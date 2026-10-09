@@ -136,6 +136,22 @@ it("shares all grading instructions above the final paragraph with blind checks"
   expect(instruction).not.toMatch(/comments|outline/);
 });
 
+it("shares the bottom-band accuracy rule across grader, check and reconcile", () => {
+  const assessment = {
+    band_selected: "Describes policies",
+    mark: 1,
+    justification: "",
+  };
+  for (const messages of [
+    gradeMessages(q, "Answer"),
+    gradeMessages(q, "Answer", true),
+    reconcileMessages(q, "Answer", assessment, assessment),
+  ])
+    expect(messages[0].content).toContain(
+      "The lowest band needs at least one accurate statement that its descriptor accepts and that bears on the question asked; a plain, brief accurate relevant statement is enough. Writing that is inaccurate, only restates the question, or is about something the question did not ask does not meet it, so award 0 (NO BAND SATISFIED).",
+    );
+});
+
 it("adds the two assessments to the check messages for reconciliation", () => {
   const a = {
     band_selected: "Describes policies",
