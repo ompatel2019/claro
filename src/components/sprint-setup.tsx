@@ -602,7 +602,17 @@ export function SprintSetup({
             <label className="flex items-center gap-2 text-sm">
               <Switch
                 checked={c.timed}
-                onCheckedChange={(timed) => set({ timed })}
+                onCheckedChange={(timed) =>
+                  set({
+                    timed,
+                    ...(!timed
+                      ? {
+                          short_min_per_mark: clampPace(c.short_min_per_mark),
+                          mcq_min_per_q: clampPace(c.mcq_min_per_q),
+                        }
+                      : {}),
+                  })
+                }
               />
               Timed
             </label>

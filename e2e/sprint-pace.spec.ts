@@ -117,6 +117,7 @@ for (const width of [390, 1280]) {
       await page.goto("/student/sprint?type=short&size=10");
       await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
       await timerStep(page);
+      await page.getByLabel("Shorts: minutes per mark").fill("");
       await page.getByRole("switch", { name: "Timed", exact: true }).click();
       await expect(page.getByLabel("Shorts: minutes per mark")).toBeHidden();
       await expect(page.getByText(/Untimed · Whole course/)).toBeVisible();
