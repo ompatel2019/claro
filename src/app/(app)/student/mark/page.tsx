@@ -15,6 +15,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 export const metadata = pageMetadata("Mark my answer");
 
 export default async function Page() {
+  const allowOwnQuestion = process.env.ENABLE_OWN_QUESTION_MARKING === "true";
   const db = await createClient();
   const {
     data: { user },
@@ -40,13 +41,18 @@ export default async function Page() {
     <div className="mx-auto max-w-3xl space-y-5">
       <PageHeader
         title="Mark my answer"
-        description="Bring a question and your answer. Find out what earns your next mark."
+        description={
+          allowOwnQuestion
+            ? "Bring a question and your answer. Find out what earns your next mark."
+            : "Choose a question from the Claro bank and bring your answer. Find out what earns your next mark."
+        }
       />
       <MarkMyAnswer
         questions={questions}
         topics={topics.data as Topic[]}
         userId={user.id}
         left={left}
+        allowOwnQuestion={allowOwnQuestion}
       />
       {recent.data.length ? (
         <Card>

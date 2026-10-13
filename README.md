@@ -43,3 +43,5 @@ Use Node 22 (`nvm use`). Local checks need `NEXT_PUBLIC_APP_URL` set; authentica
 In check-as-you-go sprints, Next shows a reminder on hover or focus for an unchecked answer and highlights Check answer. Navigation remains available.
 
 Written checks show the saved marked answer, all comments and the full-mark outline inline using the same feedback as results. Wide screens have margin comments; small screens stack them. The current mark API does not return guidelines, model answers or checker/review metadata, so these remain in finished results.
+
+Mark my answer defaults to the Claro bank. Set the server flag `ENABLE_OWN_QUESTION_MARKING=true` to show My own question. Own-question schemas and API remain available; saved own-question sessions still resume. Stale unsaved own-question drafts keep their answer text and require a bank selection.
