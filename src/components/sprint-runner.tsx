@@ -263,7 +263,8 @@ export function SprintRunner({
     window.location.assign(`/student/sprint/${session.id}/results`);
   }
   const a = attempts[index];
-  const editable = !!a && ["pending", "transcribed"].includes(a.status);
+  const editable =
+    !!a && ["pending", "transcribed"].includes(a.status) && checking !== a.id;
   const answerKey =
     checkMode && a?.status === "marked" ? a.feedback?.correct_index : null;
   const needsCheck = checkMode && editable && answered(a) && checking !== a.id;
@@ -566,6 +567,7 @@ export function SprintRunner({
           </fieldset>
         ) : checkMode && a.status === "marked" ? null : (
           <WrittenAnswer
+            inputOnly={checkMode}
             disabled={busy || !editable}
             onBusy={setBusy}
             key={a.question_id ?? a.id}
