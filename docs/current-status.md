@@ -3,3 +3,5 @@
 - S7: editable multi/short pace replaces flat custom minutes; `start_sprint` computes time from the actual selection. Legacy saved setup pace is reset to the new defaults.
 
 - S9: flagging moved from the question header to the answer action row. Keyboard and persistence behavior are retained.
+
+- S12: unchecked answers get a Next tooltip and highlighted Check action; navigation remains available and keyboard checking ignores empty or already-checking answers.

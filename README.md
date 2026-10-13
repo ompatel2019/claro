@@ -39,3 +39,5 @@ Sprint pace defaults to 1 min per multi and 1.5 min per short-answer mark, both 
 Flag for review sits in the bottom answer actions alongside Check answer; flags still persist in the question booklet.
 
 Use Node 22 (`nvm use`). Local checks need `NEXT_PUBLIC_APP_URL` set; authenticated Playwright tests additionally use synthetic `STUDENT_EMAIL` / `STUDENT_PASSWORD` and the Supabase settings from `.env.local`. Never commit credentials.
+
+In check-as-you-go sprints, Next shows a reminder on hover or focus for an unchecked answer and highlights Check answer. Navigation remains available.

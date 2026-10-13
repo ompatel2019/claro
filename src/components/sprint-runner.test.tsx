@@ -85,12 +85,12 @@ const attempt = {
     year: null,
   },
 } satisfies Attempt;
-function show() {
+function show(initial: Attempt[] = [attempt], config = session.config) {
   mocks.update.mockReturnThis();
   return render(
     <SprintRunner
-      session={session}
-      initial={[attempt]}
+      session={{ ...session, config }}
+      initial={initial}
       userId="u"
       title="Sprint"
     />,
@@ -213,6 +213,72 @@ it("keeps flagging locked for a checked answer", () => {
   expect(
     screen.getByRole("button", { name: "Flag for review" }),
   ).toBeDisabled();
+});
+
+const nextAttempt = { ...attempt, id: "a2", question_id: "q2", position: 2 };
+it("highlights an unchecked answer and warns on Next focus without blocking navigation", async () => {
+  show([attempt, nextAttempt]);
+  const check = screen.getByRole("button", { name: "Check answer" });
+  expect(check).toHaveAccessibleDescription("You have an unchecked answer.");
+  const next = screen.getByRole("button", { name: "Next question" });
+  next.focus();
+  expect(await screen.findByRole("tooltip")).toHaveTextContent(
+    "check it first?",
+  );
+  fireEvent.click(next);
+  await waitFor(() => expect(screen.getByText(/Question 2 ·/)).toBeVisible());
+  expect(mocks.fetch).not.toHaveBeenCalled();
+});
+it.each(["blank", "checked", "end"])(
+  "does not warn for %s answers",
+  (state) => {
+    const a =
+      state === "blank"
+        ? { ...attempt, choice_index: null }
+        : state === "checked"
+          ? { ...attempt, status: "marked", mark: 1 }
+          : attempt;
+    show([a, nextAttempt], {
+      ...session.config,
+      feedback: state === "end" ? "end" : "each",
+    });
+    const check = screen.queryByRole("button", { name: "Check answer" });
+    if (check)
+      expect(check).not.toHaveAccessibleDescription(
+        "You have an unchecked answer.",
+      );
+    expect(screen.getByRole("button", { name: "Next question" })).toBeVisible();
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  },
+);
+it("keeps the reminder after a marking error and lets the student retry", async () => {
+  mocks.fetch.mockResolvedValue({
+    ok: false,
+    status: 503,
+    json: async () => ({ error: "Marking is paused." }),
+  });
+  vi.stubGlobal("fetch", mocks.fetch);
+  show([attempt, nextAttempt]);
+  fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Marking is paused.",
+  );
+  expect(
+    screen.getByRole("button", { name: "Check answer" }),
+  ).toHaveAccessibleDescription("You have an unchecked answer.");
+  expect(screen.getByRole("button", { name: "Next question" })).toBeEnabled();
+});
+it("keyboard checking ignores empty answers and never runs twice while checking", async () => {
+  vi.stubGlobal("fetch", mocks.fetch);
+  show([{ ...attempt, choice_index: null }]);
+  fireEvent.keyDown(window, { ctrlKey: true, key: "Enter" });
+  expect(mocks.fetch).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("radio", { name: /^Option A:/ }));
+  mocks.fetch.mockReturnValue(new Promise(() => {}));
+  fireEvent.keyDown(window, { ctrlKey: true, key: "Enter" });
+  await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(1));
+  fireEvent.keyDown(window, { ctrlKey: true, key: "Enter" });
+  expect(mocks.fetch).toHaveBeenCalledTimes(1);
 });
 
 it("a failed manual finish keeps the saved answer editable and allows retry", async () => {

@@ -91,9 +91,22 @@ const TYPES: Record<string, string> = {
   Mixed: "mixed",
 };
 /** Starts a sprint of one type on Inflation through the §3.2 setup page. */
-export async function start(page: Page, mode: string, ids: string[]) {
+export async function start(
+  page: Page,
+  mode: string,
+  ids: string[],
+  checkEach = false,
+) {
   await page.goto(`/student/sprint?type=${TYPES[mode]}&sub=t3-inflation`);
   await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
+  if (checkEach) {
+    const each = page.getByRole("radio", {
+      name: "After each question (check as you go)",
+    });
+    for (let step = 0; step < 4 && !(await each.isVisible()); step++)
+      await page.getByRole("button", { name: "Next", exact: true }).click();
+    await each.click();
+  }
   await page.getByRole("button", { name: /^Start (sprint|with)/ }).click();
   await expect(page).toHaveURL(/\/student\/sprint\/[^/]+$/);
   const id = page.url().split("/").at(-1)!;

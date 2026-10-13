@@ -27,6 +27,7 @@ import { RichText } from "./rich-text";
 import { QuestionView } from "./question-view";
 import { isTyping, SessionShell, type SaveState } from "./session-shell";
 import { WrittenAnswer } from "./written-answer";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { markTone, TYPE_LABEL } from "@/lib/results";
 
 import { BookletFilter, BookletLegend } from "./booklet-controls";
@@ -263,7 +264,9 @@ export function SprintRunner({
   const editable = !!a && ["pending", "transcribed"].includes(a.status);
   const answerKey =
     checkMode && a?.status === "marked" ? a.feedback?.correct_index : null;
+  const needsCheck = checkMode && editable && answered(a) && checking !== a.id;
   async function check() {
+    if (!checkMode || checking || busy || !editable || !answered(a)) return;
     const id = a.id;
     setChecking(id);
     setError("");
@@ -590,7 +593,8 @@ export function SprintRunner({
               attempt={a}
               explanation={explanations[a.id]}
               checking={checking === a.id}
-              canCheck={editable && answered(a) && !busy}
+              highlight={needsCheck}
+              canCheck={editable && answered(a) && !busy && checking !== a.id}
               onCheck={() => void check()}
             />
           )}
@@ -615,13 +619,22 @@ export function SprintRunner({
           Previous question
         </Button>
         {index < attempts.length - 1 ? (
-          <Button
-            variant="outline"
-            disabled={busy}
-            onClick={() => go(index + 1)}
-          >
-            Next question
-          </Button>
+          <Tooltip disabled={!needsCheck}>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => go(index + 1)}
+                />
+              }
+            >
+              Next question
+            </TooltipTrigger>
+            <TooltipContent>
+              You’ve selected an answer, check it first?
+            </TooltipContent>
+          </Tooltip>
         ) : (
           <Button disabled={busy} onClick={() => setConfirm(true)}>
             Finish
@@ -705,12 +718,14 @@ function CheckResult({
   explanation,
   checking,
   canCheck,
+  highlight = false,
   onCheck,
 }: {
   attempt: Attempt;
   explanation?: string;
   checking: boolean;
   canCheck: boolean;
+  highlight?: boolean;
   onCheck: () => void;
 }) {
   if (a.status === "marked") {
@@ -758,7 +773,17 @@ function CheckResult({
     );
   return (
     <div className="flex items-center gap-3">
-      <Button variant="outline" disabled={!canCheck} onClick={onCheck}>
+      <Button
+        variant="outline"
+        disabled={!canCheck}
+        onClick={onCheck}
+        className={cn(
+          highlight && "bg-accent ring-primary ring-2 ring-offset-2",
+        )}
+        aria-description={
+          highlight ? "You have an unchecked answer." : undefined
+        }
+      >
         Check answer
       </Button>
       <span className="text-muted-foreground text-xs">⌘Enter</span>
