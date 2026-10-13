@@ -1,15 +1,20 @@
-import { expect, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { expect, test } from "./fixtures/weak-topic-student";
+import { adminClient } from "./helpers";
 
 test.describe("Student progress (read only)", () => {
-  test.skip(!process.env.STUDENT_EMAIL, "Needs a student account");
-  test.beforeEach(async ({ page }) => {
-    await signIn(page);
+  test.skip(!adminClient(), "Needs Supabase test credentials");
+  test.beforeEach(async ({ page, historyStudent }) => {
+    await historyStudent.addAnswers(3);
+    await historyStudent.addAnswers(1);
     await page.goto("/student/progress");
     await expect(
       page.getByRole("heading", { level: 1, name: "Progress" }),
     ).toBeVisible();
-    await expect(page.getByTestId("progress-stats")).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "Marks by topic", exact: true }),
+    ).toBeVisible();
+    await expect(page.getByTestId("progress-stats")).toHaveCount(0);
+    await expect(page.getByTestId("activity-heatmap")).toHaveCount(0);
     await expect(
       page.getByRole("combobox", { name: "Progress range" }),
     ).toBeEnabled();
@@ -34,13 +39,10 @@ test.describe("Student progress (read only)", () => {
         });
       }).toPass({ timeout: 20000 });
       // URL changes can precede the streamed cards and transition completion.
-      await expect(page.getByTestId("progress-stats")).toHaveAttribute(
+      await expect(page.getByTestId("progress-page")).toHaveAttribute(
         "data-range",
         value,
       );
-      await expect(
-        page.getByTestId("progress-stats").getByText(label, { exact: true }),
-      ).toBeVisible();
       await expect(control).toBeEnabled();
     }
   });
@@ -48,7 +50,7 @@ test.describe("Student progress (read only)", () => {
     page,
   }) => {
     await page.goto("/student/progress?range=all");
-    await expect(page.getByTestId("progress-stats")).toHaveAttribute(
+    await expect(page.getByTestId("progress-page")).toHaveAttribute(
       "data-range",
       "all",
     );
@@ -119,55 +121,11 @@ test.describe("Student progress (read only)", () => {
     }).toPass({ timeout: 20000 });
   });
   for (const width of [360, 400, 1280]) {
-    test(`${width}px keeps the heatmap and topic tables within their containers`, async ({
+    test(`${width}px keeps topic tables within their containers`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 850 });
-      const heatmap = page.getByTestId("activity-heatmap");
-      await expect(heatmap).toHaveCount(1);
-      await expect(heatmap).toBeVisible();
-      await expect
-        .poll(() =>
-          heatmap.evaluate(
-            (el) => el.scrollWidth <= el.clientWidth && el.scrollLeft === 0,
-          ),
-        )
-        .toBe(true);
-      const months = heatmap.locator("[data-month-label]");
-      await expect(months.first()).toBeVisible();
-      await expect(heatmap.getByRole("group")).toHaveAccessibleName(
-        /^Activity from \d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}$/,
-      );
-      const latest = heatmap.locator("a[data-day]").last();
-      await expect(async () => {
-        await latest.focus();
-        await expect(heatmap.getByRole("tooltip")).toBeVisible({
-          timeout: 1000,
-        });
-      }).toPass({ timeout: 20000 });
-      await expect
-        .poll(() => heatmap.evaluate((el) => el.scrollWidth <= el.clientWidth))
-        .toBe(true);
-      await latest.blur();
-      await expect
-        .poll(() =>
-          months.evaluateAll((labels) =>
-            labels.every((label) => {
-              const bounds = label
-                .closest('[data-testid="activity-heatmap"]')!
-                .getBoundingClientRect();
-              const range = document.createRange();
-              range.selectNodeContents(label);
-              const text = range.getBoundingClientRect();
-              return (
-                label.textContent?.length === 3 &&
-                text.left >= bounds.left &&
-                text.right <= bounds.right
-              );
-            }),
-          ),
-        )
-        .toBe(true);
+      await expect(page.getByTestId("activity-heatmap")).toHaveCount(0);
       const table = page.getByRole("table", {
         name: "Marks by topic",
         exact: true,

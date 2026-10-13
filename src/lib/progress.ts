@@ -1,3 +1,4 @@
+import { isWeakTopic } from "./weak-topics";
 import { addDays } from "./activity";
 import type { Topic } from "./practice";
 
@@ -24,6 +25,7 @@ export function rangeFrom(range: ProgressRange, today: string) {
 }
 export type TopicProgress = Topic & {
   answered: number;
+  sessions?: number;
   earned: number;
   possible: number;
   pct: number | null;
@@ -53,13 +55,6 @@ export type Mastery = {
   new: number;
 };
 export type ProgressData = {
-  stats: {
-    answered: number;
-    earned: number;
-    possible: number;
-    pct: number | null;
-    active: number;
-  };
   topics: TopicProgress[];
   types: Breakdown[];
   verbs: Breakdown[];
@@ -97,9 +92,7 @@ export function weakSpots(
   cards: ProgressData["missed"],
 ) {
   const questions = topics
-    .filter(
-      (t) => t.parent_id && t.answered >= 3 && t.pct !== null && t.pct < 60,
-    )
+    .filter((t) => t.parent_id && isWeakTopic(t))
     .sort(
       (a, b) =>
         a.pct! - b.pct! || b.answered - a.answered || a.id.localeCompare(b.id),

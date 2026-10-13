@@ -14,7 +14,7 @@ npm run dev
 
 ## Layout
 
-- `src/app/(auth)`: sign in / sign up; `src/app/page.tsx` student home; `src/app/admin` admin home
+- `src/app/(auth)`: sign in / sign up; `src/app/(app)/student/page.tsx` student home; `src/app/admin` admin home
 - `src/app/api`: marking route handlers (attempt mark/transcribe, flashcard mark, session finish)
 - `src/lib/marking`: band-first marking engine (pure grading helpers, prompts, schemas, server engine)
 - `src/lib/ai`: OpenAI structured-output calls, per-model prices, cost logging to `ai_usage` and the budget guard
@@ -87,3 +87,18 @@ use the split and editable pace; saved timers use the actual selected marks.
 Apply `0046_sprints_mixed_buckets.sql`. Coverage adds `e2e/sprint-mixed.spec.ts`
 (mobile/desktop, exact fills, zero buckets, shortfalls and invalid RPC input) and
 `supabase/tests/sprint_mixed.sql` (transactional selection regression).
+
+## Progress
+
+Home owns the summary stats and yearly activity heatmap. Progress leads with topic,
+question-type and directive-verb breakdowns, then score history and flashcard mastery.
+Question weak spots require 3 marked answers across 2 distinct sessions per subtopic;
+apply migration 0039 before using the new history counts. Missing counts keep spots locked.
+
+Run checks serially on the shared box with `Q_MIN_GB=3 Q_SLOTS=1 q-run npm run check`.
+Progress browser specs create and delete isolated synthetic students using Supabase
+env credentials. Load `.env.local` when invoking Playwright:
+`q-run node --env-file=.env.local node_modules/@playwright/test/cli.js test e2e/progress.spec.ts --workers=1`.
+Database assertions in `supabase/tests/weak-topic-samples.sql` run after migration
+0039 via `q-run bash scripts/sql.sh supabase/tests/weak-topic-samples.sql`; fixtures
+and all their writes roll back.

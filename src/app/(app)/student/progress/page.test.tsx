@@ -1,10 +1,4 @@
-import {
-  Children,
-  isValidElement,
-  cloneElement,
-  type ReactNode,
-  type ReactElement,
-} from "react";
+import { resolve } from "@/test/resolve-server-components";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import type { ProgressData } from "@/lib/progress";
@@ -13,7 +7,6 @@ import ErrorCard from "./error";
 import Loading from "./loading";
 const mocks = vi.hoisted(() => ({
   load: vi.fn(),
-  activity: vi.fn(),
   refresh: vi.fn(),
 }));
 vi.mock("@/lib/auth", () => ({
@@ -21,20 +14,10 @@ vi.mock("@/lib/auth", () => ({
 }));
 vi.mock("@/lib/progress-data", () => ({
   loadProgress: mocks.load,
-  loadProgressActivity: mocks.activity,
   progressToday: () => "2026-10-09",
 }));
 vi.mock("@/components/progress-controls", () => ({
   ProgressControls: () => null,
-}));
-vi.mock("@/components/activity-heatmap", () => ({
-  ActivityHeatmap: ({
-    error,
-    errorContent,
-  }: {
-    error: boolean;
-    errorContent: ReactNode;
-  }) => (error ? errorContent : <p>Year heatmap</p>),
 }));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: mocks.refresh }),
@@ -42,7 +25,6 @@ vi.mock("next/navigation", () => ({
   usePathname: () => "/student/progress",
 }));
 const empty: ProgressData = {
-  stats: { answered: 0, earned: 0, possible: 0, pct: null, active: 0 },
   topics: [
     {
       id: "t1",
@@ -63,36 +45,12 @@ const empty: ProgressData = {
   missed: [],
   due: [],
 };
-// Resolve just async server components; normal client components render with React.
-async function resolve(node: ReactNode): Promise<ReactNode> {
-  if (!isValidElement(node)) return node;
-  const element = node as ReactElement<{ children?: ReactNode }>;
-  if (
-    typeof element.type === "function" &&
-    element.type.constructor.name === "AsyncFunction"
-  ) {
-    const component = element.type as (props: unknown) => Promise<ReactNode>;
-    return resolve(await component(element.props));
-  }
-  if (element.props.children !== undefined) {
-    const children = await Promise.all(
-      Children.toArray(element.props.children).map(resolve),
-    );
-    return cloneElement(element, undefined, ...children);
-  }
-  return element;
-}
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.load.mockResolvedValue(empty);
-  mocks.activity.mockResolvedValue({
-    days: [],
-    current_streak: 0,
-    longest_streak: 0,
-  });
 });
 afterEach(cleanup);
-it("renders range-scoped stats and per-card empty states while keeping untouched topics available", async () => {
+it("renders range-scoped breakdowns and per-card empty states while keeping untouched topics available", async () => {
   render(
     await resolve(
       await Progress({ searchParams: Promise.resolve({ range: "year" }) }),
@@ -110,16 +68,16 @@ it("renders range-scoped stats and per-card empty states while keeping untouched
   expect(
     screen.getByRole("link", { name: "Start Global economy" }),
   ).toHaveAttribute("href", "/student/sprint?topics=t1");
-  expect(screen.getByTestId("progress-stats")).toHaveAttribute(
-    "data-range",
-    "year",
+  expect(screen.queryByTestId("progress-stats")).toBeNull();
+  expect(screen.queryByText("Year heatmap")).toBeNull();
+  expect(screen.getAllByRole("heading", { level: 2 })[0]).toHaveTextContent(
+    "Marks by topic",
   );
 });
 it("isolates load failures in cards and retries through the router", async () => {
   mocks.load.mockRejectedValue(new Error("unavailable"));
-  mocks.activity.mockRejectedValue(new Error("unavailable"));
   render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
-  expect(screen.getAllByRole("alert")).toHaveLength(8);
+  expect(screen.getAllByRole("alert")).toHaveLength(6);
   fireEvent.click(screen.getAllByRole("button", { name: "Try again" })[0]);
   expect(mocks.refresh).toHaveBeenCalledOnce();
 });
@@ -193,4 +151,52 @@ it("links each finished session to its correct report and scopes type chips to s
     screen.getAllByRole("link", { name: /Short answer sprint/ })[0],
   ).toHaveAccessibleName(/60%/);
   expect(screen.queryByRole("link", { name: /Flashcards/ })).toBeNull();
+});
+
+it("keeps weak spots locked until both history boundaries", async () => {
+  const topic = {
+    ...empty.topics[0],
+    id: "synthetic",
+    parent_id: "t1",
+    name: "Synthetic topic",
+    answered: 2,
+    sessions: 2,
+    pct: 20,
+  };
+  mocks.load.mockResolvedValue({ ...empty, topics: [topic] });
+  const view = render(
+    await resolve(await Progress({ searchParams: Promise.resolve({}) })),
+  );
+  expect(
+    screen.getByText(/Answer 1 more question in Synthetic topic/),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: /^Practise$/ }),
+  ).toBeNull();
+  view.unmount();
+  mocks.load.mockResolvedValue({
+    ...empty,
+    topics: [{ ...topic, answered: 3, sessions: 1 }],
+  });
+  const locked = render(
+    await resolve(await Progress({ searchParams: Promise.resolve({}) })),
+  );
+  expect(
+    screen.getByText(/Practise Synthetic topic in another session/),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByRole("link", { name: /^Practise$/ }),
+  ).toBeNull();
+  locked.unmount();
+  mocks.load.mockResolvedValue({
+    ...empty,
+    topics: [{ ...topic, answered: 3 }],
+  });
+  render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
+  expect(
+    screen.getByRole("link", { name: /^Practise$/ }),
+  ).toHaveAttribute(
+    "href",
+    "/student/sprint?topics=t1&sub=synthetic&history=mistakes",
+  );
 });

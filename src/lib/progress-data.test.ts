@@ -4,12 +4,14 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/utils/supabase/server", () => ({
   createClient: async () => ({ rpc }),
 }));
-vi.mock("./flashcard-data", () => ({ pages: async () => [] }));
 import { loadProgress } from "./progress-data";
 it("requests SQL aggregation with inclusive Sydney range dates, never limited raw rows", async () => {
-  rpc.mockResolvedValue({ data: { stats: { answered: 1501 } }, error: null });
+  rpc.mockResolvedValue({
+    data: { topics: [{ answered: 1501, sessions: 100 }] },
+    error: null,
+  });
   expect(await loadProgress("90", "2026-10-09")).toEqual({
-    stats: { answered: 1501 },
+    topics: [{ answered: 1501, sessions: 100 }],
   });
   expect(rpc).toHaveBeenLastCalledWith("student_progress", {
     p_from: "2026-07-12",

@@ -64,6 +64,7 @@ const topic = (
   sort: 1,
   pct,
   answered,
+  sessions: 2,
   earned: 0,
   possible: 10,
   last_answered: null,

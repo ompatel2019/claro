@@ -2,11 +2,7 @@ import { pageMetadata } from "@/lib/page-metadata";
 import { Suspense } from "react";
 import Link from "next/link";
 import { requireProfile } from "@/lib/auth";
-import {
-  loadProgress,
-  loadProgressActivity,
-  progressToday,
-} from "@/lib/progress-data";
+import { loadProgress, progressToday } from "@/lib/progress-data";
 import {
   parseRange,
   rangeFrom,
@@ -14,14 +10,13 @@ import {
   masterySegments,
   reportHref,
   verbRows,
-  PROGRESS_RANGES,
   type ProgressRange,
 } from "@/lib/progress";
+import { weakTopicUnlock } from "@/lib/weak-topics";
 import { sessionTitle } from "@/lib/home";
 import { sydneyToday } from "@/lib/flashcards";
 import { dateLabel, timer, plural } from "@/lib/practice";
 import { PageHeader } from "@/components/page-header";
-import { ActivityHeatmap } from "@/components/activity-heatmap";
 import { SessionScoreTrend } from "@/components/score-trend";
 import { ProgressControls } from "@/components/progress-controls";
 import {
@@ -30,7 +25,6 @@ import {
   VerbProgressTable,
 } from "@/components/progress-tables";
 import { EmptyState as Empty } from "@/components/empty-state";
-import { StatCard } from "@/components/stat-card";
 import { StatusPill } from "@/components/status-pill";
 import { TryAgain } from "@/components/try-again";
 import {
@@ -79,62 +73,6 @@ function CardSkeleton() {
 }
 
 type Scope = { range: ProgressRange; today: string };
-async function Stats({ range, today }: Scope) {
-  const d = await loadProgress(range, today).catch(() => null);
-  if (!d)
-    return (
-      <Section title="Your progress">
-        <TryAgain what="your stats" />
-      </Section>
-    );
-  const s = d.stats,
-    label = PROGRESS_RANGES.find((r) => r.value === range)!.label;
-  return (
-    <div
-      className="grid grid-cols-2 gap-3 xl:grid-cols-4 [&_dd]:[overflow-wrap:anywhere]"
-      data-testid="progress-stats"
-      data-range={range}
-    >
-      <StatCard label="Questions answered" value={s.answered} caption={label} />
-      <StatCard
-        label="Average mark"
-        value={s.pct === null ? "No marks yet" : `${Math.round(s.pct)}%`}
-        empty={s.pct === null}
-        caption={
-          s.pct === null ? (
-            "Finish a sprint to see your average"
-          ) : (
-            <ProgressScore pct={s.pct} />
-          )
-        }
-      />
-      <StatCard
-        label="Marks earned"
-        value={s.possible ? `${s.earned} / ${s.possible}` : "No marks yet"}
-        empty={!s.possible}
-        caption="Earned / possible"
-      />
-      <StatCard
-        label="Active days"
-        value={s.active}
-        caption="Questions and flashcards"
-      />
-    </div>
-  );
-}
-async function Heatmap({ userId, today }: { userId: string; today: string }) {
-  const d = await loadProgressActivity(userId, today).catch(() => null);
-  return (
-    <ActivityHeatmap
-      today={today}
-      days={d?.days ?? []}
-      current={d?.current_streak ?? 0}
-      longest={d?.longest_streak ?? 0}
-      error={!d}
-      errorContent={<TryAgain what="your activity" />}
-    />
-  );
-}
 async function HistoryCard({
   range,
   today,
@@ -324,20 +262,34 @@ async function Weak({ range, today }: Scope) {
       </Section>
     );
   const rows = weakSpots(d.topics, d.missed);
-  if (!rows.length)
-    return (
-      <Empty
-        icon={Target}
-        title="Weak spots"
-        description="Topics below 60% appear after 3 answers, alongside cards rated Missed or Mostly."
-      />
-    );
+  const locked = d.topics.filter(
+    (t) => t.parent_id && t.answered > 0 && weakTopicUnlock(t),
+  );
   return (
     <Section
       title="Weak spots"
-      caption="Practise missed questions, or choose Missed last time in the flashcard builder."
+      caption="Question weak spots unlock after 3 marked answers across 2 sessions in a topic. Cards rated Missed or Mostly appear alongside them."
     >
+      {!rows.length && !locked.length && (
+        <Empty
+          icon={Target}
+          title={
+            d.topics.some((t) => t.answered > 0)
+              ? "No weak spots in this range"
+              : "Build your topic history"
+          }
+          description="Practise questions or review flashcards to find where to focus next."
+        />
+      )}
       <ul className="divide-y divide-dashed">
+        {locked.map((t) => (
+          <li
+            key={`locked-${t.id}`}
+            className="text-muted-foreground py-3 text-sm"
+          >
+            {weakTopicUnlock(t)}
+          </li>
+        ))}
         {rows.map((r) => (
           <li key={r.id} className="flex items-center gap-3 py-3">
             <div className="min-w-0 flex-1">
@@ -459,8 +411,8 @@ export default async function Progress({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  const profile = await requireProfile(),
-    p = await searchParams;
+  await requireProfile();
+  const p = await searchParams;
   const range = parseRange(p.range),
     today = progressToday(),
     scope = { range, today };
@@ -472,8 +424,6 @@ export default async function Progress({
     typeof p.type === "string" && ["mcq", "short", "extended"].includes(p.type)
       ? p.type
       : undefined;
-  // Keep the heatmap in the page tree, rather than a separate streamed payload.
-  const heatmap = await Heatmap({ userId: profile.id, today });
   return (
     <div
       className="min-w-0 space-y-4"
@@ -486,25 +436,6 @@ export default async function Progress({
         description="See where your marks come from and make your next session count."
         actions={<ProgressControls range={range} />}
       />
-      <Suspense
-        key={`stats-${range}`}
-        fallback={
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-28 rounded-2xl" />
-            ))}
-          </div>
-        }
-      >
-        <Stats {...scope} />
-      </Suspense>
-      {heatmap}
-      <Suspense
-        key={`history-${range}-${kind}-${type}`}
-        fallback={<CardSkeleton />}
-      >
-        <HistoryCard {...scope} kind={kind} type={type} />
-      </Suspense>
       <Suspense key={`topics-${range}`} fallback={<CardSkeleton />}>
         <Topics {...scope} />
       </Suspense>
@@ -521,6 +452,12 @@ export default async function Progress({
           <Weak {...scope} />
         </Suspense>
       </div>
+      <Suspense
+        key={`history-${range}-${kind}-${type}`}
+        fallback={<CardSkeleton />}
+      >
+        <HistoryCard {...scope} kind={kind} type={type} />
+      </Suspense>
       <Suspense key={`mastery-${range}`} fallback={<CardSkeleton />}>
         <Mastery {...scope} />
       </Suspense>
