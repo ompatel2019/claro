@@ -315,20 +315,15 @@ export function SprintRunner({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [checkMode]);
-  // §3.2 "Finish and mark automatically" when time runs out.
+  // Expiry never submits an answer, including sessions saved with the old finish option.
   const timedOut = useRef(false);
   useEffect(() => {
-    if (
-      !limit ||
-      session.config.on_timeout !== "finish" ||
-      elapsed < limit ||
-      timedOut.current
-    )
-      return;
+    if (!limit || elapsed < limit || timedOut.current) return;
     timedOut.current = true;
-    toast("Time’s up. Marking your answers.");
-    void act(finish);
-  });
+    const sound = new Audio("/sounds/time-up.wav");
+    void sound.play().catch(() => {});
+    return () => sound.pause();
+  }, [elapsed, limit]);
   function choose(i: number | null) {
     const previous = a.choice_index;
     local(a.id, { choice_index: i });
@@ -480,6 +475,11 @@ export function SprintRunner({
       onMove={(d) => !busy && go(index + d)}
       booklet={sprintBooklet}
     >
+      {!!limit && elapsed >= limit && (
+        <div role="alert" className="bg-accent rounded-xl border p-4 text-sm">
+          Time’s up. You can keep working in overtime or choose Finish and mark.
+        </div>
+      )}
       {error && (
         <div
           role="alert"

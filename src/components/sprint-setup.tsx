@@ -666,15 +666,10 @@ export function SprintSetup({
                   </div>
                 )}
                 <p className="text-muted-foreground text-xs">≈ {minutes} min</p>
-                <Choice
-                  label="When time runs out"
-                  value={c.on_timeout}
-                  onChange={(on_timeout) => set({ on_timeout })}
-                  options={[
-                    ["overtime", "Keep going and show overtime"],
-                    ["finish", "Finish and mark automatically"],
-                  ]}
-                />
+                <p className="text-muted-foreground text-xs">
+                  A sound and banner let you know when time is up. Keep working
+                  in overtime until you choose to finish.
+                </p>
               </>
             )}
           </Section>

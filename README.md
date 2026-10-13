@@ -31,3 +31,5 @@ npm run check       # formatting, linting, types, and unit tests
 npm run test:e2e    # Playwright (set PORT to change the dev server port)
 npm run build
 ```
+
+Topic Sprint timers notify with a sound and an overtime banner; students always finish manually, including resumed legacy sessions.

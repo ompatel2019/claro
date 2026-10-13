@@ -38,7 +38,7 @@ const SprintConfig = z.object({
   timed: z.boolean().default(true),
   pace: z.enum(["hsc", "relaxed", "custom"]).default("hsc"),
   custom_minutes: z.number().int().min(5).max(180).default(45),
-  on_timeout: z.enum(["overtime", "finish"]).default("overtime"),
+  on_timeout: z.literal("overtime").default("overtime"),
   feedback: z.enum(["end", "each"]).default("end"),
 });
 /** §3.2: the setup page (and quick starts) post the config as JSON; start_sprint validates the rest. */

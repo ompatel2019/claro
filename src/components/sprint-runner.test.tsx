@@ -124,3 +124,39 @@ it("persists sprint time on save and exit, and keeps the finish confirmation", a
   await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/student"));
   expect(mocks.update).toHaveBeenCalledWith({ elapsed_s: 0 });
 });
+
+it.each(["finish", "overtime"])(
+  "expiry warns once without submitting an old %s session",
+  async (on_timeout) => {
+    const play = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal(
+      "Audio",
+      class {
+        play = play;
+        pause = vi.fn();
+      },
+    );
+    vi.stubGlobal("fetch", mocks.fetch);
+    const props = {
+      session: {
+        ...session,
+        elapsed_s: 60,
+        config: { ...session.config, time_limit_s: 60, on_timeout },
+      } as Session,
+      initial: [attempt],
+      userId: "u",
+      title: "Sprint",
+    };
+    const view = render(<SprintRunner {...props} />);
+    expect(screen.getByRole("alert")).toHaveTextContent("Time’s up");
+    expect(screen.getByRole("button", { name: "Check answer" })).toBeEnabled();
+    expect(play).toHaveBeenCalledTimes(1);
+    view.rerender(<SprintRunner {...props} />);
+    expect(play).toHaveBeenCalledTimes(1);
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  },
+);
+it("untimed sessions never warn", () => {
+  show();
+  expect(screen.queryByText(/Time’s up/)).not.toBeInTheDocument();
+});

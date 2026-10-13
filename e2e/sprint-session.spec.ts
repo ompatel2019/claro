@@ -61,27 +61,52 @@ test.describe("Sprint session", () => {
     ).toBeVisible();
   });
 
-  test("finishes and marks automatically when time runs out", async ({
-    page,
-  }) => {
-    const id = await setUp(page, ["Custom", "Finish and mark automatically"]);
-    await pick(page, "A");
-    await expect(page.getByText("Saved", { exact: true })).toBeVisible();
-    // Leave first (leaving saves the clock), then jump it to 2 s before the 45-minute limit.
-    await page.goto("/student/sprint");
-    await expect(
-      page.getByText(/unfinished Multiple choice sprint/),
-    ).toBeVisible();
-    const { error } = await adminClient()!
-      .from("sessions")
-      .update({ elapsed_s: 45 * 60 - 2 })
-      .eq("id", id);
-    expect(error).toBeNull();
-    await page.goto(`/student/sprint/${id}`);
-    await expect(page).toHaveURL(new RegExp(`/student/sprint/${id}/results$`), {
-      timeout: 60000,
+  for (const width of [390, 1280]) {
+    test(`expiry stays editable with manual finish at ${width}px`, async ({
+      page,
+    }) => {
+      test.skip(!adminClient(), "Needs a test database admin client");
+      await page.setViewportSize({ width, height: 850 });
+      const id = await setUp(page, []);
+      await pick(page, "A");
+      await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+      await page.getByRole("button", { name: "Save and exit" }).click();
+      await expect(page).toHaveURL(/\/student$/);
+      const { data: saved, error: readError } = await adminClient()!
+        .from("sessions")
+        .select("config")
+        .eq("id", id)
+        .single();
+      expect(readError).toBeNull();
+      const { error } = await adminClient()!
+        .from("sessions")
+        .update({
+          elapsed_s: saved!.config.time_limit_s - 1,
+          config: { ...saved!.config, on_timeout: "finish" },
+        })
+        .eq("id", id);
+      expect(error).toBeNull();
+      await page.goto(`/student/sprint/${id}`);
+      await expect(
+        page.getByRole("alert").filter({ hasText: "Time’s up" }),
+      ).toBeVisible();
+      await expect(page).toHaveURL(new RegExp(`/student/sprint/${id}$`));
+      await pick(page, "B");
+      await page.getByRole("button", { name: "Next question" }).click();
+      await expect(page.getByText(/^Question 2 ·/)).toBeVisible();
+      await page
+        .getByRole("button", { name: "Finish", exact: true })
+        .first()
+        .click();
+      await expect(
+        page.getByRole("dialog", { name: "Finish and mark?" }),
+      ).toBeVisible();
+      await page.getByRole("button", { name: "Keep working" }).click();
+      await expect(
+        page.getByRole("alert").filter({ hasText: "Time’s up" }),
+      ).toBeVisible();
     });
-  });
+  }
 
   test("old /practice session links redirect", async ({ page }) => {
     await page.goto(`/practice/${ids[0]}`);

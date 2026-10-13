@@ -21,7 +21,7 @@ export type SetupConfig = {
   timed: boolean;
   pace: "hsc" | "relaxed" | "custom";
   custom_minutes: number;
-  on_timeout: "overtime" | "finish";
+  on_timeout: "overtime";
   feedback: "end" | "each";
   /** Last size picked per "type:size_by", so switching type and back keeps it (setup only). */
   sizes?: Record<string, number>;
@@ -198,7 +198,10 @@ export function restore(saved: unknown): SetupConfig {
     s.sizes && typeof s.sizes === "object" && !Array.isArray(s.sizes)
       ? s.sizes
       : undefined;
-  let c = withMode({ ...DEFAULTS, ...s, mode, sizes }, mode);
+  let c = withMode(
+    { ...DEFAULTS, ...s, mode, sizes, on_timeout: "overtime" },
+    mode,
+  );
   if (s.size_by && SIZES[`${mode}:${s.size_by}`]) c = withSizeBy(c, s.size_by);
   if (typeof s.target === "number") c.target = clampTarget(c, s.target);
   return c;

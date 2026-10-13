@@ -1,0 +1,1 @@
+- S8: sprint expiry keeps answers editable and shows overtime until manual finish; the automatic finish setting is removed.

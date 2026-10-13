@@ -138,3 +138,7 @@ it("remembers the last size per type when switching back", () => {
   ).toBe(40);
   expect(restore({ sizes: [1] }).sizes).toEqual({ "mcq:questions": 20 });
 });
+
+it("restores legacy auto-finish setups as overtime", () => {
+  expect(restore({ on_timeout: "finish" }).on_timeout).toBe("overtime");
+});
