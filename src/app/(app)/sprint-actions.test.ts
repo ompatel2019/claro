@@ -14,7 +14,9 @@ const form = (config: unknown) => {
   f.set("config", JSON.stringify(config));
   return f;
 };
-beforeEach(() => rpc.mockReset());
+beforeEach(() => {
+  rpc.mockReset();
+});
 it.each([0, -1, 10.25, Infinity])(
   "rejects invalid pace %s before selection",
   async (pace) => {
