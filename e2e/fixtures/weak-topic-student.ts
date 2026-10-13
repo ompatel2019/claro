@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test as base } from "@playwright/test";
-import { adminClient, signIn } from "../helpers";
+import { createServerClient } from "@supabase/ssr";
+import { adminClient } from "../helpers";
 
 // Each test owns a synthetic account; teardown cascades only its own study history.
 export const test = base.extend<{
@@ -9,7 +10,7 @@ export const test = base.extend<{
     addAnswers: (count: number, mark?: number) => Promise<void>;
   };
 }>({
-  historyStudent: async ({ page }, runFixture) => {
+  historyStudent: async ({ page, baseURL }, runFixture) => {
     const db = adminClient()!;
     const email = `claro-history-${randomUUID()}@example.com`;
     const password = `${randomUUID()}Aa1!`;
@@ -28,7 +29,36 @@ export const test = base.extend<{
         .update({ year_level: 12 })
         .eq("id", userId);
       if (profileError) throw profileError;
-      await signIn(page, undefined, { email, password });
+      if (!baseURL) throw new Error("Browser tests need a base URL");
+      const cookies: Array<
+        Parameters<ReturnType<typeof page.context>["addCookies"]>[0][number]
+      > = [];
+      const auth = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+        {
+          cookies: {
+            getAll: () => [],
+            setAll: (updates) => {
+              cookies.push(
+                ...updates.map(({ name, value }) => ({
+                  name,
+                  value,
+                  url: new URL("/", baseURL).href,
+                  sameSite: "Lax" as const,
+                })),
+              );
+            },
+          },
+        },
+      );
+      const { error: signInError } = await auth.auth.signInWithPassword({
+        email,
+        password,
+      });
+      if (signInError) throw signInError;
+      await page.context().addCookies(cookies);
+      await page.goto("/student");
       await runFixture({
         userId,
         async addAnswers(count, mark = 1) {

@@ -1,4 +1,4 @@
--- Run after migration 0039 with scripts/sql.sh. Everything is rolled back.
+-- Run after migration 0047 with scripts/sql.sh. Everything is rolled back.
 begin;
 insert into auth.users (id, raw_user_meta_data) values
   ('00000000-0000-4000-8000-000000000171', '{}'),
@@ -34,6 +34,9 @@ do $$
 declare row jsonb; report jsonb;
 begin
   report := public.student_progress(null, '2026-10-14');
+  if (report -> 'stats' ->> 'answered')::int <> 5 or (report -> 'stats' ->> 'possible')::int <> 31 then
+    raise exception 'Legacy overview totals must remain compatible: %', report -> 'stats';
+  end if;
   select t into row from jsonb_array_elements(report -> 'topics') t where t ->> 'id' = 'synthetic-history-child';
   if (row ->> 'answered')::int <> 3 or (row ->> 'sessions')::int <> 2 then
     raise exception 'Child history incorrect: %', row;

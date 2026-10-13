@@ -1,3 +1,5 @@
+import { loadProgress } from "@/lib/progress-data";
+import { isWeakTopic, weakTopicUnlock } from "@/lib/weak-topics";
 import { pageMetadata } from "@/lib/page-metadata";
 import { WelcomeDialog } from "@/components/welcome-dialog";
 import { needsWelcome } from "@/lib/welcome";
@@ -362,49 +364,48 @@ async function Continue({ userId }: { userId: string }) {
   );
 }
 
-async function WeakTopics({ userId }: { userId: string }) {
-  const db = await createClient();
-  const [progress, topics] = await Promise.all([
-    db
-      .from("topic_progress")
-      .select("topic_id,parent_id,earned,possible,answered")
-      .eq("user_id", userId)
-      .gte("answered", 3)
-      .gt("possible", 0),
-    load.topics().catch(() => null),
-  ]);
-  if (progress.error || !topics)
+async function WeakTopics() {
+  const progress = await loadProgress("all", sydneyToday()).catch(() => null);
+  if (!progress)
     return (
       <Section title="Weak topics">
         <TryAgain what="your weak topics" />
       </Section>
     );
-  const weak = progress.data
-    .map((p) => ({ ...p, pct: (100 * Number(p.earned)) / Number(p.possible) }))
-    .sort((a, b) => a.pct - b.pct || a.topic_id.localeCompare(b.topic_id))
+  const topics = progress.topics.filter((t) => t.parent_id);
+  const weak = topics
+    .filter(isWeakTopic)
+    .sort((a, b) => a.pct! - b.pct! || a.id.localeCompare(b.id))
     .slice(0, 3);
+  const locked = topics.filter((t) => t.answered > 0 && weakTopicUnlock(t));
   return (
     <Section title="Weak topics">
-      {weak.length ? (
+      {!!(weak.length || locked.length) && (
         <ul className="divide-y divide-dashed">
           {weak.map((t) => (
-            <li key={t.topic_id} className="flex items-center gap-3 py-3">
-              <span className="min-w-0 flex-1">
-                {topics.find((x) => x.id === t.topic_id)?.name ?? t.topic_id}
-              </span>
-              <Badge variant={scoreTone(t.pct)}>{Math.round(t.pct)}%</Badge>
+            <li key={t.id} className="flex items-center gap-3 py-3">
+              <span className="min-w-0 flex-1">{t.name}</span>
+              <Badge variant={scoreTone(t.pct!)}>{Math.round(t.pct!)}%</Badge>
               <Link
-                href={`/student/sprint?topics=${t.parent_id}&sub=${t.topic_id}&history=prefer_new`}
+                href={`/student/sprint?topics=${t.parent_id}&sub=${t.id}&history=prefer_new`}
                 className={buttonVariants({ variant: "outline", size: "sm" })}
               >
                 Practise
               </Link>
             </li>
           ))}
+          {locked.map((t) => (
+            <li key={t.id} className="text-muted-foreground py-3 text-sm">
+              {weakTopicUnlock(t)}
+            </li>
+          ))}
         </ul>
-      ) : (
+      )}
+      {!weak.length && !locked.length && (
         <p className="text-muted-foreground text-sm">
-          Your weak spots show up after 3 marked answers in a topic.
+          {topics.some((t) => t.answered > 0)
+            ? "No weak topics at the moment. Keep practising to build your history."
+            : "Weak spots unlock after 3 marked answers across 2 sessions in a topic."}
         </p>
       )}
     </Section>
@@ -486,7 +487,7 @@ export default async function Home() {
             <Continue userId={id} />
           </Suspense>
           <Suspense fallback={<Skeleton className="h-48" />}>
-            <WeakTopics userId={id} />
+            <WeakTopics />
           </Suspense>
         </div>
       </div>

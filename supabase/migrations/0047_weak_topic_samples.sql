@@ -97,6 +97,11 @@ with bounds as (
   group by d
 )
 select jsonb_build_object(
+  -- Preserve overview totals for already deployed RPC clients.
+  'stats', (select jsonb_build_object('answered', count(*) filter (where answered),
+    'earned', coalesce(sum(mark), 0), 'possible', coalesce(sum(max_marks), 0),
+    'pct', 100 * sum(mark) / nullif(sum(max_marks), 0),
+    'active', (select count(*) from public.activity_days((select uid from bounds), p_from, p_to))) from marked),
   'topics', coalesce((select jsonb_agg(t order by t.sort, t.id) from topic_rows t), '[]'::jsonb),
   'types', coalesce((select jsonb_agg(t order by t.id) from types t), '[]'::jsonb),
   'verbs', coalesce((select jsonb_agg(v order by v.pct, v.id) from verbs v), '[]'::jsonb),

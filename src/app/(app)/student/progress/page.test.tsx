@@ -170,9 +170,7 @@ it("keeps weak spots locked until both history boundaries", async () => {
   expect(
     screen.getByText(/Answer 1 more question in Synthetic topic/),
   ).toBeInTheDocument();
-  expect(
-    screen.queryByRole("link", { name: /^Practise$/ }),
-  ).toBeNull();
+  expect(screen.queryByRole("link", { name: /^Practise$/ })).toBeNull();
   view.unmount();
   mocks.load.mockResolvedValue({
     ...empty,
@@ -184,18 +182,14 @@ it("keeps weak spots locked until both history boundaries", async () => {
   expect(
     screen.getByText(/Practise Synthetic topic in another session/),
   ).toBeInTheDocument();
-  expect(
-    screen.queryByRole("link", { name: /^Practise$/ }),
-  ).toBeNull();
+  expect(screen.queryByRole("link", { name: /^Practise$/ })).toBeNull();
   locked.unmount();
   mocks.load.mockResolvedValue({
     ...empty,
     topics: [{ ...topic, answered: 3 }],
   });
   render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
-  expect(
-    screen.getByRole("link", { name: /^Practise$/ }),
-  ).toHaveAttribute(
+  expect(screen.getByRole("link", { name: /^Practise$/ })).toHaveAttribute(
     "href",
     "/student/sprint?topics=t1&sub=synthetic&history=mistakes",
   );
