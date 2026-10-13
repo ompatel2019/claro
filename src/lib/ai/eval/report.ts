@@ -20,6 +20,7 @@ export type Row = {
   delta: number | null;
   flags: {
     excluded?: string;
+    failed?: boolean;
     validated?: boolean;
     inRange?: boolean;
     lowConfidence?: boolean;
@@ -35,6 +36,9 @@ export type Row = {
 };
 export function writeResults(
   meta: {
+    airo: string;
+    benchmark: ("heldout-196" | "a1-18")[];
+    sameQuestionExamples: boolean;
     stamp: string;
     git: string;
     dirty: boolean;
@@ -50,12 +54,22 @@ export function writeResults(
   rows: Row[],
 ) {
   const out = "/workspace/claro/eval-runs";
+  for (const row of rows) {
+    if (row.section === "Held-out" && (row.error || !row.score)) {
+      row.flags.failed = true;
+      row.error ??= "No marking result";
+    }
+  }
   const summary = (section: string) => {
     const sectionRows = rows.filter(
       (r) => r.section === section && !r.flags.excluded,
     );
-    const scored = sectionRows.flatMap((r) =>
-      !r.error && r.score ? [{ ...r, score: r.score }] : [],
+    const scored = sectionRows.flatMap<Row>((r) =>
+      !r.flags.failed && !r.error && r.score
+        ? [{ ...r, score: r.score }]
+        : section === "Held-out"
+          ? [{ ...r, score: undefined, firstScore: undefined }]
+          : [],
     );
     const marked = sectionRows.filter((r) => r.mark !== null);
     return {
@@ -69,8 +83,12 @@ export function writeResults(
         .length,
       inReview: marked.filter((r) => r.check?.status === "in_review").length,
       firstPass: summarise(
-        scored.flatMap((r) =>
-          r.firstScore ? [{ ...r, score: r.firstScore }] : [],
+        scored.flatMap<Row>((r) =>
+          r.firstScore
+            ? [{ ...r, score: r.firstScore }]
+            : section === "Held-out"
+              ? [{ ...r, score: undefined }]
+              : [],
         ),
       ),
     };

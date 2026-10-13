@@ -40,7 +40,7 @@ export function scoreItem({
 
 export function summarise(
   rows: {
-    score: ReturnType<typeof scoreItem>;
+    score?: ReturnType<typeof scoreItem>;
     usd: number;
     seconds: number;
     verdict?: {
@@ -56,11 +56,13 @@ export function summarise(
   const verdicts = rows.flatMap((row) => (row.verdict ? [row.verdict] : []));
   return {
     n,
-    exact: mean(rows.map((r) => Number(r.score.exact))),
-    within1: mean(rows.map((r) => Number(r.score.within1))),
-    band: mean(rows.map((r) => Number(r.score.band))),
-    meanSigned: mean(rows.map((r) => r.score.delta)),
-    meanAbs: mean(rows.map((r) => Math.abs(r.score.delta))),
+    exact: mean(rows.map((r) => Number(r.score?.exact ?? false))),
+    within1: mean(rows.map((r) => Number(r.score?.within1 ?? false))),
+    band: mean(rows.map((r) => Number(r.score?.band ?? false))),
+    meanSigned: mean(rows.flatMap((r) => (r.score ? [r.score.delta] : []))),
+    meanAbs: mean(
+      rows.flatMap((r) => (r.score ? [Math.abs(r.score.delta)] : [])),
+    ),
     prosKept: mean(
       verdicts.flatMap((v) => v.pros.map((p) => Number(p.delivered))),
     ),

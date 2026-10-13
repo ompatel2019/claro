@@ -51,15 +51,14 @@ export async function markEvalItem(
   const started = performance.now();
   let result;
   try {
-    // Keep the CLI's four-argument call unchanged.
-    result = config
-      ? await markWritten(q, answer, null, task, config)
-      : await markWritten(q, answer, null, task);
+    result = await markWritten(q, answer, null, task, config);
   } finally {
     row.seconds = (performance.now() - started) / 1000;
     row.usd = await cost();
   }
   config?.signal?.throwIfAborted();
+  if (!result || !Number.isFinite(result.mark))
+    throw new Error("No marking result");
   row.mark = result.mark;
   row.band = result.band;
   row.check = config?.blind === false ? null : result.check;

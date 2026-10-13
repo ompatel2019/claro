@@ -35,6 +35,9 @@ it("excludes fixture bugs and failures from headline metrics, but reports their 
   };
   writeResults(
     {
+      airo: "4.1",
+      benchmark: ["heldout-196", "a1-18"],
+      sameQuestionExamples: true,
       stamp: "2026-10-09-2000",
       git: "abc123",
       dirty: true,
@@ -126,6 +129,11 @@ it("excludes fixture bugs and failures from headline metrics, but reports their 
     judgeUsd: 0,
     blindAgreement: 1,
   });
+  expect(result.meta).toMatchObject({
+    airo: "4.1",
+    benchmark: ["heldout-196", "a1-18"],
+    sameQuestionExamples: true,
+  });
   expect(result.items).toHaveLength(6);
   const markdown = String(calls[1][1]);
   expect(markdown).toContain("Blind-check agreement");
@@ -152,6 +160,9 @@ it.each([
   vi.mocked(writeFileSync).mockClear();
   writeResults(
     {
+      airo: "4.1",
+      benchmark: ["heldout-196", "a1-18"],
+      sameQuestionExamples: true,
       stamp: "2026-10-09-2000",
       git: "abc123",
       dirty: false,
@@ -176,5 +187,70 @@ it.each([
     `reconcile=medium${priority ? " (priority)" : ""}. Judge:`,
   );
   expect(header.includes("(priority)")).toBe(priority);
+  vi.restoreAllMocks();
+});
+
+it("counts all 196 held-out answers, including schema, error and missing results, as misses", () => {
+  vi.spyOn(console, "log").mockImplementation(() => {});
+  vi.mocked(writeFileSync).mockClear();
+  const rows: Row[] = Array.from({ length: 196 }, (_, i) => ({
+    id: `held-${i}`,
+    section: "Held-out",
+    label: "",
+    marks: 3,
+    expected: 0,
+    mark: i < 3 ? null : 0,
+    band: null,
+    check: null,
+    delta: i < 3 ? null : 0,
+    flags: {},
+    usd: 0.01,
+    judgeUsd: 0,
+    seconds: 1,
+    verdict: null,
+    feedback: null,
+    error: ["Schema failure", "Marking error", null][i] ?? null,
+    ...(i < 3
+      ? {}
+      : { score: { delta: 0, exact: true, within1: true, band: true } }),
+  }));
+  writeResults(
+    {
+      airo: "4.1",
+      benchmark: ["heldout-196", "a1-18"],
+      sameQuestionExamples: true,
+      stamp: "test",
+      git: "abc",
+      dirty: false,
+      label: "",
+      limit: null,
+      marker: {
+        model: "anthropic/claude-sonnet-5.5",
+        effort: { grade: "low", check: "low", reconcile: "medium" },
+      },
+      judge: { model: "gpt-6-astra", effort: "low" },
+      spentBefore: 0,
+      spentAfter: 0,
+      blocked: false,
+    },
+    rows,
+  );
+  const result = JSON.parse(String(vi.mocked(writeFileSync).mock.calls[0][1]));
+  expect(result.heldOut).toMatchObject({
+    n: 196,
+    exact: 193 / 196,
+    within1: 193 / 196,
+    band: 193 / 196,
+    meanSigned: 0,
+    meanAbs: 0,
+    firstPass: { n: 196, exact: 0 },
+  });
+  expect(result.items).toHaveLength(196);
+  expect(result.items.slice(0, 3).map((r: Row) => r.flags.failed)).toEqual([
+    true,
+    true,
+    true,
+  ]);
+  expect(result.items[2].error).toBe("No marking result");
   vi.restoreAllMocks();
 });
