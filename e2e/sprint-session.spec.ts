@@ -93,7 +93,7 @@ test.describe("Sprint session", () => {
       await expect(page).toHaveURL(new RegExp(`/student/sprint/${id}$`));
       await pick(page, "B");
       await page.getByRole("button", { name: "Next question" }).click();
-      await expect(page.getByText(/^Question 2 ·/)).toBeVisible();
+      await expect(page.getByText(/^Question 3 ·/)).toBeVisible();
       await page
         .getByRole("button", { name: "Finish", exact: true })
         .first()

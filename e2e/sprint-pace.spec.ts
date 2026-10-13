@@ -63,6 +63,54 @@ for (const width of [390, 1280]) {
       expect(data!.config.on_timeout).toBe("overtime");
       expect(data!.config).not.toHaveProperty("pace");
     });
+    test("empty pool and count errors preserve pace settings", async ({
+      page,
+    }) => {
+      let fail = false;
+      await page.route("**/rest/v1/rpc/sprint_pool", async (route) => {
+        await route.fulfill({
+          status: fail ? 503 : 200,
+          contentType: "application/json",
+          body: JSON.stringify(
+            fail
+              ? { message: "Synthetic count error" }
+              : {
+                  questions: 0,
+                  marks: 0,
+                  any: 0,
+                  new: 0,
+                  mistakes: 0,
+                  flagged: 0,
+                  topics: {},
+                  subtopics: {},
+                  all_subtopics: 0,
+                  verbs: {},
+                  difficulty: {},
+                  all_years: 0,
+                  years: [2018, 2025],
+                  trial: false,
+                },
+          ),
+        });
+      });
+      await page.goto("/student/sprint?type=mcq&size=5");
+      await expect(
+        page.getByRole("heading", { name: "No questions match" }),
+      ).toBeVisible();
+      await timerStep(page);
+      const multis = page.getByLabel("Multis: minutes per question");
+      await multis.fill("2");
+      await expect(
+        page.getByRole("button", { name: /^Start (sprint|with)/ }),
+      ).toBeDisabled();
+      fail = true;
+      await multis.fill("3");
+      await expect(
+        page.getByText("Couldn't count matching questions."),
+      ).toBeVisible();
+      await expect(multis).toHaveValue("3");
+    });
+
     test("short timer uses actual marks; untimed hides pace", async ({
       page,
     }) => {

@@ -27,9 +27,9 @@ Scripts run with `npx tsx --conditions=react-server --env-file=.env.local script
 ## Quality commands
 
 ```bash
-npm run check       # formatting, linting, types, and unit tests
-npm run test:e2e    # Playwright (set PORT to change the dev server port)
-npm run build
+Q_MIN_GB=3 Q_SLOTS=1 q-run npm run check # formatting, linting, types, unit tests
+Q_MIN_GB=3 Q_SLOTS=1 q-run npm run test:e2e # Playwright; PORT changes server port
+Q_MIN_GB=3 Q_SLOTS=1 q-run npm run build
 ```
 
 Topic Sprint timers notify with a sound and an overtime banner; students always finish manually, including resumed legacy sessions.
@@ -37,3 +37,5 @@ Topic Sprint timers notify with a sound and an overtime banner; students always 
 Sprint pace defaults to 1 min per multi and 1.5 min per short-answer mark, both editable (0.25–10). Setup shows an estimate; the saved timer uses the actual selected questions. Apply migration `0039_sprint_pace.sql` before deploying these controls. The five-short-answer quick start estimates about 23 minutes.
 
 Flag for review sits in the bottom answer actions alongside Check answer; flags still persist in the question booklet.
+
+Use Node 22 (`nvm use`). Local checks need `NEXT_PUBLIC_APP_URL` set; authenticated Playwright tests additionally use synthetic `STUDENT_EMAIL` / `STUDENT_PASSWORD` and the Supabase settings from `.env.local`. Never commit credentials.
