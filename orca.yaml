@@ -1,0 +1,12 @@
+# Orca worktree setup (https://www.onorca.dev/docs/model/worktrees).
+# .env.local is copied by .worktreeinclude; never commit it.
+scripts:
+  setup: |
+    cd "$ORCA_WORKTREE_PATH"
+    if [ ! -f .env.local ] && [ -f "$ORCA_ROOT_PATH/.env.local" ]; then
+      install -m 600 "$ORCA_ROOT_PATH/.env.local" .env.local
+    fi
+    if [ ! -d node_modules ]; then
+      if command -v q-run >/dev/null; then Q=q-run; else Q=; fi
+      $Q npm ci --prefer-offline --no-audit --no-fund
+    fi
