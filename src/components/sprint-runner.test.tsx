@@ -401,6 +401,17 @@ it("locks the written answer while its single check is running", async () => {
   expect(screen.getByRole("textbox", { name: "Your answer" })).toBeDisabled();
 });
 
+it("allows Next during checking but disables another check until it finishes", async () => {
+  mocks.fetch.mockReturnValue(new Promise(() => {}));
+  vi.stubGlobal("fetch", mocks.fetch);
+  show([attempt, nextAttempt]);
+  fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+  await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(1));
+  fireEvent.click(screen.getByRole("button", { name: "Next question" }));
+  await waitFor(() => expect(screen.getByText(/Question 2 ·/)).toBeVisible());
+  expect(screen.getByRole("button", { name: "Check answer" })).toBeDisabled();
+});
+
 it("a failed manual finish keeps the saved answer editable and allows retry", async () => {
   vi.spyOn(window, "scrollTo").mockImplementation(() => {});
   mocks.fetch.mockResolvedValue({

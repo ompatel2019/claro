@@ -267,7 +267,7 @@ export function SprintRunner({
     !!a && ["pending", "transcribed"].includes(a.status) && checking !== a.id;
   const answerKey =
     checkMode && a?.status === "marked" ? a.feedback?.correct_index : null;
-  const needsCheck = checkMode && editable && answered(a) && checking !== a.id;
+  const needsCheck = checkMode && editable && answered(a);
   async function check() {
     if (!checkMode || checking || busy || !editable || !answered(a)) return;
     const id = a.id;
@@ -599,7 +599,7 @@ export function SprintRunner({
               explanation={explanations[a.id]}
               checking={checking === a.id}
               highlight={needsCheck}
-              canCheck={editable && answered(a) && !busy && checking !== a.id}
+              canCheck={editable && answered(a) && !busy && !checking}
               onCheck={() => void check()}
             />
           )}
