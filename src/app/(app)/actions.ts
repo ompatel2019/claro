@@ -36,8 +36,8 @@ const SprintConfig = z.object({
     .default("prefer_new"),
   order: z.enum(["exam", "shuffled"]).default("exam"),
   timed: z.boolean().default(true),
-  pace: z.enum(["hsc", "relaxed", "custom"]).default("hsc"),
-  custom_minutes: z.number().int().min(5).max(180).default(45),
+  short_min_per_mark: z.number().min(0.25).max(10).default(1.5),
+  mcq_min_per_q: z.number().min(0.25).max(10).default(1),
   on_timeout: z.literal("overtime").default("overtime"),
   feedback: z.enum(["end", "each"]).default("end"),
 });

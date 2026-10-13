@@ -3,6 +3,8 @@ import {
   clampTarget,
   DEFAULTS,
   estimateMinutes,
+  validPace,
+  clampPace,
   filtersOn,
   fromParams,
   restore,
@@ -36,23 +38,60 @@ it("switching type resets size to that type's default and range", () => {
   expect(clampTarget(withMode(DEFAULTS, "mixed"), 3)).toBe(20);
 });
 
-it("estimates time at HSC, relaxed and custom pace", () => {
+it("estimates editable pace for each question type and untimed sessions", () => {
   expect(estimateMinutes(DEFAULTS)).toBe(20);
+  expect(estimateMinutes({ ...DEFAULTS, mcq_min_per_q: 2 })).toBe(40);
   expect(estimateMinutes(withMode(DEFAULTS, "short"))).toBe(45);
   expect(
-    estimateMinutes({ ...withMode(DEFAULTS, "short"), pace: "relaxed" }),
-  ).toBe(68);
+    estimateMinutes({ ...withMode(DEFAULTS, "short"), short_min_per_mark: 2 }),
+  ).toBe(60);
+  expect(
+    estimateMinutes(withSizeBy(withMode(DEFAULTS, "short"), "questions")),
+  ).toBe(23);
   expect(estimateMinutes({ ...DEFAULTS, mode: "extended", target: 2 })).toBe(
     70,
   );
-  // Mixed 45: 18 MC (18 min) + 27 short marks (40.5 min) + extended 35.
   expect(
-    estimateMinutes({ ...withMode(DEFAULTS, "mixed"), include_extended: true }),
-  ).toBe(94);
-  expect(
-    estimateMinutes({ ...DEFAULTS, pace: "custom", custom_minutes: 25 }),
-  ).toBe(25);
+    estimateMinutes({
+      ...withMode(DEFAULTS, "mixed"),
+      mcq_min_per_q: 2,
+      short_min_per_mark: 1,
+    }),
+  ).toBe(63);
   expect(estimateMinutes({ ...DEFAULTS, timed: false })).toBeNull();
+});
+it.each([0, -1, 11, NaN, Infinity, "2", null, undefined])(
+  "rejects invalid pace %s and restores defaults",
+  (value) => {
+    expect(validPace(value)).toBe(false);
+    const c = restore({
+      short_min_per_mark: value,
+      mcq_min_per_q: value,
+      pace: "custom",
+      custom_minutes: 100,
+    });
+    expect(c.short_min_per_mark).toBe(1.5);
+    expect(c.mcq_min_per_q).toBe(1);
+    expect(c).not.toHaveProperty("pace");
+    expect(c).not.toHaveProperty("custom_minutes");
+  },
+);
+it.each([0.25, 1, 1.5, 10])(
+  "keeps valid pace %s across restore and type changes",
+  (value) => {
+    expect(validPace(value)).toBe(true);
+    expect(
+      withMode(
+        restore({ short_min_per_mark: value, mcq_min_per_q: value }),
+        "short",
+      ).short_min_per_mark,
+    ).toBe(value);
+  },
+);
+it("clamps input pace at the boundaries", () => {
+  expect(clampPace(0)).toBe(0.25);
+  expect(clampPace(11)).toBe(10);
+  expect(clampPace(NaN)).toBe(1);
 });
 
 it("URL prefill wins and tolerates old subtopic links", () => {

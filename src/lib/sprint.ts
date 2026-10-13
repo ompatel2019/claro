@@ -19,8 +19,8 @@ export type SetupConfig = {
   history: History;
   order: "exam" | "shuffled";
   timed: boolean;
-  pace: "hsc" | "relaxed" | "custom";
-  custom_minutes: number;
+  short_min_per_mark: number;
+  mcq_min_per_q: number;
   on_timeout: "overtime";
   feedback: "end" | "each";
   /** Last size picked per "type:size_by", so switching type and back keeps it (setup only). */
@@ -76,8 +76,8 @@ export const DEFAULTS: SetupConfig = {
   history: "prefer_new",
   order: "exam",
   timed: true,
-  pace: "hsc",
-  custom_minutes: 45,
+  short_min_per_mark: 1.5,
+  mcq_min_per_q: 1,
   on_timeout: "overtime",
   feedback: "end",
 };
@@ -121,23 +121,28 @@ export function clampTarget(c: SetupConfig, n: number) {
   return Math.min(s.max, Math.max(s.min, Math.round(n)));
 }
 
-/** HSC pace: MC 1 min a question, short 1.5 min a mark, extended 35 min each. */
+/** Editable pace limits apply equally in setup, saved settings and the start action. */
+export const validPace = (n: unknown): n is number =>
+  typeof n === "number" && Number.isFinite(n) && n >= 0.25 && n <= 10;
+export const clampPace = (n: number) =>
+  Number.isFinite(n) ? Math.min(10, Math.max(0.25, n)) : 1;
+
+/** Setup estimate; the server uses the actual marks selected when starting. */
 export function estimateMinutes(c: SetupConfig): number | null {
   if (!c.timed) return null;
-  if (c.pace === "custom") return c.custom_minutes;
+  const mc = c.mcq_min_per_q;
+  const short = c.short_min_per_mark;
   const base =
     c.mode === "mcq"
-      ? c.target
+      ? mc * c.target
       : c.mode === "extended"
         ? 35 * c.target
         : c.mode === "short"
-          ? c.size_by === "marks"
-            ? 1.5 * c.target
-            : 1.5 * 3 * c.target // about 3 marks a question
-          : Math.round(c.target * 0.4) +
-            1.5 * (c.target - Math.round(c.target * 0.4)) +
+          ? short * c.target * (c.size_by === "marks" ? 1 : 3)
+          : mc * Math.round(c.target * 0.4) +
+            short * (c.target - Math.round(c.target * 0.4)) +
             (c.include_extended ? 35 : 0);
-  return Math.round(base * (c.pace === "relaxed" ? 1.5 : 1));
+  return Math.round(base);
 }
 
 /** Count of "More filters" in use, for the collapsed header. */
@@ -192,14 +197,26 @@ export function fromParams(
 /** Keeps only known keys with valid values, so an old or edited saved setup can't break the page. */
 export function restore(saved: unknown): SetupConfig {
   if (!saved || typeof saved !== "object") return DEFAULTS;
-  const s = saved as Partial<SetupConfig>;
+  const s = { ...saved } as Partial<SetupConfig> & Record<string, unknown>;
+  delete s.pace;
+  delete s.custom_minutes;
   const mode = s.mode && s.mode in modes ? s.mode : DEFAULTS.mode;
   const sizes =
     s.sizes && typeof s.sizes === "object" && !Array.isArray(s.sizes)
       ? s.sizes
       : undefined;
   let c = withMode(
-    { ...DEFAULTS, ...s, mode, sizes, on_timeout: "overtime" },
+    {
+      ...DEFAULTS,
+      ...s,
+      mode,
+      sizes,
+      on_timeout: "overtime",
+      short_min_per_mark: validPace(s.short_min_per_mark)
+        ? s.short_min_per_mark
+        : 1.5,
+      mcq_min_per_q: validPace(s.mcq_min_per_q) ? s.mcq_min_per_q : 1,
+    },
     mode,
   );
   if (s.size_by && SIZES[`${mode}:${s.size_by}`]) c = withSizeBy(c, s.size_by);

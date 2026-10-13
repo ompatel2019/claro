@@ -8,6 +8,8 @@ import {
   clampTarget,
   DEFAULTS,
   estimateMinutes,
+  validPace,
+  clampPace,
   filtersOn,
   fromParams,
   HISTORY_LABELS,
@@ -606,64 +608,36 @@ export function SprintSetup({
             </label>
             {c.timed && (
               <>
-                <Choice
-                  label="Pace"
-                  value={c.pace}
-                  onChange={(pace) => set({ pace })}
-                  options={[
-                    ["hsc", "HSC pace"],
-                    ["relaxed", "Relaxed (1.5× time)"],
-                    ["custom", "Custom"],
-                  ]}
-                />
-                {c.pace === "custom" && (
-                  <div className="flex items-center gap-2 text-sm">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      aria-label="5 minutes less"
-                      onClick={() =>
-                        set({
-                          custom_minutes: Math.max(5, c.custom_minutes - 5),
-                        })
-                      }
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {(
+                    [
+                      ["short_min_per_mark", "Shorts: minutes per mark"],
+                      ["mcq_min_per_q", "Multis: minutes per question"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label
+                      key={key}
+                      className="grid gap-1.5 text-sm font-medium"
                     >
-                      <Minus />
-                    </Button>
-                    <Input
-                      aria-label="Minutes"
-                      inputMode="numeric"
-                      className="w-16 text-center tabular-nums"
-                      value={c.custom_minutes}
-                      onChange={(e) =>
-                        /^\d*$/.test(e.target.value) &&
-                        set({ custom_minutes: Number(e.target.value) || 0 })
-                      }
-                      onBlur={() =>
-                        set({
-                          custom_minutes: Math.min(
-                            180,
-                            Math.max(5, c.custom_minutes),
-                          ),
-                        })
-                      }
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      aria-label="5 minutes more"
-                      onClick={() =>
-                        set({
-                          custom_minutes: Math.min(180, c.custom_minutes + 5),
-                        })
-                      }
-                    >
-                      <Plus />
-                    </Button>
-                    minutes (5–180)
-                  </div>
+                      {label}
+                      <Input
+                        type="number"
+                        min={0.25}
+                        max={10}
+                        step={0.25}
+                        value={c[key] || ""}
+                        aria-invalid={!validPace(c[key])}
+                        onChange={(e) => set({ [key]: Number(e.target.value) })}
+                        onBlur={() => set({ [key]: clampPace(c[key]) })}
+                      />
+                    </label>
+                  ))}
+                </div>
+                {(!validPace(c.short_min_per_mark) ||
+                  !validPace(c.mcq_min_per_q)) && (
+                  <p role="alert" className="text-destructive text-sm">
+                    Use a pace between 0.25 and 10 minutes.
+                  </p>
                 )}
                 <p className="text-muted-foreground text-xs">≈ {minutes} min</p>
                 <p className="text-muted-foreground text-xs">
@@ -736,7 +710,16 @@ export function SprintSetup({
           <Button type="button" variant="ghost" onClick={() => setC(DEFAULTS)}>
             Reset
           </Button>
-          <Button type="submit" disabled={pending || pool?.questions === 0}>
+          <Button
+            type="submit"
+            disabled={
+              pending ||
+              pool?.questions === 0 ||
+              (c.timed &&
+                (!validPace(c.short_min_per_mark) ||
+                  !validPace(c.mcq_min_per_q)))
+            }
+          >
             {pending
               ? "Building…"
               : shortfall
@@ -794,11 +777,9 @@ function Chip({
 const QUICK = [
   { label: "20 MC questions · 20 min", config: withMode(DEFAULTS, "mcq") },
   {
-    label: "5 short answers · 45 min",
+    label: "5 short answers · about 23 min",
     config: {
       ...withSizeBy(withMode(DEFAULTS, "short"), "questions"),
-      pace: "custom" as const,
-      custom_minutes: 45,
     },
   },
 ];
