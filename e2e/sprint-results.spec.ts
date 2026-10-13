@@ -1,5 +1,11 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
-import { cleanupSessions, finish, pick, signIn } from "./helpers";
+import {
+  cleanupSessions,
+  finish,
+  pick,
+  reviewSprintSetup,
+  signIn,
+} from "./helpers";
 
 const noOverflow = (page: Page) =>
   page.evaluate(
@@ -40,6 +46,7 @@ test.describe("Sprint results", () => {
         page.getByRole("button", { name: /^Start (sprint|with)/ }),
       );
     }
+    await reviewSprintSetup(page);
     await page.getByRole("button", { name: /^Start (sprint|with)/ }).click();
     await expect(page).toHaveURL(/\/student\/sprint\/[^/]+$/);
     ids.push(page.url().split("/").at(-1)!);

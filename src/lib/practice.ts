@@ -15,7 +15,7 @@ export type Topic = {
 };
 /** sessions.config for a sprint (§3.2). time_limit_min is the pre-§3.2 shape. */
 export type SprintConfig = {
-  mode: Mode;
+  mode: Mode | "extended";
   topics: string[];
   subtopics?: string[];
   time_limit_s?: number | null;

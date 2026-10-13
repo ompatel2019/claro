@@ -4,6 +4,7 @@ import {
   expectNoOverlap,
   expectStackedBelow,
   signIn,
+  reviewSprintSetup,
 } from "./helpers";
 
 test.describe("Topic Sprint setup", () => {
@@ -13,7 +14,7 @@ test.describe("Topic Sprint setup", () => {
     await cleanupSessions(ids);
   });
   test.beforeEach(async ({ page }) => {
-    await signIn(page);
+    await signIn(page, "/student/sprint");
   });
 
   test("400px controls clear feedback and the sticky summary at page end", async ({
@@ -47,6 +48,7 @@ test.describe("Topic Sprint setup", () => {
       bar.getByRole("button", { name: "Reset", exact: true }),
     );
     await expectStackedBelow(summary, start);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
     const chip = page.getByRole("button", {
       name: /^National and global context for environmental management ·/,
     });
@@ -76,7 +78,8 @@ test.describe("Topic Sprint setup", () => {
     );
     await expect(topic).toBeInViewport({ ratio: 1 });
     await expectNoOverlap(bar, topic);
-    await page.getByRole("button", { name: "More filters" }).click();
+    await reviewSprintSetup(page);
+    await page.getByRole("button", { name: "Advanced" }).click();
     await page.evaluate(() =>
       window.scrollTo(0, document.documentElement.scrollHeight),
     );
@@ -101,9 +104,7 @@ test.describe("Topic Sprint setup", () => {
     await page
       .getByRole("button", { name: "Short answer", exact: true })
       .click();
-    await expect(page.getByRole("textbox", { name: "Marks" })).toHaveValue(
-      "30",
-    );
+    await page.getByRole("button", { name: "Next", exact: true }).click();
     await page.getByRole("button", { name: /^Economic Issues/ }).click();
     const subs = page.getByRole("group", { name: "Economic Issues subtopics" });
     await subs.getByRole("button", { name: /^Inflation · \d+$/ }).click();
@@ -126,10 +127,11 @@ test.describe("Topic Sprint setup", () => {
     await expect(
       page.getByRole("button", { name: /^Economic Policies/ }),
     ).toHaveAttribute("aria-pressed", "false");
-    await page.getByRole("button", { name: "More filters" }).click();
+    await reviewSprintSetup(page);
+    await page.getByRole("button", { name: "Advanced" }).click();
     await page.getByRole("button", { name: "Last 5 years" }).click();
     await expect(page.getByText("1 filter on")).toBeVisible();
-    await page.getByRole("radio", { name: /^Relaxed/ }).click();
+    await page.getByLabel("Shorts: minutes per mark").fill("2.25");
     await expect(page.getByText("≈ 68 min")).toBeVisible();
     await page.getByRole("switch").last().click();
     await expect(bar).toContainText("Untimed");
@@ -150,7 +152,8 @@ test.describe("Topic Sprint setup", () => {
     const count = async () =>
       Number((await match.textContent())!.match(/^(\d+)/)![1]);
     await expect(match).toBeVisible();
-    await page.getByRole("button", { name: "More filters" }).click();
+    await reviewSprintSetup(page);
+    await page.getByRole("button", { name: "Advanced" }).click();
     const source = page.getByRole("group", { name: "Source" });
     await expect(
       source.getByRole("button", { name: "HSC papers" }),
@@ -177,10 +180,13 @@ test.describe("Topic Sprint setup", () => {
   }) => {
     await page.goto("/student/sprint?type=mcq&sub=t3-inflation&size=5");
     await expect(page.getByText("Prefilled from a link.")).toBeVisible();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(page.getByRole("textbox", { name: "Questions" })).toHaveValue(
       "5",
     );
     await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
+    await reviewSprintSetup(page);
     await page.keyboard.press("Control+Enter");
     await expect(page).toHaveURL(/\/student\/sprint\/[^/]+$/);
     ids.push(page.url().split("/").at(-1)!);
@@ -201,7 +207,7 @@ test.describe("Topic Sprint setup", () => {
 
   test("no matches offers one-click fixes with counts", async ({ page }) => {
     await page.goto(
-      "/student/sprint?type=extended&sub=t3-external-stability&history=flagged",
+      "/student/sprint?type=short&sub=t3-external-stability&history=flagged",
     );
     await expect(page.getByText("No questions match")).toBeVisible();
     await expect(page.getByRole("button", { name: /^Start/ })).toBeDisabled();
@@ -209,6 +215,8 @@ test.describe("Topic Sprint setup", () => {
       .getByRole("button", { name: /^Include seen questions \(\+\d+\)$/ })
       .click();
     await expect(page.getByText("No questions match")).toHaveCount(0);
+    await reviewSprintSetup(page);
+    await page.getByRole("button", { name: "Advanced" }).click();
     await expect(page.getByRole("radio", { name: /^Any/ })).toBeChecked();
   });
 
@@ -217,6 +225,7 @@ test.describe("Topic Sprint setup", () => {
   }) => {
     await page.goto("/practice?topics=t3");
     await expect(page).toHaveURL(/\/student\/sprint\?topics=t3$/);
+    await page.getByRole("button", { name: "Next", exact: true }).click();
     await expect(
       page.getByRole("button", { name: /^Economic Issues/ }),
     ).toHaveAttribute("aria-pressed", "true");

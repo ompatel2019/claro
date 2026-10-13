@@ -1,5 +1,11 @@
 import { expect, test } from "@playwright/test";
-import { adminClient, cleanupSessions, pick, signIn } from "./helpers";
+import {
+  adminClient,
+  cleanupSessions,
+  pick,
+  reviewSprintSetup,
+  signIn,
+} from "./helpers";
 
 test.describe("Sprint session", () => {
   test.skip(!process.env.STUDENT_EMAIL, "Needs a student account");
@@ -17,6 +23,7 @@ test.describe("Sprint session", () => {
   ) {
     await page.goto("/student/sprint?type=mcq&sub=t3-inflation&size=5");
     await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
+    await reviewSprintSetup(page);
     for (const name of options) await page.getByRole("radio", { name }).click();
     await page.getByRole("button", { name: /^Start (sprint|with)/ }).click();
     await expect(page).toHaveURL(/\/student\/sprint\/[^/]+$/);

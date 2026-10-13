@@ -41,22 +41,39 @@ async function signInAs(
   email: string,
   password: string,
   destination: RegExp,
+  nextPath?: string,
 ) {
-  await page.goto("/sign-in");
+  await page.goto(
+    nextPath ? `/sign-in?next=${encodeURIComponent(nextPath)}` : "/sign-in",
+  );
+  if (destination.test(new URL(page.url()).pathname)) return;
+  // Wait for React to attach the form handlers before filling a cold dev page.
+  await expect
+    .poll(
+      () =>
+        page
+          .getByLabel("Email")
+          .evaluate((element) =>
+            Object.keys(element).some((key) => key.startsWith("__reactProps$")),
+          ),
+      { timeout: 30_000 },
+    )
+    .toBe(true);
   await expect(async () => {
     if (destination.test(new URL(page.url()).pathname)) return;
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(password);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page).toHaveURL(destination, { timeout: 5000 });
+    await expect(page).toHaveURL(destination, { timeout: 15_000 });
   }).toPass({ timeout: 60000 });
 }
-export async function signIn(page: Page) {
+export async function signIn(page: Page, nextPath?: "/student/sprint") {
   await signInAs(
     page,
     process.env.STUDENT_EMAIL!,
     process.env.STUDENT_PASSWORD!,
-    /\/student$/,
+    nextPath ? /\/student\/sprint$/ : /\/student$/,
+    nextPath,
   );
 }
 /** Signs in with the admin account and waits for hydration when submitting. */
@@ -87,13 +104,18 @@ export async function cleanupSessions(ids: string[]) {
 const TYPES: Record<string, string> = {
   "Multiple choice": "mcq",
   "Short answer": "short",
-  "Extended response": "extended",
   Mixed: "mixed",
 };
+/** Reviews every setup step, preserving URL-prefilled settings. */
+export async function reviewSprintSetup(page: Page) {
+  const next = page.getByRole("button", { name: "Next", exact: true });
+  while (await next.count()) await next.click();
+}
 /** Starts a sprint of one type on Inflation through the §3.2 setup page. */
 export async function start(page: Page, mode: string, ids: string[]) {
   await page.goto(`/student/sprint?type=${TYPES[mode]}&sub=t3-inflation`);
   await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
+  await reviewSprintSetup(page);
   await page.getByRole("button", { name: /^Start (sprint|with)/ }).click();
   await expect(page).toHaveURL(/\/student\/sprint\/[^/]+$/);
   const id = page.url().split("/").at(-1)!;

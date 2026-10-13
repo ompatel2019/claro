@@ -42,9 +42,12 @@ Use Node 22 (`nvm use`). Local checks need `NEXT_PUBLIC_APP_URL` set; authentica
 
 Topic sprints offer Multiple choice, Short answer and Mixed (MC + shorts). Essays
 remain available in Mark my answer and existing results; they are excluded from
-new sprints, including legacy saved setups. Apply `0039_sprints_no_essays.sql`.
+new sprints, including legacy saved setups. Apply `0040_sprints_no_essays.sql`.
 Sprint regression coverage: `src/lib/sprint.test.ts`,
 `src/app/(app)/sprint-actions.test.ts`, `e2e/sprint-feedback.spec.ts` (mobile/desktop).
 Use `Q_MIN_GB=3 Q_SLOTS=1 q-run` for checks and Playwright on the shared box.
 Questions always run in exam order: MC first, then short answers. Existing
-shuffled sprints resume in the same grouping. Apply `0040_sprints_exam_order.sql`.
+shuffled sprints resume in the same grouping. Apply `0041_sprints_exam_order.sql`.
+Setup is a four-step wizard (question type → topics → size → timer/feedback).
+The summary stays visible; Start and ⌘/Ctrl+Enter work on the last step. Back keeps
+choices, Reset returns to step one, and Advanced holds history and extra filters.

@@ -6,10 +6,10 @@ import { createClient } from "@/utils/supabase/client";
 import { modes, type Mode, type Topic } from "@/lib/practice";
 import {
   clampTarget,
+  clampPace,
+  validPace,
   DEFAULTS,
   estimateMinutes,
-  validPace,
-  clampPace,
   filtersOn,
   fromParams,
   HISTORY_LABELS,
@@ -113,6 +113,7 @@ export function SprintSetup({
   topics: Topic[];
   params: Record<string, string | undefined>;
 }) {
+  const [step, setStep] = useState(0);
   const [c, setC] = useState<SetupConfig>(DEFAULTS);
   const [prefilled, setPrefilled] = useState<SetupConfig | null>(null);
   const [pool, setPool] = useState<Pool | null>(null);
@@ -159,12 +160,12 @@ export function SprintSetup({
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
-        form.current?.requestSubmit();
+        if (step === 3) form.current?.requestSubmit();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, []);
+  }, [step]);
 
   const set = (patch: Partial<SetupConfig>) =>
     setC((o) => ({ ...o, ...patch }));
@@ -232,419 +233,501 @@ export function SprintSetup({
           </button>
         </p>
       )}
+      <ol
+        aria-label="Sprint setup progress"
+        className="grid grid-cols-4 gap-2 text-xs"
+      >
+        {["Question type", "Topics", "Size", "Timer & feedback"].map(
+          (label, i) => (
+            <li
+              key={label}
+              aria-current={step === i ? "step" : undefined}
+              className={cn(
+                "border-t-2 pt-2",
+                i <= step
+                  ? "border-primary text-foreground"
+                  : "text-muted-foreground",
+              )}
+            >
+              <span className="block font-semibold">{i + 1}</span>
+              {label}
+            </li>
+          ),
+        )}
+      </ol>
+      <p role="status" className="text-muted-foreground text-sm">
+        Step {step + 1} of 4
+      </p>
       <Card>
         <CardContent className="space-y-7">
-          <Section title="Question type">
-            <ToggleGroup
-              aria-label="Question type"
-              variant="outline"
-              className="flex-wrap"
-              value={[c.mode]}
-              onValueChange={(v) => v[0] && setC(withMode(c, v[0] as Mode))}
-            >
-              {Object.entries(modes).map(([id, m]) => (
-                <ToggleGroupItem key={id} value={id}>
-                  {m.label}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </Section>
-
-          <Section
-            title="Topics"
-            hint="Up to 2. None selected practises the whole course."
-          >
-            <div className="grid gap-2 sm:grid-cols-2">
-              {parents.map((t) => {
-                const on = c.topics.includes(t.id);
-                return (
+          <div hidden={step !== 0}>
+            <Section title="Question type">
+              <div
+                role="group"
+                aria-label="Question type"
+                className="grid gap-3 sm:grid-cols-3"
+              >
+                {Object.entries(modes).map(([id, m]) => (
                   <button
-                    key={t.id}
+                    key={id}
                     type="button"
-                    aria-pressed={on}
-                    onClick={() => toggleTopic(t.id)}
+                    aria-label={m.label}
+                    aria-pressed={c.mode === id}
+                    onClick={() => {
+                      if (c.mode !== id) setC(withMode(c, id as Mode));
+                    }}
                     className={cn(
-                      "rounded-xl border p-3 text-left text-sm transition-colors",
-                      on ? "border-primary bg-accent" : "hover:bg-muted",
+                      "min-h-28 rounded-xl border p-4 text-left transition-colors",
+                      c.mode === id
+                        ? "border-primary bg-accent"
+                        : "hover:bg-muted",
                     )}
                   >
-                    <span className="block font-medium">{t.name}</span>
-                    <span className="text-muted-foreground text-xs tabular-nums">
-                      {n(pool?.topics[t.id] ?? (pool ? 0 : undefined))}{" "}
-                      questions
+                    <span className="block font-semibold">{m.label}</span>
+                    <span className="text-muted-foreground mt-2 block text-xs">
+                      {id === "mcq"
+                        ? "Choose from four options."
+                        : id === "short"
+                          ? "Practise written answers."
+                          : "Multiple choice, then short answers."}
                     </span>
                   </button>
-                );
-              })}
-            </div>
-            {limitHit && (
-              <p role="status" className="text-warning text-xs">
-                Up to 2 topics. Deselect one first.
-              </p>
-            )}
-          </Section>
-
-          {c.topics.length > 0 && (
+                ))}
+              </div>
+            </Section>
+          </div>
+          <div
+            hidden={step !== 1}
+            className={step === 1 ? "space-y-7" : undefined}
+          >
             <Section
-              title="Subtopics"
-              hint="None selected covers the whole topic."
+              title="Topics"
+              hint="Up to 2. None selected practises the whole course."
             >
-              {c.topics.map((p) => {
-                const subs = topics.filter((t) => t.parent_id === p);
-                const chosen = c.subtopics.filter((x) => x.startsWith(`${p}-`));
-                return (
-                  <div key={p} className="space-y-1.5">
-                    <p className="text-muted-foreground text-xs">{names[p]}</p>
+              <div className="grid gap-2 sm:grid-cols-2">
+                {parents.map((t) => {
+                  const on = c.topics.includes(t.id);
+                  return (
+                    <button
+                      key={t.id}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() => toggleTopic(t.id)}
+                      className={cn(
+                        "rounded-xl border p-3 text-left text-sm transition-colors",
+                        on ? "border-primary bg-accent" : "hover:bg-muted",
+                      )}
+                    >
+                      <span className="block font-medium">{t.name}</span>
+                      <span className="text-muted-foreground text-xs tabular-nums">
+                        {n(pool?.topics[t.id] ?? (pool ? 0 : undefined))}{" "}
+                        questions
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+              {limitHit && (
+                <p role="status" className="text-warning text-xs">
+                  Up to 2 topics. Deselect one first.
+                </p>
+              )}
+            </Section>
+
+            {c.topics.length > 0 && (
+              <Section
+                title="Subtopics"
+                hint="None selected covers the whole topic."
+              >
+                {c.topics.map((p) => {
+                  const subs = topics.filter((t) => t.parent_id === p);
+                  const chosen = c.subtopics.filter((x) =>
+                    x.startsWith(`${p}-`),
+                  );
+                  return (
+                    <div key={p} className="space-y-1.5">
+                      <p className="text-muted-foreground text-xs">
+                        {names[p]}
+                      </p>
+                      <div
+                        className="flex flex-wrap gap-1.5"
+                        role="group"
+                        aria-label={`${names[p]} subtopics`}
+                      >
+                        <Chip
+                          on={chosen.length === 0}
+                          onClick={() =>
+                            set({
+                              subtopics: c.subtopics.filter(
+                                (x) => !x.startsWith(`${p}-`),
+                              ),
+                            })
+                          }
+                        >
+                          All
+                        </Chip>
+                        {subs.map((t) => {
+                          const count = pool?.subtopics[t.id] ?? 0;
+                          return (
+                            <Chip
+                              key={t.id}
+                              on={c.subtopics.includes(t.id)}
+                              disabled={!!pool && count === 0}
+                              onClick={() =>
+                                set({ subtopics: toggle(c.subtopics, t.id) })
+                              }
+                            >
+                              {t.name} · {pool ? count : "–"}
+                            </Chip>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </Section>
+            )}
+          </div>
+          <div hidden={step !== 2}>
+            <Section title="Size">
+              {c.mode === "short" && (
+                <ToggleGroup
+                  aria-label="Size by"
+                  variant="outline"
+                  size="sm"
+                  value={[c.size_by]}
+                  onValueChange={(v) =>
+                    v[0] && setC(withSizeBy(c, v[0] as SetupConfig["size_by"]))
+                  }
+                >
+                  <ToggleGroupItem value="marks">Marks</ToggleGroupItem>
+                  <ToggleGroupItem value="questions">Questions</ToggleGroupItem>
+                </ToggleGroup>
+              )}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Decrease"
+                  onClick={() =>
+                    set({ target: clampTarget(c, c.target - s.step) })
+                  }
+                >
+                  <Minus />
+                </Button>
+                <Input
+                  aria-label={byMarks ? "Marks" : "Questions"}
+                  inputMode="numeric"
+                  className="w-16 text-center tabular-nums"
+                  value={c.target}
+                  onChange={(e) =>
+                    /^\d*$/.test(e.target.value) &&
+                    set({ target: Number(e.target.value) || 0 })
+                  }
+                  onBlur={() => set({ target: clampTarget(c, c.target) })}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  aria-label="Increase"
+                  onClick={() =>
+                    set({ target: clampTarget(c, c.target + s.step) })
+                  }
+                >
+                  <Plus />
+                </Button>
+                <span className="text-muted-foreground text-sm">
+                  {unit} ({s.min}–{s.max})
+                </span>
+                <div className="flex gap-1">
+                  {s.presets.map((p) => (
+                    <Chip
+                      key={p}
+                      on={c.target === p}
+                      onClick={() => set({ target: p })}
+                    >
+                      {p}
+                    </Chip>
+                  ))}
+                </div>
+              </div>
+            </Section>
+          </div>
+          <div
+            hidden={step !== 3}
+            className={step === 3 ? "space-y-7" : undefined}
+          >
+            <Collapsible>
+              <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-semibold">
+                <span>
+                  Advanced
+                  {filtersOn(c) > 0 && (
+                    <span className="text-muted-foreground ml-2 font-normal">
+                      {filtersOn(c)} {filtersOn(c) === 1 ? "filter" : "filters"}{" "}
+                      on
+                    </span>
+                  )}
+                </span>
+                <ChevronDown className="size-4" />
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-5 pt-4">
+                {c.mode === "short" || c.mode === "mixed" ? (
+                  <Section
+                    title="Difficulty (by marks)"
+                    hint="Written questions only."
+                  >
                     <div
                       className="flex flex-wrap gap-1.5"
                       role="group"
-                      aria-label={`${names[p]} subtopics`}
+                      aria-label="Difficulty"
                     >
-                      <Chip
-                        on={chosen.length === 0}
-                        onClick={() =>
-                          set({
-                            subtopics: c.subtopics.filter(
-                              (x) => !x.startsWith(`${p}-`),
-                            ),
-                          })
-                        }
-                      >
-                        All
-                      </Chip>
-                      {subs.map((t) => {
-                        const count = pool?.subtopics[t.id] ?? 0;
-                        return (
-                          <Chip
-                            key={t.id}
-                            on={c.subtopics.includes(t.id)}
-                            disabled={!!pool && count === 0}
-                            onClick={() =>
-                              set({ subtopics: toggle(c.subtopics, t.id) })
-                            }
-                          >
-                            {t.name} · {pool ? count : "–"}
-                          </Chip>
-                        );
-                      })}
-                    </div>
-                  </div>
-                );
-              })}
-            </Section>
-          )}
-
-          <Section title="Size">
-            {c.mode === "short" && (
-              <ToggleGroup
-                aria-label="Size by"
-                variant="outline"
-                size="sm"
-                value={[c.size_by]}
-                onValueChange={(v) =>
-                  v[0] && setC(withSizeBy(c, v[0] as SetupConfig["size_by"]))
-                }
-              >
-                <ToggleGroupItem value="marks">Marks</ToggleGroupItem>
-                <ToggleGroupItem value="questions">Questions</ToggleGroupItem>
-              </ToggleGroup>
-            )}
-            <div className="flex flex-wrap items-center gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label="Decrease"
-                onClick={() =>
-                  set({ target: clampTarget(c, c.target - s.step) })
-                }
-              >
-                <Minus />
-              </Button>
-              <Input
-                aria-label={byMarks ? "Marks" : "Questions"}
-                inputMode="numeric"
-                className="w-16 text-center tabular-nums"
-                value={c.target}
-                onChange={(e) =>
-                  /^\d*$/.test(e.target.value) &&
-                  set({ target: Number(e.target.value) || 0 })
-                }
-                onBlur={() => set({ target: clampTarget(c, c.target) })}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                aria-label="Increase"
-                onClick={() =>
-                  set({ target: clampTarget(c, c.target + s.step) })
-                }
-              >
-                <Plus />
-              </Button>
-              <span className="text-muted-foreground text-sm">
-                {unit} ({s.min}–{s.max})
-              </span>
-              <div className="flex gap-1">
-                {s.presets.map((p) => (
-                  <Chip
-                    key={p}
-                    on={c.target === p}
-                    onClick={() => set({ target: p })}
-                  >
-                    {p}
-                  </Chip>
-                ))}
-              </div>
-            </div>
-          </Section>
-
-          <Collapsible>
-            <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-semibold">
-              <span>
-                More filters
-                {filtersOn(c) > 0 && (
-                  <span className="text-muted-foreground ml-2 font-normal">
-                    {filtersOn(c)} {filtersOn(c) === 1 ? "filter" : "filters"}{" "}
-                    on
-                  </span>
-                )}
-              </span>
-              <ChevronDown className="size-4" />
-            </CollapsibleTrigger>
-            <CollapsibleContent className="space-y-5 pt-4">
-              {c.mode === "short" || c.mode === "mixed" ? (
-                <Section
-                  title="Difficulty (by marks)"
-                  hint="Written questions only."
-                >
-                  <div
-                    className="flex flex-wrap gap-1.5"
-                    role="group"
-                    aria-label="Difficulty"
-                  >
-                    {DIFFICULTY.map(([d, label]) => (
-                      <Chip
-                        key={d}
-                        on={c.difficulty.includes(d)}
-                        onClick={() =>
-                          set({ difficulty: toggle(c.difficulty, d) })
-                        }
-                      >
-                        {label} ·{" "}
-                        {n(pool?.difficulty[d] ?? (pool ? 0 : undefined))}
-                      </Chip>
-                    ))}
-                  </div>
-                </Section>
-              ) : null}
-              {written && pool && Object.keys(pool.verbs).length > 0 && (
-                <Section title="Directive verb">
-                  <div
-                    className="flex flex-wrap gap-1.5"
-                    role="group"
-                    aria-label="Directive verb"
-                  >
-                    {Object.entries(pool.verbs)
-                      .sort((a, b) => b[1] - a[1])
-                      .map(([v, k]) => (
+                      {DIFFICULTY.map(([d, label]) => (
                         <Chip
-                          key={v}
-                          on={c.verbs.includes(v)}
-                          onClick={() => set({ verbs: toggle(c.verbs, v) })}
+                          key={d}
+                          on={c.difficulty.includes(d)}
+                          onClick={() =>
+                            set({ difficulty: toggle(c.difficulty, d) })
+                          }
                         >
-                          {v} · {k}
+                          {label} ·{" "}
+                          {n(pool?.difficulty[d] ?? (pool ? 0 : undefined))}
                         </Chip>
                       ))}
-                  </div>
-                </Section>
-              )}
-              {years && (
-                <Section title="Years">
-                  <div className="flex flex-wrap items-center gap-2 text-sm">
-                    {(["year_from", "year_to"] as const).map((k, i) => (
-                      <Select
-                        key={k}
-                        value={String(c[k] ?? years[i])}
-                        onValueChange={(v) => {
-                          const y = {
-                            year_from: c.year_from ?? years[0],
-                            year_to: c.year_to ?? years[1],
-                            [k]: Number(v),
-                          };
-                          // From ≤ To: swap rather than reject.
-                          const [from, to] = [y.year_from, y.year_to].sort();
-                          set({ year_from: from, year_to: to });
-                        }}
-                      >
-                        <SelectTrigger
-                          aria-label={i ? "To year" : "From year"}
-                          className="w-24"
-                        >
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {yearList.map((y) => (
-                            <SelectItem key={y} value={String(y)}>
-                              {y}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ))}
-                    <button
-                      type="button"
-                      className="underline"
-                      onClick={() =>
-                        set({ year_from: years[1] - 4, year_to: years[1] })
-                      }
+                    </div>
+                  </Section>
+                ) : null}
+                {written && pool && Object.keys(pool.verbs).length > 0 && (
+                  <Section title="Directive verb">
+                    <div
+                      className="flex flex-wrap gap-1.5"
+                      role="group"
+                      aria-label="Directive verb"
                     >
-                      Last 5 years
-                    </button>
-                  </div>
+                      {Object.entries(pool.verbs)
+                        .sort((a, b) => b[1] - a[1])
+                        .map(([v, k]) => (
+                          <Chip
+                            key={v}
+                            on={c.verbs.includes(v)}
+                            onClick={() => set({ verbs: toggle(c.verbs, v) })}
+                          >
+                            {v} · {k}
+                          </Chip>
+                        ))}
+                    </div>
+                  </Section>
+                )}
+                {years && (
+                  <Section title="Years">
+                    <div className="flex flex-wrap items-center gap-2 text-sm">
+                      {(["year_from", "year_to"] as const).map((k, i) => (
+                        <Select
+                          key={k}
+                          value={String(c[k] ?? years[i])}
+                          onValueChange={(v) => {
+                            const y = {
+                              year_from: c.year_from ?? years[0],
+                              year_to: c.year_to ?? years[1],
+                              [k]: Number(v),
+                            };
+                            // From ≤ To: swap rather than reject.
+                            const [from, to] = [y.year_from, y.year_to].sort();
+                            set({ year_from: from, year_to: to });
+                          }}
+                        >
+                          <SelectTrigger
+                            aria-label={i ? "To year" : "From year"}
+                            className="w-24"
+                          >
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {yearList.map((y) => (
+                              <SelectItem key={y} value={String(y)}>
+                                {y}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      ))}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() =>
+                          set({ year_from: years[1] - 4, year_to: years[1] })
+                        }
+                      >
+                        Last 5 years
+                      </button>
+                    </div>
+                  </Section>
+                )}
+                {pool?.trial && (
+                  <Section title="Source">
+                    <div
+                      className="flex gap-1.5"
+                      role="group"
+                      aria-label="Source"
+                    >
+                      {(
+                        [
+                          ["nesa", "HSC papers"],
+                          ["a1", "Practice"],
+                        ] as const
+                      ).map(([o, label]) => (
+                        <Chip
+                          key={o}
+                          on={c.origins.length === 0 || c.origins.includes(o)}
+                          onClick={() => {
+                            // Empty = both; never deselect the last one.
+                            const next = toggle<"nesa" | "a1">(
+                              c.origins.length ? c.origins : ["nesa", "a1"],
+                              o,
+                            );
+                            if (next.length)
+                              set({ origins: next.length === 2 ? [] : next });
+                          }}
+                        >
+                          {label}
+                        </Chip>
+                      ))}
+                    </div>
+                  </Section>
+                )}
+                <Section
+                  title="Question history"
+                  hint="Seen means answered in a finished sprint."
+                >
+                  <Choice<History>
+                    label="Question history"
+                    value={c.history}
+                    onChange={(history) => set({ history })}
+                    options={(
+                      [
+                        ["prefer_new", "any"],
+                        ["new_only", "new"],
+                        ["mistakes", "mistakes"],
+                        ["flagged", "flagged"],
+                        ["any", "any"],
+                      ] as const
+                    ).map(([h, k]) => [
+                      h,
+                      <>
+                        {HISTORY_LABELS[h]}
+                        <span className="text-muted-foreground tabular-nums">
+                          {" "}
+                          · {n(pool?.[k])}
+                        </span>
+                      </>,
+                      !!pool &&
+                        h !== "prefer_new" &&
+                        h !== "any" &&
+                        pool[k] === 0 &&
+                        c.history !== h,
+                    ])}
+                  />
                 </Section>
-              )}
-              {pool?.trial && (
-                <Section title="Source">
-                  <div
-                    className="flex gap-1.5"
-                    role="group"
-                    aria-label="Source"
-                  >
+              </CollapsibleContent>
+            </Collapsible>
+
+            <Section title="Timer">
+              <label className="flex items-center gap-2 text-sm">
+                <Switch
+                  checked={c.timed}
+                  onCheckedChange={(timed) =>
+                    set({
+                      timed,
+                      ...(!timed
+                        ? {
+                            short_min_per_mark: clampPace(c.short_min_per_mark),
+                            mcq_min_per_q: clampPace(c.mcq_min_per_q),
+                          }
+                        : {}),
+                    })
+                  }
+                />
+                Timed
+              </label>
+              {c.timed && (
+                <>
+                  <div className="grid gap-3 sm:grid-cols-2">
                     {(
                       [
-                        ["nesa", "HSC papers"],
-                        ["a1", "Practice"],
+                        ["short_min_per_mark", "Shorts: minutes per mark"],
+                        ["mcq_min_per_q", "Multis: minutes per question"],
                       ] as const
-                    ).map(([o, label]) => (
-                      <Chip
-                        key={o}
-                        on={c.origins.length === 0 || c.origins.includes(o)}
-                        onClick={() => {
-                          // Empty = both; never deselect the last one.
-                          const next = toggle<"nesa" | "a1">(
-                            c.origins.length ? c.origins : ["nesa", "a1"],
-                            o,
-                          );
-                          if (next.length)
-                            set({ origins: next.length === 2 ? [] : next });
-                        }}
+                    ).map(([key, label]) => (
+                      <label
+                        key={key}
+                        className="grid gap-1.5 text-sm font-medium"
                       >
                         {label}
-                      </Chip>
+                        <Input
+                          type="number"
+                          min={0.25}
+                          max={10}
+                          step={0.25}
+                          value={c[key] || ""}
+                          aria-invalid={!validPace(c[key])}
+                          onChange={(e) =>
+                            set({ [key]: Number(e.target.value) })
+                          }
+                          onBlur={() => set({ [key]: clampPace(c[key]) })}
+                        />
+                      </label>
                     ))}
                   </div>
-                </Section>
-              )}
-            </CollapsibleContent>
-          </Collapsible>
-
-          <Section
-            title="Question history"
-            hint="Seen means answered in a finished sprint."
-          >
-            <Choice<History>
-              label="Question history"
-              value={c.history}
-              onChange={(history) => set({ history })}
-              options={(
-                [
-                  ["prefer_new", "any"],
-                  ["new_only", "new"],
-                  ["mistakes", "mistakes"],
-                  ["flagged", "flagged"],
-                  ["any", "any"],
-                ] as const
-              ).map(([h, k]) => [
-                h,
-                <>
-                  {HISTORY_LABELS[h]}
-                  <span className="text-muted-foreground tabular-nums">
-                    {" "}
-                    · {n(pool?.[k])}
-                  </span>
-                </>,
-                !!pool &&
-                  h !== "prefer_new" &&
-                  h !== "any" &&
-                  pool[k] === 0 &&
-                  c.history !== h,
-              ])}
-            />
-          </Section>
-
-          <Section title="Timer">
-            <label className="flex items-center gap-2 text-sm">
-              <Switch
-                checked={c.timed}
-                onCheckedChange={(timed) =>
-                  set({
-                    timed,
-                    ...(!timed
-                      ? {
-                          short_min_per_mark: clampPace(c.short_min_per_mark),
-                          mcq_min_per_q: clampPace(c.mcq_min_per_q),
-                        }
-                      : {}),
-                  })
-                }
-              />
-              Timed
-            </label>
-            {c.timed && (
-              <>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {(
-                    [
-                      ["short_min_per_mark", "Shorts: minutes per mark"],
-                      ["mcq_min_per_q", "Multis: minutes per question"],
-                    ] as const
-                  ).map(([key, label]) => (
-                    <label
-                      key={key}
-                      className="grid gap-1.5 text-sm font-medium"
-                    >
-                      {label}
-                      <Input
-                        type="number"
-                        min={0.25}
-                        max={10}
-                        step={0.25}
-                        value={c[key] || ""}
-                        aria-invalid={!validPace(c[key])}
-                        onChange={(e) => set({ [key]: Number(e.target.value) })}
-                        onBlur={() => set({ [key]: clampPace(c[key]) })}
-                      />
-                    </label>
-                  ))}
-                </div>
-                {(!validPace(c.short_min_per_mark) ||
-                  !validPace(c.mcq_min_per_q)) && (
-                  <p role="alert" className="text-destructive text-sm">
-                    Use a pace between 0.25 and 10 minutes.
+                  {(!validPace(c.short_min_per_mark) ||
+                    !validPace(c.mcq_min_per_q)) && (
+                    <p role="alert" className="text-destructive text-sm">
+                      Use a pace between 0.25 and 10 minutes.
+                    </p>
+                  )}
+                  <p className="text-muted-foreground text-xs">
+                    ≈ {minutes} min
                   </p>
-                )}
-                <p className="text-muted-foreground text-xs">≈ {minutes} min</p>
-                <p className="text-muted-foreground text-xs">
-                  A sound and banner let you know when time is up. Keep working
-                  in overtime until you choose to finish.
-                </p>
-              </>
-            )}
-          </Section>
+                  <p className="text-muted-foreground text-xs">
+                    A sound and banner let you know when time is up. Keep
+                    working in overtime until you choose to finish.
+                  </p>
+                </>
+              )}
+            </Section>
 
-          <Section title="Feedback">
-            <Choice
-              label="Feedback"
-              value={c.feedback}
-              onChange={(feedback) => set({ feedback })}
-              options={[
-                ["end", "At the end (exam style)"],
-                ["each", "After each question (check as you go)"],
-              ]}
-            />
-          </Section>
+            <Section title="Feedback">
+              <Choice
+                label="Feedback"
+                value={c.feedback}
+                onChange={(feedback) => set({ feedback })}
+                options={[
+                  ["end", "At the end (exam style)"],
+                  ["each", "After each question (check as you go)"],
+                ]}
+              />
+            </Section>
+          </div>
+          <div className="flex items-center justify-between gap-3 border-t pt-4">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={step === 0}
+              onClick={() => setStep(step - 1)}
+            >
+              Back
+            </Button>
+            {step < 3 && (
+              <Button type="button" onClick={() => setStep(step + 1)}>
+                Next
+              </Button>
+            )}
+            {step === 3 && (
+              <p className="text-muted-foreground text-xs">
+                Ready? Start your sprint below.
+              </p>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -675,6 +758,16 @@ export function SprintSetup({
       <form
         ref={form}
         action={action}
+        onSubmit={(e) => {
+          if (
+            step !== 3 ||
+            pool?.questions === 0 ||
+            pending ||
+            (c.timed &&
+              (!validPace(c.short_min_per_mark) || !validPace(c.mcq_min_per_q)))
+          )
+            e.preventDefault();
+        }}
         // Sticky stays in flow, reserving its full height even when the summary wraps.
         className="bg-background/95 sticky bottom-4 z-30 rounded-2xl border backdrop-blur lg:bottom-24"
       >
@@ -693,12 +786,20 @@ export function SprintSetup({
                 : `${n(pool?.questions)} questions match · ${n(pool?.new)} new`}
             </p>
           </div>
-          <Button type="button" variant="ghost" onClick={() => setC(DEFAULTS)}>
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => {
+              setC(DEFAULTS);
+              setStep(0);
+            }}
+          >
             Reset
           </Button>
           <Button
             type="submit"
             disabled={
+              step !== 3 ||
               pending ||
               pool?.questions === 0 ||
               (c.timed &&
