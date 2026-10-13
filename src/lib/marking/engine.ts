@@ -44,9 +44,10 @@ export async function markWritten(
   userId: string | null,
   task?: string,
   config?: {
-    model: Model;
-    effort: "low" | "medium" | "high";
-    blind: boolean;
+    model?: Model;
+    effort?: "low" | "medium" | "high";
+    blind?: boolean;
+    sameQuestionExamples?: boolean;
     onUsage?: (usd: number) => void;
     onUnloggedUsage?: (usd: number) => void;
     signal?: AbortSignal;
@@ -121,7 +122,7 @@ export async function markWritten(
     return { grade, mark, criterion, validated: validation.ok };
   }
 
-  const examples = await bandExamples(q);
+  const examples = await bandExamples(q, config?.sameQuestionExamples);
   const passes = [
     pass(
       GradeSchema,

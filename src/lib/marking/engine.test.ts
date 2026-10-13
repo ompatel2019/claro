@@ -327,7 +327,7 @@ it("puts the question's band anchors in the grader, blind check and reconciler p
     .mockResolvedValueOnce(checkGrade(2))
     .mockResolvedValueOnce(checkGrade(4));
   await markWritten(q, "prices rise", "user");
-  expect(bandExamples).toHaveBeenCalledWith(q);
+  expect(bandExamples).toHaveBeenCalledWith(q, undefined);
   expect(mockedCall).toHaveBeenCalledTimes(3);
   for (const [{ messages }] of mockedCall.mock.calls)
     expect(messages[1].content).toContain(
@@ -1072,4 +1072,18 @@ it("stops configured eval corrections when the step signal aborts", async () => 
     }),
   ).rejects.toThrow("deadline");
   expect(mockedCall).toHaveBeenCalledTimes(1);
+});
+
+it("passes sameQuestionExamples=false to the example reader for every marking pass", async () => {
+  mockedCall
+    .mockResolvedValueOnce(grade)
+    .mockResolvedValueOnce(checkGrade(2))
+    .mockResolvedValueOnce(checkGrade(4));
+  await markWritten(q, "prices rise", null, "eval:test:mark", {
+    sameQuestionExamples: false,
+  });
+  expect(bandExamples).toHaveBeenCalledWith(q, false);
+  expect(mockedCall).toHaveBeenCalledTimes(3);
+  for (const [{ messages }] of mockedCall.mock.calls)
+    expect(messages[1].content).not.toContain("<marked_answer");
 });

@@ -52,3 +52,11 @@ it("reads the grader view for the question, which excludes test rows", async () 
   query.order.mockResolvedValue({ data: null, error: { message: "boom" } });
   await expect(bandExamples(q)).rejects.toThrow("marking examples: boom");
 });
+
+it("returns no anchors and skips the grader view when same-question examples are disabled", async () => {
+  query.from.mockClear();
+  expect(
+    await bandExamples({ id: "q", criteria } as MarkableQuestion, false),
+  ).toEqual([]);
+  expect(query.from).not.toHaveBeenCalled();
+});

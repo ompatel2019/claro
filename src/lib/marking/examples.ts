@@ -27,7 +27,11 @@ export function pickBandExamples(
 }
 
 /** Band anchors for a question. Reads only the grader view, which never holds split 'test' rows. */
-export async function bandExamples(q: MarkableQuestion) {
+export async function bandExamples(
+  q: MarkableQuestion,
+  sameQuestionExamples = true,
+) {
+  if (!sameQuestionExamples) return [];
   const { data, error } = await admin()
     .from("marking_examples_for_grader")
     .select("answer_text, tutor_mark")
