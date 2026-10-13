@@ -99,6 +99,7 @@ function show() {
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   localStorage.clear();
 });
@@ -212,4 +213,25 @@ it("keeps flagging locked for a checked answer", () => {
   expect(
     screen.getByRole("button", { name: "Flag for review" }),
   ).toBeDisabled();
+});
+
+it("a failed manual finish keeps the saved answer editable and allows retry", async () => {
+  vi.spyOn(window, "scrollTo").mockImplementation(() => {});
+  mocks.fetch.mockResolvedValue({
+    ok: false,
+    status: 503,
+    json: async () => ({ error: "Marking is paused. Try again." }),
+  });
+  vi.stubGlobal("fetch", mocks.fetch);
+  show();
+  fireEvent.click(screen.getByRole("button", { name: "Finish" }));
+  fireEvent.click(screen.getByRole("button", { name: "Finish and mark" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Marking is paused.",
+  );
+  expect(
+    screen.queryByRole("heading", { name: "Marking your answers" }),
+  ).not.toBeInTheDocument();
+  expect(screen.getByRole("radio", { name: /^Option A:/ })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Finish" })).toBeEnabled();
 });

@@ -129,6 +129,49 @@ test.describe("Sprint session", () => {
     });
   }
 
+  for (const width of [390, 1280]) {
+    test(`manual finish errors retain the saved answer at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 850 });
+      await page.route("**/api/sessions/*/finish", (route) =>
+        route.fulfill({
+          status: 500,
+          contentType: "application/json",
+          body: JSON.stringify({
+            error: "Could not finish your session. Try again.",
+          }),
+        }),
+      );
+      await setUp(page, []);
+      await pick(page, "A");
+      await page
+        .getByRole("button", { name: "Finish", exact: true })
+        .first()
+        .click();
+      await page
+        .getByRole("button", { name: "Finish and mark", exact: true })
+        .click();
+      await expect(
+        page
+          .getByRole("alert")
+          .filter({ hasText: "Could not finish your session" }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("radio", { name: /^Option A:/ }),
+      ).toBeChecked();
+      await pick(page, "B");
+      await page
+        .getByRole("button", { name: "Finish", exact: true })
+        .first()
+        .click();
+      await expect(
+        page.getByRole("dialog", { name: "Finish and mark?" }),
+      ).toBeVisible();
+      await page.getByRole("button", { name: "Keep working" }).click();
+    });
+  }
+
   test("old /practice session links redirect", async ({ page }) => {
     await page.goto(`/practice/${ids[0]}`);
     await expect(page).toHaveURL(/\/student\/sprint\/[^/]+(\/results)?$/);
