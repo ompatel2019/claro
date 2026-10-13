@@ -185,3 +185,7 @@ it("old essay setups fall back to MC and mixed setups discard essays", () => {
   );
   expect(fromParams({ type: "extended" }, DEFAULTS)?.mode).toBe("mcq");
 });
+
+it("legacy shuffled setups restore exam order", () => {
+  expect(restore({ ...DEFAULTS, order: "shuffled" }).order).toBe("exam");
+});

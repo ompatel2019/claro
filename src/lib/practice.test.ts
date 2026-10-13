@@ -118,3 +118,22 @@ describe("plural", () => {
     expect(plural(3, "category", "categories")).toBe("3 categories");
   });
 });
+
+it("exam order groups legacy shuffled attempts without changing their identities or source array", async () => {
+  const { examOrder } = await import("./practice");
+  const rows = [
+    { id: "short-2", position: 1, question: { type: "short" } },
+    { id: "mc-2", position: 4, question: { type: "mcq" } },
+    { id: "essay", position: 3, question: { type: "extended" } },
+    { id: "mc-1", position: 2, question: { type: "mcq" } },
+  ] as import("./practice").Attempt[];
+  expect(examOrder(rows).map((a) => a.id)).toEqual([
+    "mc-1",
+    "mc-2",
+    "short-2",
+    "essay",
+  ]);
+  expect(rows[0].id).toBe("short-2");
+  expect(examOrder([])).toEqual([]);
+  expect(examOrder([rows[0]])).toEqual([rows[0]]);
+});

@@ -33,7 +33,10 @@ const SprintConfig = z.object({
   history: z
     .enum(["prefer_new", "new_only", "mistakes", "flagged", "any"])
     .default("prefer_new"),
-  order: z.enum(["exam", "shuffled"]).default("exam"),
+  order: z
+    .enum(["exam", "shuffled"])
+    .default("exam")
+    .transform(() => "exam" as const),
   timed: z.boolean().default(true),
   short_min_per_mark: z.number().min(0.25).max(10).default(1.5),
   mcq_min_per_q: z.number().min(0.25).max(10).default(1),

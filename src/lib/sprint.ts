@@ -16,7 +16,7 @@ export type SetupConfig = {
   year_to: number | null;
   origins: ("nesa" | "a1")[];
   history: History;
-  order: "exam" | "shuffled";
+  order: "exam";
   timed: boolean;
   short_min_per_mark: number;
   mcq_min_per_q: number;
@@ -95,6 +95,7 @@ export function withMode(c: SetupConfig, mode: Mode): SetupConfig {
   return {
     ...c,
     mode,
+    order: "exam",
     size_by,
     sizes,
     target: sizeFor(sizes, `${mode}:${size_by}`),

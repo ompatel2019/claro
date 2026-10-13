@@ -99,3 +99,8 @@ it("defaults missing pace and reports an empty pool", async () => {
     }),
   });
 });
+
+it("old shuffled start requests are normalised to exam order", async () => {
+  await startSprint({}, form({ ...DEFAULTS, order: "shuffled" }));
+  expect(mocks.rpc.mock.calls[0][1].p_config.order).toBe("exam");
+});

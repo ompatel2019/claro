@@ -2,7 +2,12 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
-import { questionColumns, type Session, type Attempt } from "./practice";
+import {
+  examOrder,
+  questionColumns,
+  type Session,
+  type Attempt,
+} from "./practice";
 export async function loadSprint(id: string) {
   const profile = await requireProfile();
   const db = await createClient();
@@ -24,7 +29,7 @@ export async function loadSprint(id: string) {
   if (attemptError) throw new Error("Could not load your questions.");
   return {
     session: session as Session,
-    attempts: (attempts ?? []) as unknown as Attempt[],
+    attempts: examOrder((attempts ?? []) as unknown as Attempt[]),
     profile,
   };
 }

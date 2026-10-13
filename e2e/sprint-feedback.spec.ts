@@ -12,7 +12,7 @@ for (const width of [400, 1280]) {
     test.afterAll(async () => {
       await cleanupSessions(ids);
     });
-    test("S4: essays are absent, including legacy saved setups and links", async ({
+    test("S4/S6: essays are absent, including legacy saved setups and links", async ({
       page,
     }) => {
       await page.goto("/student/sprint");
@@ -33,6 +33,9 @@ for (const width of [400, 1280]) {
       await expect(
         page.getByText("Extended response", { exact: true }),
       ).toHaveCount(0);
+      await expect(
+        page.getByRole("radiogroup", { name: "Order", exact: true }),
+      ).toHaveCount(0);
       await page.getByRole("button", { name: "Mixed", exact: true }).click();
       await expect(page.getByText(/Include an extended/)).toHaveCount(0);
       await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
@@ -43,8 +46,9 @@ for (const width of [400, 1280]) {
       const db = adminClient()!;
       const { data, error } = await db
         .from("attempts")
-        .select("question:questions(type)")
-        .eq("session_id", id);
+        .select("position,question:questions(type)")
+        .eq("session_id", id)
+        .order("position");
       expect(error).toBeNull();
       expect(data!.length).toBeGreaterThan(0);
       expect(
@@ -53,6 +57,14 @@ for (const width of [400, 1280]) {
             (row.question as unknown as { type: string }).type !== "extended",
         ),
       ).toBe(true);
+      const types = data!.map(
+        (row) => (row.question as unknown as { type: string }).type,
+      );
+      expect(types).toEqual(
+        [...types].sort(
+          (a, b) => Number(a === "short") - Number(b === "short"),
+        ),
+      );
     });
   });
 }

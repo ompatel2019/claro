@@ -46,3 +46,5 @@ new sprints, including legacy saved setups. Apply `0039_sprints_no_essays.sql`.
 Sprint regression coverage: `src/lib/sprint.test.ts`,
 `src/app/(app)/sprint-actions.test.ts`, `e2e/sprint-feedback.spec.ts` (mobile/desktop).
 Use `Q_MIN_GB=3 Q_SLOTS=1 q-run` for checks and Playwright on the shared box.
+Questions always run in exam order: MC first, then short answers. Existing
+shuffled sprints resume in the same grouping. Apply `0040_sprints_exam_order.sql`.

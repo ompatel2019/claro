@@ -574,21 +574,6 @@ export function SprintSetup({
             />
           </Section>
 
-          <Section
-            title="Order"
-            hint="Questions are always chosen at random; this only sets the order."
-          >
-            <Choice
-              label="Order"
-              value={c.order}
-              onChange={(order) => set({ order })}
-              options={[
-                ["exam", "Exam order (multiple choice first, then by year)"],
-                ["shuffled", "Shuffled"],
-              ]}
-            />
-          </Section>
-
           <Section title="Timer">
             <label className="flex items-center gap-2 text-sm">
               <Switch

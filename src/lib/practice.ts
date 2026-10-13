@@ -186,3 +186,13 @@ export function highlightSegments(
 /** "1 term", "3 terms"; pass the plural when it isn't word + "s". */
 export const plural = (n: number, word: string, many = `${word}s`) =>
   `${n} ${n === 1 ? word : many}`;
+
+/** Legacy shuffled sessions also follow the booklet's MC, short, extended grouping. */
+export function examOrder(attempts: Attempt[]): Attempt[] {
+  const types = ["mcq", "short", "extended"];
+  return [...attempts].sort(
+    (a, b) =>
+      types.indexOf(a.question.type) - types.indexOf(b.question.type) ||
+      a.position - b.position,
+  );
+}
