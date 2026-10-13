@@ -2,11 +2,23 @@
 
 Eval = A1 set, 18 headline items (fm-1 and ei-4 excluded). Signed error: + = lenient. Marker anthropic/claude-sonnet-5.5 (OpenRouter); earlier runs used gpt-6.1-sol (Fast). Judge gpt-6-astra/low. Result files are in `src/lib/ai/eval/results/`. Runs marked dirty were made on an uncommitted change (the eval varied one setting), and the setting is recorded in the file.
 
+## Airo versions
+
+| Airo | Engine                             |
+| ---- | ---------------------------------- |
+| 1.0  | Single pass on Sol                 |
+| 2.0  | Blind second marker plus reconcile |
+| 2.1  | Band-element evidence prompt       |
+| 3.0  | Tutor band examples (shipped)      |
+| 3.1  | Plus tutor notes (dropped)         |
+| 4.0  | Sonnet 5.5 via OpenRouter          |
+| 4.1  | Plus the format retry (live)       |
+
 ## 10 Oct 2026: eval storage reads bypass the CDN cache
 
 Eval storage JSON reads use a fresh cache nonce, so a step never loads a stale copy of a run, lease or cancel marker (a stale run read made a production run's second step refuse to save). The run version guard is unchanged.
 
-## 9 Oct 2026: Sonnet 5.5 via OpenRouter + field-naming format retry
+## Airo 4.0 → 4.1 — 9 Oct 2026: Sonnet 5.5 via OpenRouter + field-naming format retry
 
 All three live marker passes now use `anthropic/claude-sonnet-5.5` (low / low / medium). Handwriting, flashcards and the judge are unchanged (ENGINE.md, Model). Compared with shipped Sol run 1211; Sonnet run 1415 was before the format retry:
 
@@ -25,7 +37,7 @@ Paired against 1211 (closer/further): A1 6/2, held-out 27/23. Held-out is a tie 
 
 To roll back to Sol, change one line: `MARKER.model = MODELS.strong` (or `MODELS.marker = "gpt-6.1-sol"`), then update the engine and price tests that assert `MODELS.marker` / the Sonnet marker.
 
-## 9 Oct 2026: band-anchored examples (A1 tutor-marked answers in the grader prompt)
+## Airo 3.0 / 3.1 — 9 Oct 2026: band-anchored examples (A1 tutor-marked answers in the grader prompt)
 
 Up to two tutor-marked answers per band from the same question, from the non-test view (ENGINE.md, Band anchors). The A1 18 questions have no examples, so their prompts are unchanged and their numbers move only by run noise. Held-out = 196 A1 mock answers (split `test`), marks only.
 
@@ -40,7 +52,7 @@ Up to two tutor-marked answers per band from the same question, from the non-tes
 
 The held-out gain is small: paired against 1159, 15 answers moved closer to the tutor's mark and 11 further away (170 unchanged), so +1 point exact is within run noise. The clearer effect is less leniency on 3–6 mark questions (signed +0.19 to +0.04 on 3-markers). Both engines over-mark weak answers and under-mark strong ones (tutor 0: about +0.75; tutor 4–5: about −0.7). Band equals exact on held-out because every A1 mock band is a single mark. Claro check 10/10 in every run. Shipped 1211; the tutor-notes trial was dropped (held-out exact −2.5 points against 1211).
 
-## 9 Oct 2026: band-descriptor element check (prompt)
+## Airo 2.1 — 9 Oct 2026: band-descriptor element check (prompt)
 
 Every element named in a band descriptor must be evidenced. Examples and evidence must be specific. Distinguish and compare need an explicit contrast. A key factual error rules out the top band. Between two bands, the lower one.
 Run 0940 (grade low, check low, reconcile medium):
@@ -52,15 +64,15 @@ Run 0940 (grade low, check low, reconcile medium):
 The reconciler settled 2 disagreements, both to Karan's mark. 0 went to review. Claro check: 10/10. fm-1: 1 (Karan 2). ei-4: 5 (Karan 3.5).
 Thinking-level trial, run 0951 (grade **medium**): the headline marks were identical. First pass alone: 27.8% exact vs 38.9% at low. 15.4 s vs 13.8 s per answer. Kept the grader at low.
 
-## 9 Oct 2026: blind second pass + reconcile, check result in attempts.check_status / mark_reviews
+## Airo 2.0 — 9 Oct 2026: blind second pass + reconcile, check result in attempts.check_status / mark_reviews
 
 Run 0920 (low / low / medium): the marks were the same as the baseline on every item. Exact 33.3%, within-1 88.9%, band 38.9%, signed +0.67, Pros 35.7%, Cons 31.8%, judge 4.33, $0.0149, 12.1 s. Blind check agreed on 94.4%.
 Thinking-level trial, run 0930 (check **medium**): within-1 fell to 83.3% (ep-5 was reconciled up to 5) with no other change. Kept the check at low.
 
-## 9 Oct 2026: §2.1 comment shape (kind, tag, body, next_mark; offsets in code)
+## Airo 2.0 — 9 Oct 2026: §2.1 comment shape (kind, tag, body, next_mark; offsets in code)
 
 Shipped with the chain above, so it is measured by run 0920.
 
-## Baseline: engine before these changes (single pass, Sol low, old comment shape)
+## Airo 1.0 — Baseline: engine before these changes (single pass, Sol low, old comment shape)
 
 Run 0901: exact 33.3%, within-1 88.9%, band 38.9%, signed +0.67, mean |Δ| 0.72, Pros 33.3%, Cons 31.8%, judge 4.44, $0.0107, 12.1 s. Claro check 10/10. fm-1: 1. ei-4: 6.

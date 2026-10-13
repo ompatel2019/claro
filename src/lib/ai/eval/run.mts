@@ -1,5 +1,5 @@
 // Offline marking eval against the current engine; --dry-run only reads the DB.
-// Run: npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts [--dry-run] [--limit=N | --items=0,1,...] [--label=text]
+// Run: npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts --airo=VERSION [--dry-run] [--limit=N | --items=0,1,...] [--label=text] [--same-question-examples=true|false]
 // --items uses 0-based positions in the full array: A1, then Held-out, then Claro.
 // Results: src/lib/ai/eval/results/ and /workspace/claro/eval-runs/.
 import { execFileSync } from "node:child_process";
@@ -20,6 +20,8 @@ import { writeResults, type Row } from "./report";
 
 const args = process.argv.slice(2);
 const dry = args.includes("--dry-run");
+const airo = args.find((a) => a.startsWith("--airo="))?.slice(7);
+const sameQuestionExamples = !args.includes("--same-question-examples=false");
 const limit = Number(
   args.find((a) => a.startsWith("--limit="))?.slice(8) ?? Infinity,
 );
@@ -31,15 +33,19 @@ const selectedItems =
     .split(",")
     .map(Number) ?? null;
 if (
+  !airo ||
   args.some(
-    (a) => !/^(--dry-run|--limit=\d+|--items=\d+(,\d+)*|--label=.*)$/.test(a),
+    (a) =>
+      !/^(--dry-run|--limit=\d+|--items=\d+(,\d+)*|--label=.*|--airo=\d+\.\d+|--same-question-examples=(true|false))$/.test(
+        a,
+      ),
   ) ||
   limit < 1 ||
   selectedItems?.some((index) => !Number.isSafeInteger(index)) ||
   (selectedItems !== null && args.some((a) => a.startsWith("--limit=")))
 ) {
   throw new Error(
-    "Use --dry-run, --limit=N (positive integer per section), --items=0,1,... (non-negative integer indices; cannot combine with --limit), --label=text",
+    "Use --dry-run, --airo=VERSION (required, e.g. 4.1), --limit=N (positive integer per section), --items=0,1,... (non-negative integer indices; cannot combine with --limit), --label=text, --same-question-examples=true|false (default true)",
   );
 }
 const parts = new Intl.DateTimeFormat("en-AU", {
@@ -138,7 +144,10 @@ if (dry) {
     await Promise.all(
       items.map(async (item) => {
         if (!item.q) throw new Error(`Missing question ${item.id}`);
-        return { item, examples: await bandExamples(item.q) };
+        return {
+          item,
+          examples: await bandExamples(item.q, sameQuestionExamples),
+        };
       }),
     )
   )
@@ -150,7 +159,7 @@ if (dry) {
   const path = `${out}/${stamp}-dry-run.md`;
   writeFileSync(
     path,
-    `# Dry-run ${stamp}\n\nLimit: ${limit} per section. Spend: $${spentBefore.toFixed(4)}. Live blocked: ${evalBlocked(spentBefore)}.\n\n${text}\n`,
+    `# Dry-run ${stamp}\n\nAiro: ${airo}. Same-question examples: ${sameQuestionExamples}. Limit: ${limit} per section. Spend: $${spentBefore.toFixed(4)}. Live blocked: ${evalBlocked(spentBefore)}.\n\n${text}\n`,
   );
   console.log(
     `${items.length} items; current spend $${spentBefore.toFixed(4)}; live run ${evalBlocked(spentBefore) ? "BLOCKED" : "allowed"}.\n${path}`,
@@ -195,6 +204,7 @@ async function evaluate(item: (typeof items)[number], index: number) {
       item.answer,
       `${task}:mark`,
       () => cost(`${task}:mark`),
+      { sameQuestionExamples },
     );
     if (typeof item.expected === "number") {
       if (item.section !== "A1") return;
@@ -228,6 +238,14 @@ async function evaluate(item: (typeof items)[number], index: number) {
 await Promise.all(Array.from({ length: 6 }, worker));
 const spentAfter = await spend();
 const meta = {
+  airo,
+  benchmark: [
+    ...(rows.some((r) => r.section === "Held-out")
+      ? ["heldout-196" as const]
+      : []),
+    ...(rows.some((r) => r.section === "A1") ? ["a1-18" as const] : []),
+  ],
+  sameQuestionExamples,
   stamp,
   git: execFileSync("git", ["rev-parse", "--short", "HEAD"], {
     encoding: "utf8",

@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   judge: vi.fn(),
   write: vi.fn(),
   report: vi.fn(),
+  examples: vi.fn(),
 }));
 vi.mock("node:fs", async (original) => ({
   ...(await original<typeof import("node:fs")>()),
@@ -30,7 +31,7 @@ vi.mock("@/lib/marking/engine", () => ({
 }));
 vi.mock("../openai", () => ({ callJson: mocks.judge }));
 vi.mock("@/lib/marking/examples", () => ({
-  bandExamples: async () => [{ answer_text: "Anchor", tutor_mark: 2 }],
+  bandExamples: mocks.examples,
 }));
 vi.mock("./report", () => ({ writeResults: mocks.report }));
 
@@ -58,12 +59,15 @@ const feedback = {
 beforeEach(() => {
   vi.resetModules();
   vi.resetAllMocks();
-  process.argv = ["node", "run.mts", "--limit=1"];
+  process.argv = ["node", "run.mts", "--airo=4.1", "--limit=1"];
   vi.spyOn(process, "exit").mockImplementation((code) => {
     throw new Error(`exit ${code}`);
   });
   vi.spyOn(console, "log").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
+  mocks.examples.mockImplementation(async (_q, enabled = true) =>
+    enabled ? [{ answer_text: "Anchor", tutor_mark: 2 }] : [],
+  );
   mocks.rpc.mockResolvedValue({ data: 1, error: null });
   mocks.from.mockImplementation((table: string) => {
     let selected = "";
@@ -121,6 +125,7 @@ afterEach(() => {
 });
 
 it.each([
+  ["--same-question-examples=no"],
   ["--items="],
   ["--items=-1"],
   ["--items=1.5"],
@@ -130,7 +135,7 @@ it.each([
   ["--items=9007199254740992"],
   ["--items=0", "--limit=1"],
 ])("rejects invalid item arguments %j before DB calls", async (...args) => {
-  process.argv = ["node", "run.mts", ...args];
+  process.argv = ["node", "run.mts", "--airo=4.1", ...args];
   await expect(run()).rejects.toThrow("Use --dry-run");
   expect(mocks.rpc).not.toHaveBeenCalled();
   expect(mocks.from).not.toHaveBeenCalled();
@@ -141,7 +146,7 @@ const heldOutIndex = a1.length;
 const itemCount = a1.length + 1 + claro.length;
 
 it("rejects an out-of-range --items index before any marking call", async () => {
-  process.argv = ["node", "run.mts", `--items=0,${itemCount}`];
+  process.argv = ["node", "run.mts", "--airo=4.1", `--items=0,${itemCount}`];
   await expect(run()).rejects.toThrow(
     `--items indices must be less than the full item count (${itemCount})`,
   );
@@ -152,13 +157,14 @@ it("rejects an out-of-range --items index before any marking call", async () => 
 });
 
 it("--items marks only the selected position and records it in the meta", async () => {
-  process.argv = ["node", "run.mts", `--items=${heldOutIndex}`];
+  process.argv = ["node", "run.mts", "--airo=4.1", `--items=${heldOutIndex}`];
   await run();
   expect(mocks.mark).toHaveBeenCalledExactlyOnceWith(
     expect.objectContaining({ id: "a1-m2-21a" }),
     "x",
     null,
     expect.stringMatching(/^eval:\d{4}-\d{2}-\d{2}-\d{4}:0:mark$/),
+    { sameQuestionExamples: true },
   );
   expect(mocks.judge).not.toHaveBeenCalled();
   expect(mocks.report).toHaveBeenCalledTimes(1);
@@ -217,6 +223,7 @@ it("costs each item by its own eval task, judges only A1 and clamps the judge sc
       expect.stringMatching(
         new RegExp(`^eval:\\d{4}-\\d{2}-\\d{2}-\\d{4}:${i}:mark$`),
       ),
+      { sameQuestionExamples: true },
     ]),
   );
   expect(mocks.judge).toHaveBeenCalledTimes(1);
@@ -297,4 +304,85 @@ it("rechecks spend before the judge and saves completed work when blocked", asyn
   expect(meta.blocked).toBe(true);
   expect(rows[0].error).toContain("Eval refused before judge");
   expect(process.exitCode).toBe(1);
+});
+
+it.each([new Error("Schema failure"), new Error("Marking error"), undefined])(
+  "keeps a failed held-out answer in items (%s)",
+  async (failure) => {
+    process.argv = ["node", "run.mts", "--airo=4.1", `--items=${heldOutIndex}`];
+    if (failure) mocks.mark.mockRejectedValue(failure);
+    else mocks.mark.mockResolvedValue(undefined);
+    await run();
+    const [, rows] = mocks.report.mock.calls[0];
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      section: "Held-out",
+      mark: null,
+      error: failure?.message ?? "No marking result",
+    });
+    expect(rows[0].score).toBeUndefined();
+  },
+);
+
+it.each(["true", "false"])(
+  "passes --same-question-examples=%s to the marker",
+  async (value) => {
+    process.argv.push(`--same-question-examples=${value}`);
+    await run();
+    expect(mocks.mark).toHaveBeenCalledTimes(3);
+    for (const call of mocks.mark.mock.calls)
+      expect(call[4]).toEqual({ sameQuestionExamples: value === "true" });
+  },
+);
+
+it("dry-run omits same-question anchors when disabled", async () => {
+  process.argv.push("--dry-run", "--same-question-examples=false");
+  await expect(run()).rejects.toThrow("exit 0");
+  expect(mocks.examples).toHaveBeenCalledWith(expect.any(Object), false);
+  expect(mocks.write.mock.calls[0][1]).not.toContain("<marked_answer");
+});
+
+it.each([[], ["--dry-run"], ["--airo="], ["--airo=live"], ["--airo=4"]])(
+  "requires an Airo version before any DB calls (%j)",
+  async (...args) => {
+    process.argv = ["node", "run.mts", ...args];
+    await expect(run()).rejects.toThrow("--airo=VERSION (required");
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.from).not.toHaveBeenCalled();
+  },
+);
+
+it.each([
+  [undefined, ["heldout-196", "a1-18"]],
+  [0, ["a1-18"]],
+  [heldOutIndex, ["heldout-196"]],
+  [heldOutIndex + 1, []],
+])(
+  "records Airo, examples and only the benchmarks actually run (%s)",
+  async (index, benchmark) => {
+    process.argv = [
+      "node",
+      "run.mts",
+      "--airo=3.0",
+      "--same-question-examples=false",
+      ...(index === undefined ? ["--limit=1"] : [`--items=${index}`]),
+    ];
+    await run();
+    expect(mocks.report.mock.calls[0][0]).toMatchObject({
+      airo: "3.0",
+      benchmark,
+      sameQuestionExamples: false,
+    });
+  },
+);
+
+it("records no benchmark when spend blocks every selected item", async () => {
+  mocks.rpc.mockResolvedValueOnce({ data: 79 }).mockResolvedValue({ data: 80 });
+  await run();
+  expect(mocks.report.mock.calls[0][0]).toMatchObject({
+    airo: "4.1",
+    benchmark: [],
+    sameQuestionExamples: true,
+    blocked: true,
+  });
 });
