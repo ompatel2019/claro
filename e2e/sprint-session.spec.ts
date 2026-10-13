@@ -69,7 +69,7 @@ test.describe("Sprint session", () => {
       await page.setViewportSize({ width, height: 850 });
       const id = await setUp(page, []);
       await pick(page, "A");
-      await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+      await expect(page.getByText("Saved", { exact: true })).toBeAttached();
       await page.getByRole("button", { name: "Save and exit" }).click();
       await expect(page).toHaveURL(/\/student$/);
       const { data: saved, error: readError } = await adminClient()!

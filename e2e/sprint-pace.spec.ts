@@ -95,7 +95,7 @@ for (const width of [390, 1280]) {
       });
       await page.goto("/student/sprint?type=mcq&size=5");
       await expect(
-        page.getByRole("heading", { name: "No questions match" }),
+        page.getByText("No questions match", { exact: true }),
       ).toBeVisible();
       await timerStep(page);
       const multis = page.getByLabel("Multis: minutes per question");

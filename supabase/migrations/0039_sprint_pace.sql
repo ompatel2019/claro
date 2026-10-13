@@ -5,6 +5,9 @@ declare
   definition text := pg_get_functiondef('public.start_sprint(jsonb)'::regprocedure);
   original text := definition;
 begin
+  if definition like '%60 * v_short_pace * x.marks%' and definition not like '%v_pace%' then
+    return;
+  end if;
   definition := replace(definition,
     'v_pace text := coalesce(p_config ->> ''pace'', ''hsc'');',
     'v_short_pace numeric := coalesce((p_config ->> ''short_min_per_mark'')::numeric, 1.5);
