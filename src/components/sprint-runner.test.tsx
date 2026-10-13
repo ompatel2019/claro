@@ -65,6 +65,14 @@ const attempt = {
   position: 1,
   status: "pending",
   choice_index: 0,
+  answer_text: null,
+  transcript: null,
+  image_paths: null,
+  flagged: false,
+  mark: null,
+  max_marks: null,
+  band: null,
+  feedback: null,
   question: {
     id: "q",
     type: "mcq",
@@ -73,8 +81,10 @@ const attempt = {
     options: ["Price increases", "Price decreases"],
     topic_id: "t",
     source: "HSC",
+    stimulus: null,
+    year: null,
   },
-} as Attempt;
+} satisfies Attempt;
 function show() {
   mocks.update.mockReturnThis();
   return render(
