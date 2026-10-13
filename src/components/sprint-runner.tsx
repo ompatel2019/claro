@@ -514,16 +514,6 @@ export function SprintRunner({
               </Badge>
             )}
           </p>
-          <Button
-            variant="outline"
-            size="sm"
-            aria-pressed={a.flagged}
-            disabled={busy || !editable}
-            onClick={flag}
-          >
-            <Flag className={cn(a.flagged && "fill-primary text-primary")} />
-            Flag for review
-          </Button>
         </div>
         <QuestionView question={a.question} />
         {a.question.type === "mcq" ? (
@@ -581,15 +571,40 @@ export function SprintRunner({
             local={(patch) => local(a.id, patch)}
           />
         )}
-        {checkMode && (
+        {checkMode && a.status === "marked" && (
           <CheckResult
             attempt={a}
             explanation={explanations[a.id]}
-            checking={checking === a.id}
-            canCheck={editable && answered(a) && !busy}
+            checking={false}
+            canCheck={false}
             onCheck={() => void check()}
           />
         )}
+        <div
+          role="group"
+          aria-label="Answer actions"
+          className="flex flex-wrap items-center gap-3"
+        >
+          {checkMode && a.status !== "marked" && (
+            <CheckResult
+              attempt={a}
+              explanation={explanations[a.id]}
+              checking={checking === a.id}
+              canCheck={editable && answered(a) && !busy}
+              onCheck={() => void check()}
+            />
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            aria-pressed={a.flagged}
+            disabled={busy || !editable}
+            onClick={flag}
+          >
+            <Flag className={cn(a.flagged && "fill-primary text-primary")} />
+            Flag for review
+          </Button>
+        </div>
       </article>
       <div className="flex flex-wrap justify-between gap-3">
         <Button

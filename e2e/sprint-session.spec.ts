@@ -108,6 +108,27 @@ test.describe("Sprint session", () => {
     });
   }
 
+  for (const width of [390, 1280]) {
+    test(`flagging uses the bottom answer actions at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 850 });
+      await setUp(page, ["After each question (check as you go)"]);
+      const actions = page.getByRole("group", { name: "Answer actions" });
+      const flag = actions.getByRole("button", { name: "Flag for review" });
+      await expect(
+        actions.getByRole("button", { name: "Check answer" }),
+      ).toBeVisible();
+      await flag.click();
+      await expect(flag).toHaveAttribute("aria-pressed", "true");
+      await page.getByRole("button", { name: "Next question" }).click();
+      await page.getByRole("button", { name: "Previous question" }).click();
+      await expect(flag).toHaveAttribute("aria-pressed", "true");
+      await flag.click();
+      await expect(flag).toHaveAttribute("aria-pressed", "false");
+    });
+  }
+
   test("old /practice session links redirect", async ({ page }) => {
     await page.goto(`/practice/${ids[0]}`);
     await expect(page).toHaveURL(/\/student\/sprint\/[^/]+(\/results)?$/);

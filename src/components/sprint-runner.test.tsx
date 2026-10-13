@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { Attempt, Session } from "@/lib/practice";
@@ -159,4 +160,46 @@ it.each(["finish", "overtime"])(
 it("untimed sessions never warn", () => {
   show();
   expect(screen.queryByText(/Time’s up/)).not.toBeInTheDocument();
+});
+
+it("flags from the answer actions and updates the question booklet", async () => {
+  show();
+  const actions = screen.getByRole("group", { name: "Answer actions" });
+  expect(
+    within(actions).getByRole("button", { name: "Check answer" }),
+  ).toBeVisible();
+  const flag = within(actions).getByRole("button", { name: "Flag for review" });
+  fireEvent.click(flag);
+  await waitFor(() => expect(flag).toHaveAttribute("aria-pressed", "true"));
+  expect(
+    screen.getByRole("button", { name: "Question 1: Answered, Flagged" }),
+  ).toBeVisible();
+  expect(mocks.update).toHaveBeenCalledWith({ flagged: true });
+  fireEvent.click(flag);
+  await waitFor(() => expect(flag).toHaveAttribute("aria-pressed", "false"));
+});
+it("rolls back a flag when saving fails", async () => {
+  mocks.update.mockImplementationOnce(() => {
+    throw new Error("Could not save flag");
+  });
+  show();
+  const flag = screen.getByRole("button", { name: "Flag for review" });
+  fireEvent.click(flag);
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Could not save flag",
+  );
+  expect(flag).toHaveAttribute("aria-pressed", "false");
+});
+it("keeps flagging locked for a checked answer", () => {
+  render(
+    <SprintRunner
+      session={session}
+      initial={[{ ...attempt, status: "marked", mark: 1 }]}
+      userId="u"
+      title="Sprint"
+    />,
+  );
+  expect(
+    screen.getByRole("button", { name: "Flag for review" }),
+  ).toBeDisabled();
 });

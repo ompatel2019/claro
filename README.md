@@ -35,3 +35,5 @@ npm run build
 Topic Sprint timers notify with a sound and an overtime banner; students always finish manually, including resumed legacy sessions.
 
 Sprint pace defaults to 1 min per multi and 1.5 min per short-answer mark, both editable (0.25–10). Setup shows an estimate; the saved timer uses the actual selected questions. Apply migration `0039_sprint_pace.sql` before deploying these controls. The five-short-answer quick start estimates about 23 minutes.
+
+Flag for review sits in the bottom answer actions alongside Check answer; flags still persist in the question booklet.
