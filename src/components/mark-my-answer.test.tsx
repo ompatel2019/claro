@@ -393,3 +393,17 @@ it("a stale own-question draft cannot enable the hidden feature or select a bank
   expect(screen.getByRole("button", { name: "Mark my answer" })).toBeDisabled();
   expect(createCheck).not.toHaveBeenCalled();
 });
+
+it("an empty bank cannot start a check or expose own-question fields", () => {
+  render(<MarkMyAnswer questions={[]} topics={[]} userId="u" left={20} />);
+  expect(
+    screen.getByText(
+      "No questions match. Try another search or change your filters.",
+    ),
+  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "Mark my answer" })).toBeDisabled();
+  expect(
+    screen.queryByRole("button", { name: "My own question" }),
+  ).not.toBeInTheDocument();
+  expect(createCheck).not.toHaveBeenCalled();
+});
