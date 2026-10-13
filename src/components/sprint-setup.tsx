@@ -248,15 +248,6 @@ export function SprintSetup({
                 </ToggleGroupItem>
               ))}
             </ToggleGroup>
-            {c.mode === "mixed" && (
-              <label className="flex items-center gap-2 text-sm">
-                <Switch
-                  checked={c.include_extended}
-                  onCheckedChange={(v) => set({ include_extended: v })}
-                />
-                Include an extended response (20 marks, +35 min)
-              </label>
-            )}
           </Section>
 
           <Section

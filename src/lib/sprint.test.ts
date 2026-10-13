@@ -25,10 +25,6 @@ it("switching type resets size to that type's default and range", () => {
     size_by: "marks",
     target: 30,
   });
-  expect(withMode(DEFAULTS, "extended")).toMatchObject({
-    size_by: "questions",
-    target: 1,
-  });
   const mixed = withMode(DEFAULTS, "mixed");
   expect(mixed).toMatchObject({ size_by: "marks", target: 45 });
   expect(withSizeBy(withMode(DEFAULTS, "short"), "questions").target).toBe(5);
@@ -48,9 +44,6 @@ it("estimates editable pace for each question type and untimed sessions", () => 
   expect(
     estimateMinutes(withSizeBy(withMode(DEFAULTS, "short"), "questions")),
   ).toBe(23);
-  expect(estimateMinutes({ ...DEFAULTS, mode: "extended", target: 2 })).toBe(
-    70,
-  );
   expect(
     estimateMinutes({
       ...withMode(DEFAULTS, "mixed"),
@@ -180,4 +173,15 @@ it("remembers the last size per type when switching back", () => {
 
 it("restores legacy auto-finish setups as overtime", () => {
   expect(restore({ on_timeout: "finish" }).on_timeout).toBe("overtime");
+});
+
+it("old essay setups fall back to MC and mixed setups discard essays", () => {
+  expect(restore({ mode: "extended", target: 1 })).toMatchObject({
+    mode: "mcq",
+    target: 5,
+  });
+  expect(restore({ mode: "mixed", include_extended: true })).not.toHaveProperty(
+    "include_extended",
+  );
+  expect(fromParams({ type: "extended" }, DEFAULTS)?.mode).toBe("mcq");
 });

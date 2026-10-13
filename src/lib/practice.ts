@@ -1,12 +1,12 @@
 export const modes = {
   mcq: { label: "Multiple choice", marks: 20, minutes: 20 },
   short: { label: "Short answer", marks: 40, minutes: 60 },
-  extended: { label: "Extended response", marks: 20, minutes: 35 },
   mixed: { label: "Mixed", marks: 60, minutes: 75 },
 };
 export type Mode = keyof typeof modes;
 export const modeLabel = (mode?: string) =>
-  modes[mode as Mode]?.label ?? "Practice";
+  modes[mode as Mode]?.label ??
+  (mode === "extended" ? "Extended response" : "Practice");
 export type Topic = {
   id: string;
   parent_id: string | null;

@@ -15,8 +15,7 @@ export type FormState = {
   sessionExpired?: boolean;
 };
 const SprintConfig = z.object({
-  mode: z.enum(["mcq", "short", "extended", "mixed"]),
-  include_extended: z.boolean().default(false),
+  mode: z.enum(["mcq", "short", "mixed"]),
   topics: z
     .array(z.string().min(1))
     .max(2, "Choose up to two topics.")

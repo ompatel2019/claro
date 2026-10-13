@@ -39,3 +39,10 @@ Sprint pace defaults to 1 min per multi and 1.5 min per short-answer mark, both 
 Flag for review sits in the bottom answer actions alongside Check answer; flags still persist in the question booklet.
 
 Use Node 22 (`nvm use`). Local checks need `NEXT_PUBLIC_APP_URL` set; authenticated Playwright tests additionally use synthetic `STUDENT_EMAIL` / `STUDENT_PASSWORD` and the Supabase settings from `.env.local`. Never commit credentials.
+
+Topic sprints offer Multiple choice, Short answer and Mixed (MC + shorts). Essays
+remain available in Mark my answer and existing results; they are excluded from
+new sprints, including legacy saved setups. Apply `0039_sprints_no_essays.sql`.
+Sprint regression coverage: `src/lib/sprint.test.ts`,
+`src/app/(app)/sprint-actions.test.ts`, `e2e/sprint-feedback.spec.ts` (mobile/desktop).
+Use `Q_MIN_GB=3 Q_SLOTS=1 q-run` for checks and Playwright on the shared box.

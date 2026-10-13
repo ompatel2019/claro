@@ -59,7 +59,7 @@ export const VERBS = [
 export const TYPE_LABELS = {
   mcq: modes.mcq.label,
   short: modes.short.label,
-  extended: modes.extended.label,
+  extended: "Extended response",
 };
 export const ORIGIN_LABELS = {
   nesa: "NESA",

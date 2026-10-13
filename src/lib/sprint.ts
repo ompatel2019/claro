@@ -6,7 +6,6 @@ export type History =
 export type Difficulty = "foundation" | "standard" | "challenging";
 export type SetupConfig = {
   mode: Mode;
-  include_extended: boolean;
   topics: string[];
   subtopics: string[];
   size_by: "marks" | "questions";
@@ -48,14 +47,12 @@ export const SIZES: Record<string, Size> = {
   "mcq:questions": { min: 5, max: 40, step: 1, presets: [10, 20, 30, 40] },
   "short:marks": { min: 10, max: 60, step: 5, presets: [15, 30, 45, 60] },
   "short:questions": { min: 2, max: 15, step: 1, presets: [3, 5, 8, 10] },
-  "extended:questions": { min: 1, max: 3, step: 1, presets: [1, 2, 3] },
   "mixed:marks": { min: 20, max: 100, step: 5, presets: [30, 45, 60, 80, 100] },
 };
 const DEFAULT_SIZE: Record<string, number> = {
   "mcq:questions": 20,
   "short:marks": 30,
   "short:questions": 5,
-  "extended:questions": 1,
   "mixed:marks": 45,
 };
 export const size = (c: Pick<SetupConfig, "mode" | "size_by">) =>
@@ -63,7 +60,6 @@ export const size = (c: Pick<SetupConfig, "mode" | "size_by">) =>
 
 export const DEFAULTS: SetupConfig = {
   mode: "mcq",
-  include_extended: false,
   topics: [],
   subtopics: [],
   size_by: "questions",
@@ -91,7 +87,7 @@ const sizeFor = (sizes: Record<string, number>, key: string) =>
     ? Math.min(SIZES[key].max, Math.max(SIZES[key].min, sizes[key]))
     : DEFAULT_SIZE[key];
 
-/** Switching type restores that type's last size (else its default); MC and extended drop written-only filters. */
+/** Switching type restores that type's last size (else its default); MC drops written-only filters. */
 export function withMode(c: SetupConfig, mode: Mode): SetupConfig {
   const size_by = mode === "short" || mode === "mixed" ? "marks" : "questions";
   const written = mode === "short" || mode === "mixed";
@@ -102,7 +98,6 @@ export function withMode(c: SetupConfig, mode: Mode): SetupConfig {
     size_by,
     sizes,
     target: sizeFor(sizes, `${mode}:${size_by}`),
-    include_extended: mode === "mixed" && c.include_extended,
     difficulty: written ? c.difficulty : [],
     verbs: written ? c.verbs : [],
   };
@@ -135,13 +130,10 @@ export function estimateMinutes(c: SetupConfig): number | null {
   const base =
     c.mode === "mcq"
       ? mc * c.target
-      : c.mode === "extended"
-        ? 35 * c.target
-        : c.mode === "short"
-          ? short * c.target * (c.size_by === "marks" ? 1 : 3)
-          : mc * Math.round(c.target * 0.4) +
-            short * (c.target - Math.round(c.target * 0.4)) +
-            (c.include_extended ? 35 : 0);
+      : c.mode === "short"
+        ? short * c.target * (c.size_by === "marks" ? 1 : 3)
+        : mc * Math.round(c.target * 0.4) +
+          short * (c.target - Math.round(c.target * 0.4));
   return Math.round(base);
 }
 
@@ -187,8 +179,7 @@ export function fromParams(
     };
   }
   if (HISTORY.includes(p.history as History)) c.history = p.history as History;
-  if (p.verb && c.mode !== "mcq" && c.mode !== "extended")
-    c.verbs = list(p.verb);
+  if (p.verb && c.mode !== "mcq") c.verbs = list(p.verb);
   if (p.size && Number.isFinite(Number(p.size)))
     c.target = clampTarget(c, Number(p.size));
   return c;
@@ -221,7 +212,11 @@ export function restore(saved: unknown): SetupConfig {
   );
   if (s.size_by && SIZES[`${mode}:${s.size_by}`]) c = withSizeBy(c, s.size_by);
   if (typeof s.target === "number") c.target = clampTarget(c, s.target);
-  return c;
+  const { include_extended: _removed, ...clean } = c as SetupConfig & {
+    include_extended?: unknown;
+  };
+  void _removed;
+  return clean;
 }
 
 export const HISTORY_LABELS: Record<History, string> = {
@@ -242,11 +237,9 @@ export function summary(
   const size =
     c.mode === "mcq"
       ? `${n(c.target, "question")} · ${n(c.target, "mark")}`
-      : c.mode === "extended"
-        ? `${n(c.target, "question")} · ${c.target * 20} marks`
-        : c.size_by === "questions"
-          ? n(c.target, "question")
-          : `${n(c.target, "mark")}${c.include_extended ? " + 1 extended" : ""}`;
+      : c.size_by === "questions"
+        ? n(c.target, "question")
+        : n(c.target, "mark");
   const minutes = estimateMinutes(c);
   const topics = c.topics.length
     ? c.topics
