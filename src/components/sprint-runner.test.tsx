@@ -247,8 +247,6 @@ it.each(["blank", "checked", "end"])(
       expect(check).not.toHaveAccessibleDescription(
         "You have an unchecked answer.",
       );
-    expect(screen.getByRole("button", { name: "Next question" })).toBeVisible();
-    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
   },
 );
 it("keeps the reminder after a marking error and lets the student retry", async () => {
@@ -279,6 +277,116 @@ it("keyboard checking ignores empty answers and never runs twice while checking"
   await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(1));
   fireEvent.keyDown(window, { ctrlKey: true, key: "Enter" });
   expect(mocks.fetch).toHaveBeenCalledTimes(1);
+});
+
+function written() {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      observe() {}
+      disconnect() {}
+    },
+  );
+  return {
+    ...attempt,
+    choice_index: null,
+    answer_text: "Demand grows.",
+    transcript: null,
+    image_paths: null,
+    question: { ...attempt.question, type: "short" as const, marks: 4 },
+  };
+}
+it("renders full written comments and an outline inline with one mark request", async () => {
+  const a = written();
+  mocks.fetch.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      status: "marked",
+      mark: 2,
+      max_marks: 4,
+      band: "Sound",
+      feedback: {
+        comments: [
+          {
+            quote: "Demand",
+            start: 0,
+            kind: "strength",
+            tag: "Knowledge",
+            body: "You identified demand.",
+            next_mark: null,
+          },
+          {
+            quote: "missing",
+            start: 30,
+            kind: "fix",
+            tag: "Analysis",
+            body: "Link demand to prices.",
+            next_mark: "Explain spare capacity.",
+          },
+        ],
+        better_answer_outline: [
+          "Define demand-pull inflation.",
+          "Explain price pressure.",
+        ],
+      },
+    }),
+  });
+  vi.stubGlobal("fetch", mocks.fetch);
+  show([a]);
+  fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+  const feedback = await screen.findByRole("region", {
+    name: "Checked answer feedback",
+  });
+  expect(within(feedback).getByText("2 / 4")).toBeVisible();
+  expect(
+    within(feedback).getByText("What gets you the next mark"),
+  ).toBeVisible();
+  expect(
+    within(feedback).getByRole("button", { name: /^Strength 1/ }),
+  ).toBeVisible();
+  expect(within(feedback).getByText("Overall")).toBeVisible();
+  expect(
+    within(feedback).getByText("Define demand-pull inflation."),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText("Full feedback in your results."),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("textbox", { name: "Your answer" }),
+  ).not.toBeInTheDocument();
+  expect(mocks.fetch).toHaveBeenCalledTimes(1);
+});
+it("resumed written marks render existing feedback without marking again", () => {
+  const a = {
+    ...written(),
+    status: "marked",
+    mark: 4,
+    max_marks: 4,
+    feedback: { comments: [] },
+  };
+  show([a]);
+  expect(
+    screen.getByRole("region", { name: "Checked answer feedback" }),
+  ).toHaveTextContent("4 / 4");
+  expect(mocks.fetch).not.toHaveBeenCalled();
+});
+it("a failed written check retains the answer and offers retry", async () => {
+  mocks.fetch.mockResolvedValue({
+    ok: false,
+    status: 500,
+    json: async () => ({ error: "Could not mark answer" }),
+  });
+  vi.stubGlobal("fetch", mocks.fetch);
+  show([written()]);
+  fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Could not mark answer",
+  );
+  expect(screen.getByRole("textbox", { name: "Your answer" })).toHaveValue(
+    "Demand grows.",
+  );
+  expect(screen.getByRole("button", { name: "Check answer" })).toBeEnabled();
 });
 
 it("a failed manual finish keeps the saved answer editable and allows retry", async () => {

@@ -41,3 +41,5 @@ Flag for review sits in the bottom answer actions alongside Check answer; flags 
 Use Node 22 (`nvm use`). Local checks need `NEXT_PUBLIC_APP_URL` set; authenticated Playwright tests additionally use synthetic `STUDENT_EMAIL` / `STUDENT_PASSWORD` and the Supabase settings from `.env.local`. Never commit credentials.
 
 In check-as-you-go sprints, Next shows a reminder on hover or focus for an unchecked answer and highlights Check answer. Navigation remains available.
+
+Written checks show the saved marked answer, all comments and the full-mark outline inline using the same feedback as results. Wide screens have margin comments; small screens stack them. The current mark API does not return guidelines, model answers or checker/review metadata, so these remain in finished results.

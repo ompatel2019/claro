@@ -92,6 +92,7 @@ type SessionProps = {
   onRetry: () => void;
   clock: { mode: "down" | "up"; seconds: number };
   busy?: boolean;
+  wide?: boolean;
   onExit: () => void;
   onFinish: () => void;
   onMove: (delta: number) => void;
@@ -109,6 +110,7 @@ export function SessionShell(props: SessionProps) {
     onRetry,
     clock,
     busy,
+    wide,
     onExit,
     onFinish,
     onMove,
@@ -302,7 +304,10 @@ export function SessionShell(props: SessionProps) {
         )}
         <main
           id="main"
-          className="mx-auto w-full max-w-3xl min-w-0 flex-1 space-y-4 p-4 sm:p-6"
+          className={cn(
+            "mx-auto w-full max-w-3xl min-w-0 flex-1 space-y-4 p-4 sm:p-6",
+            wide && "max-w-7xl",
+          )}
         >
           {children}
         </main>

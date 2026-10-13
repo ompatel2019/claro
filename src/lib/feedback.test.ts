@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   bandOf,
+  inlineSprintFeedback,
   layoutCards,
   markLabel,
   markingState,
@@ -205,4 +206,55 @@ it("places cards level with highlights and pushes collisions down 8px", () => {
       { anchor: 200, height: 10 },
     ]),
   ).toEqual([0, 58, 200]);
+});
+
+describe("inlineSprintFeedback", () => {
+  const attempt = {
+    id: "synthetic-attempt",
+    position: 1,
+    question_id: "synthetic-question",
+    choice_index: null,
+    answer_text: "Demand grows.",
+    transcript: null,
+    image_paths: null,
+    flagged: false,
+    status: "marked",
+    mark: 2,
+    max_marks: 4,
+    band: "Sound",
+    feedback: { comments: [] },
+    question: {
+      id: "synthetic-question",
+      type: "short",
+      marks: 4,
+      stem: "Explain inflation.",
+      stimulus: null,
+      options: null,
+      source: "Synthetic practice",
+      topic_id: "synthetic-topic",
+      year: null,
+    },
+  } satisfies import("./practice").Attempt;
+  it("uses exactly the saved answer and marking feedback without reference keys", () => {
+    const row = inlineSprintFeedback(attempt);
+    expect(row.feedback).toBe(attempt.feedback);
+    expect(row.answer_text).toBe("Demand grows.");
+    expect(row.mark).toBe(2);
+    expect(row.criteria).toBeNull();
+    expect(row.sample_answer).toBeNull();
+    expect(row.review).toBeNull();
+    expect(markingState(row)).toBe("marked");
+  });
+  it("keeps photo transcripts and handles empty feedback", () => {
+    const row = inlineSprintFeedback({
+      ...attempt,
+      answer_text: null,
+      transcript: "Confirmed transcript.",
+      image_paths: ["synthetic/photo.png"],
+      feedback: null,
+    });
+    expect(row.transcript).toBe("Confirmed transcript.");
+    expect(readComments(row.feedback, row.transcript!)).toEqual([]);
+    expect(row.image_paths).toEqual(["synthetic/photo.png"]);
+  });
 });

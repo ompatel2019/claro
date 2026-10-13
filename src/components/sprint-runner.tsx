@@ -27,6 +27,8 @@ import { RichText } from "./rich-text";
 import { QuestionView } from "./question-view";
 import { isTyping, SessionShell, type SaveState } from "./session-shell";
 import { WrittenAnswer } from "./written-answer";
+import { AnnotatedFeedback } from "./annotated-feedback";
+import { inlineSprintFeedback } from "@/lib/feedback";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { markTone, TYPE_LABEL } from "@/lib/results";
 
@@ -462,6 +464,7 @@ export function SprintRunner({
   return (
     <SessionShell
       title={title}
+      wide={checkMode && a.question.type !== "mcq" && a.status === "marked"}
       position={index + 1}
       total={attempts.length}
       answered={attempts.length - unanswered.length}
@@ -561,7 +564,7 @@ export function SprintRunner({
               </label>
             ))}
           </fieldset>
-        ) : (
+        ) : checkMode && a.status === "marked" ? null : (
           <WrittenAnswer
             disabled={busy || !editable}
             onBusy={setBusy}
@@ -749,20 +752,17 @@ function CheckResult({
         </div>
       );
     }
-    const next = a.feedback?.comments?.find(
-      (c) => c.kind === "fix" && c.next_mark,
-    )?.next_mark;
     return (
-      <div role="status" className="bg-muted space-y-1 rounded-xl p-4 text-sm">
-        <p className="font-semibold tabular-nums">
-          {a.mark} / {a.max_marks}
-        </p>
-        {a.band && <p className="text-muted-foreground">Band: {a.band}</p>}
-        {next && <p>Next mark: {next}</p>}
-        <p className="text-muted-foreground text-xs">
-          Full feedback in your results.
-        </p>
-      </div>
+      <section aria-label="Checked answer feedback" className="space-y-3">
+        {a.band && (
+          <p className="text-muted-foreground text-sm">Band: {a.band}</p>
+        )}
+        <AnnotatedFeedback
+          row={inlineSprintFeedback(a)}
+          readOnly
+          showReferences={false}
+        />
+      </section>
     );
   }
   if (checking || a.status === "marking")
