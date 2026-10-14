@@ -1,5 +1,6 @@
 import {
   cleanup,
+  act,
   fireEvent,
   render,
   screen,
@@ -226,7 +227,7 @@ it("highlights an unchecked answer and warns on Next focus without blocking navi
   vi.spyOn(next, "matches").mockImplementation(
     (selector) => selector === ":focus-visible" || matches(selector),
   );
-  fireEvent.focus(next);
+  act(() => next.focus());
   expect(await screen.findByRole("tooltip")).toHaveTextContent(
     "check it first?",
   );

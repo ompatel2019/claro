@@ -196,3 +196,11 @@ export async function restoreFlashcardProgress(
     if (error) throw error;
   }
 }
+
+/** Enter a control through keyboard navigation, so native focus-visible applies. */
+export async function focusWithKeyboard(page: Page, control: Locator) {
+  await control.focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(control).toBeFocused();
+}

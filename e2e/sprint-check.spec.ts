@@ -14,7 +14,7 @@ for (const width of [390, 1600]) {
     }) => {
       await start(page, "Multiple choice", ids, true);
       const next = page.getByRole("button", { name: "Next question" });
-      await next.focus();
+      await focusWithKeyboard(page, next);
       await expect(page.getByRole("tooltip")).toBeHidden();
       await pick(page, "A");
       const check = page.getByRole("button", { name: "Check answer" });
@@ -24,7 +24,7 @@ for (const width of [390, 1600]) {
       );
       await expect(check).toHaveClass(/ring-2/);
       if (width > 1000) await next.hover();
-      else await next.focus();
+      else await focusWithKeyboard(page, next);
       await expect(page.getByRole("tooltip")).toContainText("check it first?");
       await next.click();
       await expect(page.getByText(/^Question 2 ·/)).toBeVisible();
@@ -67,7 +67,10 @@ for (const width of [390, 1600]) {
       await check.click();
       await expect(page.getByText("Correct", { exact: true })).toBeVisible();
       await expect(check).toHaveCount(0);
-      await page.getByRole("button", { name: "Next question" }).focus();
+      await focusWithKeyboard(
+        page,
+        page.getByRole("button", { name: "Next question" }),
+      );
       await expect(page.getByRole("tooltip")).toBeHidden();
     });
     test("written feedback annotates the answer, persists on resume and uses one mark", async ({
@@ -222,7 +225,10 @@ for (const width of [390, 1600]) {
     test("exam feedback mode never prompts to check", async ({ page }) => {
       await start(page, "Multiple choice", ids);
       await pick(page, "A");
-      await page.getByRole("button", { name: "Next question" }).focus();
+      await focusWithKeyboard(
+        page,
+        page.getByRole("button", { name: "Next question" }),
+      );
       await expect(page.getByRole("tooltip")).toBeHidden();
       await expect(
         page.getByRole("button", { name: "Check answer" }),
