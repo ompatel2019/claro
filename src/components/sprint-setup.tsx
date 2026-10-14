@@ -842,8 +842,7 @@ export function SprintSetup({
           )
             e.preventDefault();
         }}
-        // Sticky stays in flow, reserving its full height even when the summary wraps.
-        className="bg-background/95 sticky bottom-4 z-30 rounded-2xl border backdrop-blur lg:bottom-24"
+        className="bg-background rounded-2xl border"
       >
         <input type="hidden" name="config" value={JSON.stringify(c)} />
         <div className="flex flex-wrap items-center gap-3 px-4 py-3">

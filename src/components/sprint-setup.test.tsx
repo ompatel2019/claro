@@ -45,6 +45,37 @@ beforeEach(() => {
   mocks.start.mockResolvedValue({ error: "Try again." });
 });
 afterEach(cleanup);
+it("keeps the summary form after the step card with its warning and controls", async () => {
+  mocks.rpc.mockResolvedValue({
+    data: { ...pool, marks: 10, questions: 4, new: 4 },
+    error: null,
+  });
+  render(<SprintSetup topics={topics} params={{ type: "short" }} />);
+  const form = start().closest("form")!;
+  const card = screen
+    .getByRole("button", { name: "Back" })
+    .closest('[data-slot="card"]')!;
+  expect(card.parentElement).toBe(form.parentElement);
+  expect(
+    card.compareDocumentPosition(form) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(form.className).not.toMatch(
+    /(?:^|\s)(?:\S+:)?(?:sticky|fixed|absolute|(?:top|bottom|inset|z)-\S+)(?:\s|$)/,
+  );
+  await waitFor(() =>
+    expect(screen.getByRole("alert")).toHaveTextContent("Only 10 marks match"),
+  );
+  expect(form).toContainElement(screen.getByRole("alert"));
+  expect(form).toHaveTextContent("30 marks · 45 min");
+  expect(form).toHaveTextContent("4 questions match · 4 new");
+  expect(form).toContainElement(screen.getByRole("button", { name: "Reset" }));
+  expect(form).toContainElement(start());
+  expect(start()).toBeDisabled();
+  next();
+  next();
+  next();
+  expect(start()).toBeEnabled();
+});
 it("shows one step at a time, blocks early starts, preserves choices on Back and resets", async () => {
   render(<SprintSetup topics={topics} params={{}} />);
   expect(screen.getAllByRole("button", { pressed: true })).toHaveLength(1);

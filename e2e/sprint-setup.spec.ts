@@ -3,6 +3,7 @@ import {
   cleanupSessions,
   expectNoOverlap,
   expectStackedBelow,
+  goToSprintStep,
   signIn,
   reviewSprintSetup,
 } from "./helpers";
@@ -17,7 +18,46 @@ test.describe("Topic Sprint setup", () => {
     await signIn(page, "/student/sprint");
   });
 
-  test("400px controls clear feedback and the sticky summary at page end", async ({
+  for (const width of [390, 1280]) {
+    test(`${width}px summary stays in flow below the step card`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto(
+        "/student/sprint?type=short&sub=t3-inflation&size=90&history=new_only",
+      );
+      const start = page.getByRole("button", { name: /^Start (sprint|with)/ });
+      const bar = page.locator("form").filter({ has: start });
+      const card = page.locator('[data-slot="card"]').filter({
+        has: page.getByRole("button", { name: "Back", exact: true }),
+      });
+      await expect(bar.getByText(/^\d+ questions match/)).toBeVisible();
+      await expect(bar.getByRole("alert")).toContainText(
+        /Only \d+ marks match/,
+      );
+      await expect(bar).toContainText("Economic Issues (Inflation)");
+      await expect(bar).toHaveCSS("position", "static");
+      for (let step = 1; step <= 4; step++) {
+        if (step === 4)
+          await page.getByRole("button", { name: "Advanced" }).click();
+        for (const bottom of [false, true]) {
+          await page.evaluate((bottom) => {
+            window.scrollTo(
+              0,
+              bottom ? document.documentElement.scrollHeight : 0,
+            );
+          }, bottom);
+          await expectStackedBelow(card, bar);
+          await expectNoOverlap(card, bar);
+        }
+        if (step < 4)
+          await page.getByRole("button", { name: "Next", exact: true }).click();
+      }
+      await expect(start).toBeEnabled();
+    });
+  }
+
+  test("400px controls clear feedback and the summary at page end", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 400, height: 800 });
@@ -225,7 +265,7 @@ test.describe("Topic Sprint setup", () => {
   }) => {
     await page.goto("/practice?topics=t3");
     await expect(page).toHaveURL(/\/student\/sprint\?topics=t3$/);
-    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await goToSprintStep(page, 2);
     await expect(
       page.getByRole("button", { name: /^Economic Issues/ }),
     ).toHaveAttribute("aria-pressed", "true");
