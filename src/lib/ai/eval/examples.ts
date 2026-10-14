@@ -4,7 +4,7 @@ import type { MarkableQuestion } from "@/lib/marking/grade";
 import type { MarkedExample } from "@/lib/marking/example-selection";
 import { retrievalPool, type EvalAnswer } from "./sets";
 
-/** Eval-only pool: filter before either band or quota selection. */
+/** Load frozen answer texts too; filter before either band or quota selection. */
 export async function evalExamplePool(
   q: MarkableQuestion,
   answer: EvalAnswer,
@@ -16,7 +16,6 @@ export async function evalExamplePool(
       "id, question_id, split, source_hash, answer_text, tutor_mark, accepted_tutor_comments",
     )
     .eq("question_id", q.id)
-    .eq("split", "example")
     .order("id")
     .throwOnError();
   const excluded = new Set(excludedIds);

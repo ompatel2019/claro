@@ -1,6 +1,7 @@
 import "server-only";
 
 import { admin } from "@/utils/supabase/admin";
+import { evalSets } from "@/lib/ai/eval/sets";
 import type { MarkableQuestion } from "./grade";
 
 export {
@@ -19,8 +20,8 @@ export async function examplePool(
     .from("marking_examples_for_grader")
     .select("answer_text, tutor_mark, accepted_tutor_comments")
     .eq("question_id", q.id);
-  if (excludedIds.length)
-    query = query.not("id", "in", `(${excludedIds.join(",")})`);
+  const excluded = [...new Set([...evalSets.final, ...excludedIds])];
+  query = query.not("id", "in", `(${excluded.join(",")})`);
   const { data, error } = await query.order("id");
   if (error) throw new Error(`marking examples: ${error.message}`);
   return (data ?? []) as MarkedExample[];

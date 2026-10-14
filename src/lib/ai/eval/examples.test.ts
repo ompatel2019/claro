@@ -90,6 +90,15 @@ it.each([undefined, "dev", "final"] as const)(
           example(id, `Frozen answer ${id}`),
         ),
         example(id, "Identity duplicate with different text"),
+        {
+          ...example(evalSets.dev[1], "Another frozen dev answer"),
+          split: "test",
+        },
+        example("dev-text-copy", "  ANOTHER\n FROZEN dev answer "),
+        example(
+          "final-text-copy",
+          ` FROZEN\t ANSWER ${evalSets.final[1].toUpperCase()} `,
+        ),
         example("text-copy", "  ＤＥＭＡＮＤ\nRISES  "),
         {
           ...example("hash-copy", "Hash duplicate with different text"),

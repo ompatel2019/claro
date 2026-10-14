@@ -19,6 +19,7 @@ import {
   pickBandExamples,
   pickQuotaExamples,
 } from "./examples";
+import { evalSets } from "@/lib/ai/eval/sets";
 import type { MarkableQuestion } from "./grade";
 
 const criteria = [
@@ -50,6 +51,7 @@ it("reads the grader view for the question, which excludes test rows", async () 
   query.from.mockReturnValue(query);
   query.select.mockReturnValue(query);
   query.eq.mockReturnValue(query);
+  query.not.mockReturnValue(query);
   query.order.mockResolvedValue({ data: [ex(2), ex(1)], error: null });
   const q = { id: "a1-m2-21a", criteria } as MarkableQuestion;
   expect(await bandExamples(q)).toEqual([ex(2), ex(1)]);
@@ -67,7 +69,11 @@ it("applies eval exclusions before fetching band anchors", async () => {
   query.order.mockResolvedValue({ data: [ex(2)], error: null });
   const q = { id: "fixture-question", criteria } as MarkableQuestion;
   expect(await bandExamples(q, ["locked-final", "dev-self"])).toEqual([ex(2)]);
-  expect(query.not).toHaveBeenCalledWith("id", "in", "(locked-final,dev-self)");
+  expect(query.not).toHaveBeenCalledWith(
+    "id",
+    "in",
+    `(${[...evalSets.final, "locked-final", "dev-self"].join(",")})`,
+  );
 });
 
 const singleBands = [1, 2, 3, 4].map((mark) => ({
@@ -179,7 +185,11 @@ it("preserves tutor comments and excludes rows before quota ranking", async () =
   expect(query.select).toHaveBeenCalledWith(
     "answer_text, tutor_mark, accepted_tutor_comments",
   );
-  expect(query.not).toHaveBeenCalledWith("id", "in", "(locked-final,dev-self)");
+  expect(query.not).toHaveBeenCalledWith(
+    "id",
+    "in",
+    `(${[...evalSets.final, "locked-final", "dev-self"].join(",")})`,
+  );
   expect(pickQuotaExamples(q, rows, "demand raises prices", 2)[0]).toEqual(
     note,
   );
@@ -195,4 +205,25 @@ it("uses bigrams to favour phrase overlap over identical unigrams", () => {
   expect(
     pickQuotaExamples(quotaQuestion, examples, "demand raises prices", 2)[0],
   ).toBe(examples[1]);
+});
+
+it("always excludes frozen final IDs without caller exclusions and unions them uniquely", async () => {
+  query.from.mockReturnValue(query);
+  query.select.mockReturnValue(query);
+  query.eq.mockReturnValue(query);
+  query.not.mockReturnValue(query);
+  query.order.mockResolvedValue({ data: [], error: null });
+  const q = { id: "live-question", criteria } as MarkableQuestion;
+  await examplePool(q);
+  expect(query.not).toHaveBeenLastCalledWith(
+    "id",
+    "in",
+    `(${evalSets.final.join(",")})`,
+  );
+  await examplePool(q, [evalSets.final[0], "caller-excluded"]);
+  expect(query.not).toHaveBeenLastCalledWith(
+    "id",
+    "in",
+    `(${[...evalSets.final, "caller-excluded"].join(",")})`,
+  );
 });

@@ -78,14 +78,13 @@ export function WrittenAnswer({
   });
   useEffect(() => {
     if (a.status !== "marking") return;
-    const db = createClient();
     let cancelled = false;
     const tick = async () => {
-      const { data } = await db
-        .from("attempts")
-        .select("status, mark, max_marks, band, feedback")
-        .eq("id", a.id)
-        .maybeSingle();
+      const response = await fetch(`/api/attempts/${a.id}/status`, {
+        cache: "no-store",
+      });
+      if (!response.ok) return;
+      const data = await response.json();
       if (cancelled || !data) return;
       if (data.status === "marked" || data.status === "failed")
         applyRef.current({
@@ -96,8 +95,8 @@ export function WrittenAnswer({
           feedback: data.feedback,
         });
     };
-    void tick();
-    const id = setInterval(() => void tick(), 1500);
+    void tick().catch(() => {});
+    const id = setInterval(() => void tick().catch(() => {}), 1500);
     return () => {
       cancelled = true;
       clearInterval(id);

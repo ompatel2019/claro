@@ -2,7 +2,12 @@ import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
 import { Pen } from "@/components/icons";
-import { markingState, markLabel, type ReviewRow } from "@/lib/feedback";
+import {
+  studentMarking,
+  markingState,
+  markLabel,
+  type ReviewRow,
+} from "@/lib/feedback";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { bankQuestions, remainingChecks } from "@/lib/single-check-data";
@@ -72,7 +77,7 @@ export default async function Page() {
                   feedback: ReviewRow["feedback"];
                   mark_reviews: NonNullable<ReviewRow["review"]>[];
                 }[];
-                const a = attempts[0];
+                const a = attempts[0] ? studentMarking(attempts[0]) : undefined;
                 const title =
                   config.question?.stem ??
                   a?.question?.stem ??

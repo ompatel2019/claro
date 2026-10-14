@@ -62,10 +62,21 @@ export function retrievalPool<
   },
 >(rows: readonly T[], set?: EvalSet, answer?: EvalAnswer): T[] {
   const excluded = new Set(retrievalExclusions(set, answer?.id));
+  const frozenIds = new Set(retrievalExclusions(set));
+  const frozenTexts = new Map<string, Set<string>>();
+  for (const row of rows) {
+    if (!frozenIds.has(row.id)) continue;
+    const texts = frozenTexts.get(row.question_id) ?? new Set<string>();
+    texts.add(normaliseAnswer(row.answer_text));
+    frozenTexts.set(row.question_id, texts);
+  }
   return rows.filter(
     (row) =>
       row.split === "example" &&
       !excluded.has(row.id) &&
+      !frozenTexts
+        .get(row.question_id)
+        ?.has(normaliseAnswer(row.answer_text)) &&
       (!answer ||
         normaliseAnswer(row.answer_text) !==
           normaliseAnswer(answer.answer_text)) &&

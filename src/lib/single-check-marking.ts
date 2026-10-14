@@ -1,4 +1,5 @@
 import "server-only";
+import { studentMarking } from "./feedback";
 import { admin } from "@/utils/supabase/admin";
 import {
   AlreadyMarking,
@@ -119,7 +120,7 @@ async function markCheck(
     const { data } = await db
       .from("attempts")
       .update({
-        ...marked,
+        ...studentMarking(marked),
         max_marks: question.marks,
         check_status: check.status,
         marked_by_model: MARKER.model,

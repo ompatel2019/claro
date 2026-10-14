@@ -21,38 +21,34 @@ const q: MarkableQuestion = {
 beforeEach(() => vi.resetAllMocks());
 
 it.each([
-  [[3, 3], undefined, false],
-  [[3, 2, 3], { uncertain: true, marks: [3, 2] }, true],
-  [[3], undefined, undefined],
-])(
-  "records uncertainty for initial marks %j",
-  async (marks, flags, uncertain) => {
-    vi.mocked(markWritten).mockResolvedValue({
-      mark: 3,
-      band: "Relevant",
-      check: { status: "agreed", marks },
-      feedback: {
-        flags,
-        validated: true,
-        comments: [],
-        justification: "Evidence",
-        next_band: "More detail",
-        why_not_higher: "Missing link",
-        better_answer_outline: [],
-      },
-    } as never);
-    const row = emptyRow({
-      id: "synthetic-item",
-      section: "Dev",
-      label: "",
-      expected: 3,
-      q,
-    });
-    await markEvalItem(row, q, "Demand rises", "eval", async () => 0);
-    expect(row.flags.uncertain).toBe(uncertain);
-    expect(row.check?.marks).toEqual(marks);
-    expect(row.score?.exact).toBe(true);
-    expect(row.usd).toBe(0);
-    expect(row.feedback).not.toContain("uncertain");
-  },
-);
+  [[3, 3], false],
+  [[3, 2, 3], true],
+  [[3], undefined],
+])("records uncertainty for initial marks %j", async (marks, uncertain) => {
+  vi.mocked(markWritten).mockResolvedValue({
+    mark: 3,
+    band: "Relevant",
+    check: { status: "agreed", marks },
+    feedback: {
+      validated: true,
+      comments: [],
+      justification: "Evidence",
+      next_band: "More detail",
+      why_not_higher: "Missing link",
+      better_answer_outline: [],
+    },
+  } as never);
+  const row = emptyRow({
+    id: "synthetic-item",
+    section: "Dev",
+    label: "",
+    expected: 3,
+    q,
+  });
+  await markEvalItem(row, q, "Demand rises", "eval", async () => 0);
+  expect(row.flags.uncertain).toBe(uncertain);
+  expect(row.check?.marks).toEqual(marks);
+  expect(row.score?.exact).toBe(true);
+  expect(row.usd).toBe(0);
+  expect(row.feedback).not.toContain("uncertain");
+});

@@ -86,3 +86,42 @@ it.each([undefined, "dev", "final"] as const)(
     ]);
   },
 );
+
+it.each([undefined, "dev", "final"] as const)(
+  "excludes copies of any same-question frozen answer in mode %s",
+  (set) => {
+    const frozen = [
+      {
+        ...row(evalSets.dev[0], "test"),
+        answer_text: "Dev answer",
+        source_hash: "dev-hash",
+      },
+      {
+        ...row(evalSets.final[0]),
+        answer_text: "Final answer",
+        source_hash: "final-hash",
+      },
+    ];
+    const copies = [
+      {
+        ...row("dev-copy"),
+        answer_text: "  ＤＥＶ\n ANSWER  ",
+        source_hash: "different-dev-hash",
+      },
+      {
+        ...row("final-copy"),
+        answer_text: " FINAL\t  answer ",
+        source_hash: "different-final-hash",
+      },
+    ];
+    const eligible = [
+      { ...copies[0], id: "other-question", question_id: "other-question" },
+      { ...row("safe"), answer_text: "Unrelated answer" },
+    ];
+    expect(
+      retrievalPool([...copies, ...eligible, ...frozen], set, {
+        answer_text: "Current answer",
+      }),
+    ).toEqual(eligible);
+  },
+);

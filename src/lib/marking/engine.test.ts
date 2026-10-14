@@ -1125,19 +1125,16 @@ it("waits for the first mark before retrieving quotas for check and reconciliati
   expect(mockedCall.mock.calls[2][0].messages[1].content).toEqual(checkPrompt);
 });
 
-it.each([
-  [4, undefined],
-  [3, { uncertain: true, marks: [4, 3] }],
-  [2, { uncertain: true, marks: [4, 2] }],
-])(
-  "records unequal initial marks (%s) even after reconciliation",
-  async (second, flags) => {
+it.each([4, 3, 2])(
+  "keeps unequal initial marks (%s) out of feedback",
+  async (second) => {
     mockedCall
       .mockResolvedValueOnce(grade)
       .mockResolvedValueOnce(checkGrade(second))
       .mockResolvedValueOnce(checkGrade(4));
     const result = await markWritten(q, "The prices rise rapidly", null);
-    expect(result.feedback.flags).toEqual(flags);
+    expect(result.feedback).not.toHaveProperty("flags");
+    expect(result.check.marks.slice(0, 2)).toEqual([4, second]);
   },
 );
 
@@ -1150,7 +1147,7 @@ it("leaves a single-pass result unflagged", async () => {
   expect(result.feedback).not.toHaveProperty("flags");
 });
 
-it("persists both initial marks in feedback JSONB after reconciliation", async () => {
+it("never persists uncertainty or pass marks in attempt feedback after reconciliation", async () => {
   const save = query({ id: "attempt", status: "marked" });
   vi.mocked(admin().from)
     .mockReturnValueOnce(
@@ -1172,9 +1169,7 @@ it("persists both initial marks in feedback JSONB after reconciliation", async (
   expect(save.update).toHaveBeenCalledWith(
     expect.objectContaining({
       check_status: "second_pass",
-      feedback: expect.objectContaining({
-        flags: { uncertain: true, marks: [4, 2] },
-      }),
+      feedback: expect.not.objectContaining({ flags: expect.anything() }),
     }),
   );
 });

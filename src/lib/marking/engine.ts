@@ -5,6 +5,7 @@ import { ZodError, type z } from "zod";
 import { callJson, type Message } from "@/lib/ai/openai";
 import { MODELS, type Model } from "@/lib/ai/prices";
 import { admin } from "@/utils/supabase/admin";
+import { studentMarking } from "@/lib/feedback";
 import { firstReviews, type FlashcardReview } from "@/lib/flashcards";
 import {
   anchorComments,
@@ -225,14 +226,6 @@ export async function markWritten(
       next_band: grade.next_band,
       better_answer_outline: grade.better_answer_outline,
       validated: first.validated,
-      ...(second && first.mark !== second.mark
-        ? {
-            flags: {
-              uncertain: true as const,
-              marks: [first.mark, second.mark],
-            },
-          }
-        : {}),
     },
   };
 }
@@ -388,7 +381,7 @@ export async function markAttempt(attemptId: string) {
           if (error && error.code !== "23505") throw error;
         }
         result = {
-          ...marked,
+          ...studentMarking(marked),
           max_marks: q.marks,
           check_status: check.status,
           marked_by_model: MARKER.model,
