@@ -184,8 +184,8 @@ export function layoutCards(
   });
 }
 
-/** Adapt the mark route's current payload to the shared annotated view. Reference
- * answers and checker/review metadata are only available in finished results. */
+/** Adapt a checked attempt to the shared annotated view: the student-facing feedback
+ * and model answer only. Criteria and checker/review metadata stay in finished results. */
 export function inlineSprintFeedback(a: Attempt): ReviewRow {
   return {
     attempt_id: a.id,
@@ -212,7 +212,7 @@ export function inlineSprintFeedback(a: Attempt): ReviewRow {
     feedback: a.feedback,
     correct_index: null,
     criteria: null,
-    sample_answer: null,
+    sample_answer: a.sample_answer ?? null,
     explanation: null,
     review: null,
   };

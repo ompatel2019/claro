@@ -245,6 +245,16 @@ describe("inlineSprintFeedback", () => {
     expect(row.review).toBeNull();
     expect(markingState(row)).toBe("marked");
   });
+  it("carries the checked model answer but never criteria or review data", () => {
+    const row = inlineSprintFeedback({
+      ...attempt,
+      sample_answer: "Synthetic model answer.",
+    });
+    expect(row.sample_answer).toBe("Synthetic model answer.");
+    expect(row.criteria).toBeNull();
+    expect(row.review).toBeNull();
+    expect(row.check_status).toBe("skipped");
+  });
   it("keeps photo transcripts and handles empty feedback", () => {
     const row = inlineSprintFeedback({
       ...attempt,

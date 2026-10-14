@@ -296,6 +296,7 @@ export function SprintRunner({
         max_marks: body.max_marks,
         band: body.band,
         feedback: body.feedback,
+        sample_answer: body.sample_answer ?? null,
       });
       if (body.explanation)
         setExplanations((e) => ({ ...e, [id]: body.explanation }));
@@ -759,11 +760,7 @@ function CheckResult({
         {a.band && (
           <p className="text-muted-foreground text-sm">Band: {a.band}</p>
         )}
-        <AnnotatedFeedback
-          row={inlineSprintFeedback(a)}
-          readOnly
-          showReferences={false}
-        />
+        <AnnotatedFeedback row={inlineSprintFeedback(a)} readOnly />
       </section>
     );
   }

@@ -124,16 +124,23 @@ export async function POST(
           .throwOnError();
       } else await rescoreSession(attempt.session_id);
     }
-    // The answer is locked now, so the explanation can be shown with the key.
-    const explanation =
-      checkMode && question?.type === "mcq"
+    // The answer is locked now, so the explanation (MCQ) or model answer
+    // (written) can be shown with the mark. Students cannot read these columns.
+    const reference =
+      checkMode && attempt.question_id
         ? (
             await admin()
               .from("questions")
-              .select("explanation")
+              .select("explanation, sample_answer")
               .eq("id", attempt.question_id)
               .single()
-          ).data?.explanation
+          ).data
+        : null;
+    const explanation =
+      question?.type === "mcq" ? reference?.explanation : null;
+    const sample_answer =
+      question?.type !== "mcq" && status === "marked"
+        ? reference?.sample_answer
         : null;
     return Response.json({
       mark,
@@ -142,6 +149,7 @@ export async function POST(
       feedback,
       status,
       ...(explanation ? { explanation } : {}),
+      ...(sample_answer ? { sample_answer } : {}),
       ...(feedback?.correct_index != null
         ? { correct_index: feedback.correct_index }
         : {}),

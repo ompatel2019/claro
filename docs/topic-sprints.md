@@ -43,3 +43,12 @@ blocks the seen 5 + 4 combination for a 9-mark target.
 back all fixtures and sessions. Set `claro.test_student_id` to a valid synthetic
 student UUID locally in that transaction before running it; never use a real
 student. Apply the migration first, or include it inside the test transaction.
+
+## Check as you go: model answer (S10)
+
+Checking a written answer shows the mark, band, comments, full-mark outline and
+the question's stored model answer, using the results page's `AnnotatedFeedback`.
+`POST /api/attempts/:id/mark` adds `sample_answer` only in check-as-you-go
+sprints and only once the attempt is marked; `loadSprint` reloads it for checked
+written answers. Marking guidelines, `check_status` and `mark_reviews` details
+are never sent to the sprint view. `e2e/sprint-model-answer.spec.ts` mocks marking.

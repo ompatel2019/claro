@@ -68,6 +68,8 @@ export type Attempt = {
   mark: number | null;
   max_marks: number | null;
   band: string | null;
+  /** Model answer, only for written answers already checked in a check-as-you-go sprint. */
+  sample_answer?: string | null;
   feedback: {
     note?: string;
     correct_index?: number;

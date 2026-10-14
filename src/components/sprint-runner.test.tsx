@@ -359,6 +359,51 @@ it("renders full written comments and an outline inline with one mark request", 
   ).not.toBeInTheDocument();
   expect(mocks.fetch).toHaveBeenCalledTimes(1);
 });
+it("shows the model answer from a written check, and no guidelines or review notes", async () => {
+  mocks.fetch.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      status: "marked",
+      mark: 2,
+      max_marks: 4,
+      band: "Sound",
+      feedback: { comments: [] },
+      sample_answer: "Synthetic model answer.",
+    }),
+  });
+  vi.stubGlobal("fetch", mocks.fetch);
+  show([written()]);
+  fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+  const feedback = await screen.findByRole("region", {
+    name: "Checked answer feedback",
+  });
+  expect(within(feedback).getByText("Model answer")).toBeVisible();
+  expect(
+    within(feedback).getByText("Synthetic model answer."),
+  ).toBeInTheDocument();
+  expect(
+    within(feedback).queryByText("Marking guidelines"),
+  ).not.toBeInTheDocument();
+  expect(
+    within(feedback).queryByText(/double-checking/),
+  ).not.toBeInTheDocument();
+});
+it("a resumed written check keeps its model answer", () => {
+  show([
+    {
+      ...written(),
+      status: "marked",
+      mark: 3,
+      max_marks: 4,
+      feedback: { comments: [] },
+      sample_answer: "Synthetic model answer.",
+    },
+  ]);
+  expect(
+    screen.getByRole("region", { name: "Checked answer feedback" }),
+  ).toHaveTextContent("Model answer");
+});
 it("resumed written marks render existing feedback without marking again", () => {
   const a = {
     ...written(),

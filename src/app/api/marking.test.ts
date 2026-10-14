@@ -438,6 +438,60 @@ it("check mode marks multiple choice early and returns key and explanation", asy
   expect(assertStudentAiRateLimit).not.toHaveBeenCalled();
   expect(rescoreSession).not.toHaveBeenCalled();
 });
+it("check mode returns the stored model answer with a written mark, without review internals", async () => {
+  client([
+    {
+      session_id: sessionId,
+      question_id: "q2",
+      session: { finished_at: null, config: { feedback: "each" } },
+      question: { type: "short" },
+    },
+  ]);
+  vi.mocked(markAttempt).mockResolvedValue({
+    mark: 2,
+    max_marks: 4,
+    band: "Sound",
+    feedback: { comments: [] },
+    status: "marked",
+    check_status: "in_review",
+    marked_by_model: "synthetic-model",
+  } as never);
+  const chain = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    single: vi.fn().mockResolvedValue({
+      data: { explanation: null, sample_answer: "Synthetic model answer." },
+    }),
+  };
+  vi.mocked(admin().from).mockReturnValue(chain as never);
+  const body = await (await mark(request(), ctx)).json();
+  expect(body).toEqual({
+    mark: 2,
+    max_marks: 4,
+    band: "Sound",
+    feedback: { comments: [] },
+    status: "marked",
+    sample_answer: "Synthetic model answer.",
+  });
+  expect(chain.eq).toHaveBeenCalledWith("id", "q2");
+});
+it("does not reveal the model answer outside check mode", async () => {
+  client([
+    {
+      session_id: sessionId,
+      question_id: "q2",
+      session: { finished_at: null, config: { feedback: "end" } },
+      question: { type: "short" },
+    },
+  ]);
+  vi.mocked(markAttempt).mockResolvedValue({
+    mark: 2,
+    status: "marked",
+  } as never);
+  const body = await (await mark(request(), ctx)).json();
+  expect(body).not.toHaveProperty("sample_answer");
+  expect(admin().from).not.toHaveBeenCalledWith("questions");
+});
 it("rescores a finished session after a retry", async () => {
   client([
     {

@@ -2,6 +2,7 @@ import "server-only";
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
+import { admin } from "@/utils/supabase/admin";
 import {
   examOrder,
   questionColumns,
@@ -27,9 +28,28 @@ export async function loadSprint(id: string) {
     .eq("user_id", profile.id)
     .order("position");
   if (attemptError) throw new Error("Could not load your questions.");
+  const rows = (attempts ?? []) as unknown as Attempt[];
+  const checked =
+    !session.finished_at && session.config?.feedback === "each"
+      ? rows.filter((a) => a.status === "marked" && a.question.type !== "mcq")
+      : [];
+  if (checked.length) {
+    // Model answers for written answers already checked (§3.3); students
+    // cannot select questions.sample_answer, so read it server-side.
+    const { data: refs, error: refError } = await admin()
+      .from("questions")
+      .select("id, sample_answer")
+      .in(
+        "id",
+        checked.map((a) => a.question_id),
+      );
+    if (refError) throw new Error("Could not load your questions.");
+    const byId = new Map((refs ?? []).map((q) => [q.id, q.sample_answer]));
+    for (const a of checked) a.sample_answer = byId.get(a.question_id) ?? null;
+  }
   return {
     session: session as Session,
-    attempts: examOrder((attempts ?? []) as unknown as Attempt[]),
+    attempts: examOrder(rows),
     profile,
   };
 }
