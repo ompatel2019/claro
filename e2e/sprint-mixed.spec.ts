@@ -105,7 +105,6 @@ for (const width of [400, 1280]) {
       await page.goto(
         `/student/sprint?type=mixed&sub=${bank.subtopic}&size=20`,
       );
-      const next = page.getByRole("button", { name: "Next", exact: true });
       await goToSprintStep(page, 3);
       await page
         .getByRole("spinbutton", { name: "Multiple choice questions" })
