@@ -154,3 +154,20 @@ it("shows the selected default size alongside Mode before the filters", () => {
     "Card type",
   ]);
 });
+
+it("renders the summary after Source and all setup controls without sticky positioning", () => {
+  render(<FlashcardBuilder cards={cards} topics={topics} history={history} />);
+  const summary = screen
+    .getByRole("button", { name: "Start" })
+    .closest("form")!;
+  const source = screen
+    .getByRole("heading", { name: "Source" })
+    .closest("section")!;
+  expect(
+    source.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(summary).toBe(summary.parentElement!.lastElementChild);
+  expect(summary.className).not.toMatch(
+    /(?:^|\s)(?:\S+:)?(?:sticky|fixed)(?:\s|$)/,
+  );
+});
