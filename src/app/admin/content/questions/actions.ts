@@ -41,7 +41,7 @@ const conflictOf = (code?: string) =>
       : null;
 
 /**
- * Save the editor (new or existing). `expected` is the updated_at the editor
+ * Save an existing imported question. `expected` is the updated_at the editor
  * loaded; a different value in the database means another admin saved first.
  */
 export async function saveQuestion(
@@ -53,6 +53,7 @@ export async function saveQuestion(
   | { conflict: string }
 > {
   await requireAdmin();
+  if (!expected) return { error: "Import questions before editing them." };
   const parsed = questionSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const q = parsed.data;

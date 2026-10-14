@@ -29,14 +29,6 @@ const pager = {
 const review = { tabCount: 0, rows: [], pager };
 const list = { rows: [], pager };
 
-function deferred<T>(value: T) {
-  let resolve!: () => void;
-  const promise = new Promise<T>((done) => {
-    resolve = () => done(value);
-  });
-  return { promise, resolve };
-}
-
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.requireAdmin.mockResolvedValue({ role: "admin" });
@@ -46,36 +38,43 @@ beforeEach(() => {
   mocks.loadQuestionList.mockResolvedValue(list);
 });
 
-it("starts all four loaders before any resolves for the default live status", async () => {
-  const pendingCounts = deferred(counts);
-  const pendingTopics = deferred([]);
-  const pendingReview = deferred(review);
-  const pendingList = deferred(list);
-  mocks.loadQuestionCounts.mockReturnValue(pendingCounts.promise);
-  mocks.loadTopics.mockReturnValue(pendingTopics.promise);
-  mocks.loadImportReview.mockReturnValue(pendingReview.promise);
-  mocks.loadQuestionList.mockReturnValue(pendingList.promise);
+it("loads the list and counts with normalised topic filters", async () => {
+  await QuestionsPage({ searchParams: Promise.resolve({}) });
+  expect(mocks.loadQuestionList).toHaveBeenCalledWith({ topic: undefined });
+  expect(mocks.loadQuestionCounts).toHaveBeenCalledOnce();
+});
 
-  const page = QuestionsPage({ searchParams: Promise.resolve({}) });
-  try {
-    await vi.waitFor(() => {
-      expect(mocks.loadQuestionCounts).toHaveBeenCalledExactlyOnceWith();
-      expect(mocks.loadTopics).toHaveBeenCalledExactlyOnceWith();
-      expect(mocks.loadImportReview).toHaveBeenCalledExactlyOnceWith(
-        0.82,
-        NaN,
-        false,
-        {},
-      );
-      expect(mocks.loadQuestionList).toHaveBeenCalledExactlyOnceWith({});
-    });
-  } finally {
-    pendingCounts.resolve();
-    pendingTopics.resolve();
-    pendingReview.resolve();
-    pendingList.resolve();
-    await page;
-  }
+it("filters imports by the selected subtopic and drops unrelated subtopics", async () => {
+  mocks.loadTopics.mockResolvedValue([
+    { id: "t3", parent_id: null },
+    { id: "t3-inflation", parent_id: "t3" },
+  ]);
+  await QuestionsPage({
+    searchParams: Promise.resolve({
+      status: "review",
+      topic: "t3",
+      subtopic: "t3-inflation",
+    }),
+  });
+  expect(mocks.loadImportReview).toHaveBeenLastCalledWith(
+    0.82,
+    NaN,
+    true,
+    expect.objectContaining({ topic: "t3-inflation" }),
+  );
+  await QuestionsPage({
+    searchParams: Promise.resolve({
+      status: "review",
+      topic: "t3",
+      subtopic: "t2-no-match",
+    }),
+  });
+  expect(mocks.loadImportReview).toHaveBeenLastCalledWith(
+    0.82,
+    NaN,
+    true,
+    expect.objectContaining({ topic: "t3" }),
+  );
 });
 
 it("skips the question list for the review status", async () => {
@@ -88,7 +87,7 @@ it("skips the question list for the review status", async () => {
     0.82,
     NaN,
     true,
-    filters,
+    { ...filters, topic: undefined },
   );
   expect(mocks.loadQuestionList).not.toHaveBeenCalled();
 });

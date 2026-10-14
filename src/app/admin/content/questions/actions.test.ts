@@ -94,7 +94,9 @@ it.each(["draft", "live"])(
       updated_at: question.updated_at,
     };
     mocks.rpc.mockResolvedValue({ data: saved, error: null });
-    expect(await saveQuestion({ ...question, status }, null)).toEqual(saved);
+    expect(
+      await saveQuestion({ ...question, status }, question.updated_at),
+    ).toEqual(saved);
     expect(mocks.rpc).toHaveBeenCalledWith(
       "admin_save_question",
       expect.objectContaining({ p_row: expect.objectContaining({ status }) }),
@@ -168,7 +170,7 @@ it("does not invalidate a rejected save", async () => {
   mocks.rpc.mockResolvedValue({
     error: { code: "23505", message: "questions_pkey" },
   });
-  expect(await saveQuestion(question, null)).toEqual({
+  expect(await saveQuestion(question, question.updated_at)).toEqual({
     error: "This ID is already taken.",
   });
   expect(mocks.updateTag).not.toHaveBeenCalled();
@@ -185,4 +187,11 @@ it.each([
   expect(mocks.service).not.toHaveBeenCalled();
   expect(mocks.rpc).not.toHaveBeenCalled();
   expect(mocks.updateTag).not.toHaveBeenCalled();
+});
+
+it("rejects manual creation before the database write", async () => {
+  expect(await saveQuestion(question, null)).toEqual({
+    error: "Import questions before editing them.",
+  });
+  expect(mocks.rpc).not.toHaveBeenCalled();
 });

@@ -17,7 +17,6 @@ import {
   ORIGIN_LABELS,
   publishProblems,
   questionSchema,
-  suggestId,
   TYPE_LABELS,
   validateCriteria,
   VERBS,
@@ -39,6 +38,7 @@ import { QuestionKey, QuestionView } from "./question-view";
 import { Button, buttonVariants } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { Input } from "./ui/input";
+import { TopicSelect } from "./topic-select";
 import { FormSelect } from "./ui/form-select";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./ui/tabs";
@@ -46,24 +46,6 @@ import { Textarea } from "./ui/textarea";
 
 type Loaded = NonNullable<Awaited<ReturnType<typeof loadQuestion>>>;
 const LETTERS = ["A", "B", "C", "D"];
-const EMPTY: QuestionInput = {
-  id: "",
-  type: "short",
-  topic_id: "",
-  marks: 4,
-  verb: null,
-  source: "",
-  year: new Date().getFullYear(),
-  stem: "",
-  stimulus: null,
-  options: null,
-  correct_index: null,
-  explanation: null,
-  criteria: [],
-  guideline_notes: null,
-  sample_answer: null,
-  status: "draft",
-};
 
 const time = (iso: string) =>
   new Date(iso)
@@ -79,33 +61,21 @@ export function QuestionEditor({
   loaded,
   topics,
 }: {
-  loaded: Loaded | null;
+  loaded: Loaded;
   topics: Topic[];
 }) {
   const router = useRouter();
-  const isNew = !loaded;
   // Stored rows may predate the rules (long stems, unknown verbs): edit them as they are.
-  const [form, setForm] = useState<QuestionInput>(
-    loaded
-      ? {
-          ...EMPTY,
-          ...Object.fromEntries(
-            Object.keys(EMPTY).map((k) => [
-              k,
-              loaded.question[k as keyof QuestionInput],
-            ]),
-          ),
-          verb: VERBS.includes(loaded.question.verb as (typeof VERBS)[number])
-            ? loaded.question.verb
-            : null,
-        }
-      : EMPTY,
-  );
-  const [savedAt, setSavedAt] = useState(loaded?.question.updated_at ?? null);
+  const [form, setForm] = useState<QuestionInput>({
+    ...loaded.question,
+    verb: VERBS.includes(loaded.question.verb as (typeof VERBS)[number])
+      ? loaded.question.verb
+      : null,
+  });
+  const [savedAt, setSavedAt] = useState(loaded.question.updated_at);
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [criteriaTouched, setCriteriaTouched] = useState(false);
   const [dirty, setDirty] = useState(false);
-  const [idTouched, setIdTouched] = useState(!isNew);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [summary, setSummary] = useState<string[]>([]);
   const [conflict, setConflict] = useState<string | null>(null);
@@ -115,7 +85,7 @@ export function QuestionEditor({
   const guardEntry = useRef(false);
   const saveQueued = useRef(false);
   const [uploading, setUploading] = useState(false);
-  const locked = (loaded?.attemptCount ?? 0) > 0;
+  const locked = loaded.attemptCount > 0;
   const mc = form.type === "mcq";
   const [lo, hi] = marksRange(form.type);
   const bands = validateCriteria(form.criteria ?? [], form.marks);
@@ -135,14 +105,6 @@ export function QuestionEditor({
       marks:
         type === "mcq" ? 1 : type === "extended" ? max : Math.min(f.marks, max),
       options: type === "mcq" ? (f.options ?? ["", "", "", ""]) : f.options,
-    }));
-    setDirty(true);
-  };
-  const setSource = (source: string) => {
-    setForm((f) => ({
-      ...f,
-      source,
-      id: idTouched ? f.id : suggestId(source),
     }));
     setDirty(true);
   };
@@ -283,8 +245,7 @@ export function QuestionEditor({
       setDirty(false);
       setConflict(null);
       toast.success("Saved");
-      if (isNew) router.replace(`/admin/content/questions/${r.id}`);
-      else router.refresh();
+      router.refresh();
     });
   }
   useEffect(() => {
@@ -308,9 +269,9 @@ export function QuestionEditor({
     };
   });
 
-  const subtopics = topics.filter((t) => t.parent_id);
-  const name = (id: string | null) =>
-    topics.find((t) => t.id === id)?.name ?? "";
+  const [parent, setParent] = useState(
+    topics.find((t) => t.id === loaded.question.topic_id)?.parent_id ?? "",
+  );
 
   return (
     <form
@@ -322,7 +283,7 @@ export function QuestionEditor({
       }}
     >
       <fieldset disabled={pending || uploading} className="min-w-0 space-y-4">
-        {loaded?.duplicate && (
+        {loaded.duplicate && (
           <p role="status" className="bg-muted rounded-xl px-4 py-3 text-sm">
             Duplicate of{" "}
             <Link
@@ -336,7 +297,7 @@ export function QuestionEditor({
         )}
         {locked && (
           <p role="status" className="bg-muted rounded-xl px-4 py-3 text-sm">
-            Has {loaded!.attemptCount} attempts. Type and marks are locked.
+            Has {loaded.attemptCount} attempts. Type and marks are locked.
           </p>
         )}
         {conflict && (
@@ -372,15 +333,7 @@ export function QuestionEditor({
               hint="Letters, digits and dashes. Fixed after saving."
               error={errors.id}
             >
-              <Input
-                value={form.id}
-                readOnly={!isNew}
-                pattern="[a-z0-9-]{3,40}"
-                onChange={(e) => {
-                  setIdTouched(true);
-                  set("id", e.target.value);
-                }}
-              />
+              <Input value={form.id} readOnly pattern="[a-z0-9-]{3,40}" />
             </Field>
             <Field label="Type" error={errors.type}>
               <FormSelect
@@ -397,20 +350,18 @@ export function QuestionEditor({
                 ]}
               />
             </Field>
-            <Field label="Topic" error={errors.topic_id}>
-              <FormSelect
-                value={form.topic_id}
-                disabled={pending || uploading}
-                onValueChange={(value) => set("topic_id", value)}
-                options={[
-                  { value: "", label: "Choose a subtopic" },
-                  ...subtopics.map((t) => ({
-                    value: t.id,
-                    label: `${name(t.parent_id)} · ${t.name}`,
-                  })),
-                ]}
-              />
-            </Field>
+            <TopicSelect
+              topics={topics}
+              parent={parent}
+              value={form.topic_id}
+              disabled={pending || uploading}
+              error={errors.topic_id}
+              onParentChange={(id) => {
+                setParent(id);
+                set("topic_id", "");
+              }}
+              onChange={(id) => set("topic_id", id)}
+            />
             <Field
               label="Marks"
               hint={mc ? "Multiple choice is always 1 mark." : `${lo}–${hi}`}
@@ -446,7 +397,7 @@ export function QuestionEditor({
               <Input
                 maxLength={60}
                 value={form.source}
-                onChange={(e) => setSource(e.target.value)}
+                onChange={(e) => set("source", e.target.value)}
               />
             </Field>
             <Field label="Year" error={errors.year}>
@@ -463,8 +414,7 @@ export function QuestionEditor({
                 readOnly
                 value={
                   ORIGIN_LABELS[
-                    (loaded?.question.origin ??
-                      "claro") as keyof typeof ORIGIN_LABELS
+                    loaded.question.origin as keyof typeof ORIGIN_LABELS
                   ]
                 }
               />
@@ -785,8 +735,7 @@ export function QuestionEditor({
               Back to questions
             </Link>
             <span className="text-muted-foreground text-xs">
-              {dirty ? "Unsaved changes" : savedAt ? "Saved" : "Not saved yet"}{" "}
-              · ⌘S
+              {dirty ? "Unsaved changes" : "Saved"} · ⌘S
             </span>
           </CardContent>
         </Card>
@@ -830,17 +779,11 @@ export function QuestionEditor({
                     Multiple choice is marked by the key; nothing to test.
                   </p>
                 ) : (
-                  <TestMark form={form} recent={loaded?.recentAnswers ?? []} />
+                  <TestMark form={form} recent={loaded.recentAnswers} />
                 )}
               </TabsContent>
               <TabsContent value="stats">
-                {loaded ? (
-                  <Stats stats={loaded.stats} mc={mc} marks={form.marks} />
-                ) : (
-                  <p className="text-muted-foreground text-sm">
-                    Stats appear once the question has attempts.
-                  </p>
-                )}
+                <Stats stats={loaded.stats} mc={mc} marks={form.marks} />
               </TabsContent>
             </Tabs>
           </CardContent>

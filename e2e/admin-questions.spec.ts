@@ -55,6 +55,23 @@ test.describe("Admin questions", () => {
   );
   test.describe.configure({ mode: "serial" });
   test.setTimeout(150000);
+  test.beforeAll(async () => {
+    const { error } = await adminClient()!
+      .from("questions")
+      .insert({
+        id,
+        type: "short",
+        topic_id: "t3-inflation",
+        marks: 4,
+        criteria: [],
+        source: `Synthetic import ${tag}`,
+        year: 2026,
+        stem: `${tag} Imported practice question.`,
+        status: "draft",
+        origin: "claro",
+      });
+    expect(error).toBeNull();
+  });
   test.afterAll(async () => {
     const db = adminClient();
     if (!db) return;
@@ -66,41 +83,26 @@ test.describe("Admin questions", () => {
     expect(error).toBeNull();
   });
 
-  test("creates a draft in the editor with inline validation and ⌘S", async ({
+  test("edits an imported draft with dependent topics and ⌘S", async ({
     page,
   }) => {
     await signInAdmin(page);
-    await page.goto("/admin/content/questions/new");
-    await expect(
-      page.getByRole("heading", { name: "New question" }),
-    ).toBeVisible({
+    await page.goto(`/admin/content/questions/${id}`);
+    await expect(page.getByRole("heading", { name: id })).toBeVisible({
       timeout: 60000,
     });
-    await expect(page.getByText("Not saved yet · ⌘S")).toBeVisible();
+    await expect(page.getByText("Saved · ⌘S")).toBeVisible();
     await expect(page.getByText("Add at least one band.")).toHaveCount(0);
-    // Saving an empty form lists what is missing; nothing is written.
-    await expect(async () => {
-      await page.getByRole("button", { name: "Save", exact: true }).click();
-      await expect(page.getByRole("alert").first()).toContainText(
-        "Choose a subtopic.",
-      );
-    }).toPass();
-    await expect(async () => {
-      await page
-        .getByLabel("Source label", { exact: true })
-        .fill(`2026 Q1(b) ${tag}`);
-      await expect(page.getByLabel("ID", { exact: true })).toHaveValue(
-        "2026-q1b",
-      );
-    }).toPass();
-    await page.getByLabel("ID", { exact: true }).fill(id);
-    await expect(async () => {
-      await page.getByRole("combobox", { name: "Topic", exact: true }).click();
-      await page.getByRole("option", { name: /Inflation/ }).click();
-      await expect(
-        page.getByRole("combobox", { name: "Topic", exact: true }),
-      ).toContainText("Inflation");
-    }).toPass();
+    await page.getByRole("combobox", { name: "Topic", exact: true }).click();
+    await page.getByRole("option", { name: /1\. / }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    await expect(page.getByRole("alert").first()).toContainText(
+      "Choose a subtopic.",
+    );
+    await page.getByRole("combobox", { name: "Topic", exact: true }).click();
+    await page.getByRole("option", { name: /3\. / }).click();
+    await page.getByRole("combobox", { name: "Subtopic", exact: true }).click();
+    await page.getByRole("option", { name: "Inflation", exact: true }).click();
     await page
       .getByLabel("Stem")
       .fill(`${tag} Explain one cause of inflation.`);
@@ -215,83 +217,85 @@ test.describe("Admin questions", () => {
     await page.goto(`/admin/content/questions/${twin}`);
     await expect(page.getByText(`Duplicate of ${id}`)).toBeVisible();
   });
-});
 
-test("question pages fit narrow screens and Test mark stays read-only", async ({
-  page,
-}) => {
-  test.skip(!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD);
-  await signInAdmin(page);
-  let aiRequests = 0;
-  page.on("request", (request) => {
-    if (request.url().includes("/api/admin/test-mark")) aiRequests++;
-  });
-  for (const width of [360, 400, 1280]) {
-    await page.setViewportSize({ width, height: 900 });
-    await page.goto("/admin/content/questions/new");
-    await expect(
-      page.getByRole("heading", { name: "New question" }),
-    ).toBeVisible();
-    await expect(async () => {
-      await page.getByRole("tab", { name: "Test mark", exact: true }).click();
-      await expect(
-        page.getByRole("button", { name: "Run test mark" }),
-      ).toBeDisabled();
-    }).toPass();
-    expect(
-      await page.evaluate(
-        () => document.documentElement.scrollWidth <= window.innerWidth,
-      ),
-    ).toBe(true);
-    const topic = page.getByRole("combobox", { name: "Topic", exact: true });
-    await topic.click();
-    const longOption = page.getByRole("option", {
-      name: /Case study: globalisation/,
+  test("question pages fit narrow screens and Test mark stays read-only", async ({
+    page,
+  }) => {
+    test.skip(!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD);
+    await signInAdmin(page);
+    let aiRequests = 0;
+    page.on("request", (request) => {
+      if (request.url().includes("/api/admin/test-mark")) aiRequests++;
     });
-    await expect(longOption).toBeVisible();
-    expect(
-      await longOption.evaluate(
-        (option) => option.scrollWidth <= option.clientWidth,
-      ),
-    ).toBe(true);
-    const popup = page.getByRole("listbox");
-    expect(
-      await popup.evaluate((list) => {
-        const bounds = list.getBoundingClientRect();
-        return bounds.left >= 0 && bounds.right <= window.innerWidth;
-      }),
-    ).toBe(true);
-    await page.keyboard.press("Escape");
-    await expect(topic).toBeFocused();
-  }
-  await expect(async () => {
+    for (const width of [360, 400, 1280]) {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/admin/content/questions/${id}`);
+      await expect(page.getByRole("heading", { name: id })).toBeVisible();
+      await expect(async () => {
+        await page.getByRole("tab", { name: "Test mark", exact: true }).click();
+        await expect(
+          page.getByRole("button", { name: "Run test mark" }),
+        ).toBeDisabled();
+      }).toPass();
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      ).toBe(true);
+      const topic = page.getByRole("combobox", { name: "Topic", exact: true });
+      await topic.click();
+      await page.getByRole("option", { name: /1\. / }).click();
+      const subtopic = page.getByRole("combobox", {
+        name: "Subtopic",
+        exact: true,
+      });
+      await subtopic.click();
+      const longOption = page.getByRole("option", {
+        name: /Case study: globalisation/,
+      });
+      await expect(longOption).toBeVisible();
+      expect(
+        await longOption.evaluate(
+          (option) => option.scrollWidth <= option.clientWidth,
+        ),
+      ).toBe(true);
+      const popup = page.getByRole("listbox");
+      expect(
+        await popup.evaluate((list) => {
+          const bounds = list.getBoundingClientRect();
+          return bounds.left >= 0 && bounds.right <= window.innerWidth;
+        }),
+      ).toBe(true);
+      await page.keyboard.press("Escape");
+      await expect(subtopic).toBeFocused();
+    }
+    await expect(async () => {
+      await page
+        .getByLabel("Source label", { exact: true })
+        .fill("e2e readonly source");
+      await expect(page.getByLabel("ID", { exact: true })).toHaveValue(id);
+    }).toPass();
     await page
-      .getByLabel("Source label", { exact: true })
-      .fill("e2e readonly source");
-    await expect(page.getByLabel("ID", { exact: true })).toHaveValue(
-      "e2e-readonly-source",
+      .getByRole("link", { name: "Back to questions", exact: true })
+      .first()
+      .click();
+    await expect(
+      page.getByRole("alertdialog", { name: "Leave without saving?" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Keep editing" }).click();
+    await expect(page.getByLabel("Source label", { exact: true })).toHaveValue(
+      "e2e readonly source",
     );
-  }).toPass();
-  await page
-    .getByRole("link", { name: "Back to questions", exact: true })
-    .first()
-    .click();
-  await expect(
-    page.getByRole("alertdialog", { name: "Leave without saving?" }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Keep editing" }).click();
-  await expect(page.getByLabel("Source label", { exact: true })).toHaveValue(
-    "e2e readonly source",
-  );
-  await page
-    .getByRole("link", { name: "Back to questions", exact: true })
-    .first()
-    .click();
-  await page
-    .getByRole("button", { name: "Leave without saving", exact: true })
-    .click();
-  await expect(page).toHaveURL(/\/admin\/content\/questions$/);
-  expect(aiRequests).toBe(0);
+    await page
+      .getByRole("link", { name: "Back to questions", exact: true })
+      .first()
+      .click();
+    await page
+      .getByRole("button", { name: "Leave without saving", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/admin\/content\/questions$/);
+    expect(aiRequests).toBe(0);
+  });
 });
 
 test("the questions list fits beside the sidebar at 1280px", async ({
@@ -311,3 +315,32 @@ test("the questions list fits beside the sidebar at 1280px", async ({
     )
     .toBe(true);
 });
+
+for (const width of [400, 1280]) {
+  test(`import is the main action and manual creation is closed at ${width}px`, async ({
+    page,
+  }) => {
+    test.skip(!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD);
+    await page.setViewportSize({ width, height: 900 });
+    await signInAdmin(page);
+    await page.goto("/admin/content/questions");
+    await expect(
+      page.getByRole("link", { name: "New question", exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole("link", { name: "Import", exact: true }).click();
+    await expect(page).toHaveURL(/status=review/);
+    await expect(
+      page.getByRole("combobox", { name: "Subtopic", exact: true }),
+    ).toContainText("Choose a topic first");
+    await page.getByRole("combobox", { name: "Topic", exact: true }).click();
+    await page.getByRole("option", { name: /3\. / }).click();
+    await expect(page).toHaveURL(/topic=t3/);
+    await page.getByRole("combobox", { name: "Subtopic", exact: true }).click();
+    await page.getByRole("option", { name: "Inflation", exact: true }).click();
+    await expect(page).toHaveURL(/subtopic=t3-inflation/);
+    await page.goto("/admin/content/questions/new");
+    await expect(
+      page.getByRole("heading", { name: "New question" }),
+    ).toHaveCount(0);
+  });
+}

@@ -23,6 +23,7 @@ import {
   AlertDialogTitle,
 } from "./ui/alert-dialog";
 import { Button } from "./ui/button";
+import { TopicSelect } from "./topic-select";
 import { FormSelect } from "./ui/form-select";
 import {
   Dialog,
@@ -135,7 +136,7 @@ export function QuestionsTable({
   >(null);
   const [choice, setChoice] = useState("");
   const name = (id: string) => topics.find((t) => t.id === id)?.name ?? id;
-  const subtopics = topics.filter((t) => t.parent_id);
+  const [parent, setParent] = useState("");
 
   function run(ids: string[], action: BulkAction, clear: () => void) {
     start(async () => {
@@ -260,27 +261,32 @@ export function QuestionsTable({
                 Applies to {dialog.ids.length} selected question
                 {dialog.ids.length === 1 ? "" : "s"}.
               </DialogDescription>
-              <label className="grid gap-1 text-sm font-medium">
-                {dialog.kind === "topic" ? "Subtopic" : "Verb"}
-                <FormSelect
-                  aria-label={dialog.kind === "topic" ? "Subtopic" : "Verb"}
+              {dialog.kind === "topic" ? (
+                <TopicSelect
+                  topics={topics}
+                  parent={parent}
                   value={choice}
-                  onValueChange={(value) => setChoice(value)}
-                  options={[
-                    {
-                      value: "",
-                      label:
-                        dialog.kind === "topic" ? "Choose a subtopic" : "None",
-                    },
-                    ...(dialog.kind === "topic"
-                      ? subtopics.map((t) => ({
-                          value: t.id,
-                          label: `${name(t.parent_id!)} · ${t.name}`,
-                        }))
-                      : VERBS.map((value) => ({ value, label: value }))),
-                  ]}
+                  onParentChange={(id) => {
+                    setParent(id);
+                    setChoice("");
+                  }}
+                  onChange={setChoice}
+                  disabled={pending}
                 />
-              </label>
+              ) : (
+                <label className="grid gap-1 text-sm font-medium">
+                  Verb
+                  <FormSelect
+                    aria-label="Verb"
+                    value={choice}
+                    onValueChange={setChoice}
+                    options={[
+                      { value: "", label: "None" },
+                      ...VERBS.map((value) => ({ value, label: value })),
+                    ]}
+                  />
+                </label>
+              )}
               <div className="flex justify-end gap-2">
                 <Button variant="outline" onClick={() => setDialog(null)}>
                   Cancel

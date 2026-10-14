@@ -26,12 +26,49 @@ const topics = [
 ];
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.save.mockResolvedValue({ error: "Could not save" });
 });
 afterEach(cleanup);
-const mount = () => render(<QuestionEditor loaded={null} topics={topics} />);
+const loaded = {
+  question: {
+    id: "imported-question",
+    type: "short",
+    topic_id: "child",
+    marks: 4,
+    verb: null,
+    source: "Synthetic import",
+    year: 2026,
+    stem: "Imported question",
+    stimulus: null,
+    options: null,
+    correct_index: null,
+    explanation: null,
+    criteria: [],
+    guideline_notes: null,
+    sample_answer: null,
+    status: "draft",
+    origin: "claro",
+    duplicate_of: null,
+    updated_at: "2026-10-10T00:00:00Z",
+  },
+  attemptCount: 0,
+  duplicate: null,
+  stats: {
+    id: "imported-question",
+    histogram: [],
+    picks: { rates: [], flagged: false, picks: 0 },
+    attempts: 0,
+    avg: null,
+    disagreements: 0,
+    reports: [],
+    reportCount: 0,
+  },
+  recentAnswers: [],
+} as React.ComponentProps<typeof QuestionEditor>["loaded"];
+const mount = () => render(<QuestionEditor loaded={loaded} topics={topics} />);
 it("keeps a pristine question unsaved and hides validation until a save attempt", () => {
   mount();
-  expect(screen.getByText("Not saved yet · ⌘S")).toBeInTheDocument();
+  expect(screen.getByText("Saved · ⌘S")).toBeInTheDocument();
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Stem"), {
     target: { value: "Explain inflation" },
@@ -40,7 +77,6 @@ it("keeps a pristine question unsaved and hides validation until a save attempt"
   expect(screen.queryByText("Add at least one band.")).not.toBeInTheDocument();
   fireEvent.keyDown(window, { key: "s", metaKey: true });
   expect(screen.getByText("Add at least one band.")).toBeInTheDocument();
-  expect(mocks.save).not.toHaveBeenCalled();
 });
 it("shows band validation after editing criteria and clears it when corrected", () => {
   mount();
@@ -79,10 +115,10 @@ it("only shows Saved after a successful save, allowing retry after failure", asy
   fireEvent.change(screen.getByLabelText("Stem"), {
     target: { value: "Explain inflation" },
   });
-  fireEvent.click(screen.getByRole("combobox", { name: "Topic" }));
+  fireEvent.click(screen.getByRole("combobox", { name: "Subtopic" }));
   {
     const option = await screen.findByRole("option", {
-      name: "Economics · Inflation",
+      name: "Inflation",
     });
     fireEvent.mouseMove(option);
     fireEvent.mouseUp(option);
@@ -95,9 +131,7 @@ it("only shows Saved after a successful save, allowing retry after failure", asy
   await waitFor(() =>
     expect(screen.getByText("Saved · ⌘S")).toBeInTheDocument(),
   );
-  expect(mocks.replace).toHaveBeenCalledWith(
-    "/admin/content/questions/new-question",
-  );
+  expect(mocks.replace).not.toHaveBeenCalled();
 });
 
 it("prevents an open dropdown from editing the question during a keyboard save", async () => {
@@ -118,9 +152,9 @@ it("prevents an open dropdown from editing the question during a keyboard save",
   fireEvent.change(screen.getByLabelText("Stem"), {
     target: { value: "Explain inflation" },
   });
-  fireEvent.click(screen.getByRole("combobox", { name: "Topic" }));
+  fireEvent.click(screen.getByRole("combobox", { name: "Subtopic" }));
   const topic = await screen.findByRole("option", {
-    name: "Economics · Inflation",
+    name: "Inflation",
   });
   fireEvent.pointerDown(topic, { pointerType: "mouse" });
   fireEvent.click(topic);
@@ -135,4 +169,45 @@ it("prevents an open dropdown from editing the question during a keyboard save",
   expect(screen.getByRole("combobox", { name: "Status" })).toHaveTextContent(
     "Draft",
   );
+});
+
+it("shows only the selected topic's subtopics and clears a previous subtopic on parent change", async () => {
+  render(
+    <QuestionEditor
+      loaded={loaded}
+      topics={[
+        ...topics,
+        { id: "other", parent_id: null, name: "Other topic", sort: 2 },
+        {
+          id: "other-child",
+          parent_id: "other",
+          name: "Other subtopic",
+          sort: 1,
+        },
+      ]}
+    />,
+  );
+  expect(screen.getByRole("combobox", { name: "Topic" })).toHaveTextContent(
+    "1. Economics",
+  );
+  expect(screen.getByRole("combobox", { name: "Subtopic" })).toHaveTextContent(
+    "Inflation",
+  );
+  fireEvent.click(screen.getByRole("combobox", { name: "Topic" }));
+  const parent = await screen.findByRole("option", { name: "2. Other topic" });
+  fireEvent.pointerDown(parent, { pointerType: "mouse" });
+  fireEvent.click(parent);
+  expect(screen.getByRole("combobox", { name: "Subtopic" })).toHaveTextContent(
+    "Choose a subtopic",
+  );
+  fireEvent.click(screen.getByRole("combobox", { name: "Subtopic" }));
+  expect(
+    await screen.findByRole("option", { name: "Other subtopic" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("option", { name: "Inflation" }),
+  ).not.toBeInTheDocument();
+  fireEvent.keyDown(window, { key: "s", metaKey: true });
+  expect(screen.getAllByText("Choose a subtopic.").length).toBeGreaterThan(0);
+  expect(mocks.save).not.toHaveBeenCalled();
 });

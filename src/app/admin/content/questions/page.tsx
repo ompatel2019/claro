@@ -36,6 +36,15 @@ export default async function QuestionsPage({
 }) {
   await requireAdmin();
   const f = singleParams(await searchParams);
+  const topicRows = await loadTopics();
+  const parent = topicRows.find((t) => t.id === f.topic);
+  const parentId = parent?.parent_id ?? parent?.id;
+  const subtopic = topicRows.find(
+    (t) =>
+      t.id === (f.subtopic ?? (parent?.parent_id ? parent.id : undefined)) &&
+      t.parent_id === parentId,
+  );
+  const filters = { ...f, topic: subtopic?.id ?? parentId };
   const status = ["live", "draft", "review", "retired"].includes(f.status ?? "")
     ? f.status!
     : "live";
@@ -44,23 +53,23 @@ export default async function QuestionsPage({
     Math.max(0.6, Number(f.threshold) || REVIEW_THRESHOLD),
   );
   // The list does not depend on the badge counts, so it loads alongside them.
-  const [counts, topics, review, list] = await Promise.all([
+  const [counts, review, list] = await Promise.all([
     loadQuestionCounts(),
-    loadTopics(),
     loadImportReview(
       threshold,
       Number(f.page),
       status === "review",
-      status === "review" ? f : {},
+      status === "review" ? filters : {},
     ),
-    status === "review" ? null : loadQuestionList(f),
+    status === "review" ? null : loadQuestionList(filters),
   ]);
   const filtered = QUESTION_FILTER_KEYS.some((k) => f[k]);
+  const topics = topicRows;
   const parents = topics.filter((t) => !t.parent_id);
   const filterBar = (
     <FilterBar
       customSelect
-      values={f}
+      values={{ ...f, topic: parentId, subtopic: subtopic?.id }}
       hidden={{
         status,
         threshold: status === "review" ? String(threshold) : undefined,
@@ -80,12 +89,19 @@ export default async function QuestionsPage({
           name: "topic",
           label: "Topic",
           all: "Any",
-          options: parents.flatMap((p) => [
-            { value: p.id, label: p.name },
-            ...topics
-              .filter((t) => t.parent_id === p.id)
-              .map((t) => ({ value: t.id, label: `· ${t.name}` })),
-          ]),
+          clearOnChange: ["subtopic"],
+          options: parents.map((p) => ({
+            value: p.id,
+            label: `${p.sort}. ${p.name}`,
+          })),
+        },
+        {
+          name: "subtopic",
+          label: "Subtopic",
+          all: parentId ? "Any" : "Choose a topic first",
+          options: topics
+            .filter((t) => t.parent_id === parentId)
+            .map((t) => ({ value: t.id, label: t.name })),
         },
         {
           name: "from",
@@ -136,10 +152,10 @@ export default async function QuestionsPage({
     <div className="space-y-4">
       <PageHeader
         title="Questions"
-        description="The bank: publish, retire, review imports and edit."
+        description="Import drafts offline, then review, publish or edit them here."
         actions={
-          <Link href={`${BASE}/new`} className={buttonVariants()}>
-            New question
+          <Link href={`${BASE}?status=review`} className={buttonVariants()}>
+            Import
           </Link>
         }
       />

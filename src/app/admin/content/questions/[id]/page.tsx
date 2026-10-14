@@ -8,7 +8,7 @@ import { QuestionEditor } from "@/components/question-editor";
 
 export const metadata = pageMetadata("Question editor");
 
-/** §4.4 editor; /new creates a Claro-origin draft. */
+/** Edit an existing imported question. */
 export default async function QuestionPage({
   params,
 }: {
@@ -16,22 +16,17 @@ export default async function QuestionPage({
 }) {
   await requireAdmin();
   const { id } = await params;
-  const [loaded, topics] = await Promise.all([
-    id === "new" ? null : loadQuestion(id),
-    loadTopics(),
-  ]);
-  if (id !== "new" && !loaded) notFound();
+  if (id === "new") notFound();
+  const [loaded, topics] = await Promise.all([loadQuestion(id), loadTopics()]);
+  if (!loaded) notFound();
   return (
     <div className="space-y-4">
       <Link href="/admin/content/questions" className="text-sm underline">
         Back to questions
       </Link>
-      <PageHeader
-        eyebrow={loaded ? loaded.question.source : "New question"}
-        title={loaded ? loaded.question.id : "New question"}
-      />
+      <PageHeader eyebrow={loaded.question.source} title={loaded.question.id} />
       <QuestionEditor
-        key={loaded?.question.updated_at ?? "new"}
+        key={loaded.question.updated_at}
         loaded={loaded}
         topics={topics}
       />

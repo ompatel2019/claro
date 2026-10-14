@@ -136,23 +136,6 @@ export function marksRange(type: QuestionInput["type"]): [number, number] {
   return type === "mcq" ? [1, 1] : type === "short" ? [1, 10] : [10, 20];
 }
 
-/** "2024 HSC Q21(b)" → "2024-q21b". */
-export function suggestId(source: string) {
-  const year = source.match(/\b(19|20)\d{2}\b/)?.[0];
-  const q = source.match(/Q\s*(\d+)\s*(?:\(?([a-z])\)?)?/i);
-  const parts = [year, q && `q${q[1]}${q[2]?.toLowerCase() ?? ""}`].filter(
-    Boolean,
-  );
-  const id = (
-    parts.length
-      ? parts.join("-")
-      : source.toLowerCase().replace(/[^a-z0-9]+/g, "-")
-  )
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40);
-  return id.length >= 3 ? id : "";
-}
-
 /**
  * Band rules: highest band first, integers 1…marks, no overlap, the top max =
  * marks, descriptors present. Returns an error per row (empty when fine) and a

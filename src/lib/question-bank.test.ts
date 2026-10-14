@@ -3,7 +3,6 @@ import {
   diffWords,
   publishProblems,
   questionSchema,
-  suggestId,
   validateCriteria,
   type QuestionInput,
 } from "./question-bank";
@@ -31,13 +30,6 @@ const written: QuestionInput = {
 };
 
 describe("question editor rules", () => {
-  it("suggests an id from the source label", () => {
-    expect(suggestId("2024 HSC Q21(b)")).toBe("2024-q21b");
-    expect(suggestId("2019 Trial Q3")).toBe("2019-q3");
-    expect(suggestId("Claro set A")).toBe("claro-set-a");
-    expect(suggestId("Q")).toBe("");
-  });
-
   it("validates bands highest first, within 1…marks, no overlap", () => {
     expect(validateCriteria(written.criteria!, 4)).toEqual({
       rows: ["", ""],
