@@ -63,7 +63,7 @@ Questions enter through offline import scripts as drafts; the bank's Import acti
 
 ## Mark reviews
 
-Students select **Question this mark** beside written feedback on finished results and give a 10–1,000 character reason. Limits: one request per answer, three open, five per Sydney Monday–Sunday week, and 48 hours after an unchanged/lowered review. An atomic RPC enforces the limits; the admin queue shows all-time history and rejection rates based on resolved disputes. Apply `0043_dispute_guardrails.sql` before deploying.
+Students select **Question this mark** beside written feedback on finished results and give a 10–1,000 character reason. Limits: one request per answer, three open, five per Sydney Monday–Sunday week, and 48 hours after an unchanged/lowered review. An atomic RPC enforces the limits; the admin queue shows all-time history and rejection rates based on resolved disputes. Duplicates return 409, limits and the cooldown return 429, and only real failures return 503. Apply `0043_dispute_guardrails.sql` and `0045_dispute_limit_statuses.sql` before deploying.
 
 Tests: dispute route/dialog/history unit suites and `e2e/dispute-guardrails.spec.ts` cover concurrent caps, cooldown expiry, invalid/foreign attempts, errors, and mobile/desktop queue/results flows using isolated synthetic accounts.
 

@@ -19,7 +19,7 @@ Both `src/lib/marking/engine.ts` and `src/lib/single-check-marking.ts` insert th
 
 Other queue entries:
 
-- `src/app/api/attempts/[id]/dispute/route.ts` accepts a 10–1,000 character note on a finished, written attempt shown as marked or reviewed; it creates `student_dispute` and sets `in_review`. The database permits one open review per attempt. The three-open-disputes limit per student is a request-time count before insertion, without a transaction or per-student database constraint; concurrent requests can exceed it.
+- `src/app/api/attempts/[id]/dispute/route.ts` accepts a 10–1,000 character note on a finished, written attempt shown as marked or reviewed; it creates `student_dispute` and sets `in_review`. The database permits one open review per attempt. The `request_mark_review` RPC enforces one request per answer, three open, five per Sydney week and a 48-hour cooldown atomically. Duplicates return 409, limits and the cooldown return 429, and RPC failures return 503.
 - `src/app/admin/marking/review/actions.ts` samples up to five agreed answers from the last seven days as `spot_check`, without changing their check status. Manual marking of failed/unreadable attempts also opens a spot-check review.
 - The queue has a separate failed/unreadable tab (`src/app/admin/marking/review/data.ts`); a failed attempt can also retain an open review as above.
 

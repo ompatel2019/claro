@@ -47,16 +47,33 @@ it("submits a trimmed written reason to the atomic RPC", async () => {
     p_note: "Please check my evidence.",
   });
 });
-it.each([400, 404, 409])(
-  "preserves database rejection status %i",
-  async (status) => {
-    mocks.rpc.mockResolvedValue({
-      data: { error: "Guardrail", status },
-      error: null,
-    });
+it.each([
+  ["invalid note", 400, "Tell us what we missed in 10 to 1,000 characters."],
+  ["missing attempt", 404, "Attempt not found"],
+  ["duplicate", 409, "You have already questioned this mark."],
+  ["already in review", 409, "This mark is already being checked."],
+  [
+    "open limit",
+    429,
+    "You have 3 marks being checked. You can question another once one is done.",
+  ],
+  [
+    "weekly limit",
+    429,
+    "You can question up to 5 marks per Sydney week. Try again next Monday.",
+  ],
+  [
+    "cooldown",
+    429,
+    "Wait 48 hours after an unchanged or lowered review before questioning another mark.",
+  ],
+])(
+  "returns the RPC's %s rejection as %i, not 503",
+  async (_, status, error) => {
+    mocks.rpc.mockResolvedValue({ data: { error, status }, error: null });
     const r = await send();
     expect(r.status).toBe(status);
-    expect(await r.json()).toEqual({ error: "Guardrail", status });
+    expect(await r.json()).toEqual({ error, status });
   },
 );
 it("returns a retryable failure without leaking database details", async () => {

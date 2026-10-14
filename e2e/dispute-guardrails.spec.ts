@@ -113,7 +113,7 @@ test.describe("student marking disputes", () => {
       fixture.attempts.slice(0, 4).map((id) => request(id)),
     );
     expect(concurrent.map((r) => r.status()).sort()).toEqual([
-      200, 200, 200, 409,
+      200, 200, 200, 429,
     ]);
     await db
       .from("mark_reviews")
@@ -132,7 +132,7 @@ test.describe("student marking disputes", () => {
     for (const id of fixture.attempts.slice(4, 6))
       expect((await request(id)).status()).toBe(200);
     const weekly = await request(fixture.attempts[6]);
-    expect(weekly.status()).toBe(409);
+    expect(weekly.status()).toBe(429);
     expect((await weekly.json()).error).toContain("Sydney week");
     await db
       .from("mark_reviews")
@@ -145,7 +145,7 @@ test.describe("student marking disputes", () => {
       .eq("user_id", fixture.userId)
       .throwOnError();
     const cooldown = await request(fixture.attempts[6]);
-    expect(cooldown.status()).toBe(409);
+    expect(cooldown.status()).toBe(429);
     expect((await cooldown.json()).error).toContain("48 hours");
     await db
       .from("mark_reviews")
