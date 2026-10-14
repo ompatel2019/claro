@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { expect, it } from "vitest";
+import { readFileSync } from "node:fs";
 import questions from "../ai/eval/a1-mock-questions.json";
 import data from "./checklists.json";
 import { checklists, ChecklistsSchema } from "./checklists";
@@ -77,4 +78,26 @@ it("requires a protection mechanism beyond naming an export incentive", () => {
   expect(
     checks.find((item) => item.id === "protection-mechanism")!.effect,
   ).toContain("caps at 2 if no");
+});
+
+it("has no checklist key missing from the real question-ID import migration", () => {
+  const sql = readFileSync(
+    new URL(
+      "../../../supabase/migrations/0022_a1_mock_questions.sql",
+      import.meta.url,
+    ),
+    "utf8",
+  );
+  // Match only the first column of inserted question rows, not origin_ref or prose.
+  const ids = new Set(
+    [...sql.matchAll(/^\s*\(\$t\$(a1-m\d+-\d{2}[a-z])\$t\$, 'short',/gm)].map(
+      (match) => match[1],
+    ),
+  );
+  expect(ids.size).toBe(41);
+  const missing = Object.keys(checklists).filter((id) => !ids.has(id));
+  expect(
+    missing,
+    "Checklist IDs absent from 0022_a1_mock_questions.sql",
+  ).toEqual([]);
 });

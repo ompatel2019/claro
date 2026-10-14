@@ -89,6 +89,10 @@ npx tsx src/lib/ai/eval/rescore.mts --file=path/to/saved-results.json
 
 The default reads `sets/past-passes.json` and hashed `sets/flagged-tutor-marks.json`. It accepts a compact run map, rows, or an eval `{ items }` file. Failed, excluded, unscored and malformed rows are skipped and counted. It hashes raw example identities in memory and emits aggregate JSON only. Historical outputs describe older runs, not Airo 5.0 performance; no rule is selected automatically.
 
+## Checklist question IDs
+
+Real `a1-m…` question IDs are available in the repository: `supabase/migrations/0022_a1_mock_questions.sql` inserts 41 mock questions with those exact IDs. `marking/checklists.test.ts` reads that file locally and fails if any checklist key is absent from its inserted question IDs. This verifies the repository import source; database state has not been checked.
+
 ## Leak guards and student boundaries
 
 - Frozen dev/final IDs are anonymous marking_examples row IDs. The research split excludes existing test rows and within-question TF-IDF near-duplicate groups (threshold 0.80); no answer text is copied into these lists. Half marks are outside these frozen whole-mark sets.
