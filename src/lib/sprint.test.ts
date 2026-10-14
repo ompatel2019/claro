@@ -10,6 +10,8 @@ import {
   restore,
   summary,
   withMode,
+  withTarget,
+  withMixedCount,
   withSizeBy,
 } from "./sprint";
 
@@ -50,7 +52,7 @@ it("estimates editable pace for each question type and untimed sessions", () => 
       mcq_min_per_q: 2,
       short_min_per_mark: 1,
     }),
-  ).toBe(63);
+  ).toBe(68);
   expect(estimateMinutes({ ...DEFAULTS, timed: false })).toBeNull();
 });
 it.each([0, -1, 11, NaN, Infinity, "2", null, undefined])(
@@ -188,4 +190,114 @@ it("old essay setups fall back to MC and mixed setups discard essays", () => {
 
 it("legacy shuffled setups restore exam order", () => {
   expect(restore({ ...DEFAULTS, order: "shuffled" }).order).toBe("exam");
+});
+
+it("mixed totals default to an even split, including odd totals and URL presets", () => {
+  expect(withMode(DEFAULTS, "mixed")).toMatchObject({
+    target: 45,
+    mcq_count: 23,
+    short_marks: 22,
+  });
+  expect(withTarget(withMode(DEFAULTS, "mixed"), 30)).toMatchObject({
+    target: 30,
+    mcq_count: 15,
+    short_marks: 15,
+  });
+  expect(fromParams({ type: "mixed", size: "31" }, DEFAULTS)).toMatchObject({
+    target: 31,
+    mcq_count: 16,
+    short_marks: 15,
+  });
+  expect(withTarget(withMode(DEFAULTS, "mixed"), 1000)).toMatchObject({
+    target: 100,
+    mcq_count: 50,
+    short_marks: 50,
+  });
+});
+it.each([
+  [-5, 0],
+  [0, 0],
+  [15, 15],
+  [30, 30],
+  [99, 30],
+  [1.6, 2],
+  [NaN, 0],
+  [Infinity, 0],
+])("linked bucket clamps %s to %s and keeps the total", (value, count) => {
+  const c = withTarget(withMode(DEFAULTS, "mixed"), 30);
+  expect(withMixedCount(c, "mcq_count", value)).toMatchObject({
+    mcq_count: count,
+    short_marks: 30 - count,
+  });
+  expect(withMixedCount(c, "short_marks", value)).toMatchObject({
+    short_marks: count,
+    mcq_count: 30 - count,
+  });
+});
+it("saved split survives reload while inconsistent and legacy splits are repaired", () => {
+  expect(
+    restore({ mode: "mixed", target: 30, mcq_count: 12, short_marks: 18 }),
+  ).toMatchObject({ mcq_count: 12, short_marks: 18 });
+  expect(
+    restore({ mode: "mixed", target: 30, mcq_count: 12, short_marks: 99 }),
+  ).toMatchObject({ mcq_count: 12, short_marks: 18 });
+  expect(restore({ mode: "mixed", target: 30 })).toMatchObject({
+    mcq_count: 15,
+    short_marks: 15,
+  });
+  expect(restore({ mode: "mixed", target: 30, short_marks: 30 })).toMatchObject(
+    { mcq_count: 0, short_marks: 30 },
+  );
+  expect(
+    restore({ mode: "mixed", target: 30, mcq_count: Infinity }),
+  ).toMatchObject({ mcq_count: 15, short_marks: 15 });
+});
+it("mixed estimate and summary follow the requested buckets, including zero-sized buckets", () => {
+  const c = withMixedCount(
+    withTarget(withMode(DEFAULTS, "mixed"), 30),
+    "mcq_count",
+    12,
+  );
+  expect(estimateMinutes(c)).toBe(39);
+  expect(estimateMinutes(withMixedCount(c, "mcq_count", 30))).toBe(30);
+  expect(estimateMinutes(withMixedCount(c, "mcq_count", 0))).toBe(45);
+  expect(summary(c, {}, null)).toContain(
+    "30 marks · 12 multis + 18 marks of shorts · 39 min",
+  );
+  expect(estimateMinutes({ ...c, timed: false })).toBeNull();
+});
+it("non-finite total input clamps safely", () => {
+  expect(clampTarget(DEFAULTS, NaN)).toBe(5);
+  expect(clampTarget(withMode(DEFAULTS, "mixed"), Infinity)).toBe(20);
+});
+
+it("saved settings reject malformed arrays, unknown keys and non-finite size memories", () => {
+  const c = restore({
+    mode: "mixed",
+    target: 30,
+    topics: ["t1", 2, null, "t2", "t3"],
+    subtopics: 42,
+    difficulty: ["standard", "unknown"],
+    origins: ["a1", "unknown"],
+    verbs: null,
+    history: "unknown",
+    feedback: "unknown",
+    sizes: { "extended:questions": 1, "mcq:questions": NaN },
+    unknown: true,
+    include_extended: true,
+  });
+  expect(c).toMatchObject({
+    topics: ["t1", "t2"],
+    subtopics: [],
+    difficulty: ["standard"],
+    origins: ["a1"],
+    verbs: [],
+    history: "prefer_new",
+    feedback: "end",
+  });
+  expect(c).not.toHaveProperty("unknown");
+  expect(c).not.toHaveProperty("include_extended");
+  expect(c.sizes).not.toHaveProperty("extended:questions");
+  expect(fromParams({ type: "toString" }, DEFAULTS)?.mode).toBe("mcq");
+  expect(restore({ mode: "toString" }).mode).toBe("mcq");
 });

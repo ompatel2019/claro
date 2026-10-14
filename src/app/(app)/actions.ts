@@ -14,35 +14,46 @@ export type FormState = {
   fieldErrors?: Record<string, string[] | undefined>;
   sessionExpired?: boolean;
 };
-const SprintConfig = z.object({
-  mode: z.enum(["mcq", "short", "mixed"]),
-  topics: z
-    .array(z.string().min(1))
-    .max(2, "Choose up to two topics.")
-    .default([]),
-  subtopics: z.array(z.string().min(1)).max(40).default([]),
-  size_by: z.enum(["marks", "questions"]).optional(),
-  target: z.number().int().optional(),
-  difficulty: z
-    .array(z.enum(["foundation", "standard", "challenging"]))
-    .default([]),
-  verbs: z.array(z.string().max(40)).max(20).default([]),
-  year_from: z.number().int().nullable().default(null),
-  year_to: z.number().int().nullable().default(null),
-  origins: z.array(z.enum(["nesa", "a1"])).default([]),
-  history: z
-    .enum(["prefer_new", "new_only", "mistakes", "flagged", "any"])
-    .default("prefer_new"),
-  order: z
-    .enum(["exam", "shuffled"])
-    .default("exam")
-    .transform(() => "exam" as const),
-  timed: z.boolean().default(true),
-  short_min_per_mark: z.number().min(0.25).max(10).default(1.5),
-  mcq_min_per_q: z.number().min(0.25).max(10).default(1),
-  on_timeout: z.literal("overtime").default("overtime"),
-  feedback: z.enum(["end", "each"]).default("end"),
-});
+const SprintConfig = z
+  .object({
+    mode: z.enum(["mcq", "short", "mixed"]),
+    topics: z
+      .array(z.string().min(1))
+      .max(2, "Choose up to two topics.")
+      .default([]),
+    subtopics: z.array(z.string().min(1)).max(40).default([]),
+    size_by: z.enum(["marks", "questions"]).optional(),
+    target: z.number().int().optional(),
+    mcq_count: z.number().int().min(0).max(100).optional(),
+    short_marks: z.number().int().min(0).max(100).optional(),
+    difficulty: z
+      .array(z.enum(["foundation", "standard", "challenging"]))
+      .default([]),
+    verbs: z.array(z.string().max(40)).max(20).default([]),
+    year_from: z.number().int().nullable().default(null),
+    year_to: z.number().int().nullable().default(null),
+    origins: z.array(z.enum(["nesa", "a1"])).default([]),
+    history: z
+      .enum(["prefer_new", "new_only", "mistakes", "flagged", "any"])
+      .default("prefer_new"),
+    order: z
+      .enum(["exam", "shuffled"])
+      .default("exam")
+      .transform(() => "exam" as const),
+    timed: z.boolean().default(true),
+    short_min_per_mark: z.number().min(0.25).max(10).default(1.5),
+    mcq_min_per_q: z.number().min(0.25).max(10).default(1),
+    on_timeout: z.literal("overtime").default("overtime"),
+    feedback: z.enum(["end", "each"]).default("end"),
+  })
+  .refine(
+    (c) =>
+      c.mode !== "mixed" ||
+      c.mcq_count === undefined ||
+      c.short_marks === undefined ||
+      c.mcq_count + c.short_marks === (c.target ?? 45),
+    { message: "Mixed counts must add up to the total." },
+  );
 /** §3.2: the setup page (and quick starts) post the config as JSON; start_sprint validates the rest. */
 export async function startSprint(
   _: FormState,

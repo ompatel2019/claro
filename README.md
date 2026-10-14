@@ -72,3 +72,12 @@ Tests: dispute route/dialog/history unit suites and `e2e/dispute-guardrails.spec
 Spend shows maximum-mark bands (1–2, 3, 4, 5–6, 7–8 and 9+). Individual marking, retries and transcription log their attempt ID; averages divide linked costs by distinct tracked marked answers. Historical and batch-engine calls lack that link and remain explicitly unallocated. Invalid/non-finite costs display safely. Apply `0044_usage_attempt_attribution.sql` before deploying; the marking engine remains unchanged.
 
 Tests: spend data/page/helpers, loader, async-context and usage-logging unit suites; `e2e/admin-spend.spec.ts` and `e2e/spend-mark-values.spec.ts` cover bucket boundaries, malformed/free/untracked costs, empty ranges and mobile/desktop layouts.
+
+Mixed sprints link MC question count and short-answer marks to the selected total.
+Changing the total starts an even split (an odd mark goes to MC); Back and reload
+keep an edited split. Buckets fill independently, with whole shorts nearest their
+target within the existing two-mark tolerance where possible. Timer estimates
+use the split and editable pace; saved timers use the actual selected marks.
+Apply `0046_sprints_mixed_buckets.sql`. Coverage adds `e2e/sprint-mixed.spec.ts`
+(mobile/desktop, exact fills, zero buckets, shortfalls and invalid RPC input) and
+`supabase/tests/sprint_mixed.sql` (transactional selection regression).

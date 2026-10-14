@@ -5,7 +5,6 @@ import { startSprint } from "@/app/(app)/actions";
 import { createClient } from "@/utils/supabase/client";
 import { modes, type Mode, type Topic } from "@/lib/practice";
 import {
-  clampTarget,
   clampPace,
   validPace,
   DEFAULTS,
@@ -17,6 +16,8 @@ import {
   size,
   summary,
   withMode,
+  withTarget,
+  withMixedCount,
   withSizeBy,
   type Difficulty,
   type History,
@@ -186,7 +187,39 @@ export function SprintSetup({
   const s = size(c);
   const written = c.mode === "short" || c.mode === "mixed";
   const byMarks = c.size_by === "marks";
-  const available = pool ? (byMarks ? pool.marks : pool.questions) : null;
+  const available = pool
+    ? c.mode === "mixed" &&
+      pool.mcq_questions !== undefined &&
+      pool.short_marks !== undefined
+      ? Math.min(c.mcq_count, pool.mcq_questions) +
+        Math.min(c.short_marks, pool.short_marks)
+      : byMarks
+        ? pool.marks
+        : pool.questions
+    : null;
+  const matching = pool
+    ? c.mode === "mixed" && pool.mcq_questions !== undefined
+      ? c.mcq_count === 0
+        ? pool.questions - pool.mcq_questions
+        : c.short_marks === 0
+          ? pool.mcq_questions
+          : pool.questions
+      : pool.questions
+    : undefined;
+  const matchingNew = pool
+    ? c.mode === "mixed" && pool.mcq_new !== undefined
+      ? c.mcq_count === 0
+        ? pool.new - pool.mcq_new
+        : c.short_marks === 0
+          ? pool.mcq_new
+          : pool.new
+      : pool.new
+    : undefined;
+  const mixedShortfall =
+    pool &&
+    c.mode === "mixed" &&
+    ((pool.mcq_questions ?? Infinity) < c.mcq_count ||
+      (pool.short_marks ?? Infinity) < c.short_marks);
   const shortfall = available !== null && available > 0 && available < c.target;
   const unit = byMarks ? "marks" : "questions";
   const minutes = estimateMinutes(c);
@@ -410,9 +443,7 @@ export function SprintSetup({
                   variant="outline"
                   size="icon"
                   aria-label="Decrease"
-                  onClick={() =>
-                    set({ target: clampTarget(c, c.target - s.step) })
-                  }
+                  onClick={() => setC(withTarget(c, c.target - s.step))}
                 >
                   <Minus />
                 </Button>
@@ -423,18 +454,21 @@ export function SprintSetup({
                   value={c.target}
                   onChange={(e) =>
                     /^\d*$/.test(e.target.value) &&
-                    set({ target: Number(e.target.value) || 0 })
+                    setC({
+                      ...c,
+                      target: Number(e.target.value) || 0,
+                      mcq_count: Math.ceil(Number(e.target.value) / 2),
+                      short_marks: Math.floor(Number(e.target.value) / 2),
+                    })
                   }
-                  onBlur={() => set({ target: clampTarget(c, c.target) })}
+                  onBlur={() => setC(withTarget(c, c.target))}
                 />
                 <Button
                   type="button"
                   variant="outline"
                   size="icon"
                   aria-label="Increase"
-                  onClick={() =>
-                    set({ target: clampTarget(c, c.target + s.step) })
-                  }
+                  onClick={() => setC(withTarget(c, c.target + s.step))}
                 >
                   <Plus />
                 </Button>
@@ -446,13 +480,53 @@ export function SprintSetup({
                     <Chip
                       key={p}
                       on={c.target === p}
-                      onClick={() => set({ target: p })}
+                      onClick={() => setC(withTarget(c, p))}
                     >
                       {p}
                     </Chip>
                   ))}
                 </div>
               </div>
+              {c.mode === "mixed" && (
+                <div className="space-y-2">
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {(
+                      [
+                        ["mcq_count", "Multiple choice questions"],
+                        ["short_marks", "Short answer marks"],
+                      ] as const
+                    ).map(([key, label]) => (
+                      <label
+                        key={key}
+                        className="grid gap-1.5 text-sm font-medium"
+                      >
+                        {label}
+                        <Input
+                          type="number"
+                          min={0}
+                          max={c.target}
+                          step={1}
+                          value={c[key]}
+                          onChange={(e) =>
+                            setC(withMixedCount(c, key, Number(e.target.value)))
+                          }
+                        />
+                      </label>
+                    ))}
+                  </div>
+                  <p
+                    className="text-muted-foreground text-sm"
+                    aria-live="polite"
+                  >
+                    {c.mcq_count} multis + {c.short_marks} marks of shorts ={" "}
+                    {c.target} marks
+                  </p>
+                  <p className="text-muted-foreground text-xs">
+                    Shorts use whole questions and aim within 2 marks of the
+                    target.
+                  </p>
+                </div>
+              )}
             </Section>
           </div>
           <div
@@ -731,7 +805,7 @@ export function SprintSetup({
         </CardContent>
       </Card>
 
-      {pool?.questions === 0 && (
+      {matching === 0 && (
         <EmptyState
           icon={SearchOff}
           title="No questions match"
@@ -761,7 +835,7 @@ export function SprintSetup({
         onSubmit={(e) => {
           if (
             step !== 3 ||
-            pool?.questions === 0 ||
+            matching === 0 ||
             pending ||
             (c.timed &&
               (!validPace(c.short_min_per_mark) || !validPace(c.mcq_min_per_q)))
@@ -783,7 +857,7 @@ export function SprintSetup({
             >
               {poolError
                 ? "Couldn't count matching questions."
-                : `${n(pool?.questions)} questions match · ${n(pool?.new)} new`}
+                : `${n(matching)} questions match · ${n(matchingNew)} new`}
             </p>
           </div>
           <Button
@@ -801,7 +875,7 @@ export function SprintSetup({
             disabled={
               step !== 3 ||
               pending ||
-              pool?.questions === 0 ||
+              matching === 0 ||
               (c.timed &&
                 (!validPace(c.short_min_per_mark) ||
                   !validPace(c.mcq_min_per_q)))
@@ -810,16 +884,25 @@ export function SprintSetup({
             {pending
               ? "Building…"
               : shortfall
-                ? `Start with ${available} ${unit}`
+                ? c.mode === "mixed"
+                  ? "Start with available questions"
+                  : `Start with ${available} ${unit}`
                 : "Start sprint"}
           </Button>
         </div>
-        {(shortfall || state.error) && (
+        {(shortfall || mixedShortfall || state.error) && (
           <div className="px-4 pb-3 text-sm">
-            {shortfall && (
+            {shortfall && c.mode !== "mixed" && (
               <p role="alert" className="text-warning">
                 Only {available} {unit} match. Start with {available} {unit} or
                 widen your filters.
+              </p>
+            )}
+            {mixedShortfall && (
+              <p role="alert" className="text-warning">
+                Only {pool?.mcq_questions} multis and {pool?.short_marks} marks
+                of shorts match. Each bucket uses what is available; adjust the
+                split or widen your filters.
               </p>
             )}
             {state.error && (

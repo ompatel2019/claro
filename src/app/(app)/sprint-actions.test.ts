@@ -104,3 +104,45 @@ it("old shuffled start requests are normalised to exam order", async () => {
   await startSprint({}, form({ ...DEFAULTS, order: "shuffled" }));
   expect(mocks.rpc.mock.calls[0][1].p_config.order).toBe("exam");
 });
+
+it.each([
+  [-1, 31],
+  [1.5, 28.5],
+  [101, -71],
+  [10, 10],
+])(
+  "rejects invalid mixed buckets %s + %s before RPC",
+  async (mcq_count, short_marks) => {
+    const config = {
+      ...DEFAULTS,
+      mode: "mixed",
+      size_by: "marks",
+      target: 30,
+      mcq_count,
+      short_marks,
+    };
+    expect(await startSprint({}, form(config))).toHaveProperty("error");
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  },
+);
+it.each([
+  [0, 30],
+  [15, 15],
+  [30, 0],
+])("passes a valid mixed split %s + %s", async (mcq_count, short_marks) => {
+  await startSprint(
+    {},
+    form({
+      ...DEFAULTS,
+      mode: "mixed",
+      size_by: "marks",
+      target: 30,
+      mcq_count,
+      short_marks,
+    }),
+  );
+  expect(mocks.rpc.mock.calls[0][1].p_config).toMatchObject({
+    mcq_count,
+    short_marks,
+  });
+});

@@ -21,3 +21,25 @@ Regression tests: `src/lib/sprint.test.ts`, `src/lib/practice.test.ts`,
 synthetic student account via `STUDENT_EMAIL`/`STUDENT_PASSWORD`; session cleanup
 uses `SUPABASE_SECRET_KEY`. Never commit credentials. Run checks and browsers
 through `Q_MIN_GB=3 Q_SLOTS=1 q-run` on the shared box.
+
+## Mixed allocation
+
+The two inputs are `mcq_count` and `short_marks`; their sum is `target`. Zero is
+allowed in either bucket. Totals/presets start an even split, with an odd mark
+assigned to MC. Saved splits are restored, and invalid or obsolete saved fields
+are removed. New mixed sessions store both requested and actual bucket counts;
+other modes omit these unused fields so Same setup again remains valid.
+
+`0046_sprints_mixed_buckets.sql` fills MC independently, then finds the closest
+attainable short total from whole questions, aiming within ±2 marks. It favours
+an exact fill and an undershoot on equal distance. A zero bucket stays empty;
+missing MCs never become extra shorts. Candidate priority still prefers unseen
+questions. This handles the greedy failure where an unseen 8-mark question
+blocks the seen 5 + 4 combination for a 9-mark target.
+
+`e2e/fixtures/sprint-bank.ts` creates and removes a synthetic bank/history;
+`e2e/sprint-mixed.spec.ts` checks the UI, selected attempts and server errors at
+400px and 1280px. `supabase/tests/sprint_mixed.sql` runs in a transaction and rolls
+back all fixtures and sessions. Set `claro.test_student_id` to a valid synthetic
+student UUID locally in that transaction before running it; never use a real
+student. Apply the migration first, or include it inside the test transaction.
