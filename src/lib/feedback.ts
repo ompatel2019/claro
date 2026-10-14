@@ -31,8 +31,6 @@ export type Criterion = { min: number; max: number; descriptor: string };
 export type MarkReview = {
   status: "open" | "resolved";
   reason: "check_disagreed" | "student_dispute" | "spot_check";
-  ai_mark: number | null;
-  check_mark: number | null;
   final_mark: number | null;
 };
 /** One row of session_review(): an attempt with its question and keys (finished sessions only). */
@@ -161,24 +159,11 @@ export function uncertainParts(text: string) {
     .map((part) => ({ text: part, uncertain: /\[\?\]$/.test(part) }));
 }
 
-/** "4 / 6", or a range "3–4 / 6" while a disagreement is being checked. */
+/** The settled or provisional mark; internal pass marks never form a range. */
 export function markLabel(
-  row: Pick<ReviewRow, "mark" | "max_marks" | "marks" | "review">,
-  state: MarkingState,
+  row: Pick<ReviewRow, "mark" | "max_marks" | "marks">,
 ) {
-  const max = row.max_marks ?? row.marks;
-  const r = row.review;
-  if (
-    state === "in_review" &&
-    r?.reason === "check_disagreed" &&
-    r.ai_mark != null &&
-    r.check_mark != null &&
-    num(r.ai_mark) !== num(r.check_mark)
-  ) {
-    const [lo, hi] = [num(r.ai_mark), num(r.check_mark)].sort((a, b) => a - b);
-    return `${lo}–${hi} / ${max}`;
-  }
-  return `${num(row.mark ?? 0)} / ${max}`;
+  return `${num(row.mark ?? 0)} / ${row.max_marks ?? row.marks}`;
 }
 
 /** Comment cards are placed level with their highlight; collisions push down by `gap`. */

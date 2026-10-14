@@ -706,7 +706,7 @@ export function AnnotatedFeedback({
           <div className="flex flex-wrap items-center gap-3">
             {showMark ? (
               <p className="text-[28px] leading-9 font-semibold tabular-nums">
-                {markLabel(row, state)}
+                {markLabel(row)}
               </p>
             ) : (
               state === "marking" && (

@@ -92,8 +92,8 @@ it.each(["Thanks for flagging this", null])(
 
 it.each([
   ["open", null, "Being checked"],
-  ["resolved", 2, "Unchanged"],
-  ["resolved", 3, "Changed 2 → 3"],
+  ["resolved", 2, "Reviewed: 2"],
+  ["resolved", 3, "Reviewed: 3"],
 ] as const)(
   "keeps review notes and outcome (%s, %s) under the linked question",
   (status, final_mark, outcome) => {
@@ -103,7 +103,6 @@ it.each([
       question: "Question 1",
       student_note: "Please check this mark",
       status,
-      ai_mark: 2,
       final_mark,
       href: "/student/activity/session#q-1",
     };

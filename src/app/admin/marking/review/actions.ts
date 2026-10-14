@@ -5,7 +5,7 @@ import { createHash, randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/auth";
-import { readComments, TAGS } from "@/lib/feedback";
+import { readComments, studentMarking, TAGS } from "@/lib/feedback";
 import { markAttempt, rescoreSession } from "@/lib/marking/engine";
 import { admin } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
@@ -228,7 +228,7 @@ export async function resolveReview(
         })
         .sort((a, b) => (a.start ?? Infinity) - (b.start ?? Infinity));
   const feedback: Record<string, unknown> = {
-    ...a.feedback,
+    ...studentMarking(a).feedback,
     comments: finalComments,
     ...(!unchanged ? { next_mark_line: nextLine } : {}),
   };

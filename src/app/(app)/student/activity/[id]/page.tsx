@@ -101,8 +101,8 @@ export default async function Page({
   if (config.question && !a.question_id) {
     const q = config.question;
     const { data: reviews, error } = await db
-      .from("mark_reviews")
-      .select("status,reason,ai_mark,check_mark,final_mark")
+      .from("student_mark_reviews")
+      .select("status,reason,final_mark")
       .eq("attempt_id", a.id)
       .order("created_at", { ascending: false })
       .limit(1);

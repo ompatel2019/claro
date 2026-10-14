@@ -24,7 +24,6 @@ export type ReviewRow = {
   question: string;
   student_note: string | null;
   status: string;
-  ai_mark: number | null;
   final_mark: number | null;
   href: string | null;
 };

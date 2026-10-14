@@ -155,7 +155,8 @@ it("hides the mark while marking and pills each review state", () => {
       }}
     />,
   );
-  screen.getByText("3–4 / 6");
+  screen.getByText("3 / 6");
+  expect(screen.queryByText("3–4 / 6")).toBeNull();
   screen.getByText("Provisional");
   rerender(
     <AnnotatedFeedback

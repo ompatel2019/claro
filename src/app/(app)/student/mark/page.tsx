@@ -33,7 +33,7 @@ export default async function Page() {
     db
       .from("sessions")
       .select(
-        "id,config,score,max_score,started_at,finished_at,attempts(status,check_status,mark,max_marks,feedback,mark_reviews(status,reason,ai_mark,check_mark,final_mark),question:questions(stem))",
+        "id,config,score,max_score,started_at,finished_at,attempts(status,check_status,mark,max_marks,feedback,question:questions(stem))",
       )
       .eq("user_id", user.id)
       .eq("kind", "single")
@@ -75,7 +75,6 @@ export default async function Page() {
                   mark: number | null;
                   max_marks: number | null;
                   feedback: ReviewRow["feedback"];
-                  mark_reviews: NonNullable<ReviewRow["review"]>[];
                 }[];
                 const a = attempts[0] ? studentMarking(attempts[0]) : undefined;
                 const title =
@@ -92,7 +91,7 @@ export default async function Page() {
                       : state === "unreadable"
                         ? "Couldn't read photo"
                         : a
-                          ? `${markLabel({ ...a, marks: a.max_marks ?? config.question?.marks ?? 0, review: a.mark_reviews.find((r) => r.status === "open") ?? a.mark_reviews[0] ?? null }, state)}${state === "in_review" ? " · Provisional" : ""}`
+                          ? `${markLabel({ ...a, marks: a.max_marks ?? config.question?.marks ?? 0 })}${state === "in_review" ? " · Provisional" : ""}`
                           : "In progress";
                 return (
                   <li key={s.id}>

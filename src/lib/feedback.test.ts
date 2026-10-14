@@ -164,7 +164,7 @@ describe("summary helpers", () => {
     expect(bandOf(criteria, "Other")).toBeNull();
     expect(bandOf(null, "Some")).toBeNull();
   });
-  it("shows a range only for an open disagreement", () => {
+  it("never displays internal pass marks, even in legacy review data", () => {
     const row = {
       mark: 4,
       max_marks: 6,
@@ -177,14 +177,8 @@ describe("summary helpers", () => {
         final_mark: null,
       },
     } as unknown as ReviewRow;
-    expect(markLabel(row, "in_review")).toBe("3–4 / 6");
-    expect(markLabel(row, "marked")).toBe("4 / 6");
-    expect(
-      markLabel(
-        { ...row, review: { ...row.review!, reason: "student_dispute" } },
-        "in_review",
-      ),
-    ).toBe("4 / 6");
+    expect(markLabel(row)).toBe("4 / 6");
+    expect(markLabel({ mark: 4, max_marks: null, marks: 6 })).toBe("4 / 6");
   });
 });
 

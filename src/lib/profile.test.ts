@@ -62,26 +62,19 @@ it("validates password length, confirmation and a different password with exact 
     if (!result.success) expect(result.error.issues[0].message).toBe(copy);
   }
 });
-it("shows pending, unchanged and changed review outcomes including zero", () => {
-  expect(reviewOutcome({ status: "open", ai_mark: 3, final_mark: null })).toBe(
-    "Being checked",
-  );
-  expect(reviewOutcome({ status: "resolved", ai_mark: 3, final_mark: 4 })).toBe(
-    "Changed 3 → 4",
-  );
-  expect(reviewOutcome({ status: "resolved", ai_mark: 0, final_mark: 0 })).toBe(
-    "Unchanged",
-  );
-  expect(reviewOutcome({ status: "resolved", ai_mark: 3, final_mark: 0 })).toBe(
-    "Changed 3 → 0",
-  );
-  expect(
-    reviewOutcome({ status: "resolved", ai_mark: null, final_mark: 4 }),
-  ).toBe("Changed to 4");
-  expect(
-    reviewOutcome({ status: "resolved", ai_mark: 3, final_mark: null }),
-  ).toBe("Being checked");
-});
+it.each([
+  ["open", null, "Being checked"],
+  ["resolved", null, "Being checked"],
+  ["resolved", 4, "Reviewed: 4"],
+  ["resolved", 0, "Reviewed: 0"],
+])(
+  "shows only the pending or final review outcome (%s, %s)",
+  (status, final_mark, outcome) => {
+    expect(
+      reviewOutcome({ status, final_mark: final_mark as number | null }),
+    ).toBe(outcome);
+  },
+);
 it.each([
   ["sprint", "/student/sprint/sit/results#q-2"],
   ["single", "/student/activity/sit#q-2"],

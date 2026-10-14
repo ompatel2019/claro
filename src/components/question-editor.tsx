@@ -933,8 +933,6 @@ function TestMark({ form, recent }: { form: QuestionInput; recent: string[] }) {
         ? {
             status: "open",
             reason: "check_disagreed",
-            ai_mark: result.check.marks[0],
-            check_mark: result.check.marks[1],
             final_mark: null,
           }
         : null,

@@ -58,7 +58,7 @@ export function ResultsAnswers({
             {r.topic_id && ` · ${name(r.topic_id)}`}
             {r.type === "mcq" && scored(r) && (
               <span className="text-ink font-semibold tabular-nums">
-                {markLabel(r, state)}
+                {markLabel(r)}
               </span>
             )}
           </p>
@@ -107,7 +107,7 @@ export function ResultsAnswers({
             type: TYPE_LABEL[r.type],
             topic: name(r.topic_id),
             source: r.source,
-            mark: scored(r) ? markLabel(r, state) : null,
+            mark: scored(r) ? markLabel(r) : null,
             tone: scored(r)
               ? markTone(r.mark ?? 0, r.max_marks ?? r.marks)
               : "",

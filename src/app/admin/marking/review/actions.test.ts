@@ -330,6 +330,34 @@ it("resolve unchanged keeps the stored comments and mark, wrapping to the oldest
   expect(example.upsert.mock.calls[0][0].rejected_ai_comments).toEqual([]);
 });
 
+it.each(["edited", "unchanged"])(
+  "resolve %s strips legacy eval flags before saving without mutating loaded feedback",
+  async (mode) => {
+    const feedback = {
+      comments: raw,
+      justification: "Sound.",
+      flags: { uncertain: true, marks: [3, 4] },
+    };
+    vi.mocked(loadReview).mockResolvedValue(loaded({}, { feedback }) as never);
+    const attempt = query({ id: attemptId });
+    service(query([{ id: reviewId }]), attempt, query(null));
+    client(query(null));
+    vi.mocked(adjacentReview).mockResolvedValue(null);
+    await expect(
+      resolveReview(
+        reviewId,
+        null,
+        mode === "unchanged" ? unchanged() : form(),
+      ),
+    ).rejects.toThrow("redirect:");
+    const saved = attempt.update.mock.calls[0][0].feedback;
+    expect(saved).not.toHaveProperty("flags");
+    expect(saved.justification).toBe("Sound.");
+    expect(saved.comments).toHaveLength(3);
+    expect(feedback.flags).toEqual({ uncertain: true, marks: [3, 4] });
+  },
+);
+
 it("resolve unchanged needs an explicit mark when the attempt has none", async () => {
   vi.mocked(loadReview).mockResolvedValue(
     loaded({ reason: "spot_check", ai_mark: null }, { mark: null }) as never,

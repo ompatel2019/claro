@@ -6,6 +6,8 @@ import type { Criterion, MarkReview, ReviewRow } from "@/lib/feedback";
 import type { DisputeHistory } from "@/lib/disputes";
 import { reasons } from "./shared";
 export type Review = MarkReview & {
+  ai_mark: number | null;
+  check_mark: number | null;
   id: string;
   attempt_id: string;
   user_id: string;

@@ -87,9 +87,9 @@ async function History({
           })
           .eq("user_id", p.id)
       : db
-          .from("mark_reviews")
+          .from("student_mark_reviews")
           .select(
-            "id,created_at,student_note,status,ai_mark,final_mark,attempts!inner(position,question_id,questions(source),session_id,sessions!inner(id,kind))",
+            "id,created_at,student_note,status,final_mark,attempts!inner(position,question_id,questions(source),session_id,sessions!inner(id,kind))",
             { count: "exact" },
           )
           .eq("user_id", p.id)

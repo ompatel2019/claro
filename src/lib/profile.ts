@@ -31,15 +31,11 @@ export const passwordSchema = z
   });
 export function reviewOutcome(review: {
   status: string;
-  ai_mark: number | null;
   final_mark: number | null;
 }) {
   if (review.status === "open" || review.final_mark === null)
     return "Being checked";
-  if (review.ai_mark === review.final_mark) return "Unchanged";
-  return review.ai_mark === null
-    ? `Changed to ${review.final_mark}`
-    : `Changed ${review.ai_mark} → ${review.final_mark}`;
+  return `Reviewed: ${review.final_mark}`;
 }
 export function reviewHref(
   session: { id: string; kind: string },
