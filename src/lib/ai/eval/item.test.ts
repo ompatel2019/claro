@@ -2,6 +2,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import type { MarkableQuestion } from "@/lib/marking/grade";
 
+vi.mock("./examples", () => ({ evalExamplePool: vi.fn() }));
 vi.mock("@/lib/marking/engine", () => ({ markWritten: vi.fn() }));
 import { markWritten } from "@/lib/marking/engine";
 import { emptyRow, markEvalItem } from "./item";

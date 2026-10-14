@@ -1,5 +1,6 @@
 import { markWritten } from "@/lib/marking/engine";
 import type { MarkableQuestion } from "@/lib/marking/grade";
+import { evalExamplePool } from "./examples";
 import { scoreItem } from "./metrics";
 import { renderFeedback } from "./judge";
 import type { Row } from "./report";
@@ -48,16 +49,25 @@ export async function markEvalItem(
   cost: () => Promise<number>,
   config?: Parameters<typeof markWritten>[4],
   excludedExampleIds: readonly string[] = [],
+  sourceHash?: string,
 ) {
   const started = performance.now();
   let result;
   try {
-    // Preserve the default call for callers without eval exclusions.
-    result = excludedExampleIds.length
-      ? await markWritten(q, answer, null, task, config, excludedExampleIds)
-      : config
-        ? await markWritten(q, answer, null, task, config)
-        : await markWritten(q, answer, null, task);
+    result = await markWritten(
+      q,
+      answer,
+      null,
+      task,
+      config,
+      excludedExampleIds,
+      () =>
+        evalExamplePool(
+          q,
+          { id: row.exampleId, answer_text: answer, source_hash: sourceHash },
+          excludedExampleIds,
+        ),
+    );
   } finally {
     row.seconds = (performance.now() - started) / 1000;
     row.usd = await cost();

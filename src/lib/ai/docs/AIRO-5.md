@@ -37,7 +37,7 @@ DEV_ITEMS=$(node -e 'const a1 = require("./src/lib/ai/eval/a1-eval-set.json"); c
 npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts --set=dev --items="$DEV_ITEMS" --label=airo-5-dev
 ```
 
-Use the same frozen set and item selection for the separately saved A0 current-engine baseline. `--label` records provenance; it does not switch engine versions. The A0 engine must also receive the same final-row and leave-self-out exclusions. No baseline-switch CLI or bare-prompt experiment arm is supplied here. Reserve final for the later release decision; do not use it to tune the candidate.
+Use the same frozen set and item selection for the separately saved A0 current-engine baseline. `--label` records provenance; it does not switch engine versions. The A0 engine must also receive the same frozen dev/final, answer-identity and normalised-text exclusions. No baseline-switch CLI or bare-prompt experiment arm is supplied here. Reserve final for the later release decision; do not use it to tune the candidate.
 
 ### Quota preview (free, local; no database or model calls)
 
@@ -96,7 +96,7 @@ Real `a1-m…` question IDs are available in the repository: `supabase/migration
 ## Leak guards and student boundaries
 
 - Frozen dev/final IDs are anonymous marking_examples row IDs. The research split excludes existing test rows and within-question TF-IDF near-duplicate groups (threshold 0.80); no answer text is copied into these lists. Half marks are outside these frozen whole-mark sets.
-- The runner excludes every final ID from retrieval in all modes and the current dev row during dev marking. The grader view excludes test rows. Runtime retrieval uses explicit ID exclusions; it does not add a fresh near-duplicate search. The frozen split audit supplies that guard for these sets.
+- Every eval mode (`--set=dev`, `--set=final`, and the default test split) excludes all frozen dev and final IDs, the current answer ID/source hash, and any answer with matching normalised text (Unicode NFKC, lowercase, collapsed whitespace, trimmed). The eval-only loader filters example rows before pass 1 band anchors, pass 2 B1 quotas or sparse-pool band anchors, and reconciliation; dry-run band prompts use the same pool. Live marking is unchanged. This exact-text guard does not perform a fresh near-duplicate search; the frozen split audit supplies that guard.
 - Quotas use Airo's first-pass mark, never the target tutor mark. Tutor rationales come from eligible anchor rows. Checklists contain question rules rather than held-out answer text or identities. Student and anchor text is treated as evidence, never instructions.
 - Feedback sampling excludes test/final rows and normalised duplicate answers of those rows. Same-question judge context excludes the target row and its normalised answer duplicates, and the target's label is absent from its prompt. Provenance and balance are checked before any judge call. This duplicate guard is normalised text equality, not semantic near-duplicate detection.
 - Internal uncertainty flags and competing pass marks are stripped from student responses and practice/results loaders. Retrieved answers/rationales, checklist trace, band deliberations, judge labels, comparison statistics and tone diagnostics are not student feedback. Student comments, advice and outline still come from pass 1; the settled mark/band/justification follow the existing reconciliation rule.

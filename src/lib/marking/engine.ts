@@ -16,7 +16,12 @@ import {
   validateGrade,
   type MarkableQuestion,
 } from "./grade";
-import { examplePool, pickBandExamples, pickQuotaExamples } from "./examples";
+import {
+  examplePool,
+  pickBandExamples,
+  pickQuotaExamples,
+  type MarkedExample,
+} from "./examples";
 import {
   bandCorrection,
   flashcardMessages,
@@ -53,6 +58,7 @@ export async function markWritten(
     timeoutMs?: number;
   },
   excludedExampleIds: readonly string[] = [],
+  loadExamplePool?: () => Promise<MarkedExample[]>,
 ) {
   async function pass<S extends z.ZodType<z.infer<typeof CheckSchema>>>(
     schema: S,
@@ -122,9 +128,11 @@ export async function markWritten(
     return { grade, mark, criterion, validated: validation.ok };
   }
 
-  const pool = excludedExampleIds.length
-    ? await examplePool(q, excludedExampleIds)
-    : await examplePool(q);
+  const pool = loadExamplePool
+    ? await loadExamplePool()
+    : excludedExampleIds.length
+      ? await examplePool(q, excludedExampleIds)
+      : await examplePool(q);
   let examples = pickBandExamples(q.criteria, pool);
   const firstPass = pass(
     GradeSchema,

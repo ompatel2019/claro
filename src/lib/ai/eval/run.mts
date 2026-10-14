@@ -2,13 +2,14 @@
 // Run: npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts [--dry-run] [--limit=N | --items=0,1,...] [--label=text] [--set=dev|final]
 // --set replaces Held-out with frozen Dev/Final rows; --limit applies per section.
 // --items uses 0-based positions: A1, then Held-out (or Dev/Final), then Claro.
-// Retrieval always excludes final rows; Dev additionally excludes the answer itself.
+// Every eval pool excludes both frozen sets and the current answer identity/text.
 // Results: src/lib/ai/eval/results/ and /workspace/claro/eval-runs/.
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { admin } from "@/utils/supabase/admin";
 import { MARKER } from "@/lib/marking/engine";
-import { bandExamples } from "@/lib/marking/examples";
+import { pickBandExamples } from "@/lib/marking/example-selection";
+import { evalExamplePool } from "./examples";
 import type { MarkableQuestion } from "@/lib/marking/grade";
 import { gradeMessages } from "@/lib/marking/prompts";
 import { callJson } from "../openai";
@@ -54,7 +55,7 @@ const checks = claro.slice(0, limit);
 // Frozen sets contain example rows; the default remains the existing held-out test split.
 let query = db
   .from("marking_examples")
-  .select("id, question_id, answer_text, tutor_mark");
+  .select("id, question_id, answer_text, tutor_mark, source_hash");
 query = set
   ? query.in("id", [...evalSets[set]])
   : query
@@ -93,6 +94,7 @@ const allItems = [
   ...held.map((h) => ({
     id: h.question_id,
     exampleId: String(h.id),
+    sourceHash: h.source_hash,
     section: set === "dev" ? "Dev" : set === "final" ? "Final" : "Held-out",
     q: (questions as MarkableQuestion[]).find((q) => q.id === h.question_id),
     answer: h.answer_text,
@@ -119,11 +121,7 @@ if (selectedItems?.some((index) => index >= allItems.length)) {
 const items = allItems.filter(
   (_, index) => selectedItems === null || selectedItems.includes(index),
 );
-const exclusionsFor = (item: (typeof items)[number]) =>
-  retrievalExclusions(
-    item.section === "Dev" ? "dev" : undefined,
-    item.exampleId,
-  );
+const excludedExampleIds = retrievalExclusions();
 mkdirSync(out, { recursive: true });
 if (dry) {
   const text = (
@@ -132,7 +130,18 @@ if (dry) {
         if (!item.q) throw new Error(`Missing question ${item.id}`);
         return {
           item,
-          examples: await bandExamples(item.q, exclusionsFor(item)),
+          examples: pickBandExamples(
+            item.q.criteria,
+            await evalExamplePool(
+              item.q,
+              {
+                id: item.exampleId,
+                answer_text: item.answer,
+                source_hash: "sourceHash" in item ? item.sourceHash : undefined,
+              },
+              excludedExampleIds,
+            ),
+          ),
         };
       }),
     )
@@ -191,7 +200,8 @@ async function evaluate(item: (typeof items)[number], index: number) {
       `${task}:mark`,
       () => cost(`${task}:mark`),
       undefined,
-      exclusionsFor(item),
+      excludedExampleIds,
+      "sourceHash" in item ? item.sourceHash : undefined,
     );
     if (typeof item.expected === "number") {
       if (item.section !== "A1") return;

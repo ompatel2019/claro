@@ -36,16 +36,39 @@ export function evalRows<T extends { id: string; question_id: string }>(
   });
 }
 
-/** Final rows are locked out in every mode; dev rows additionally leave themselves out. */
-export function retrievalExclusions(set?: EvalSet, rowId?: string): string[] {
-  return set === "dev" && rowId
-    ? [...evalSets.final, rowId]
-    : [...evalSets.final];
+/** Both frozen sets are locked out in every eval mode. */
+export function retrievalExclusions(_set?: EvalSet, rowId?: string): string[] {
+  return [
+    ...new Set([...evalSets.dev, ...evalSets.final, ...(rowId ? [rowId] : [])]),
+  ];
 }
 
+export type EvalAnswer = {
+  id?: string;
+  answer_text: string;
+  source_hash?: string;
+};
+
+const normaliseAnswer = (text: string) =>
+  text.normalize("NFKC").toLowerCase().replace(/\s+/g, " ").trim();
+
 export function retrievalPool<
-  T extends { id: string; question_id: string; split: string },
->(rows: readonly T[], set?: EvalSet, rowId?: string): T[] {
-  const excluded = new Set(retrievalExclusions(set, rowId));
-  return rows.filter((row) => row.split === "example" && !excluded.has(row.id));
+  T extends {
+    id: string;
+    question_id: string;
+    split: string;
+    answer_text: string;
+    source_hash?: string;
+  },
+>(rows: readonly T[], set?: EvalSet, answer?: EvalAnswer): T[] {
+  const excluded = new Set(retrievalExclusions(set, answer?.id));
+  return rows.filter(
+    (row) =>
+      row.split === "example" &&
+      !excluded.has(row.id) &&
+      (!answer ||
+        normaliseAnswer(row.answer_text) !==
+          normaliseAnswer(answer.answer_text)) &&
+      (!answer?.source_hash || row.source_hash !== answer.source_hash),
+  );
 }

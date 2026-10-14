@@ -46,33 +46,43 @@ it.each(["dev", "final"] as const)(
   },
 );
 
-it("leaves the current dev answer out while retaining other dev answers", () => {
-  const self = evalSets.dev[0];
-  const other = row(evalSets.dev[1]);
+it("excludes all dev answers instead of leaving only the current answer out", () => {
+  const answer = row(evalSets.dev[0]);
+  const eligible = { ...row("eligible"), answer_text: "Different answer" };
   expect(
     retrievalPool(
-      [row(self), other, row(evalSets.final[0]), row("test", "test")],
+      [answer, row(evalSets.dev[1]), row(evalSets.final[0]), eligible],
       "dev",
-      self,
+      answer,
     ),
-  ).toEqual([other]);
-  expect(retrievalExclusions("dev", self)).toContain(self);
+  ).toEqual([eligible]);
+  expect(retrievalExclusions("dev", answer.id)).toContain(evalSets.dev[1]);
 });
 
 it.each([undefined, "dev", "final"] as const)(
-  "excludes every final row from retrieval in mode %s",
+  "excludes every dev/final row and matching answer identity/text in mode %s",
   (set) => {
-    const rows = evalSets.final.map((id) => row(id));
-    const example = row("ordinary-example");
-    expect(
-      retrievalPool(
-        [...rows, example, row("test", "test")],
-        set,
-        evalSets.dev[0],
-      ),
-    ).toEqual([example]);
-    expect(retrievalExclusions(set, evalSets.dev[0])).toEqual(
-      set === "dev" ? [...evalSets.final, evalSets.dev[0]] : evalSets.final,
-    );
+    const answer = { ...row("self"), source_hash: "same-hash" };
+    const eligible = {
+      ...row("ordinary-example"),
+      answer_text: "Different answer",
+    };
+    const rows = [
+      ...[...evalSets.dev, ...evalSets.final].map((id) => row(id)),
+      answer,
+      { ...row("text-duplicate"), answer_text: "  ＭＯＣＫ\nANSWER  " },
+      {
+        ...row("hash-duplicate"),
+        answer_text: "Different text",
+        source_hash: answer.source_hash,
+      },
+      eligible,
+      row("test", "test"),
+    ];
+    expect(retrievalPool(rows, set, answer)).toEqual([eligible]);
+    expect(retrievalExclusions(set)).toEqual([
+      ...evalSets.dev,
+      ...evalSets.final,
+    ]);
   },
 );

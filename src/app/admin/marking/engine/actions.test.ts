@@ -291,6 +291,8 @@ it("marks exactly one item with task eval, then stores score, check, time and ac
     null,
     "eval",
     expect.objectContaining(options),
+    [],
+    expect.any(Function),
   );
   const stored = JSON.parse(mocks.files.get(`runs/${run.id}.json`)!);
   expect(stored.items[0]).toMatchObject({
