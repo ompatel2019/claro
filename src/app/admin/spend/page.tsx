@@ -59,7 +59,7 @@ export default async function SpendPage({
           <span> · Those dates aren&apos;t valid, showing this month</span>
         )}
       </p>
-      <div className="grid min-w-0 auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid min-w-0 auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <StatCard label="Today" value={usd(spend.today)} caption="Sydney day" />
         <StatCard
           label="This month"
@@ -106,17 +106,36 @@ export default async function SpendPage({
             </div>
           }
         />
-        <StatCard
-          label="Avg cost per marked written answer"
-          empty={spend.avgPerMarkedWritten === null}
-          value={
-            spend.avgPerMarkedWritten === null
-              ? "No marked written answers"
-              : avgUsd(spend.avgPerMarkedWritten)
-          }
-          caption="Selected range"
-        />
       </div>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2>Cost by written mark value</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-muted-foreground text-sm">
+            Selected range. Average per tracked marked answer includes marking,
+            checks and transcription. Historical and batch calls without an
+            answer link remain unallocated: {usd(spend.unattributedWrittenUsd)}.
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {spend.byMarkValue.map((bucket) => (
+              <StatCard
+                key={bucket.label}
+                label={bucket.label}
+                empty={bucket.average === null}
+                value={
+                  bucket.average === null
+                    ? "No tracked costs"
+                    : avgUsd(bucket.average)
+                }
+                caption={`${bucket.answers} marked · ${bucket.trackedAnswers} tracked · ${usd(bucket.usd)} total`}
+              />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         {total > 0 ? (
           <DailyChart

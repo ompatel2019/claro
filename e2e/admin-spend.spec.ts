@@ -4,12 +4,7 @@ import { sydneyDay } from "../src/lib/admin";
 import { dateLabel } from "../src/lib/practice";
 import type { Range } from "../src/app/admin/spend/data";
 
-const kpis = [
-  "Today",
-  "This month",
-  "All time",
-  "Avg cost per marked written answer",
-];
+const kpis = ["Today", "This month", "All time"];
 async function expectWindow(page: Page, range: Range = "month") {
   const today = sydneyDay(new Date());
   const from =
@@ -52,7 +47,7 @@ async function ready(page: Page, range: Range = "month") {
   await expect(
     page.getByRole("heading", { level: 1, name: "AI spend", exact: true }),
   ).toBeVisible({ timeout: 30000 });
-  await expect(page.locator('[data-slot="card"] > dl')).toHaveCount(4);
+  await expect(page.locator('[data-slot="card"] > dl')).toHaveCount(9);
   await expectWindow(page, range);
 }
 
@@ -89,7 +84,7 @@ test.describe("admin spend", () => {
     expect(values[1]).toMatch(/^\$\d+\.\d{2}$/);
     expect(values[2]).toMatch(/^\$\d+\.\d{2} of \$100$/);
     expect(values[3]).toMatch(
-      /^(<\$0\.0001|\$0\.\d{4}|\$\d+\.\d{2}|No marked written answers)$/,
+      /^(<\$0\.0001|\$0\.\d{4}|\$\d+\.\d{2}|No tracked costs)$/,
     );
     for (const text of [
       "80% · Evals blocked",

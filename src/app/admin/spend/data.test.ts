@@ -94,7 +94,6 @@ it("keeps KPIs and fixed student windows independent of the selected range", () 
   );
   expect([result.today, result.month, result.all]).toEqual([12, 14, 24]);
   expect(result.byModel[0].usd).toBe(2);
-  expect(result.avgPerMarkedWritten).toBeNull();
   expect(result.topStudents).toEqual([
     {
       id: "fake-student-a",
@@ -134,7 +133,6 @@ it("aggregates model tokens, task groups and daily model stacks; averages only w
     now,
   );
   expect(result.markedWritten).toBe(3);
-  expect(result.avgPerMarkedWritten).toBe(4 / 3);
   expect(result.byModel).toEqual([
     {
       model: "Model A",
@@ -177,7 +175,6 @@ it("aggregates model tokens, task groups and daily model stacks; averages only w
 it("handles empty data, all-time start and exclusive end boundaries", () => {
   const empty = computeSpend({ month: 0, all: 0 }, [], [], [], "all", now);
   expect(empty.perDay).toEqual([]);
-  expect(empty.avgPerMarkedWritten).toBeNull();
   expect(empty.byTask.map((g) => g.name)).toEqual([
     "Marking",
     "Admin and evals",
@@ -255,7 +252,6 @@ it("includes lower boundaries and excludes the midnight after a custom end day",
   );
   expect(result.byModel[0].usd).toBe(5);
   expect(result.markedWritten).toBe(1);
-  expect(result.avgPerMarkedWritten).toBe(5);
 });
 it("uses exactly 30 Sydney days for students and includes the rolling hour boundary", () => {
   const rows = [
@@ -279,7 +275,6 @@ it("uses exactly 30 Sydney days for students and includes the rolling hour bound
     percent: 100,
   });
   expect(result.over150[0].calls).toBe(151);
-  expect(result.avgPerMarkedWritten).toBe(0);
 });
 
 it("normalises real engine and eval names before grouping and averaging", () => {
@@ -330,7 +325,6 @@ it("normalises real engine and eval names before grouping and averaging", () => 
     avgPerCall: 1,
   });
   expect(result.markedWritten).toBe(1);
-  expect(result.avgPerMarkedWritten).toBe(4);
   expect(
     computeSpend(
       { month: 0, all: 0 },
@@ -339,8 +333,8 @@ it("normalises real engine and eval names before grouping and averaging", () => 
       students,
       "month",
       now,
-    ).avgPerMarkedWritten,
-  ).toBeNull();
+    ).markedWritten,
+  ).toBe(0);
 });
 it("accepts sane custom boundaries including today in Sydney", () => {
   expect(parseRange({ from: "2020-01-01", to: "2026-10-09" }, now)).toEqual({
@@ -353,4 +347,86 @@ it("accepts sane custom boundaries including today in Sydney", () => {
       new Date("2026-10-09T13:01:00Z"),
     ),
   ).toEqual({ from: "2026-10-10", to: "2026-10-10" });
+});
+
+it("keeps null, invalid and infinite costs from poisoning all spend summaries", () => {
+  const result = computeSpend(
+    { month: NaN, all: Infinity },
+    [null, "bad", Infinity, NaN, "0.5"].map((usd) => usage({ usd })),
+    [],
+    students,
+    "month",
+    now,
+  );
+  expect([
+    result.today,
+    result.month,
+    result.all,
+    result.unattributedWrittenUsd,
+  ]).toEqual([0.5, 0, 0, 0.5]);
+  expect(result.byModel[0].usd).toBe(0.5);
+  expect(result.byTask[0].tasks[0].avgPerCall).toBe(0.1);
+  expect(result.perDay.find((d) => d.usd > 0)?.usd).toBe(0.5);
+  expect(result.topStudents[0].usd).toBe(0.5);
+});
+it("groups linked written costs by maximum marks and divides by distinct tracked answers", () => {
+  const attempts = [1, 2, 3, 4, 5, 6, 7, 8, 10].map((m) =>
+    attempt({ id: `a${m}`, max_marks: m }),
+  );
+  const rows = attempts.map((a) => usage({ attempt_id: a.id, usd: 0.01 }));
+  rows.push(
+    usage({ attempt_id: "a4", task: "check_written", usd: 0.02 }),
+    usage({ attempt_id: "a4", task: "transcribe_answer", usd: 0.03 }),
+    usage({ attempt_id: "a4", task: "summary", usd: 9 }),
+    usage({ usd: 1 }),
+  );
+  const result = computeSpend(
+    { month: 0, all: 0 },
+    rows,
+    attempts,
+    students,
+    "month",
+    now,
+  );
+  expect(result.byMarkValue.map((b) => b.answers)).toEqual([2, 1, 1, 2, 2, 1]);
+  expect(result.byMarkValue.find((b) => b.label === "4 marks")).toEqual({
+    label: "4 marks",
+    answers: 1,
+    trackedAnswers: 1,
+    usd: 0.06,
+    average: 0.06,
+  });
+  expect(result.unattributedWrittenUsd).toBeCloseTo(1);
+});
+it("does not allocate unrelated, unanswered, MC or out-of-range costs", () => {
+  const result = computeSpend(
+    { month: 0, all: 0 },
+    [usage({ attempt_id: "a" })],
+    [attempt({ id: "a", max_marks: 4, note: "No answer" })],
+    students,
+    "month",
+    now,
+  );
+  expect(
+    result.byMarkValue.every(
+      (b) => b.average === null && b.trackedAnswers === 0,
+    ),
+  ).toBe(true);
+  expect(result.unattributedWrittenUsd).toBe(1);
+});
+it("shows zero average for a linked free call and no average for untracked answers", () => {
+  const result = computeSpend(
+    { month: 0, all: 0 },
+    [usage({ attempt_id: "a", usd: null })],
+    [attempt({ id: "a", max_marks: 2 }), attempt({ id: "b", max_marks: 4 })],
+    students,
+    "month",
+    now,
+  );
+  expect(result.byMarkValue[0].average).toBe(0);
+  expect(result.byMarkValue[2]).toMatchObject({
+    answers: 1,
+    trackedAnswers: 0,
+    average: null,
+  });
 });

@@ -1,3 +1,4 @@
+import { withAttemptUsage } from "@/lib/ai/usage-context";
 import { singleSlotIds } from "@/lib/single-check";
 import {
   ANSWER_PHOTO_BYTE_LIMIT,
@@ -124,11 +125,8 @@ export async function POST(
         if (!pageLimited.ok) return rateLimitedResponse(pageLimited);
       }
       results.push(
-        await transcribeImage(
-          await image.arrayBuffer(),
-          image.type,
-          stem,
-          user.id,
+        await withAttemptUsage(id, async () =>
+          transcribeImage(await image.arrayBuffer(), image.type, stem, user.id),
         ),
       );
     }

@@ -98,6 +98,7 @@ it("routes Anthropic through a lazy OpenRouter client without priority", async (
   expect(mocks.serverEnv).not.toHaveBeenCalled();
   expect(mocks.openaiCreate).not.toHaveBeenCalled();
   expect(mocks.insert).toHaveBeenCalledWith({
+    attempt_id: null,
     user_id: null,
     task: "mark-written",
     model: MODELS.marker,
@@ -339,4 +340,19 @@ it("times out a stalled eval usage insert and retains the unlogged cost", async 
   } finally {
     vi.useRealTimers();
   }
+});
+
+it("logs the attempt context for individual marking costs", async () => {
+  const { callJson } = await import("./openai");
+  const { withAttemptUsage } = await import("./usage-context");
+  mocks.openaiCreate.mockResolvedValue(response);
+  await withAttemptUsage("synthetic-attempt", () =>
+    callJson({ task: "mark_written", model: "gpt-6.1-sol", schema, messages }),
+  );
+  expect(mocks.insert).toHaveBeenCalledWith(
+    expect.objectContaining({
+      attempt_id: "synthetic-attempt",
+      task: "mark_written",
+    }),
+  );
 });

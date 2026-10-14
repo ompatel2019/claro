@@ -1,4 +1,5 @@
 "use server";
+import { withAttemptUsage } from "@/lib/ai/usage-context";
 
 import { createHash, randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
@@ -86,7 +87,7 @@ export async function retryMarking(id: string) {
     redirect(`${queue}?tab=failed&notice=This+answer+is+no+longer+failed.`);
   let notice = "Marking retried.";
   try {
-    await markAttempt(id);
+    await withAttemptUsage(id, () => markAttempt(id));
     await rescoreSession(a.session_id);
   } catch {
     notice = "Retry did not complete. Refresh the queue or mark manually.";

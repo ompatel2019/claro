@@ -1,3 +1,4 @@
+import { withAttemptUsage } from "@/lib/ai/usage-context";
 import { singleSlotIds } from "@/lib/single-check";
 import { markOwnCheck, markBankCheck } from "@/lib/single-check-marking";
 import { BUDGET_USD } from "@/lib/ai/prices";
@@ -97,12 +98,15 @@ export async function POST(
         return Response.json({ error }, { status: 503 });
       }
     }
-    const { mark, max_marks, band, feedback, status } =
-      session.kind === "single"
-        ? attempt.question_id
-          ? await markBankCheck(id, user.id, attempt.question_id)
-          : await markOwnCheck(id, user.id, session.config)
-        : await markAttempt(id);
+    const { mark, max_marks, band, feedback, status } = await withAttemptUsage(
+      id,
+      async () =>
+        session.kind === "single"
+          ? attempt.question_id
+            ? await markBankCheck(id, user.id, attempt.question_id)
+            : await markOwnCheck(id, user.id, session.config)
+          : await markAttempt(id),
+    );
     if (feedback?.note === "No answer")
       await admin()
         .from("attempts")

@@ -37,7 +37,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
 });
-it("renders four KPIs, labelled budget markers, empty sections and loader limits", async () => {
+it("renders KPIs and mark-value bands, labelled budget markers, empty sections and loader limits", async () => {
   vi.mocked(loadSpend).mockResolvedValue(spend());
   const { container } = render(
     await SpendPage({ searchParams: Promise.resolve({}) }),
@@ -51,11 +51,9 @@ it("renders four KPIs, labelled budget markers, empty sections and loader limits
       "1 Oct 2026 to 9 Oct 2026 (Sydney, through now) · 0 calls",
     ),
   ).toBeInTheDocument();
-  expect(container.querySelectorAll('[data-slot="card"] > dl')).toHaveLength(4);
+  expect(container.querySelectorAll('[data-slot="card"] > dl')).toHaveLength(9);
   expect(screen.getByText("$0.00 of $100")).toBeInTheDocument();
-  expect(screen.getByText("No marked written answers")).toHaveClass(
-    "text-muted-foreground",
-  );
+  expect(screen.getAllByText("No tracked costs")).toHaveLength(6);
   for (const text of [
     "80% · Evals blocked",
     "90% · All AI stops",
@@ -77,7 +75,13 @@ it("renders four KPIs, labelled budget markers, empty sections and loader limits
 it("shows stacked spend, calls, written average and over-limit student links, clamping the progress bar", async () => {
   const data = spend("30");
   data.all = 120;
-  data.avgPerMarkedWritten = 0.0025;
+  data.byMarkValue[2] = {
+    label: "4 marks",
+    answers: 2,
+    trackedAnswers: 1,
+    usd: 0.0025,
+    average: 0.0025,
+  };
   data.byModel = [
     {
       model: "Alpha",

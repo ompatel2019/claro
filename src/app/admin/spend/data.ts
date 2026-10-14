@@ -10,15 +10,31 @@ export type Usage = {
   input_tokens: number;
   cached_tokens: number;
   output_tokens: number;
-  usd: number | string;
+  usd: number | string | null;
+  attempt_id?: string | null;
 };
 export type Student = { id: string; full_name: string };
 export type MarkedAttempt = {
+  id?: string;
+  max_marks?: number | null;
   marked_at: string;
   note: string | null;
   question_id: string | null;
-  question: { type: string } | null;
+  question: { type: string; marks?: number } | null;
 };
+/** Bad historical costs cannot poison totals or formatted averages. */
+function finiteCost(value: unknown) {
+  const number = Number(value) || 0;
+  return Number.isFinite(number) ? number : 0;
+}
+export const MARK_VALUE_BUCKETS = [
+  { label: "1–2 marks", min: 1, max: 2 },
+  { label: "3 marks", min: 3, max: 3 },
+  { label: "4 marks", min: 4, max: 4 },
+  { label: "5–6 marks", min: 5, max: 6 },
+  { label: "7–8 marks", min: 7, max: 8 },
+  { label: "9+ marks", min: 9, max: Infinity },
+];
 const DAY = 86_400_000;
 function shiftDay(day: string, days: number) {
   return new Date(Date.parse(day) + days * DAY).toISOString().slice(0, 10);
@@ -107,7 +123,7 @@ export function computeSpend(
     (sum, row) =>
       Date.parse(row.created_at) < now.getTime() &&
       sydneyDay(row.created_at) === todayKey
-        ? sum + Number(row.usd)
+        ? sum + finiteCost(row.usd)
         : sum,
     0,
   );
@@ -141,7 +157,7 @@ export function computeSpend(
       days.set(day, { day, models: {}, usd: 0 });
   let writtenUsd = 0;
   for (const r of rows) {
-    const usd = Number(r.usd);
+    const usd = finiteCost(r.usd);
     const model = byModel.get(r.model) ?? {
       model: r.model,
       calls: 0,
@@ -195,13 +211,37 @@ export function computeSpend(
       };
     })
     .filter((g) => g.name !== "Other" || g.tasks.length);
-  const markedWritten = attempts.filter(
+  const writtenAttempts = attempts.filter(
     (a) =>
       inRange(a.marked_at) &&
       a.note !== "No answer" &&
       (a.question_id === null ||
         ["short", "extended"].includes(a.question?.type ?? "")),
-  ).length;
+  );
+  const byMarkValue = MARK_VALUE_BUCKETS.map((bucket) => {
+    const answers = writtenAttempts.filter((a) => {
+      const marks = a.max_marks ?? a.question?.marks;
+      return marks != null && marks >= bucket.min && marks <= bucket.max;
+    });
+    const ids = new Set(answers.flatMap((a) => (a.id ? [a.id] : [])));
+    const costs = rows.filter(
+      (r) =>
+        r.attempt_id &&
+        ids.has(r.attempt_id) &&
+        writtenTasks.includes(normaliseTask(r.task)),
+    );
+    const trackedAnswers = new Set(costs.map((r) => r.attempt_id)).size;
+    const usd = costs.reduce((sum, r) => sum + finiteCost(r.usd), 0);
+    const average = trackedAnswers ? usd / trackedAnswers : null;
+    return {
+      label: bucket.label,
+      answers: answers.length,
+      trackedAnswers,
+      usd,
+      average: average !== null && Number.isFinite(average) ? average : null,
+    };
+  });
+  const attributedWrittenUsd = byMarkValue.reduce((sum, b) => sum + b.usd, 0);
   const since30 = sydneyMidnight(shiftDay(todayKey, -29));
   const hour = new Date(now.getTime() - 3_600_000).toISOString();
   const studentMap = new Map(students.map((s) => [s.id, s.full_name]));
@@ -216,7 +256,7 @@ export function computeSpend(
       Date.parse(r.created_at) >= now.getTime()
     )
       continue;
-    const usd = Number(r.usd);
+    const usd = finiteCost(r.usd);
     spend30 += usd;
     if (r.user_id === null || !studentMap.has(r.user_id)) continue;
     const s = studentUsage.get(r.user_id) ?? {
@@ -234,10 +274,11 @@ export function computeSpend(
   return {
     window: { ...window, from },
     today,
-    month: totals.month,
-    all: totals.all,
-    markedWritten,
-    avgPerMarkedWritten: markedWritten ? writtenUsd / markedWritten : null,
+    month: finiteCost(totals.month),
+    all: finiteCost(totals.all),
+    markedWritten: writtenAttempts.length,
+    byMarkValue,
+    unattributedWrittenUsd: Math.max(0, writtenUsd - attributedWrittenUsd),
     perDay: [...days.values()],
     byModel: [...byModel.values()].sort(
       (a, b) => b.usd - a.usd || a.model.localeCompare(b.model),

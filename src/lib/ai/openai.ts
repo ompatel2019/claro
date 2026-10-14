@@ -1,3 +1,4 @@
+import { usageAttemptId } from "./usage-context";
 import "server-only";
 
 import OpenAI from "openai";
@@ -110,6 +111,7 @@ export async function callJson<S extends z.ZodType>(opts: {
         .from("ai_usage")
         .insert({
           user_id: opts.userId ?? null,
+          attempt_id: usageAttemptId(),
           task: opts.task,
           model: opts.model,
           input_tokens: usage.prompt_tokens,

@@ -183,7 +183,7 @@ it("pages usage past 1000 rows and returns shared caps and limits", async () => 
   }
   for (const { query } of usage) {
     expect(query.select).toHaveBeenCalledWith(
-      "created_at,user_id,model,task,input_tokens,cached_tokens,output_tokens,usd",
+      "created_at,user_id,model,task,input_tokens,cached_tokens,output_tokens,usd,attempt_id",
     );
     expect(query.gte).toHaveBeenCalledWith(
       "created_at",
@@ -200,7 +200,7 @@ it("filters custom attempt dates server-side while preserving fixed recent usage
   const attempts = queries.find((q) => q.table === "attempts")!.query;
   expect(attempts.eq).toHaveBeenCalledWith("status", "marked");
   expect(attempts.select).toHaveBeenCalledWith(
-    "marked_at,question_id,note:feedback->>note,question:questions(type)",
+    "id,marked_at,max_marks,question_id,note:feedback->>note,question:questions(type,marks)",
   );
   expect(attempts.gte).toHaveBeenCalledWith(
     "marked_at",

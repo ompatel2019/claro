@@ -378,7 +378,7 @@ export async function loadSpend(range: Range = "month", now = new Date()) {
       let query = db
         .from("ai_usage")
         .select(
-          "created_at,user_id,model,task,input_tokens,cached_tokens,output_tokens,usd",
+          "created_at,user_id,model,task,input_tokens,cached_tokens,output_tokens,usd,attempt_id",
         )
         .lt("created_at", now.toISOString());
       if (since) query = query.gte("created_at", since);
@@ -388,7 +388,7 @@ export async function loadSpend(range: Range = "month", now = new Date()) {
       let query = db
         .from("attempts")
         .select(
-          "marked_at,question_id,note:feedback->>note,question:questions(type)",
+          "id,marked_at,max_marks,question_id,note:feedback->>note,question:questions(type,marks)",
         )
         .eq("status", "marked")
         .lt("marked_at", window.until);
