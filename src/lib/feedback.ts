@@ -1,4 +1,4 @@
-import { orderedComments, type Comment } from "./practice";
+import { orderedComments, type Attempt, type Comment } from "./practice";
 
 /** claro-ml's comment tags (Comment["tag"]), for checking stored rows at runtime. */
 export const TAGS = [
@@ -182,4 +182,38 @@ export function layoutCards(
     bottom = top + height;
     return top;
   });
+}
+
+/** Adapt the mark route's current payload to the shared annotated view. Reference
+ * answers and checker/review metadata are only available in finished results. */
+export function inlineSprintFeedback(a: Attempt): ReviewRow {
+  return {
+    attempt_id: a.id,
+    position: a.position,
+    question_id: a.question_id,
+    type: a.question.type,
+    marks: a.question.marks,
+    stem: a.question.stem,
+    stimulus: a.question.stimulus,
+    options: a.question.options,
+    source: a.question.source,
+    topic_id: a.question.topic_id,
+    year: a.question.year,
+    choice_index: a.choice_index,
+    answer_text: a.answer_text,
+    transcript: a.transcript,
+    image_paths: a.image_paths,
+    flagged: a.flagged,
+    status: a.status,
+    check_status: "skipped",
+    mark: a.mark,
+    max_marks: a.max_marks,
+    band: a.band,
+    feedback: a.feedback,
+    correct_index: null,
+    criteria: null,
+    sample_answer: null,
+    explanation: null,
+    review: null,
+  };
 }

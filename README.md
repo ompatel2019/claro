@@ -50,7 +50,13 @@ Setup is a four-step wizard (question type → topics → size → timer/feedbac
 The summary stays visible; Start and ⌘/Ctrl+Enter work on the last step. Back keeps
 choices, Reset returns to step one, and Advanced holds history and extra filters.
 
-Run checks on Node 22 (`nvm use`) with `.env.local` variables exported. Authenticated Playwright also needs `STUDENT_EMAIL` / `STUDENT_PASSWORD` and `ADMIN_EMAIL` / `ADMIN_PASSWORD`; keep credentials in the local environment.
+Use Node 22 (`nvm use`). Local checks need `NEXT_PUBLIC_APP_URL` set; authenticated Playwright tests additionally use synthetic `STUDENT_EMAIL` / `STUDENT_PASSWORD` and the Supabase settings from `.env.local`. Never commit credentials.
+
+In check-as-you-go sprints, Next shows a reminder on hover or focus for an unchecked answer and highlights Check answer. Navigation remains available.
+
+Written checks show the saved marked answer, all comments and the full-mark outline inline using the same feedback as results. Wide screens have margin comments; small screens stack them. The current mark API does not return guidelines, model answers or checker/review metadata, so these remain in finished results.
+
+Mark my answer defaults to the Claro bank. Set the server flag `ENABLE_OWN_QUESTION_MARKING=true` to show My own question. Own-question schemas and API remain available; saved own-question sessions still resume. Stale unsaved own-question drafts keep their answer text and require a bank selection.
 
 ## Flashcards
 

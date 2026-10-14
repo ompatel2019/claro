@@ -27,6 +27,9 @@ import { RichText } from "./rich-text";
 import { QuestionView } from "./question-view";
 import { isTyping, SessionShell, type SaveState } from "./session-shell";
 import { WrittenAnswer } from "./written-answer";
+import { AnnotatedFeedback } from "./annotated-feedback";
+import { inlineSprintFeedback } from "@/lib/feedback";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { markTone, TYPE_LABEL } from "@/lib/results";
 
 import { BookletFilter, BookletLegend } from "./booklet-controls";
@@ -260,10 +263,13 @@ export function SprintRunner({
     window.location.assign(`/student/sprint/${session.id}/results`);
   }
   const a = attempts[index];
-  const editable = !!a && ["pending", "transcribed"].includes(a.status);
+  const editable =
+    !!a && ["pending", "transcribed"].includes(a.status) && checking !== a.id;
   const answerKey =
     checkMode && a?.status === "marked" ? a.feedback?.correct_index : null;
+  const needsCheck = checkMode && editable && answered(a);
   async function check() {
+    if (!checkMode || checking || busy || !editable || !answered(a)) return;
     const id = a.id;
     setChecking(id);
     setError("");
@@ -459,6 +465,7 @@ export function SprintRunner({
   return (
     <SessionShell
       title={title}
+      wide={checkMode && a.question.type !== "mcq" && a.status === "marked"}
       position={index + 1}
       total={attempts.length}
       answered={attempts.length - unanswered.length}
@@ -558,8 +565,9 @@ export function SprintRunner({
               </label>
             ))}
           </fieldset>
-        ) : (
+        ) : checkMode && a.status === "marked" ? null : (
           <WrittenAnswer
+            inputOnly={checkMode}
             disabled={busy || !editable}
             onBusy={setBusy}
             key={a.question_id ?? a.id}
@@ -590,7 +598,8 @@ export function SprintRunner({
               attempt={a}
               explanation={explanations[a.id]}
               checking={checking === a.id}
-              canCheck={editable && answered(a) && !busy}
+              highlight={needsCheck}
+              canCheck={editable && answered(a) && !busy && !checking}
               onCheck={() => void check()}
             />
           )}
@@ -615,13 +624,22 @@ export function SprintRunner({
           Previous question
         </Button>
         {index < attempts.length - 1 ? (
-          <Button
-            variant="outline"
-            disabled={busy}
-            onClick={() => go(index + 1)}
-          >
-            Next question
-          </Button>
+          <Tooltip disabled={!needsCheck}>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => go(index + 1)}
+                />
+              }
+            >
+              Next question
+            </TooltipTrigger>
+            <TooltipContent role="tooltip">
+              You’ve selected an answer, check it first?
+            </TooltipContent>
+          </Tooltip>
         ) : (
           <Button disabled={busy} onClick={() => setConfirm(true)}>
             Finish
@@ -705,12 +723,14 @@ function CheckResult({
   explanation,
   checking,
   canCheck,
+  highlight = false,
   onCheck,
 }: {
   attempt: Attempt;
   explanation?: string;
   checking: boolean;
   canCheck: boolean;
+  highlight?: boolean;
   onCheck: () => void;
 }) {
   if (a.status === "marked") {
@@ -734,20 +754,17 @@ function CheckResult({
         </div>
       );
     }
-    const next = a.feedback?.comments?.find(
-      (c) => c.kind === "fix" && c.next_mark,
-    )?.next_mark;
     return (
-      <div role="status" className="bg-muted space-y-1 rounded-xl p-4 text-sm">
-        <p className="font-semibold tabular-nums">
-          {a.mark} / {a.max_marks}
-        </p>
-        {a.band && <p className="text-muted-foreground">Band: {a.band}</p>}
-        {next && <p>Next mark: {next}</p>}
-        <p className="text-muted-foreground text-xs">
-          Full feedback in your results.
-        </p>
-      </div>
+      <section aria-label="Checked answer feedback" className="space-y-3">
+        {a.band && (
+          <p className="text-muted-foreground text-sm">Band: {a.band}</p>
+        )}
+        <AnnotatedFeedback
+          row={inlineSprintFeedback(a)}
+          readOnly
+          showReferences={false}
+        />
+      </section>
     );
   }
   if (checking || a.status === "marking")
@@ -758,7 +775,17 @@ function CheckResult({
     );
   return (
     <div className="flex items-center gap-3">
-      <Button variant="outline" disabled={!canCheck} onClick={onCheck}>
+      <Button
+        variant="outline"
+        disabled={!canCheck}
+        onClick={onCheck}
+        className={cn(
+          highlight && "bg-accent ring-primary ring-2 ring-offset-2",
+        )}
+        aria-description={
+          highlight ? "You have an unchecked answer." : undefined
+        }
+      >
         Check answer
       </Button>
       <span className="text-muted-foreground text-xs">⌘Enter</span>

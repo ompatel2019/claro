@@ -115,9 +115,22 @@ export async function reviewSprintSetup(page: Page) {
   while (await next.count()) await next.click();
 }
 /** Starts a sprint of one type on Inflation through the §3.2 setup page. */
-export async function start(page: Page, mode: string, ids: string[]) {
+export async function start(
+  page: Page,
+  mode: string,
+  ids: string[],
+  checkEach = false,
+) {
   await page.goto(`/student/sprint?type=${TYPES[mode]}&sub=t3-inflation`);
   await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
+  if (checkEach) {
+    const each = page.getByRole("radio", {
+      name: "After each question (check as you go)",
+    });
+    for (let step = 0; step < 4 && !(await each.isVisible()); step++)
+      await page.getByRole("button", { name: "Next", exact: true }).click();
+    await each.click();
+  }
   await reviewSprintSetup(page);
   await page.getByRole("button", { name: /^Start (sprint|with)/ }).click();
   await expect(page).toHaveURL(/\/student\/sprint\/[^/]+$/);
@@ -207,4 +220,12 @@ export async function restoreFlashcardProgress(
       .upsert(existing, { onConflict: "user_id,flashcard_id" });
     if (error) throw error;
   }
+}
+
+/** Enter a control through keyboard navigation, so native focus-visible applies. */
+export async function focusWithKeyboard(page: Page, control: Locator) {
+  await control.focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(control).toBeFocused();
 }

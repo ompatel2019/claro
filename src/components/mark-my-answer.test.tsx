@@ -41,9 +41,15 @@ const questions = [
     verb: "explain",
   },
 ] satisfies BankQuestion[];
-function setup(left = 20) {
+function setup(left = 20, allowOwnQuestion = false) {
   return render(
-    <MarkMyAnswer questions={questions} topics={[]} userId="u" left={left} />,
+    <MarkMyAnswer
+      questions={questions}
+      topics={[]}
+      userId="u"
+      left={left}
+      allowOwnQuestion={allowOwnQuestion}
+    />,
   );
 }
 afterEach(() => {
@@ -69,8 +75,8 @@ it("searches stems and source, selects the question and enables only a valid ans
   expect(submit).toBeEnabled();
   expect(createCheck).not.toHaveBeenCalled();
 });
-it("shows inline own-question validation and auto-fills the verb", () => {
-  setup();
+it("shows inline own-question validation and auto-fills the verb when enabled", () => {
+  setup(20, true);
   fireEvent.click(screen.getByRole("button", { name: "My own question" }));
   const stem = screen.getByRole("textbox", { name: /Question text/ });
   fireEvent.change(stem, { target: { value: "Explain" } });
@@ -100,7 +106,7 @@ it("shows the daily cap and keeps submit disabled", () => {
 });
 
 it("keeps a manually selected verb when question text changes", async () => {
-  setup();
+  setup(20, true);
   fireEvent.click(screen.getByRole("button", { name: "My own question" }));
   const stem = screen.getByRole("textbox", { name: /Question text/ });
   fireEvent.change(stem, { target: { value: "Assess fiscal policy." } });
@@ -336,4 +342,68 @@ it("restores unsaved text without replacing a saved session's immutable question
     "4 marks",
   );
   expect(screen.getByText(/aim for about 140–200/)).toBeVisible();
+});
+
+it("defaults to bank-only with useful filtered-empty copy", () => {
+  setup();
+  expect(
+    screen.queryByRole("button", { name: "My own question" }),
+  ).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Search questions"), {
+    target: { value: "synthetic missing question" },
+  });
+  expect(
+    screen.getByText(
+      "No questions match. Try another search or change your filters.",
+    ),
+  ).toBeVisible();
+});
+it("a stale own-question draft cannot enable the hidden feature or select a bank question", async () => {
+  localStorage.setItem(
+    "claro.single.u",
+    JSON.stringify({
+      source: "own",
+      selected: "q1",
+      own: {
+        stem: "Explain inflation.",
+        marks: 4,
+        verb: "explain",
+        topic_id: null,
+        criteria_text: null,
+      },
+      mode: "type",
+      sessionId: null,
+      answer: {
+        answer_text: "Saved synthetic answer",
+        transcript: null,
+        image_paths: null,
+      },
+    }),
+  );
+  setup();
+  await waitFor(() =>
+    expect(screen.getByRole("textbox", { name: "Your answer" })).toHaveValue(
+      "Saved synthetic answer",
+    ),
+  );
+  expect(
+    screen.queryByRole("textbox", { name: /Question text/ }),
+  ).not.toBeInTheDocument();
+  expect(screen.queryByText(/Selected question/)).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Mark my answer" })).toBeDisabled();
+  expect(createCheck).not.toHaveBeenCalled();
+});
+
+it("an empty bank cannot start a check or expose own-question fields", () => {
+  render(<MarkMyAnswer questions={[]} topics={[]} userId="u" left={20} />);
+  expect(
+    screen.getByText(
+      "No questions match. Try another search or change your filters.",
+    ),
+  ).toBeVisible();
+  expect(screen.getByRole("button", { name: "Mark my answer" })).toBeDisabled();
+  expect(
+    screen.queryByRole("button", { name: "My own question" }),
+  ).not.toBeInTheDocument();
+  expect(createCheck).not.toHaveBeenCalled();
 });

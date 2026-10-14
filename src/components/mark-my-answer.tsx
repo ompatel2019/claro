@@ -101,11 +101,13 @@ export function MarkMyAnswer({
   userId,
   left,
   initial,
+  allowOwnQuestion = false,
 }: {
   questions: BankQuestion[];
   topics: Topic[];
   userId: string;
   left: number;
+  allowOwnQuestion?: boolean;
   initial?: {
     sessionId: string;
     attempt: Omit<Attempt, "question">;
@@ -263,8 +265,12 @@ export function MarkMyAnswer({
           ) {
             // A saved session's question is immutable; only restore its answer.
             if (!initial) {
-              setSource(draft.data.source);
-              setSelected(draft.data.selected);
+              setSource(allowOwnQuestion ? draft.data.source : "bank");
+              setSelected(
+                !allowOwnQuestion && draft.data.source === "own"
+                  ? ""
+                  : draft.data.selected,
+              );
               setOwn(draft.data.own);
               setVerbEdited(true);
             }
@@ -282,7 +288,7 @@ export function MarkMyAnswer({
       setRestored(true);
     }, 0);
     return () => clearTimeout(timer);
-  }, [draftKey, initial, router, userId]);
+  }, [allowOwnQuestion, draftKey, initial, router, userId]);
   useEffect(() => {
     if (!restored || submitted) return;
     try {
@@ -440,20 +446,28 @@ export function MarkMyAnswer({
             <CardTitle>Question</CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <ToggleGroup
-              value={[source]}
-              onValueChange={(v) => {
-                if (v[0]) setSource(v[0]);
-              }}
-              aria-label="Question source"
-              className="w-full flex-wrap"
-              disabled={questionLocked}
-            >
-              <ToggleGroupItem value="bank">
-                From the Claro bank
-              </ToggleGroupItem>
-              <ToggleGroupItem value="own">My own question</ToggleGroupItem>
-            </ToggleGroup>
+            {allowOwnQuestion ? (
+              <ToggleGroup
+                value={[source]}
+                onValueChange={(v) => {
+                  if (v[0]) setSource(v[0]);
+                }}
+                aria-label="Question source"
+                className="w-full flex-wrap"
+                disabled={questionLocked}
+              >
+                <ToggleGroupItem value="bank">
+                  From the Claro bank
+                </ToggleGroupItem>
+                <ToggleGroupItem value="own">My own question</ToggleGroupItem>
+              </ToggleGroup>
+            ) : (
+              <p className="text-sm font-medium">
+                {initial?.question
+                  ? "Your saved question"
+                  : "From the Claro bank"}
+              </p>
+            )}
             {source === "bank" ? (
               <>
                 <label className="grid gap-1.5 text-sm font-medium">
@@ -558,7 +572,9 @@ export function MarkMyAnswer({
                     >
                       {results.length
                         ? `${results.length} matching questions${results.length === 30 ? " · refine your search for more" : ""}`
-                        : "No questions match. Try another search or use your own question."}
+                        : allowOwnQuestion
+                          ? "No questions match. Try another search or use your own question."
+                          : "No questions match. Try another search or change your filters."}
                     </p>
                     <ul
                       id={bankListId}
