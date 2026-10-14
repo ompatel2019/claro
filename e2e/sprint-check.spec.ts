@@ -1,5 +1,12 @@
 import { expect, test } from "@playwright/test";
-import { adminClient, cleanupSessions, pick, signIn, start } from "./helpers";
+import {
+  adminClient,
+  cleanupSessions,
+  focusWithKeyboard,
+  pick,
+  signIn,
+  start,
+} from "./helpers";
 for (const width of [390, 1600]) {
   test.describe(`Sprint check ${width}px`, () => {
     test.skip(!process.env.STUDENT_EMAIL, "Needs a synthetic student account");
@@ -112,7 +119,7 @@ for (const width of [390, 1600]) {
         const attemptId = route.request().url().split("/").at(-2)!;
         const { error } = await adminClient()!
           .from("attempts")
-          .update(body)
+          .update({ ...body, check_status: "agreed" })
           .eq("id", attemptId);
         expect(error).toBeNull();
         await route.fulfill({
