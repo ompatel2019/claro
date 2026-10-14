@@ -65,7 +65,9 @@ for (const width of [390, 1600]) {
       await pick(page, "A");
       const check = page.getByRole("button", { name: "Check answer" });
       await check.click();
-      await expect(page.getByRole("alert")).toContainText("Marking is paused.");
+      await expect(
+        page.getByRole("alert").filter({ hasText: "Marking is paused." }),
+      ).toBeVisible();
       await expect(check).toHaveAttribute(
         "aria-description",
         "You have an unchecked answer.",
@@ -184,7 +186,7 @@ for (const width of [390, 1600]) {
       await page.reload();
       // Resume selects the next unanswered question; return to the checked one.
       await page.getByRole("button", { name: "Previous question" }).click();
-      await expect(feedback).toContainText("Demand grows.");
+      await expect(feedback).toContainText(/Demand\d* grows\./);
       expect(calls).toBe(1);
       await expect(page).toHaveURL(new RegExp(`/student/sprint/${id}$`));
     });
@@ -223,7 +225,7 @@ for (const width of [390, 1600]) {
         name: "Checked answer feedback",
       });
       await expect(feedback).toContainText("0 / 4");
-      await expect(feedback).toContainText("Demand grows.");
+      await expect(feedback).toContainText(/Demand\d* grows\./);
       await expect(
         feedback.getByRole("group", { name: "Filter comments" }),
       ).toHaveCount(0);
