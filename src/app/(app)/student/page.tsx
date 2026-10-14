@@ -299,24 +299,7 @@ async function Continue({ userId }: { userId: string }) {
         <TryAgain what="your unfinished sessions" />
       </Section>
     );
-  if (!data.length) {
-    const due = await load.due(userId).catch(() => ({ today: 0 }));
-    return (
-      <Section title="Quick start">
-        <div className="grid gap-2">
-          <QuickStarts />
-          {due.today > 0 && (
-            <FlashcardStart
-              due
-              label={`Review due flashcards (${due.today})`}
-              variant="outline"
-              className="w-full justify-start"
-            />
-          )}
-        </div>
-      </Section>
-    );
-  }
+  if (!data.length) return null;
   const topics = await load.topics().catch(() => []);
   return (
     <Section title="Continue where you left off">
@@ -420,7 +403,11 @@ async function DueButton({ userId }: { userId: string }) {
       label={`Flashcards · ${due.today} due`}
       variant="outline"
     />
-  ) : null;
+  ) : due ? (
+    <p className="text-muted-foreground text-sm">0 due</p>
+  ) : (
+    <TryAgain what="your due flashcards" />
+  );
 }
 
 export const metadata = pageMetadata("Home");
@@ -448,17 +435,47 @@ export default async function Home() {
       <PageHeader
         eyebrow={longDate()}
         title={`${greeting()}${first ? `, ${first}` : ""}`}
-        actions={
-          <>
-            <Link href="/student/sprint" className={buttonVariants()}>
+      />
+      <section aria-label="Quick start" className="grid gap-4 sm:grid-cols-2">
+        <Section title="Topic Sprint">
+          <div className="grid gap-2">
+            <Link
+              href="/student/sprint"
+              className={buttonVariants({
+                variant: "outline",
+                className: "justify-start",
+              })}
+            >
+              <Sprint aria-hidden className="size-5" />
               Start sprint
             </Link>
-            <Suspense>
+            <QuickStarts />
+          </div>
+        </Section>
+        <Section title="Flashcards">
+          <div className="space-y-2">
+            <Link
+              href="/student/flashcards"
+              className={buttonVariants({
+                variant: "outline",
+                className: "w-full justify-start",
+              })}
+            >
+              <Cards aria-hidden className="size-5" />
+              Choose a deck
+            </Link>
+            <Suspense
+              fallback={
+                <p className="text-muted-foreground text-sm">
+                  Loading due count…
+                </p>
+              }
+            >
               <DueButton userId={id} />
             </Suspense>
-          </>
-        }
-      />
+          </div>
+        </Section>
+      </section>
       <Suspense
         fallback={
           <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">

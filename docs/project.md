@@ -13,6 +13,15 @@ Apply migration 0042 before serving these changes. Use Node 22 and export local/
 
 ## Home and progress
 
+Student Home always shows the Topic Sprint presets and Flashcards launch boxes
+immediately below the header, including the due count (zero when none are due).
+Summary stats, activity heatmap, score trend/recent activity and unfinished
+sessions/weak topics follow. Continue appears only when there are unfinished
+sessions; loading failures keep the launch boxes available with a retry for the
+unavailable due count. No migration is needed for this layout.
+Coverage: `src/app/(app)/student/quick-start.test.tsx` and `e2e/student-home.spec.ts`
+(empty history, unfinished sessions and due cards at 360px and 1280px).
+
 Home and Progress use the same weak-topic helper and SQL history counts. Home
 uses all-time history; Progress uses its selected range. Topics below 60% qualify.
 Home supplies summary stats and the yearly activity heatmap. Progress focuses on

@@ -90,6 +90,15 @@ Apply `0046_sprints_mixed_buckets.sql`. Coverage adds `e2e/sprint-mixed.spec.ts`
 
 ## Progress
 
+Student Home always shows the Topic Sprint presets and Flashcards launch boxes
+immediately below the header, including the due count (zero when none are due).
+Summary stats, activity heatmap, score trend/recent activity and unfinished
+sessions/weak topics follow. Continue appears only when there are unfinished
+sessions; loading failures keep the launch boxes available with a retry for the
+unavailable due count. No migration is needed for this layout.
+Coverage: `src/app/(app)/student/quick-start.test.tsx` and `e2e/student-home.spec.ts`
+(empty history, unfinished sessions and due cards at 360px and 1280px).
+
 Home owns the summary stats and yearly activity heatmap. Progress leads with topic,
 question-type and directive-verb breakdowns, then score history and flashcard mastery.
 Question weak spots require 3 marked answers across 2 distinct sessions per subtopic;
