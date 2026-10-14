@@ -134,3 +134,24 @@ Database assertions in `supabase/tests/weak-topic-samples.sql` run after migrati
 and all their writes roll back.
 
 The student and admin headers include a keyboard-accessible Dark mode toggle. The initial theme follows your system, and explicit choices are saved in this browser. Choose “Use system theme” in the account menu to reset it. A synchronous head script sets the theme before paint; panels, controls, charts and activity shades share light/dark tokens.
+
+## Marking accuracy (A4)
+
+Check agreement has a keyboard/hover tooltip: it measures current AI checker
+agreement, not human accuracy. Admin-verified accuracy is exact AI/final-mark
+agreement on comparable written spot checks and checker disagreements resolved
+by an admin in the selected range. It excludes every student dispute and shows
+the sample count; it describes a selected review sample, not overall accuracy.
+
+Dispute counts, override rate and mark-change breakdowns exclude disputes from
+currently blocked accounts and repeat disputers: at least 3 all-time resolved
+disputes, with at least half unchanged or lowered (A3's rejection definition).
+Legitimate repeat disputes with lower rejection rates remain included. The page
+shows the excluded count. Staff reviews remain included for all students.
+No database change or migration is required.
+
+Coverage: accuracy data/page/tooltip Vitest suites and
+`e2e/admin-marking-accuracy.spec.ts` (tooltip keyboard/hover/touch, range changes,
+admin metric and phone layouts). Run with `q-run npm run check` and
+`q-run npx playwright test e2e/admin-marking-accuracy.spec.ts --workers=1`.
+Authenticated browser tests need the admin credentials described above.

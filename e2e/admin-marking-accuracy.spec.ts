@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { adminClient } from "./helpers";
+import { disputeStudent } from "./fixtures/dispute-student";
 
 async function signInAdmin(page: Page) {
   await page.goto("/sign-in");
@@ -17,6 +19,7 @@ const kpis = [
   "Settled by second pass",
   "Sent to review",
   "Override rate",
+  "Admin-verified accuracy",
 ];
 /** These sections render either a heading or an EmptyState title paragraph. */
 async function expectSectionOrEmpty(
@@ -61,12 +64,12 @@ test.describe("admin marking accuracy", () => {
           .locator('[data-slot="card"] > dl')
           .getByText(label, { exact: true }),
       ).toBeVisible();
-    // Four KPI cards; every value is a percentage or a word, never a dash.
+    // Five KPI cards; every value is a percentage or a word, never a dash.
     const values = page.locator("dl > dd:first-of-type");
-    await expect(values).toHaveCount(4);
+    await expect(values).toHaveCount(5);
     for (const value of await values.allTextContents())
       expect(value).toMatch(
-        /^(\d+\.\d%|No (checked answers|comparable reviews) yet)$/,
+        /^(\d+\.\d%|No (checked answers|comparable reviews|admin-verified answers) yet)$/,
       );
     // Weekly chart headings remain visible even when their content is empty.
     for (const heading of [
@@ -167,6 +170,157 @@ test.describe("admin marking accuracy", () => {
     ).toHaveAttribute("aria-current", "page");
     // Read-only aggregate page: no student emails anywhere in the main content.
     expect(await page.locator("#main").innerText()).not.toMatch(/@/);
+  });
+
+  test("agreement explanation works on hover, keyboard and touch", async ({
+    page,
+    browser,
+  }) => {
+    await signInAdmin(page);
+    await page.goto("/admin/marking/accuracy");
+    const trigger = page.getByRole("button", { name: "About check agreement" });
+    const tooltip = page.getByRole("tooltip");
+    // Retry pointer entry until the client has hydrated.
+    await expect(async () => {
+      await page.mouse.move(0, 0);
+      await trigger.hover();
+      await expect(tooltip).toContainText("Agreed ÷ checked written answers", {
+        timeout: 2000,
+      });
+    }).toPass({ timeout: 20000 });
+    await expect(tooltip).toContainText("not human-verified accuracy");
+    await expect(tooltip).toContainText(
+      "student disputes can change that status",
+    );
+    await page.mouse.move(0, 0);
+    await trigger.focus();
+    await expect(tooltip).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(tooltip).not.toBeVisible();
+    await expect(trigger).toBeFocused();
+    await expect(
+      page.getByText(/Student disputes are excluded; this review sample/),
+    ).toBeVisible();
+    await expect(page.getByText(/\d+ disputes excluded\./)).toBeVisible();
+    const touchContext = await browser.newContext({
+      hasTouch: true,
+      viewport: { width: 390, height: 844 },
+    });
+    try {
+      const touchPage = await touchContext.newPage();
+      await signInAdmin(touchPage);
+      await touchPage.goto("/admin/marking/accuracy");
+      await expect(async () => {
+        await touchPage
+          .getByRole("button", { name: "About check agreement" })
+          .tap();
+        await expect(touchPage.getByRole("tooltip")).toBeVisible({
+          timeout: 2000,
+        });
+      }).toPass({ timeout: 20000 });
+      expect(await noOverflow(touchPage)).toBe(true);
+    } finally {
+      await touchContext.close();
+    }
+  });
+
+  test("student disputes cannot change admin verification; blocked and repeat disputes are excluded", async ({
+    page,
+  }) => {
+    test.skip(
+      !adminClient(),
+      "Needs service credentials for isolated fixtures",
+    );
+    const db = adminClient()!;
+    const fixture = await disputeStudent(5);
+    try {
+      const { data: resolver } = await db
+        .from("profiles")
+        .select("id")
+        .eq("role", "admin")
+        .limit(1)
+        .single()
+        .throwOnError();
+      await signInAdmin(page);
+      await page.goto("/admin/marking/accuracy?range=7");
+      const verified = page
+        .getByText("Admin-verified accuracy", { exact: true })
+        .locator("..");
+      const sample = async () => {
+        const text = await verified.innerText();
+        const match = text.match(/(\d+) of (\d+) comparable staff-initiated/)!;
+        return { agreed: Number(match[1]), total: Number(match[2]) };
+      };
+      const exclusions = async () =>
+        Number(
+          (await page.getByText(/\d+ disputes excluded\./).innerText()).match(
+            /(\d+) disputes excluded/,
+          )![1],
+        );
+      const before = await sample();
+      const excludedBefore = await exclusions();
+      const stamp = new Date().toISOString();
+      await db
+        .from("mark_reviews")
+        .insert(
+          fixture.attempts.slice(0, 2).map((attempt_id, i) => ({
+            attempt_id,
+            user_id: fixture.userId,
+            reason: i ? "check_disagreed" : "spot_check",
+            status: "resolved",
+            ai_mark: 1,
+            final_mark: i ? 0 : 1,
+            resolved_by: resolver!.id,
+            resolved_at: stamp,
+          })),
+        )
+        .throwOnError();
+      await page.reload();
+      await expect
+        .poll(sample)
+        .toEqual({ agreed: before.agreed + 1, total: before.total + 2 });
+      const staffSample = await verified.textContent();
+      const dispute = (attempt_id: string) => ({
+        attempt_id,
+        user_id: fixture.userId,
+        reason: "student_dispute",
+        status: "resolved",
+        ai_mark: 1,
+        final_mark: 1,
+        resolved_by: resolver!.id,
+        resolved_at: stamp,
+        student_note: "Synthetic A4 dispute fixture.",
+      });
+      await db
+        .from("mark_reviews")
+        .insert(dispute(fixture.attempts[2]))
+        .throwOnError();
+      await page.reload();
+      await expect(verified).toHaveText(staffSample!);
+      await expect.poll(exclusions).toBe(excludedBefore);
+      const { error: blockError } = await db.auth.admin.updateUserById(
+        fixture.userId,
+        { ban_duration: "24h" },
+      );
+      if (blockError) throw blockError;
+      await page.reload();
+      await expect(verified).toHaveText(staffSample!);
+      await expect.poll(exclusions).toBe(excludedBefore + 1);
+      const { error: unblockError } = await db.auth.admin.updateUserById(
+        fixture.userId,
+        { ban_duration: "none" },
+      );
+      if (unblockError) throw unblockError;
+      await db
+        .from("mark_reviews")
+        .insert(fixture.attempts.slice(3).map(dispute))
+        .throwOnError();
+      await page.reload();
+      await expect(verified).toHaveText(staffSample!);
+      await expect.poll(exclusions).toBe(excludedBefore + 3);
+    } finally {
+      await fixture.cleanup();
+    }
   });
 
   test("the range select updates the URL and the page", async ({ page }) => {

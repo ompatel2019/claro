@@ -32,6 +32,8 @@ export type Attempt = {
 export type Review = {
   id: string;
   reason: string;
+  user_id: string;
+  resolved_by: string | null;
   status: string;
   ai_mark: number | null;
   final_mark: number | null;
@@ -119,6 +121,7 @@ export function computeAccuracy(
   topics: Topic[],
   range: Range,
   now = new Date(),
+  excludedStudents: ReadonlySet<string> = new Set(),
 ) {
   const window = rangeWindow(range, now);
   const start = Date.parse(window.since),
@@ -134,13 +137,27 @@ export function computeAccuracy(
   const checked = answers.filter((a) =>
     checkedStatuses.some((s) => s === a.check_status),
   );
-  const resolved = reviews.filter(
+  const eligibleReviews = reviews.filter(
+    (r) => r.reason !== "student_dispute" || !excludedStudents.has(r.user_id),
+  );
+  const resolved = eligibleReviews.filter(
     (r) => r.status === "resolved" && inRange(r.resolved_at),
+  );
+  // Only staff-initiated, staff-resolved written reviews are independent of disputes.
+  const verified = resolved.filter(
+    (r) =>
+      (r.reason === "spot_check" || r.reason === "check_disagreed") &&
+      r.resolved_by != null &&
+      written(r.attempt?.question ?? null) &&
+      r.ai_mark != null &&
+      r.final_mark != null &&
+      Number.isFinite(r.ai_mark) &&
+      Number.isFinite(r.final_mark),
   );
   const sentToReview = (a: Attempt) =>
     (a.check_status === "in_review" || a.check_status === "reviewed") &&
     a.reviews.some((r) => r.reason === "check_disagreed");
-  const comparable = resolved.filter((r) => r.ai_mark != null);
+  const comparable = resolved.filter((r) => delta(r) != null);
   const deltas = comparable.flatMap((r) =>
     delta(r) == null ? [] : [delta(r)!],
   );
@@ -161,7 +178,7 @@ export function computeAccuracy(
     if (checkedStatuses.some((s) => s === a.check_status)) w.checked++;
     if (a.check_status === "agreed") w.agreed++;
   }
-  for (const r of reviews)
+  for (const r of eligibleReviews)
     if (r.reason === "student_dispute" && inRange(r.created_at))
       weeks.get(weekKey(r.created_at))!.disputes++;
   const topicMap = new Map(topics.map((t) => [t.id, t]));
@@ -225,6 +242,9 @@ export function computeAccuracy(
     checked: checked.length,
     mix,
     sentToReview: checked.filter(sentToReview).length,
+    verified: verified.length,
+    verifiedAgreed: verified.filter((r) => r.ai_mark === r.final_mark).length,
+    excludedDisputes: reviews.length - eligibleReviews.length,
     resolved: resolved.length,
     overrides: resolved.filter((r) => delta(r) != null && delta(r)! > 0).length,
     meanDelta: meanDelta(deltas),
@@ -282,7 +302,7 @@ export async function loadAccuracy(range: Range, now = new Date()) {
         let query = db
           .from("mark_reviews")
           .select(
-            `id,reason,status,ai_mark,final_mark,resolved_at,created_at,attempt:attempts(max_marks,${question})`,
+            `id,user_id,resolved_by,reason,status,ai_mark,final_mark,resolved_at,created_at,attempt:attempts(max_marks,${question})`,
           )
           .gte(date, since)
           .lte(date, until);
@@ -313,12 +333,18 @@ export async function loadAccuracy(range: Range, now = new Date()) {
       }
     })(),
   ]);
+  const excludedStudents = await loadExcludedStudents(
+    db,
+    [...reviews.values()],
+    now,
+  );
   const result = computeAccuracy(
     attempts,
     [...reviews.values()],
     topics,
     range,
     now,
+    excludedStudents,
   );
   if (result.questions.length) {
     const { data } = await db
@@ -336,6 +362,74 @@ export async function loadAccuracy(range: Range, now = new Date()) {
     }));
   }
   return result;
+}
+
+/** Repeat-dispute flag: at least 3 resolved disputes, half unchanged or lowered.
+ * A3 defines rejection the same way. Use all-time history, outside the chart range. */
+export function repeatDisputer(history: {
+  resolved: number;
+  rejected: number;
+}) {
+  return history.resolved >= 3 && history.rejected * 2 >= history.resolved;
+}
+
+async function loadExcludedStudents(
+  db: ReturnType<typeof import("@/utils/supabase/admin").admin>,
+  reviews: Review[],
+  now: Date,
+) {
+  const users = [
+    ...new Set(
+      reviews
+        .filter((r) => r.reason === "student_dispute")
+        .map((r) => r.user_id),
+    ),
+  ];
+  const excluded = new Set<string>();
+  if (!users.length) return excluded;
+  const wanted = new Set(users);
+  // Blocking uses Supabase Auth's existing banned_until flag, not a new profile field.
+  for (let page = 1; ; page++) {
+    const { data, error } = await db.auth.admin.listUsers({
+      page,
+      perPage: 1000,
+    });
+    if (error) throw error;
+    for (const user of data.users) {
+      if (!wanted.delete(user.id)) continue;
+      const until = (user as { banned_until?: string | null }).banned_until;
+      if (until && Date.parse(until) > now.getTime()) excluded.add(user.id);
+    }
+    if (!wanted.size || data.users.length < 1000) break;
+  }
+  for (let offset = 0; offset < users.length; offset += 500) {
+    const history = new Map<string, { resolved: number; rejected: number }>();
+    for (let from = 0; ; from += 1000) {
+      const { data } = await db
+        .from("mark_reviews")
+        .select("user_id,ai_mark,final_mark")
+        .eq("reason", "student_dispute")
+        .eq("status", "resolved")
+        .in("user_id", users.slice(offset, offset + 500))
+        .order("id")
+        .range(from, from + 999)
+        .throwOnError();
+      for (const r of data ?? []) {
+        const h = history.get(r.user_id) ?? { resolved: 0, rejected: 0 };
+        h.resolved++;
+        if (
+          r.ai_mark != null &&
+          r.final_mark != null &&
+          r.final_mark <= r.ai_mark
+        )
+          h.rejected++;
+        history.set(r.user_id, h);
+      }
+      if ((data?.length ?? 0) < 1000) break;
+    }
+    for (const [id, h] of history) if (repeatDisputer(h)) excluded.add(id);
+  }
+  return excluded;
 }
 
 export type EvalRun = {

@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from "vitest";
 vi.mock("@/utils/supabase/admin", () => {
-  const client = { from: vi.fn() };
+  const client = { from: vi.fn(), auth: { admin: { listUsers: vi.fn() } } };
   return { admin: () => client };
 });
 import { admin } from "@/utils/supabase/admin";
@@ -12,6 +12,7 @@ import {
   marksBucket,
   parseRange,
   rangeWindow,
+  repeatDisputer,
   sydneyMidnight,
   weekKey,
   type Attempt,
@@ -75,6 +76,8 @@ const review = (
   question: Question | null | undefined,
 ): Review => ({
   id: `r${++n}`,
+  user_id: "student",
+  resolved_by: status === "resolved" ? "admin" : null,
   reason,
   status,
   ai_mark,
@@ -166,7 +169,19 @@ const reviews = [
     undefined,
   ),
 ];
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.mocked(admin().auth.admin.listUsers).mockResolvedValue({
+    data: {
+      users: [],
+      aud: "authenticated",
+      nextPage: null,
+      lastPage: 1,
+      total: 0,
+    },
+    error: null,
+  });
+});
 
 it("parses the range with 30 as the default", () => {
   expect(parseRange("7")).toBe(7);
@@ -431,7 +446,8 @@ it("loads every table past the 1000-row page cap and dedupes reviews fetched twi
     [{ id: "t3-inflation", parent_id: "t3", name: "Causes" }],
   ]);
   // Each page starts a fresh builder from the same table; reviews run two queries.
-  const reviewChains = [disputes, resolved];
+  const history = chain([[]]);
+  const reviewChains = [disputes, resolved, history];
   const db = admin() as unknown as { from: ReturnType<typeof vi.fn> };
   db.from.mockImplementation((table: string) =>
     table === "attempts"
@@ -473,7 +489,7 @@ it("loads every table past the 1000-row page cap and dedupes reviews fetched twi
     [0, 999],
     [1000, 1999],
   ]);
-  // Only summary columns: no student ids or names leave the database.
+  // Attempt summaries avoid identifying fields; review user ids stay server-side.
   const selected = attemptsChain.select.mock.calls[0][0] as string;
   expect(selected).not.toMatch(
     /user_id|full_name|answer_text|feedback|stem|source/,
@@ -640,3 +656,209 @@ it.each(["agreed", "reviewed"])(
     expect(result.questions[0].disagreed).toBe(0);
   },
 );
+
+it.each([
+  [2, 2, false],
+  [3, 1, false],
+  [3, 2, true],
+  [4, 2, true],
+  [10, 4, false],
+  [10, 5, true],
+  [0, 0, false],
+])(
+  "repeat policy: %i resolved, %i rejected → %s",
+  (resolved, rejected, expected) => {
+    expect(repeatDisputer({ resolved, rejected })).toBe(expected);
+  },
+);
+
+it("admin verification ignores all student disputes regardless of volume or resolution", () => {
+  const stamp = "2026-10-08T01:00:00Z";
+  const staff = [
+    review("spot_check", "resolved", 2, 2, stamp, stamp, q1),
+    review("check_disagreed", "resolved", 1, 2, stamp, stamp, q1),
+  ];
+  const baseline = computeAccuracy([], staff, topics, 7, now);
+  const spam = Array.from({ length: 50 }, () =>
+    review("student_dispute", "resolved", 1, 1, stamp, stamp, q1),
+  );
+  const result = computeAccuracy([], [...staff, ...spam], topics, 7, now);
+  expect(baseline).toMatchObject({ verified: 2, verifiedAgreed: 1 });
+  expect(result.verified).toBe(baseline.verified);
+  expect(result.verifiedAgreed).toBe(baseline.verifiedAgreed);
+  expect(result.comparable).toBe(52);
+});
+
+it("verification requires a staff resolver, written question, finite marks and resolution in range", () => {
+  const stamp = "2026-10-08T01:00:00Z";
+  const valid = review(
+    "spot_check",
+    "resolved",
+    0,
+    0,
+    "2026-09-01T00:00:00Z",
+    stamp,
+    q1,
+  );
+  const result = computeAccuracy(
+    [],
+    [
+      valid,
+      { ...valid, resolved_by: null },
+      { ...valid, status: "open" },
+      { ...valid, resolved_at: "2026-10-02T13:59:59Z" },
+      { ...valid, resolved_at: "2026-10-10T00:00:00Z" },
+      { ...valid, ai_mark: null },
+      { ...valid, final_mark: null },
+      { ...valid, ai_mark: NaN },
+      { ...valid, final_mark: Infinity },
+      { ...valid, attempt: null },
+      { ...valid, attempt: { max_marks: 1, question: mcq } },
+      { ...valid, reason: "other" },
+    ],
+    topics,
+    7,
+    now,
+  );
+  expect(result).toMatchObject({ verified: 1, verifiedAgreed: 1 });
+  expect(computeAccuracy([], [], [], 7, now)).toMatchObject({
+    verified: 0,
+    verifiedAgreed: 0,
+  });
+});
+
+it("excluded disputes affect neither override statistics nor weekly counts or breakdown deltas", () => {
+  const stamp = "2026-10-08T01:00:00Z";
+  const staff = review("spot_check", "resolved", 1, 2, stamp, stamp, q1);
+  const spam = review("student_dispute", "resolved", 0, 2, stamp, stamp, q1);
+  const result = computeAccuracy(
+    attempts,
+    [staff, spam],
+    topics,
+    7,
+    now,
+    new Set(["student"]),
+  );
+  expect(result).toMatchObject({
+    excludedDisputes: 1,
+    resolved: 1,
+    comparable: 1,
+    overrides: 1,
+    meanDelta: 1,
+    verified: 1,
+  });
+  expect(result.weeks.map((w) => w.disputes)).toEqual([0, 0]);
+  expect(result.byType.find((r) => r.id === "2–3")!.deltas).toEqual([1]);
+  expect(result.byTopic.find((r) => r.id === "t3")!.deltas).toEqual([1]);
+  expect(result.checked).toBe(7);
+});
+
+it("missing final marks are excluded from comparable reviews", () => {
+  const stamp = "2026-10-08T01:00:00Z";
+  expect(
+    computeAccuracy(
+      [],
+      [review("spot_check", "resolved", 1, null, stamp, stamp, q1)],
+      topics,
+      7,
+      now,
+    ),
+  ).toMatchObject({
+    comparable: 0,
+    overrides: 0,
+    meanDelta: null,
+    verified: 0,
+  });
+});
+
+it("loads all-time repeat history and paginated blocked flags, keeping legitimate and expired accounts", async () => {
+  const stamp = "2026-10-08T01:00:00Z";
+  const disputes = ["repeat", "blocked", "legitimate", "expired"].map(
+    (user_id) => ({
+      ...review("student_dispute", "resolved", 1, 2, stamp, stamp, q1),
+      user_id,
+    }),
+  );
+  const histories = chain([
+    Array.from({ length: 1000 }, () => ({
+      user_id: "legitimate",
+      ai_mark: 1,
+      final_mark: 2,
+    })),
+    [
+      ...Array.from({ length: 3 }, () => ({
+        user_id: "repeat",
+        ai_mark: 2,
+        final_mark: 1,
+      })),
+      { user_id: "legitimate", ai_mark: 2, final_mark: 1 },
+    ],
+  ]);
+  const chains = [chain([disputes]), chain([disputes]), histories, histories];
+  vi.mocked(admin().from).mockImplementation(
+    (table: string) =>
+      (table === "mark_reviews" ? chains.shift() : chain([[]])) as never,
+  );
+  vi.mocked(admin().auth.admin.listUsers)
+    .mockResolvedValueOnce({
+      data: {
+        users: Array.from({ length: 1000 }, (_, i) => ({ id: `other-${i}` })),
+      },
+      error: null,
+    } as never)
+    .mockResolvedValueOnce({
+      data: {
+        users: [
+          { id: "repeat" },
+          { id: "blocked", banned_until: "2026-10-10T00:00:00Z" },
+          { id: "legitimate" },
+          { id: "expired", banned_until: now.toISOString() },
+        ],
+      },
+      error: null,
+    } as never);
+  const result = await loadAccuracy(7, now);
+  expect(result).toMatchObject({
+    excludedDisputes: 2,
+    resolved: 2,
+    comparable: 2,
+    overrides: 2,
+    verified: 0,
+  });
+  expect(result.weeks.at(-1)!.disputes).toBe(2);
+  expect(histories.range.mock.calls).toEqual([
+    [0, 999],
+    [1000, 1999],
+  ]);
+  expect(histories.gte).not.toHaveBeenCalled();
+  expect(histories.lte).not.toHaveBeenCalled();
+  expect(admin().auth.admin.listUsers).toHaveBeenNthCalledWith(2, {
+    page: 2,
+    perPage: 1000,
+  });
+  expect(JSON.stringify(result)).not.toMatch(/blocked|legitimate|expired/);
+});
+
+it("fails closed when blocked-account or dispute-history reads fail", async () => {
+  const stamp = "2026-10-08T01:00:00Z";
+  const dispute = review("student_dispute", "open", 1, null, stamp, null, q1);
+  const histories = chain([[]]);
+  const resetQueries = () => {
+    const chains = [chain([[dispute]]), chain([[]]), histories];
+    vi.mocked(admin().from).mockImplementation(
+      (table: string) =>
+        (table === "mark_reviews" ? chains.shift() : chain([[]])) as never,
+    );
+  };
+  resetQueries();
+  vi.mocked(admin().auth.admin.listUsers).mockResolvedValueOnce({
+    data: null,
+    error: new Error("auth unavailable"),
+  } as never);
+  await expect(loadAccuracy(7, now)).rejects.toThrow("auth unavailable");
+  resetQueries();
+  histories.throwOnError
+    .mockReset()
+    .mockRejectedValueOnce(new Error("history unavailable"));
+  await expect(loadAccuracy(7, now)).rejects.toThrow("history unavailable");
+});

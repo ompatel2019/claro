@@ -15,6 +15,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { dateLabel } from "@/lib/practice";
 import { loadAccuracy, parseRange, percentLabel } from "./data";
 import { loadLatestEval } from "./eval";
+import { AgreementLabel } from "./agreement-label";
 import { RangeSelect } from "./range-select";
 import { CategoryBar, WeeklyChart } from "./charts";
 import { BreakdownTable, DisagreedQuestions } from "./tables";
@@ -56,7 +57,7 @@ export default async function AccuracyPage({
       </p>
       <div className="grid min-w-0 auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label="Check agreement"
+          label={<AgreementLabel />}
           empty={!data.checked}
           value={percentLabel(agreed, data.checked, "No checked answers yet")}
           caption={checkedCaption(agreed)}
@@ -96,6 +97,30 @@ export default async function AccuracyPage({
           }
         />
       </div>
+      <StatCard
+        label="Admin-verified accuracy"
+        empty={!data.verified}
+        value={percentLabel(
+          data.verifiedAgreed,
+          data.verified,
+          "No admin-verified answers yet",
+        )}
+        caption={
+          <>
+            {data.verifiedAgreed} of {data.verified} comparable staff-initiated
+            written reviews matched the AI mark exactly.
+            <br />
+            Resolved by an admin in this range. Student disputes are excluded;
+            this review sample is not overall accuracy.
+          </>
+        }
+      />
+      <p className="text-muted-foreground text-xs">
+        Dispute counts, override rate and mean mark changes exclude disputes
+        from blocked students and repeat disputers (at least 3 resolved
+        disputes, with half unchanged or lowered). {data.excludedDisputes}{" "}
+        disputes excluded.
+      </p>
       <div className="grid min-w-0 gap-4 lg:grid-cols-2">
         <WeeklyChart weeks={data.weeks} kind="agreement" />
         <WeeklyChart weeks={data.weeks} kind="disputes" />

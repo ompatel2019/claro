@@ -48,3 +48,20 @@ serially through
 The student and admin headers include a keyboard-accessible Dark mode toggle. The initial theme follows your system, and explicit choices are saved in this browser. Choose “Use system theme” in the account menu to reset it. A synchronous head script sets the theme before paint; panels, controls, charts and activity shades share light/dark tokens.
 
 Theme validation: `e2e/theme.spec.ts` (student and admin toggle, persistence, system default, blocked storage, 360px and 1280px) runs with the normal Playwright config.
+
+### A4: accuracy and dispute spam
+
+The Accuracy page distinguishes current checker agreement from human verification.
+Its admin-verified figure uses exact AI/final agreement only for written
+`spot_check` / `check_disagreed` reviews resolved by an admin in range, with both
+marks present and finite. Student disputes never enter this sample, even after
+resolution. The caption exposes its count and selection bias; empty samples show
+“No admin-verified answers yet”. Offline held-out eval remains separate.
+
+Only dispute-derived metrics (weekly counts, override rate and delta breakdowns)
+exclude currently blocked students (`banned_until > now`) and repeat disputers
+(3+ resolved all-time disputes and at least 50% unchanged/lowered, matching A3).
+The loader pages Auth users and resolved dispute history and fails on read errors;
+identifiers remain server-side. Exclusions never hide staff-initiated reviews.
+Checker-status charts remain a current snapshot and may change during reviews,
+as the accessible Check agreement tooltip explains. No migration is needed.
