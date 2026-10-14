@@ -18,6 +18,10 @@ vi.mock("node:fs", async (original) => ({
   writeFileSync: mocks.write,
 }));
 vi.mock("node:child_process", () => ({ execFileSync: vi.fn(() => "abc123") }));
+// The OpenRouter-only spend query is unit-tested in spend.test.ts; here it returns the mocked spend.
+vi.mock("../spend", () => ({
+  openRouterSpend: async () => Number((await mocks.rpc()).data),
+}));
 vi.mock("@/utils/supabase/admin", () => ({
   admin: () => ({ rpc: mocks.rpc, from: mocks.from }),
 }));

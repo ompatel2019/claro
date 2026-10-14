@@ -9,7 +9,7 @@ const mocks = vi.hoisted(() => ({
   openaiCreate: vi.fn(),
   openrouterCreate: vi.fn(),
   serverEnv: vi.fn(),
-  rpc: vi.fn(),
+  spend: vi.fn(),
   insert: vi.fn(),
   unlogged: vi.fn(),
 }));
@@ -33,9 +33,9 @@ vi.mock("openai", () => ({
   },
 }));
 vi.mock("@/env/server", () => ({ serverEnv: mocks.serverEnv }));
+vi.mock("./spend", () => ({ openRouterSpend: mocks.spend }));
 vi.mock("@/utils/supabase/admin", () => ({
   admin: () => ({
-    rpc: mocks.rpc,
     from: () => ({ insert: mocks.insert }),
   }),
 }));
@@ -54,7 +54,7 @@ beforeEach(() => {
   vi.stubEnv("OPENROUTER_API_KEY", "test-openrouter");
   mocks.serverEnv.mockReturnValue({ OPENAI_API_KEY: "test-openai" });
   mocks.unlogged.mockResolvedValue(0);
-  mocks.rpc.mockResolvedValue({ data: 0, error: null });
+  mocks.spend.mockResolvedValue(0);
   mocks.insert.mockResolvedValue({ error: null });
   mocks.openrouterCreate.mockResolvedValue(response);
   mocks.openaiCreate.mockResolvedValue({
@@ -230,7 +230,7 @@ it("logs web evaluation calls with task eval and reports their exact cost", asyn
 it.each([80, null, NaN])(
   "refuses web eval before the mocked provider at spend %s",
   async (data) => {
-    mocks.rpc.mockResolvedValue({ data, error: null });
+    mocks.spend.mockResolvedValue(data);
     const { callJson } = await import("./openai");
     await expect(
       callJson({ task: "eval", model: "gpt-6.1-sol", schema, messages }),
@@ -251,7 +251,7 @@ it("fails the web eval if logging fails, retaining its reported cost", async () 
 });
 
 it("blocks eval on durable unlogged spend but preserves live logging failure behavior", async () => {
-  mocks.rpc.mockResolvedValue({ data: 79, error: null });
+  mocks.spend.mockResolvedValue(79);
   mocks.unlogged.mockResolvedValue(1);
   const { callJson } = await import("./openai");
   await expect(

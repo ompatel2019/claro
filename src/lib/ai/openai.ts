@@ -10,6 +10,7 @@ import { serverEnv } from "@/env/server";
 import { admin } from "@/utils/supabase/admin";
 
 import { BUDGET_USD, EVAL_BLOCK_USD, costUsd, type Model } from "./prices";
+import { openRouterSpend } from "./spend";
 
 import { bounded } from "./eval/deadline";
 
@@ -33,11 +34,10 @@ export async function callJson<S extends z.ZodType>(opts: {
   /** Priority processing: lower latency at 2x price. Used for student-facing marking. */
   fast?: boolean;
 }): Promise<z.infer<S>> {
-  const spendRequest = admin().rpc("ai_spend");
-  const { data: spent, error } = await (opts.task === "eval"
+  const spendRequest = openRouterSpend(admin());
+  const spent = await (opts.task === "eval"
     ? bounded(spendRequest, opts.signal)
     : spendRequest);
-  if (error) throw new Error(`ai_spend failed: ${error.message}`);
   if (
     opts.task === "eval" &&
     (spent == null || !Number.isFinite(Number(spent)))

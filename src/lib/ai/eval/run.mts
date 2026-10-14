@@ -10,6 +10,7 @@ import { bandExamples } from "@/lib/marking/examples";
 import type { MarkableQuestion } from "@/lib/marking/grade";
 import { gradeMessages } from "@/lib/marking/prompts";
 import { callJson } from "../openai";
+import { openRouterSpend } from "../spend";
 import { evalBlocked } from "./metrics";
 import { JUDGE, JudgeSchema, judgeMessages } from "./judge";
 import { emptyRow, markEvalItem } from "./item";
@@ -56,16 +57,12 @@ const stamp = `${date.year}-${date.month}-${date.day}-${date.hour}${date.minute}
 const out = "/workspace/claro/eval-runs";
 const db = admin();
 async function spend() {
-  const { data, error } = await db.rpc("ai_spend");
-  if (error) throw new Error(`ai_spend failed: ${error.message}`);
-  if (data == null || !Number.isFinite(Number(data)))
-    throw new Error("Invalid ai_spend result");
-  return Number(data);
+  return openRouterSpend(db);
 }
 const spentBefore = await spend();
 if (!dry && evalBlocked(spentBefore)) {
   console.error(
-    `Eval refused: total AI spend $${spentBefore.toFixed(4)} has reached the $80 eval limit.`,
+    `Eval refused: OpenRouter spend $${spentBefore.toFixed(4)} has reached the $80 eval limit.`,
   );
   process.exit(1);
 }
@@ -179,7 +176,7 @@ async function evaluate(item: (typeof items)[number], index: number) {
   const task = `eval:${stamp}:${index}`;
   if (evalBlocked(await spend())) {
     console.error(
-      "Eval refused: total AI spend has reached the $80 eval limit. Saving completed items.",
+      "Eval refused: OpenRouter spend has reached the $80 eval limit. Saving completed items.",
     );
     blocked = true;
     return;
@@ -201,7 +198,7 @@ async function evaluate(item: (typeof items)[number], index: number) {
       if (evalBlocked(await spend())) {
         blocked = true;
         throw new Error(
-          "Eval refused before judge: total AI spend has reached the $80 eval limit.",
+          "Eval refused before judge: OpenRouter spend has reached the $80 eval limit.",
         );
       }
       try {
