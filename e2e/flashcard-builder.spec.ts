@@ -41,7 +41,36 @@ test.describe("Flashcard deck builder", () => {
     });
   }
 
-  test("400px builder controls clear feedback and the sticky summary at page end", async ({
+  for (const width of [400, 1280]) {
+    test(`summary stays below Source and all controls at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.goto("/student/flashcards");
+      const source = page
+        .getByRole("heading", { name: "Source", exact: true })
+        .locator("xpath=ancestor::section[1]");
+      const summary = page.locator("form").filter({
+        has: page.getByRole("button", { name: "Start", exact: true }),
+      });
+      await expectStackedBelow(source, summary);
+      await expect(summary).not.toHaveClass(
+        /(?:^|\s)(?:\S+:)?(?:sticky|fixed)(?:\s|$)/,
+      );
+      await expect
+        .poll(() =>
+          summary.evaluate((element) => getComputedStyle(element).position),
+        )
+        .toBe("static");
+      await page.evaluate(() =>
+        window.scrollTo(0, document.documentElement.scrollHeight),
+      );
+      await expectStackedBelow(source, summary);
+      await expect(summary).toBeInViewport({ ratio: 1 });
+    });
+  }
+
+  test("400px builder controls clear feedback and the summary row at page end", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 400, height: 800 });

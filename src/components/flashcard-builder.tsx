@@ -169,7 +169,7 @@ export function FlashcardBuilder({
     });
   };
   return (
-    <div className="mx-auto max-w-[720px] space-y-4 pb-8">
+    <div className="mx-auto max-w-[720px] space-y-4">
       <Card>
         <CardContent className="space-y-7">
           <Options
@@ -425,8 +425,7 @@ export function FlashcardBuilder({
             set({ size: customNumber });
           }
         }}
-        // Keep the bar's height in flow; the outer gutter clears its sticky offset.
-        className="bg-background sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4 lg:bottom-24"
+        className="bg-background flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4"
       >
         <input
           type="hidden"

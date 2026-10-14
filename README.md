@@ -62,7 +62,7 @@ Mark my answer defaults to the Claro bank. Set the server flag `ENABLE_OWN_QUEST
 
 ## Flashcards
 
-Deck size (20 selected by default) and Answer by sit beside Mode. Study lets students type or speak before flipping and self-rating; Test checks their answer. Typing remains available if speech is unsupported or denied. List view and missed-card repeats remain available.
+Deck size (20 selected by default) and Answer by sit beside Mode. The summary and Start button sit at the bottom after all setup sections, including Source, and scroll with the page without covering options. Study lets students type or speak before flipping and self-rating; Test checks their answer. Typing remains available if speech is unsupported or denied. List view and missed-card repeats remain available.
 Tests: `src/components/flashcard-{builder,runner}.test.tsx`, `e2e/flashcard-{builder,session}.spec.ts` cover setup, bounds, empty decks, answer drafts, speech fallback, repeats and mobile/desktop flows. Run heavy checks through `Q_MIN_GB=3 Q_SLOTS=1 q-run` on the shared box.
 
 ## Admin dashboard (Karan A1)
