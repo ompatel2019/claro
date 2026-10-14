@@ -324,3 +324,34 @@ it("loadReview joins criteria, guideline notes and the student's name, and falls
     },
   });
 });
+
+it("attaches SQL dispute histories to queued students", async () => {
+  const review = query([
+    {
+      id: "r1",
+      attempt_id: "a1",
+      user_id: "u1",
+      created_at: "2026-10-01T00:00:00Z",
+      reason: "student_dispute",
+      ai_mark: 2,
+      check_mark: null,
+      student_note: "Please check evidence.",
+      student: null,
+      attempt: { question: null },
+    },
+  ]);
+  const history = {
+    user_id: "u1",
+    total: 6,
+    open: 1,
+    resolved: 5,
+    rejected: 4,
+    latest_rejected_at: "2026-09-30T00:00:00Z",
+  };
+  const db = client([...counts(), review, query([])], [history]);
+  const result = await loadQueue("open");
+  expect(db.rpc).toHaveBeenCalledWith("admin_dispute_history", {
+    p_users: ["u1"],
+  });
+  expect(result.rows[0].disputes).toEqual(history);
+});

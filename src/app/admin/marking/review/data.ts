@@ -3,6 +3,7 @@ import { admin } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import type { Criterion, MarkReview, ReviewRow } from "@/lib/feedback";
 
+import type { DisputeHistory } from "@/lib/disputes";
 import { reasons } from "./shared";
 export type Review = MarkReview & {
   id: string;
@@ -60,6 +61,7 @@ export type QueueRow = {
   check: number | null;
   note: string | null;
   photos: string[];
+  disputes?: DisputeHistory;
 };
 
 export async function loadQueue(tab: string) {
@@ -182,6 +184,28 @@ export async function loadQueue(tab: string) {
           urls.get(p) ? [urls.get(p)!] : [],
         );
     }
+  }
+  if (rows.length) {
+    const users = [...new Set(rows.map((r) => r.userId))];
+    const histories = new Map<string, DisputeHistory>();
+    for (let from = 0; from < users.length; from += 500) {
+      const { data } = await db
+        .rpc("admin_dispute_history", {
+          p_users: users.slice(from, from + 500),
+        })
+        .throwOnError();
+      for (const history of (data ?? []) as DisputeHistory[])
+        histories.set(history.user_id, history);
+    }
+    for (const row of rows)
+      row.disputes = histories.get(row.userId) ?? {
+        user_id: row.userId,
+        total: 0,
+        open: 0,
+        resolved: 0,
+        rejected: 0,
+        latest_rejected_at: null,
+      };
   }
   const { data: topics } = await db
     .from("topics")

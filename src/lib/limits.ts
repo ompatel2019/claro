@@ -22,6 +22,8 @@ export const SHORT_PHOTO_PAGE_LIMIT = 3;
 export const LONG_PHOTO_PAGE_LIMIT = 8;
 export const OPEN_DISPUTES_PER_ANSWER = 1;
 export const OPEN_DISPUTES_PER_STUDENT = 3;
+export const WEEKLY_DISPUTES_PER_STUDENT = 5;
+export const DISPUTE_REJECTION_COOLDOWN_HOURS = 48;
 
 // Admin test marking uses the same typed-answer limits as student marking.
 export {

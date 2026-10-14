@@ -51,6 +51,15 @@ export default async function ReviewQueue({
           </form>
         }
       />
+      <p className="text-muted-foreground text-sm">
+        Students select <strong>Question this mark</strong> beside written
+        feedback on their{" "}
+        <Link className="underline" href="/student/activity">
+          finished session results
+        </Link>
+        . Dispute history counts all requests; rejection rates use resolved
+        disputes with unchanged or lowered marks.
+      </p>
       <ReviewNotice message={value("notice")} />
       <nav aria-label="Review queues" className="flex flex-wrap gap-2">
         {tabs.map((t, i) => (

@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { markManually, retryMarking } from "./actions";
 import type { QueueRow } from "./data";
+import { rejectionRate } from "@/lib/disputes";
 import { ageLabel, reasons } from "./shared";
 
 export function QueueTable({
@@ -84,6 +85,31 @@ export function QueueTable({
         );
       },
     },
+    {
+      id: "disputes",
+      header: "Dispute history",
+      cell: (r) =>
+        r.disputes ? (
+          <div className="text-sm whitespace-nowrap">
+            <p>
+              {r.disputes.total} total · {r.disputes.open} open
+            </p>
+            <p>
+              {r.disputes.resolved} resolved · {r.disputes.rejected} rejected
+            </p>
+            <p>
+              {rejectionRate(r.disputes) === null
+                ? "No resolved disputes"
+                : `${rejectionRate(r.disputes)}% rejection rate`}
+            </p>
+            {r.disputes.latest_rejected_at && (
+              <p>Last rejection {ageLabel(r.disputes.latest_rejected_at)}</p>
+            )}
+          </div>
+        ) : (
+          "—"
+        ),
+    },
     { id: "ai", header: "AI mark", cell: (r) => r.ai ?? "—" },
     { id: "check", header: "Check mark", cell: (r) => r.check ?? "—" },
     {
@@ -148,7 +174,7 @@ export function QueueTable({
       aria-label="Review table, scroll horizontally"
       tabIndex={0}
     >
-      <div className="min-w-[740px] [&_td]:px-2 [&_th]:w-px [&_th]:px-2 [&_th]:whitespace-normal [&_th:nth-child(4)]:w-auto [&_th:nth-child(8)]:w-1/5">
+      <div className="min-w-[740px] [&_td]:px-2 [&_th]:w-px [&_th]:px-2 [&_th]:whitespace-normal [&_th:nth-child(4)]:w-auto [&_th:nth-child(9)]:w-1/5">
         <DataTable columns={columns} rows={rows} label="Marking review queue" />
       </div>
     </div>

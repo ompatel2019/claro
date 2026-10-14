@@ -2,6 +2,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import {
+  WEEKLY_DISPUTES_PER_STUDENT,
+  DISPUTE_REJECTION_COOLDOWN_HOURS,
+} from "@/lib/limits";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -39,7 +43,10 @@ export function QuestionMark({ attemptId }: { attemptId: string }) {
     }
   }
   return (
-    <>
+    <div className="space-y-2" id={`dispute-${attemptId}`}>
+      <p className="text-muted-foreground text-sm">
+        Think a written mark missed something? Request a marking review.
+      </p>
       <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
         Question this mark
       </Button>
@@ -49,6 +56,12 @@ export function QuestionMark({ attemptId }: { attemptId: string }) {
           <DialogDescription>
             Our team will re-check your answer. Your mark can go up or down.
           </DialogDescription>
+          <p className="text-muted-foreground text-sm">
+            Give a specific reason (10–1,000 characters). One request per
+            answer, up to {WEEKLY_DISPUTES_PER_STUDENT} per Sydney week and
+            three open at once. After an unchanged or lowered review, wait{" "}
+            {DISPUTE_REJECTION_COOLDOWN_HOURS} hours.
+          </p>
           <form onSubmit={submit} className="space-y-3">
             <label className="block space-y-1.5 text-sm font-medium">
               What do you think we missed?
@@ -84,6 +97,6 @@ export function QuestionMark({ attemptId }: { attemptId: string }) {
           </form>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }

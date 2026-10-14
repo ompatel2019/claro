@@ -114,6 +114,7 @@ it("shows the open queue with counts, reason pills and a 60-char stem", async ()
     "Checker disagreed",
     "Priya Sharma",
     `2023 HSC Q24${"A".repeat(60)}…`,
+    "—",
     "3",
     "4",
     "1",

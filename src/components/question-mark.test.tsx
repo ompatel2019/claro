@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import {
   cleanup,
   fireEvent,
@@ -5,47 +6,71 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
-const refresh = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
-vi.mock("sonner", () => ({ toast: { success: vi.fn() } }));
+const mocks = vi.hoisted(() => ({ refresh: vi.fn(), toast: vi.fn() }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: mocks.refresh }),
+}));
+vi.mock("sonner", () => ({ toast: { success: mocks.toast } }));
 import { QuestionMark } from "./question-mark";
-afterEach(cleanup);
+const fetcher = vi.fn();
+beforeEach(() => {
+  vi.resetAllMocks();
+  vi.stubGlobal("fetch", fetcher);
+});
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+it("labels the review entry and explains caps, requiring a written reason", () => {
+  render(<QuestionMark attemptId="synthetic" />);
+  expect(screen.getByText(/Request a marking review/)).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Question this mark" }));
+  expect(screen.getByText(/up to 5 per Sydney week/)).toBeVisible();
+  const submit = screen.getByRole("button", { name: "Submit" });
+  expect(submit).toBeDisabled();
+  fireEvent.change(screen.getByRole("textbox"), {
+    target: { value: "          " },
+  });
+  expect(submit).toBeDisabled();
+  fireEvent.change(screen.getByRole("textbox"), {
+    target: { value: "Please check my evidence." },
+  });
+  expect(submit).toBeEnabled();
+});
+it("shows a guardrail failure and allows retry", async () => {
+  fetcher
+    .mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: "Weekly limit reached" }),
+    })
+    .mockResolvedValueOnce({ ok: true });
+  render(<QuestionMark attemptId="synthetic" />);
+  fireEvent.click(screen.getByRole("button", { name: "Question this mark" }));
+  fireEvent.change(screen.getByRole("textbox"), {
+    target: { value: "Please check my evidence." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Weekly limit reached",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+  await waitFor(() => expect(mocks.refresh).toHaveBeenCalledOnce());
+});
 
-async function ask(note: string) {
+it("posts the specific reason to the selected attempt", async () => {
+  fetcher.mockResolvedValue({ ok: true });
   render(<QuestionMark attemptId="a1" />);
   fireEvent.click(screen.getByRole("button", { name: "Question this mark" }));
-  const box = await screen.findByRole("textbox", {
-    name: "What do you think we missed?",
+  fireEvent.change(screen.getByRole("textbox"), {
+    target: { value: "I named the CPI figure." },
   });
-  fireEvent.change(box, { target: { value: note } });
-  return screen.getByRole("button", { name: "Submit" });
-}
-
-it("needs 10 characters, then posts the note and refreshes", async () => {
-  const fetch = vi
-    .spyOn(globalThis, "fetch")
-    .mockResolvedValue(Response.json({ ok: true }));
-  expect((await ask("too short")).hasAttribute("disabled")).toBe(true);
-  cleanup();
-  fireEvent.click(await ask("I named the CPI figure."));
-  await waitFor(() => expect(refresh).toHaveBeenCalled());
-  expect(fetch).toHaveBeenCalledWith(
+  fireEvent.click(screen.getByRole("button", { name: "Submit" }));
+  await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+  expect(fetcher).toHaveBeenCalledWith(
     "/api/attempts/a1/dispute",
     expect.objectContaining({
       method: "POST",
       body: JSON.stringify({ note: "I named the CPI figure." }),
     }),
   );
-});
-
-it("shows the server's limit message", async () => {
-  vi.spyOn(globalThis, "fetch").mockResolvedValue(
-    Response.json(
-      { error: "You have 3 marks being checked." },
-      { status: 409 },
-    ),
-  );
-  fireEvent.click(await ask("Please check this again."));
-  await screen.findByText("You have 3 marks being checked.");
 });
