@@ -5,6 +5,7 @@ import mockQuestions from "../ai/eval/a1-mock-questions.json";
 import { checklists } from "./checklists";
 import {
   COMMENT_VOICE_EXAMPLES,
+  SUMMARY_ANSWER_MAX_CHARS,
   bandCorrection,
   flashcardMessages,
   gradeMessages,
@@ -209,14 +210,14 @@ it("truncates summary stems and answers and requests specific Australian English
       mark: 3,
       max: 4,
       band: null,
-      answer: "a".repeat(3001),
+      answer: "a".repeat(SUMMARY_ANSWER_MAX_CHARS + 1),
       strengths: ["Cause and effect"],
       improvements: ["Second effect"],
     },
   ]);
   expect(JSON.parse(messages[1].content as string)[0].stem).toHaveLength(240);
   expect(JSON.parse(messages[1].content as string)[0].answer).toBe(
-    "a".repeat(3000),
+    "a".repeat(SUMMARY_ANSWER_MAX_CHARS),
   );
   expect(messages[0].content).toContain("Australian English");
   expect(messages[0].content).toContain("no em dashes");
@@ -277,7 +278,7 @@ it("preserves capped writing and feedback as evidence without promoting instruct
     { ...item, answer: malicious, improvements: [malicious] },
   ]);
   expect(JSON.parse(normal[1].content as string)).toEqual([
-    { ...item, answer: item.answer.slice(0, 3000) },
+    { ...item, answer: item.answer.slice(0, SUMMARY_ANSWER_MAX_CHARS) },
   ]);
   expect(injected[0]).toEqual(normal[0]);
   expect(injected[0].content).toContain(

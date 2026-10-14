@@ -2,6 +2,7 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { z, ZodError } from "zod";
 import { topicSummary, type MarkableQuestion } from "./grade";
+import { SUMMARY_ANSWER_MAX_CHARS } from "./prompts";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/ai/openai", () => ({ callJson: vi.fn() }));
@@ -1188,7 +1189,12 @@ it.each([
     "Your transcribed definition.\nYour explanation.",
     "Your transcribed definition.\nYour explanation.",
   ],
-  ["long answer", "a".repeat(3001), null, "a".repeat(3000)],
+  [
+    "long answer",
+    "a".repeat(SUMMARY_ANSWER_MAX_CHARS + 1),
+    null,
+    "a".repeat(SUMMARY_ANSWER_MAX_CHARS),
+  ],
 ])(
   "summarises %s from written evidence only in a mixed session",
   async (_name, answer_text, transcript, answer) => {

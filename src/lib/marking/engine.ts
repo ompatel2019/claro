@@ -24,6 +24,7 @@ import {
   type MarkedExample,
 } from "./examples";
 import {
+  SUMMARY_ANSWER_MAX_CHARS,
   bandCorrection,
   flashcardMessages,
   gradeMessages,
@@ -460,7 +461,10 @@ export async function finishSession(sessionId: string) {
           mark: Number(a.mark ?? 0),
           max: a.max_marks ?? a.question.marks,
           band: a.band,
-          answer: (a.transcript ?? a.answer_text ?? "").slice(0, 3000),
+          answer: (a.transcript ?? a.answer_text ?? "").slice(
+            0,
+            SUMMARY_ANSWER_MAX_CHARS,
+          ),
           strengths: a.feedback?.analysis?.strengths ?? [],
           improvements: a.feedback?.missing_points ?? [],
         })),
