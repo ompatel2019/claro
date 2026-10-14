@@ -386,3 +386,27 @@ it("records no benchmark when spend blocks every selected item", async () => {
     blocked: true,
   });
 });
+
+it("runs only held-out for Airo 4.2 and records its benchmark", async () => {
+  process.argv = ["node", "run.mts", "--airo=4.2", "--set=heldout"];
+  await run();
+  expect(mocks.mark).toHaveBeenCalledOnce();
+  expect(mocks.judge).not.toHaveBeenCalled();
+  const [meta, rows] = mocks.report.mock.calls[0];
+  expect(meta).toMatchObject({
+    airo: "4.2",
+    benchmark: ["heldout-196"],
+    sameQuestionExamples: true,
+    limit: null,
+    items: null,
+  });
+  expect(rows.map((row: { section: string }) => row.section)).toEqual([
+    "Held-out",
+  ]);
+});
+
+it("rejects an unknown set before DB calls", async () => {
+  process.argv = ["node", "run.mts", "--airo=4.2", "--set=unknown"];
+  await expect(run()).rejects.toThrow("Use --dry-run");
+  expect(mocks.rpc).not.toHaveBeenCalled();
+});

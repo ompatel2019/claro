@@ -70,13 +70,14 @@ The NESA directive verb glossary, highest band fully satisfied, and the sample a
 
 ## Eval
 
-`npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts --airo=4.1 [--same-question-examples=true|false] [--dry-run] [--limit=N | --items=i,j] [--label=x]`
+`npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts --airo=4.1 [--same-question-examples=true|false] [--dry-run] [--set=heldout|a1|claro] [--limit=N | --items=i,j] [--label=x]`
 
 - Runs A1's 20 answers with Karan's marks and critiques. Headline numbers exclude fm-1 (its answer duplicates fm-5) and ei-4 (3.5 is an invented midpoint), which are reported separately. It also runs our 10-answer Claro check.
 - **Held-out set**: the 196 `marking_examples` rows with `split = 'test'` on the `a1-m*` mock questions (up to 6 whole-mark answers per question spread across marks, fixed seed in `split.ts`). Reported as its own section with the same mark metrics. It has no judge, because there is no Karan critique for these answers. These questions were never used to tune the prompt.
 - Marking failures (including schema errors and missing results) stay in held-out `n` and count as misses for exact, within-1 and band accuracy. A completed full run always has held-out `n = 196`; failed items carry `flags.failed` and an error. Signed and absolute error means use successful marks only.
 - `--airo=VERSION` is required, including for dry runs (e.g. `--airo=4.1`). `--same-question-examples=false` simulates a new question by supplying no same-question tutor-marked anchors to any marker pass; it defaults to `true` and also applies to dry-run prompts.
 - JSON `meta` records `airo` (version string), `sameQuestionExamples` (boolean), and `benchmark` (an array containing `heldout-196` and/or `a1-18` for sections actually attempted, including partial runs; empty for Claro-only runs).
+- `--set=heldout` runs only the held-out benchmark; `--set=a1` and `--set=claro` select the other sections. Omit it to run all sections. It filters after `--items`, so full-array item indices remain unchanged.
 - Items run 6 at a time; `--limit=N` applies per section.
 - For small targeted runs, `--items=i,j` selects 0-based positions in the full array: A1, then Held-out, then Claro. It cannot be combined with `--limit`. The `ai_usage` task index `eval:<stamp>:<n>` is the position in the selected list, not the full-array index.
 - Feedback is judged by a pinned **gpt-6-astra** (low thinking), separate from the marker so runs stay comparable. The judge reports Pros kept and Cons fixed, the way A1's judge does.

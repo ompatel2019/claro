@@ -1,5 +1,5 @@
 // Offline marking eval against the current engine; --dry-run only reads the DB.
-// Run: npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts --airo=VERSION [--dry-run] [--limit=N | --items=0,1,...] [--label=text] [--same-question-examples=true|false]
+// Run: npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts --airo=VERSION [--dry-run] [--set=heldout|a1|claro] [--limit=N | --items=0,1,...] [--label=text] [--same-question-examples=true|false]
 // --items uses 0-based positions in the full array: A1, then Held-out, then Claro.
 // Results: src/lib/ai/eval/results/ and /workspace/claro/eval-runs/.
 import { execFileSync } from "node:child_process";
@@ -20,6 +20,7 @@ import { writeResults, type Row } from "./report";
 
 const args = process.argv.slice(2);
 const dry = args.includes("--dry-run");
+const set = args.find((a) => a.startsWith("--set="))?.slice(6);
 const airo = args.find((a) => a.startsWith("--airo="))?.slice(7);
 const sameQuestionExamples = !args.includes("--same-question-examples=false");
 const limit = Number(
@@ -36,7 +37,7 @@ if (
   !airo ||
   args.some(
     (a) =>
-      !/^(--dry-run|--limit=\d+|--items=\d+(,\d+)*|--label=.*|--airo=\d+\.\d+|--same-question-examples=(true|false))$/.test(
+      !/^(--dry-run|--set=(heldout|a1|claro)|--limit=\d+|--items=\d+(,\d+)*|--label=.*|--airo=\d+\.\d+|--same-question-examples=(true|false))$/.test(
         a,
       ),
   ) ||
@@ -45,7 +46,7 @@ if (
   (selectedItems !== null && args.some((a) => a.startsWith("--limit=")))
 ) {
   throw new Error(
-    "Use --dry-run, --airo=VERSION (required, e.g. 4.1), --limit=N (positive integer per section), --items=0,1,... (non-negative integer indices; cannot combine with --limit), --label=text, --same-question-examples=true|false (default true)",
+    "Use --dry-run, --airo=VERSION (required, e.g. 4.1), --limit=N (positive integer per section), --items=0,1,... (non-negative integer indices; cannot combine with --limit), --label=text, --set=heldout|a1|claro (default all), --same-question-examples=true|false (default true)",
   );
 }
 const parts = new Intl.DateTimeFormat("en-AU", {
@@ -136,7 +137,11 @@ if (selectedItems?.some((index) => index >= allItems.length)) {
   );
 }
 const items = allItems.filter(
-  (_, index) => selectedItems === null || selectedItems.includes(index),
+  (item, index) =>
+    (selectedItems === null || selectedItems.includes(index)) &&
+    (!set ||
+      item.section ===
+        (set === "heldout" ? "Held-out" : set === "a1" ? "A1" : "Claro")),
 );
 mkdirSync(out, { recursive: true });
 if (dry) {

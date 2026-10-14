@@ -13,6 +13,11 @@ Eval = A1 set, 18 headline items (fm-1 and ei-4 excluded). Signed error: + = len
 | 3.1  | Plus tutor notes (dropped)         |
 | 4.0  | Sonnet 5.5 via OpenRouter          |
 | 4.1  | Plus the format retry (live)       |
+| 4.2  | Plus the bottom-band rule (trial)  |
+
+## Airo 4.2 — 14 Oct 2026: bottom-band rule (not evaluated, not live)
+
+Live 4.1 plus only the shared marking prompt's bottom-band rule: the lowest band needs at least one accurate statement accepted by its descriptor and relevant to the question; a brief accurate statement is enough. Inaccurate writing, restating the question, or answering something else earns 0 (NO BAND SATISFIED). This applies to the grader, blind checker and reconciler. No other changes from the accuracy-grader experiment are included. Not yet evaluated; not live. Airo 4.1 remains the live version.
 
 ## 10 Oct 2026: eval storage reads bypass the CDN cache
 
