@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { adminClient, cleanupSessions } from "./helpers";
+import { assertTestSupabaseUrl } from "./guard";
 
 // Row-level security and RPC checks for the v1 schema (migrations 0011–0017), as real users.
 async function as(email?: string, password?: string) {
   const db = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    assertTestSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL),
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } },
   );

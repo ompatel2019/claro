@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test as base } from "@playwright/test";
 import { createServerClient } from "@supabase/ssr";
 import { adminClient } from "../helpers";
+import { assertTestSupabaseUrl } from "../guard";
 
 // Each test owns a synthetic account; teardown cascades only its own study history.
 export const test = base.extend<{
@@ -34,7 +35,7 @@ export const test = base.extend<{
         Parameters<ReturnType<typeof page.context>["addCookies"]>[0][number]
       > = [];
       const auth = createServerClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        assertTestSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL),
         process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
         {
           cookies: {
