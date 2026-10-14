@@ -122,7 +122,7 @@ it("caps topics at two and handles malformed saved JSON", () => {
     "false",
   );
 });
-it("empty pools block start on the final step and provide a widening action", async () => {
+it("empty pools keep the summary immediately after the step card, block start and provide a widening action", async () => {
   mocks.rpc.mockResolvedValue({
     data: { ...pool, questions: 0, any: 10 },
     error: null,
@@ -134,6 +134,10 @@ it("empty pools block start on the final step and provide a widening action", as
   await waitFor(() =>
     expect(screen.getByText("No questions match")).toBeVisible(),
   );
+  const card = screen
+    .getByRole("button", { name: "Back" })
+    .closest('[data-slot="card"]')!;
+  expect(card.nextElementSibling).toBe(start().closest("form"));
   expect(start()).toBeDisabled();
   fireEvent.click(
     screen.getByRole("button", { name: "Include seen questions (+10)" }),

@@ -805,30 +805,6 @@ export function SprintSetup({
         </CardContent>
       </Card>
 
-      {matching === 0 && (
-        <EmptyState
-          icon={SearchOff}
-          title="No questions match"
-          description="Widen your filters to build a sprint."
-          action={
-            fixes.length > 0 && (
-              <div className="flex flex-wrap justify-center gap-2">
-                {fixes.map(([label, k, patch]) => (
-                  <Button
-                    key={label}
-                    variant="outline"
-                    size="sm"
-                    onClick={() => set(patch)}
-                  >
-                    {label} (+{k})
-                  </Button>
-                ))}
-              </div>
-            )
-          }
-        />
-      )}
-
       <form
         ref={form}
         action={action}
@@ -912,6 +888,30 @@ export function SprintSetup({
           </div>
         )}
       </form>
+
+      {matching === 0 && (
+        <EmptyState
+          icon={SearchOff}
+          title="No questions match"
+          description="Widen your filters to build a sprint."
+          action={
+            fixes.length > 0 && (
+              <div className="flex flex-wrap justify-center gap-2">
+                {fixes.map(([label, k, patch]) => (
+                  <Button
+                    key={label}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => set(patch)}
+                  >
+                    {label} (+{k})
+                  </Button>
+                ))}
+              </div>
+            )
+          }
+        />
+      )}
     </div>
   );
 }

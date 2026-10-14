@@ -5,8 +5,9 @@ then timer and feedback. Back preserves settings; Reset returns to defaults and
 step one. Advanced on the last step contains history, difficulty, verbs, years
 and sources. Start (including ⌘/Ctrl+Enter) is available after reviewing all steps.
 The summary (marks, minutes, filters, live match count, Reset, Start and warnings)
-is a normal in-flow block below the step card on every step. It scrolls with the
-page, wraps on narrow screens and never floats over the card.
+is a normal in-flow block immediately below the step card on every step, with
+the no-match empty state after the summary. It scrolls with the page, wraps on
+narrow screens and never floats over the card.
 
 New sprints contain MC, short answers or both. Essays remain reviewable in old
 sessions and available through Mark my answer; their separate practice route is
