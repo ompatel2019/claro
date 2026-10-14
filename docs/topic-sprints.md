@@ -49,6 +49,11 @@ student. Apply the migration first, or include it inside the test transaction.
 Checking a written answer shows the mark, band, comments, full-mark outline and
 the question's stored model answer, using the results page's `AnnotatedFeedback`.
 `POST /api/attempts/:id/mark` adds `sample_answer` only in check-as-you-go
-sprints and only once the attempt is marked; `loadSprint` reloads it for checked
-written answers. Marking guidelines, `check_status` and `mark_reviews` details
-are never sent to the sprint view. `e2e/sprint-model-answer.spec.ts` mocks marking.
+sprints and only once the written attempt is marked, excluding `No answer`
+results; `loadSprint` reloads it only for those attempts in unfinished
+check-as-you-go sessions. Marking guidelines, `check_status` and `mark_reviews` details
+are never sent to the sprint view. Unit tests in `src/app/api/marking.test.ts`
+and `src/lib/practice-data.test.ts` cover response and admin-read boundaries.
+`e2e/sprint-model-answer.spec.ts` skips without `STUDENT_EMAIL` and mocks the
+mark API; it covers UI behavior only, not real marking or server-side
+model-answer reads.

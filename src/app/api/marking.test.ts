@@ -424,15 +424,22 @@ it("check mode marks multiple choice early and returns key and explanation", asy
   const chain = {
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
-    single: vi.fn().mockResolvedValue({ data: { explanation: "Because C." } }),
+    single: vi.fn().mockResolvedValue({
+      data: {
+        explanation: "Because C.",
+        sample_answer: "Must stay private.",
+      },
+    }),
   };
   vi.mocked(admin().from).mockReturnValue(chain as never);
   const response = await mark(request(), ctx);
-  expect(await response.json()).toMatchObject({
+  const body = await response.json();
+  expect(body).toMatchObject({
     mark: 0,
     correct_index: 2,
     explanation: "Because C.",
   });
+  expect(body).not.toHaveProperty("sample_answer");
   expect(chain.eq).toHaveBeenCalledWith("id", "q1");
   // Deterministic: no AI rate limit, and no rescore before finish.
   expect(assertStudentAiRateLimit).not.toHaveBeenCalled();
@@ -492,6 +499,36 @@ it("does not reveal the model answer outside check mode", async () => {
   expect(body).not.toHaveProperty("sample_answer");
   expect(admin().from).not.toHaveBeenCalledWith("questions");
 });
+it.each([
+  { status: "pending", feedback: null },
+  { status: "failed", feedback: { error: "Marking failed" } },
+  { status: "marked", feedback: { note: "No answer" } },
+])(
+  "does not read or return a model answer for written checks with %j",
+  async (result) => {
+    client([
+      {
+        session_id: sessionId,
+        question_id: "q2",
+        session: { finished_at: null, config: { feedback: "each" } },
+        question: { type: "short" },
+      },
+    ]);
+    vi.mocked(markAttempt).mockResolvedValue(result as never);
+    const save = adminQuery(null);
+    vi.mocked(admin().from).mockReturnValue(save as never);
+    const response = await mark(request(), ctx);
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body).toMatchObject(result);
+    expect(body).not.toHaveProperty("sample_answer");
+    expect(admin().from).not.toHaveBeenCalledWith("questions");
+    if (result.feedback && "note" in result.feedback) {
+      expect(save.update).toHaveBeenCalledWith({ check_status: "skipped" });
+      expect(save.eq).toHaveBeenCalledWith("user_id", userId);
+    }
+  },
+);
 it("rescores a finished session after a retry", async () => {
   client([
     {

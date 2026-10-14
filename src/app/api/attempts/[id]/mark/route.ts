@@ -127,7 +127,10 @@ export async function POST(
     // The answer is locked now, so the explanation (MCQ) or model answer
     // (written) can be shown with the mark. Students cannot read these columns.
     const reference =
-      checkMode && attempt.question_id
+      checkMode &&
+      attempt.question_id &&
+      (question?.type === "mcq" ||
+        (status === "marked" && feedback?.note !== "No answer"))
         ? (
             await admin()
               .from("questions")
@@ -139,7 +142,9 @@ export async function POST(
     const explanation =
       question?.type === "mcq" ? reference?.explanation : null;
     const sample_answer =
-      question?.type !== "mcq" && status === "marked"
+      question?.type !== "mcq" &&
+      status === "marked" &&
+      feedback?.note !== "No answer"
         ? reference?.sample_answer
         : null;
     return Response.json({

@@ -31,7 +31,12 @@ export async function loadSprint(id: string) {
   const rows = (attempts ?? []) as unknown as Attempt[];
   const checked =
     !session.finished_at && session.config?.feedback === "each"
-      ? rows.filter((a) => a.status === "marked" && a.question.type !== "mcq")
+      ? rows.filter(
+          (a) =>
+            a.status === "marked" &&
+            a.question.type !== "mcq" &&
+            a.feedback?.note !== "No answer",
+        )
       : [];
   if (checked.length) {
     // Model answers for written answers already checked (§3.3); students
