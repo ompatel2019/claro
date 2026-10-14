@@ -215,9 +215,9 @@ for (const width of [390, 1600]) {
       const answer = page.getByRole("textbox", { name: "Your answer" });
       await answer.fill("Demand grows.");
       await page.getByRole("button", { name: "Check answer" }).click();
-      await expect(page.getByRole("alert")).toContainText(
-        "Could not mark answer",
-      );
+      await expect(
+        page.getByRole("alert").filter({ hasText: "Could not mark answer" }),
+      ).toBeVisible();
       await expect(answer).toHaveValue("Demand grows.");
       error = false;
       await page.getByRole("button", { name: "Check answer" }).click();
