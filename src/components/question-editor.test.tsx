@@ -211,3 +211,70 @@ it("shows only the selected topic's subtopics and clears a previous subtopic on 
   expect(screen.getAllByText("Choose a subtopic.").length).toBeGreaterThan(0);
   expect(mocks.save).not.toHaveBeenCalled();
 });
+
+const structuredMc = {
+  concept: "Domestic share.",
+  why_correct: "Imports fall.",
+  distractors: { A: "Tax.", B: "Subsidy.", D: "Quota." },
+};
+function mountMc(explanation: string) {
+  render(
+    <QuestionEditor
+      loaded={{
+        ...loaded,
+        question: {
+          ...loaded.question,
+          type: "mcq",
+          marks: 1,
+          options: ["A", "B", "C", "D"],
+          correct_index: 2,
+          explanation,
+        },
+      }}
+      topics={topics}
+    />,
+  );
+}
+it("edits structured MC explanations through named fields and serialises the same contract", async () => {
+  mountMc(JSON.stringify(structuredMc));
+  expect(screen.getByLabelText("Concept")).toHaveValue("Domestic share.");
+  expect(
+    screen.queryByLabelText("Why option C is wrong"),
+  ).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Concept"), {
+    target: { value: "New concept." },
+  });
+  fireEvent.change(screen.getByLabelText("Why option A is wrong"), {
+    target: { value: "New note." },
+  });
+  fireEvent.keyDown(window, { key: "s", metaKey: true });
+  await waitFor(() => expect(mocks.save).toHaveBeenCalled());
+  expect(JSON.parse(mocks.save.mock.calls[0][0].explanation)).toEqual({
+    ...structuredMc,
+    concept: "New concept.",
+    distractors: { ...structuredMc.distractors, A: "New note." },
+  });
+});
+it("converts legacy prose without losing it and restores incomplete drafts as fields", () => {
+  mountMc("Existing reasoning.");
+  expect(screen.getByLabelText("Explanation")).toHaveValue(
+    "Existing reasoning.",
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: "Use concept-first explanation" }),
+  );
+  expect(screen.getByLabelText("Why the correct answer follows")).toHaveValue(
+    "Existing reasoning.",
+  );
+  expect(screen.getByLabelText("Concept")).toHaveValue("");
+  cleanup();
+  mountMc(
+    JSON.stringify({
+      concept: "",
+      why_correct: "Existing reasoning.",
+      distractors: {},
+    }),
+  );
+  expect(screen.getByLabelText("Concept")).toHaveValue("");
+  expect(screen.getByLabelText("Why option D is wrong")).toHaveValue("");
+});

@@ -76,7 +76,7 @@ it("reads model answers only for the caller's marked written question ids", asyn
   const { sessions, attempts, refs, adminFrom } = setup([
     attempt("short"),
     attempt("extended", "extended", "marked", { comments: [] }),
-    attempt("mcq", "mcq"),
+    attempt("mcq", "mcq", "pending"),
     attempt("pending", "short", "pending"),
     attempt("failed", "short", "failed"),
     attempt("empty", "short", "marked", { note: "No answer" }),
@@ -115,7 +115,7 @@ it.each([
 });
 
 it.each([
-  ["MCQ", [attempt("mcq", "mcq")]],
+  ["unmarked MCQ", [attempt("mcq", "mcq", "pending")]],
   ["unmarked written", [attempt("pending", "short", "pending")]],
   ["failed written", [attempt("failed", "short", "failed")]],
   ["No answer", [attempt("empty", "short", "marked", { note: "No answer" })]],

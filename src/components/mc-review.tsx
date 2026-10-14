@@ -1,6 +1,6 @@
 import type { ReviewRow } from "@/lib/feedback";
 import { cn } from "@/lib/utils";
-import { RichText } from "./rich-text";
+import { McqExplanationView } from "./mcq-explanation";
 import { Badge } from "./ui/badge";
 
 const letter = (i: number | null | undefined) =>
@@ -43,7 +43,12 @@ export function McReview({ row }: { row: ReviewRow }) {
           <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">
             Explanation
           </summary>
-          <RichText className="px-4 pb-4 text-sm" text={row.explanation} />
+          <div className="px-4 pb-4 text-sm">
+            <McqExplanationView
+              explanation={row.explanation}
+              correctIndex={correct}
+            />
+          </div>
         </details>
       )}
     </div>

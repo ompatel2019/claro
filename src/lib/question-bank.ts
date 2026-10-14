@@ -1,5 +1,6 @@
 /** Pure question-bank logic shared by the admin list, import review and editor (§4.4). */
 import { z } from "zod";
+import { readMcqExplanation } from "./mcq-explanation";
 import { modes } from "./practice";
 export type { Criterion } from "./feedback";
 
@@ -175,6 +176,22 @@ export function publishProblems(q: QuestionInput) {
       problems.push("All four options are required.");
     if (q.correct_index == null) problems.push("Pick the correct answer.");
     if (!q.explanation) problems.push("Add an explanation.");
+    else if (q.explanation.trim().startsWith("{")) {
+      const structured = readMcqExplanation(q.explanation);
+      const others = "ABCD".split("").filter((_, i) => i !== q.correct_index);
+      if (
+        !structured ||
+        others.some(
+          (letter) =>
+            !structured.distractors[
+              letter as keyof typeof structured.distractors
+            ],
+        )
+      )
+        problems.push(
+          "Add the concept, correct-answer reasoning and all other option explanations.",
+        );
+    }
   } else {
     const bands = validateCriteria(q.criteria ?? [], q.marks);
     const bad = bands.rows.find(Boolean) ?? bands.summary;

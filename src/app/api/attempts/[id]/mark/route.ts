@@ -1,4 +1,5 @@
 import { studentMarking } from "@/lib/feedback";
+import { readMcqExplanation } from "@/lib/mcq-explanation";
 import { withAttemptUsage } from "@/lib/ai/usage-context";
 import { singleSlotIds } from "@/lib/single-check";
 import { markOwnCheck, markBankCheck } from "@/lib/single-check-marking";
@@ -148,6 +149,7 @@ export async function POST(
       feedback?.note !== "No answer"
         ? reference?.sample_answer
         : null;
+    const structuredExplanation = readMcqExplanation(explanation);
     return Response.json({
       mark,
       max_marks,
@@ -156,6 +158,9 @@ export async function POST(
       status,
       ...(explanation ? { explanation } : {}),
       ...(sample_answer ? { sample_answer } : {}),
+      ...(structuredExplanation
+        ? { structured_explanation: structuredExplanation }
+        : {}),
       ...(feedback?.correct_index != null
         ? { correct_index: feedback.correct_index }
         : {}),

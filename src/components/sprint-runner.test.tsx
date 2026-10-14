@@ -479,3 +479,67 @@ it("a failed manual finish keeps the saved answer editable and allows retry", as
   expect(screen.getByRole("radio", { name: /^Option A:/ })).toBeEnabled();
   expect(screen.getByRole("button", { name: "Finish" })).toBeEnabled();
 });
+
+it("shows structured MC feedback concept first and retains it on question navigation", async () => {
+  mocks.fetch.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({
+      status: "marked",
+      mark: 0,
+      max_marks: 1,
+      feedback: { correct_index: 2 },
+      explanation: "Legacy fallback",
+      structured_explanation: {
+        concept: "A local content rule sets a domestic share.",
+        why_correct: "Imported inputs fall.",
+        distractors: {
+          A: "Not a tariff.",
+          B: "Not a subsidy.",
+          D: "Not a quota.",
+        },
+      },
+    }),
+  });
+  vi.stubGlobal("fetch", mocks.fetch);
+  show([attempt, nextAttempt]);
+  fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
+  expect(await screen.findByText("Thus the answer is C.")).toBeVisible();
+  expect(screen.getByText("Not a tariff.")).toBeVisible();
+  expect(screen.queryByText("Legacy fallback")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Next question" }));
+  await waitFor(() =>
+    expect(screen.queryByText("Not a tariff.")).not.toBeInTheDocument(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Previous question" }));
+  expect(await screen.findByText("Not a tariff.")).toBeVisible();
+  expect(mocks.fetch).toHaveBeenCalledTimes(1);
+});
+
+it("restores a checked MC explanation without another marking request", () => {
+  render(
+    <SprintRunner
+      session={session}
+      initial={[
+        {
+          ...attempt,
+          status: "marked",
+          mark: 1,
+          feedback: { correct_index: 0 },
+        },
+      ]}
+      initialExplanations={{
+        a: JSON.stringify({
+          concept: "Prices rise.",
+          why_correct: "A is the increase.",
+          distractors: { B: "A decrease is deflation." },
+        }),
+      }}
+      userId="u"
+      title="Sprint"
+    />,
+  );
+  expect(screen.getByText("Thus the answer is A.")).toBeVisible();
+  expect(screen.getByText("A decrease is deflation.")).toBeVisible();
+  expect(mocks.fetch).not.toHaveBeenCalled();
+});

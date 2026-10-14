@@ -156,3 +156,34 @@ it("requires four options and a single key for an MC draft, matching the databas
     questionSchema.safeParse({ ...mc, options: ["A", "B", "", "D"] }).success,
   ).toBe(false);
 });
+
+it("requires complete concept-first explanations to publish while accepting legacy prose", () => {
+  const mc: QuestionInput = {
+    ...written,
+    type: "mcq",
+    marks: 1,
+    options: ["A", "B", "C", "D"],
+    correct_index: 2,
+    explanation: "Legacy prose.",
+  };
+  expect(publishProblems(mc)).toEqual([]);
+  const structured = {
+    concept: "Concept.",
+    why_correct: "Reason.",
+    distractors: { A: "A note.", B: "B note.", D: "D note." },
+  };
+  expect(
+    publishProblems({ ...mc, explanation: JSON.stringify(structured) }),
+  ).toEqual([]);
+  for (const explanation of [
+    { ...structured, concept: "" },
+    { ...structured, distractors: { A: "A note." } },
+    { concept: "Incomplete" },
+  ]) {
+    expect(
+      publishProblems({ ...mc, explanation: JSON.stringify(explanation) }),
+    ).toContain(
+      "Add the concept, correct-answer reasoning and all other option explanations.",
+    );
+  }
+});

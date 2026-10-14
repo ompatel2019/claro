@@ -24,6 +24,8 @@ import {
 } from "./ui/dialog";
 import { Logo } from "./logo";
 import { RichText } from "./rich-text";
+import { McqExplanationView } from "./mcq-explanation";
+import type { McqExplanation } from "@/lib/mcq-explanation";
 import { QuestionView } from "./question-view";
 import { isTyping, SessionShell, type SaveState } from "./session-shell";
 import { WrittenAnswer } from "./written-answer";
@@ -40,6 +42,7 @@ const draftKey = (id: string) => `claro-draft-${id}`;
 export function SprintRunner({
   session,
   initial,
+  initialExplanations = {},
   userId,
   title,
   topicNames = {},
@@ -47,6 +50,7 @@ export function SprintRunner({
 }: {
   session: Session;
   initial: Attempt[];
+  initialExplanations?: Record<string, string>;
   userId: string;
   title: string;
   topicNames?: Record<string, string>;
@@ -73,7 +77,8 @@ export function SprintRunner({
   // §3.2 feedback "each": check as you go.
   const checkMode = session.config.feedback === "each";
   const [checking, setChecking] = useState<string | null>(null);
-  const [explanations, setExplanations] = useState<Record<string, string>>({});
+  const [explanations, setExplanations] =
+    useState<Record<string, string | McqExplanation>>(initialExplanations);
 
   function local(id: string, patch: Partial<Attempt>) {
     rows.current = rows.current.map((a) =>
@@ -299,7 +304,10 @@ export function SprintRunner({
         sample_answer: body.sample_answer ?? null,
       });
       if (body.explanation)
-        setExplanations((e) => ({ ...e, [id]: body.explanation }));
+        setExplanations((e) => ({
+          ...e,
+          [id]: body.structured_explanation ?? body.explanation,
+        }));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -728,7 +736,7 @@ function CheckResult({
   onCheck,
 }: {
   attempt: Attempt;
-  explanation?: string;
+  explanation?: string | McqExplanation;
   checking: boolean;
   canCheck: boolean;
   highlight?: boolean;
@@ -751,7 +759,9 @@ function CheckResult({
               ? "Correct"
               : `Incorrect · Answer: ${k == null ? "unknown" : LETTERS[k]}`}
           </p>
-          {explanation && <RichText text={explanation} />}
+          {explanation && (
+            <McqExplanationView explanation={explanation} correctIndex={k} />
+          )}
         </div>
       );
     }

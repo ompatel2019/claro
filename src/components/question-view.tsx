@@ -2,6 +2,7 @@ import type { Attempt } from "@/lib/practice";
 import type { Criterion } from "@/lib/feedback";
 import { plural } from "@/lib/practice";
 import { RichText } from "./rich-text";
+import { McqExplanationView } from "./mcq-explanation";
 import { Badge } from "./ui/badge";
 
 const LETTERS = "ABCD";
@@ -90,10 +91,12 @@ export function QuestionKey({
   criteria,
   sample,
   explanation,
+  correctIndex,
 }: {
   criteria?: Criterion[] | null;
   sample?: string | null;
   explanation?: string | null;
+  correctIndex?: number | null;
 }) {
   return (
     <div className="space-y-4 text-sm">
@@ -132,7 +135,12 @@ export function QuestionKey({
       {explanation && (
         <div>
           <p className="font-semibold">Explanation</p>
-          <RichText className="mt-2" text={explanation} />
+          <div className="mt-2">
+            <McqExplanationView
+              explanation={explanation}
+              correctIndex={correctIndex}
+            />
+          </div>
         </div>
       )}
     </div>

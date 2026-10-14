@@ -9,3 +9,8 @@
 - S10 UI: inline written feedback reuses AnnotatedFeedback and the existing mark payload without an extra marking pass. Stored model answers are returned and reloaded only for marked written answers in unfinished check-as-you-go sprints, excluding No answer results. Guidelines and checker/review metadata remain in results. The Playwright model-answer spec requires STUDENT_EMAIL and mocks the mark API; server read boundaries have unit coverage.
 
 - S16 UI: own questions are hidden by default behind ENABLE_OWN_QUESTION_MARKING; empty-state copy suggests search/filter changes. Schema and API are retained, and saved legacy sessions remain readable.
+
+- S11: one concept-first MC explanation renderer is shared by inline checks,
+  resumed checks, results and previews. Structured JSON text is supported alongside
+  legacy Markdown; the owned mark API adds validated structured fields. No schema
+  change. Existing bank prose still needs the separately tagged ML/content rewrite.

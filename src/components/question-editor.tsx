@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { readMcqExplanation, type McqExplanation } from "@/lib/mcq-explanation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp, Close, Plus } from "@/components/icons";
@@ -72,6 +73,9 @@ export function QuestionEditor({
       ? loaded.question.verb
       : null,
   });
+  const [mcExplanation, setMcExplanation] = useState<McqExplanation | null>(
+    readMcqExplanation(loaded.question.explanation, true),
+  );
   const [savedAt, setSavedAt] = useState(loaded.question.updated_at);
   const [saveAttempted, setSaveAttempted] = useState(false);
   const [criteriaTouched, setCriteriaTouched] = useState(false);
@@ -219,6 +223,12 @@ export function QuestionEditor({
     if (problems.length) {
       if (mc) {
         if (!form.explanation?.trim()) next.explanation = "Add an explanation.";
+        else if (
+          mcExplanation &&
+          problems.some((p) => p.startsWith("Add the concept"))
+        )
+          next.explanation =
+            "Add the concept, correct-answer reasoning and all other option explanations.";
         if (form.options?.some((o) => !o.trim()))
           next.options = "All four options are required.";
         if (form.correct_index == null)
@@ -514,17 +524,102 @@ export function QuestionEditor({
               <p className="text-muted-foreground text-xs">
                 Pick exactly one correct answer.
               </p>
-              <Field
-                label="Explanation"
-                hint="Markdown. Required to publish."
-                error={errors.explanation}
-              >
-                <Textarea
-                  rows={4}
-                  value={form.explanation ?? ""}
-                  onChange={(e) => set("explanation", e.target.value || null)}
-                />
-              </Field>
+              {mcExplanation ? (
+                <div className="space-y-4">
+                  <p className="text-sm font-semibold">Explanation</p>
+                  {[
+                    {
+                      key: "concept" as const,
+                      label: "Concept",
+                      hint: "Define the idea before discussing the options.",
+                    },
+                    {
+                      key: "why_correct" as const,
+                      label: "Why the correct answer follows",
+                      hint: "Explain how the concept leads to the correct option.",
+                    },
+                  ].map(({ key, label, hint }) => (
+                    <Field key={key} label={label} hint={hint}>
+                      <Textarea
+                        rows={3}
+                        value={mcExplanation[key]}
+                        onChange={(e) => {
+                          const next = {
+                            ...mcExplanation,
+                            [key]: e.target.value,
+                          };
+                          setMcExplanation(next);
+                          set("explanation", JSON.stringify(next));
+                        }}
+                      />
+                    </Field>
+                  ))}
+                  {LETTERS.filter((_, i) => i !== form.correct_index).map(
+                    (letter) => (
+                      <Field
+                        key={letter}
+                        label={`Why option ${letter} is wrong`}
+                      >
+                        <Textarea
+                          rows={2}
+                          value={
+                            mcExplanation.distractors[
+                              letter as keyof McqExplanation["distractors"]
+                            ] ?? ""
+                          }
+                          onChange={(e) => {
+                            const next = {
+                              ...mcExplanation,
+                              distractors: {
+                                ...mcExplanation.distractors,
+                                [letter]: e.target.value,
+                              },
+                            };
+                            setMcExplanation(next);
+                            set("explanation", JSON.stringify(next));
+                          }}
+                        />
+                      </Field>
+                    ),
+                  )}
+                  {errors.explanation && (
+                    <p role="alert" className="text-destructive text-xs">
+                      {errors.explanation}
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Field
+                    label="Explanation"
+                    hint="Markdown. Required to publish."
+                    error={errors.explanation}
+                  >
+                    <Textarea
+                      rows={4}
+                      value={form.explanation ?? ""}
+                      onChange={(e) =>
+                        set("explanation", e.target.value || null)
+                      }
+                    />
+                  </Field>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const next = {
+                        concept: "",
+                        why_correct: form.explanation ?? "",
+                        distractors: {},
+                      };
+                      setMcExplanation(next);
+                      set("explanation", JSON.stringify(next));
+                    }}
+                  >
+                    Use concept-first explanation
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -770,6 +865,7 @@ export function QuestionEditor({
                     criteria={mc ? null : form.criteria}
                     sample={mc ? null : form.sample_answer}
                     explanation={mc ? form.explanation : null}
+                    correctIndex={form.correct_index}
                   />
                 </div>
               </TabsContent>

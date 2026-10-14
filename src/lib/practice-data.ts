@@ -29,7 +29,27 @@ export async function loadSprint(id: string) {
     .eq("user_id", profile.id)
     .order("position");
   if (attemptError) throw new Error("Could not load your questions.");
-  const rows = (attempts ?? []) as unknown as Attempt[];
+  const rows = examOrder((attempts ?? []) as unknown as Attempt[]);
+  // Only locked MC answers in an owned check-mode session may reveal explanations.
+  const checkedMcq =
+    session.config?.feedback === "each"
+      ? rows.filter((a) => a.status === "marked" && a.question.type === "mcq")
+      : [];
+  const explanations: Record<string, string> = {};
+  if (checkedMcq.length) {
+    const { data: keys, error: keyError } = await admin()
+      .from("questions")
+      .select("id,explanation")
+      .in(
+        "id",
+        checkedMcq.map((a) => a.question_id),
+      );
+    if (keyError) throw new Error("Could not load your checked explanations.");
+    for (const a of checkedMcq) {
+      const key = keys?.find((q) => q.id === a.question_id);
+      if (key?.explanation) explanations[a.id] = key.explanation;
+    }
+  }
   const checked =
     !session.finished_at && session.config?.feedback === "each"
       ? rows.filter(
@@ -54,8 +74,9 @@ export async function loadSprint(id: string) {
     for (const a of checked) a.sample_answer = byId.get(a.question_id) ?? null;
   }
   return {
+    explanations,
     session: session as Session,
-    attempts: examOrder(rows).map(studentMarking),
+    attempts: rows.map(studentMarking),
     profile,
   };
 }

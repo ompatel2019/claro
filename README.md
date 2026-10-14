@@ -169,3 +169,13 @@ npx tsx --conditions=react-server src/lib/ai/eval/import-a1-examples.mts /path/t
 ```
 
 Dry-run needs no credentials and makes no database calls. It rejects invalid marks, unknown questions, duplicate hashes, repeated answer text and overlap with the separate `a1-eval-set.json` benchmark. The seeded split and existing grader view keep held-out scripts out of prompts. See [ENGINE](src/lib/ai/docs/ENGINE.md) for offline evaluation and import details. No new migration is required for A5.
+
+MCQ explanations support concept-first feedback in checked sprints, resumed checks,
+finished results and the admin preview. Structured content is stored as JSON text
+in the existing `questions.explanation` column; legacy Markdown still renders.
+The mark API adds `structured_explanation` after an owned check-mode answer is
+locked. No schema change or migration is needed. See [the MCQ content contract](docs/mcq-explanations.md).
+Coverage: parser, shared renderer, sprint runner, owned-session loader and mark API
+Vitest suites; `e2e/mcq-explanation.spec.ts` exercises real marking, key withholding,
+resume, correct/wrong/unanswered results and mobile/desktop layouts with temporary
+synthetic students/questions. Run with the same queue and env settings above.
