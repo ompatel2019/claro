@@ -38,11 +38,17 @@ export async function expectNoOverlap(a: Locator, b: Locator) {
 
 async function signInAs(
   page: Page,
-  email: string,
-  password: string,
+  email: string | undefined,
+  password: string | undefined,
   destination: "/student" | "/admin" | "/student/sprint",
   nextPath?: string,
 ) {
+  if (!email || !password) {
+    const role = destination === "/admin" ? "ADMIN" : "STUDENT";
+    throw new Error(
+      `Missing sign-in credentials: provide both ${role}_EMAIL and ${role}_PASSWORD (or explicit credentials for signIn).`,
+    );
+  }
   await page.goto(
     nextPath ? `/sign-in?next=${encodeURIComponent(nextPath)}` : "/sign-in",
   );

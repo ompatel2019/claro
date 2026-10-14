@@ -46,6 +46,12 @@ for (const width of [360, 1280]) {
       test(`${kind} keyboard toggle, persistence and dark panels`, async ({
         page,
       }) => {
+        test.skip(
+          kind === "admin"
+            ? !process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD
+            : !process.env.STUDENT_EMAIL || !process.env.STUDENT_PASSWORD,
+          `Needs a ${kind} account`,
+        );
         const errors: string[] = [];
         page.on("console", (message) => {
           if (
@@ -106,6 +112,10 @@ for (const width of [360, 1280]) {
     test("system default changes live, override wins and account reset follows system", async ({
       page,
     }) => {
+      test.skip(
+        !process.env.STUDENT_EMAIL || !process.env.STUDENT_PASSWORD,
+        "Needs a student account",
+      );
       await page.emulateMedia({ colorScheme: "dark" });
       await signInStudent(page);
       await expectDarkPaint(page, true);
@@ -125,6 +135,18 @@ for (const width of [360, 1280]) {
       await expect(toggle(page)).toHaveAttribute("aria-pressed", "true");
       await page.reload();
       await expectDarkPaint(page, true);
+    });
+    test("public sign-in follows system default before paint without storing an override", async ({
+      page,
+    }) => {
+      for (const colorScheme of ["light", "dark"] as const) {
+        await page.emulateMedia({ colorScheme });
+        await page.goto("/sign-in");
+        await expectDarkPaint(page, colorScheme === "dark");
+        expect(
+          await page.evaluate(() => localStorage.getItem("claro-theme")),
+        ).toBeNull();
+      }
     });
     test("invalid and blocked storage fall back to system before paint", async ({
       page,
