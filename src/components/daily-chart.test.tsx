@@ -3,6 +3,71 @@ import { afterEach, expect, it } from "vitest";
 import { DailyChart } from "./daily-chart";
 
 afterEach(cleanup);
+it.each(["area", "bars"] as const)(
+  "keeps all 30 Sydney days readable in the dashboard %s chart",
+  (kind) => {
+    const title = kind === "bars" ? "AI spend per day" : "Sessions per day";
+    const points = Array.from({ length: 30 }, (_, i) => ({
+      day: `2026-09-${String(i + 1).padStart(2, "0")}`,
+      value: kind === "bars" ? i / 100 : i,
+    }));
+    const { container } = render(
+      <DailyChart title={title} hero="Total" kind={kind} points={points} />,
+    );
+    const select = screen.getByRole("combobox", { name: `${title} day` });
+    expect(screen.getAllByRole("option")).toHaveLength(30);
+    expect(select).toHaveValue("2026-09-30");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      kind === "bars" ? "$0.29" : "29",
+    );
+    fireEvent.change(select, { target: { value: "2026-09-01" } });
+    expect(screen.getByRole("status")).toHaveTextContent(
+      kind === "bars" ? "$0.00" : "0",
+    );
+    const marks = container.querySelectorAll(
+      kind === "bars" ? "rect" : "circle",
+    );
+    expect(marks).toHaveLength(30);
+    fireEvent.click(marks[14].parentElement!);
+    expect(select).toHaveValue("2026-09-15");
+    expect(screen.getByRole("status")).toHaveTextContent(
+      kind === "bars" ? "$0.14" : "14",
+    );
+    expect(marks[14].parentElement!.querySelector("title")).toHaveTextContent(
+      "15 Sept 2026 (Sydney)",
+    );
+  },
+);
+it("draws finite, zero-height spend bars when every day has zero usage", () => {
+  const { container } = render(
+    <DailyChart
+      title="AI spend per day"
+      hero="$0.00"
+      kind="bars"
+      points={[
+        { day: "2026-10-01", value: 0 },
+        { day: "2026-10-02", value: 0 },
+      ]}
+    />,
+  );
+  for (const bar of container.querySelectorAll("rect")) {
+    expect(Number(bar.getAttribute("y"))).toBe(136);
+    expect(Number(bar.getAttribute("height"))).toBe(0);
+  }
+  expect(screen.getByRole("status")).toHaveTextContent("$0.00");
+});
+it.each(["area", "bars"] as const)(
+  "keeps an empty %s chart visible without a misleading day value",
+  (kind) => {
+    render(<DailyChart title="Daily total" hero="0" kind={kind} points={[]} />);
+    expect(
+      screen.getByRole("heading", { name: "Daily total" }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole("img")).toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  },
+);
 it("stacks model spend with a text legend, Sydney titles and a keyboard day control", () => {
   const { container } = render(
     <DailyChart

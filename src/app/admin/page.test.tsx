@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -42,6 +42,75 @@ beforeEach(() => {
   mocks.loadDashboard.mockResolvedValue(data);
 });
 afterEach(cleanup);
+it("keeps A1's dashboard KPIs and both daily charts with their SQL totals", async () => {
+  mocks.loadDashboard.mockResolvedValue({
+    ...data,
+    active: { now: 12, prev: 9 },
+    sessionsWeek: 27,
+    openReviews: { count: 4, oldestDays: 2 },
+    spend: { month: 14.25, all: 81.5, cap: 100 },
+    sessionsTotal: 63,
+    spendTotal: 19.75,
+    sessionsPerDay: [{ day: "2026-10-09", value: 3 }],
+    spendPerDay: [{ day: "2026-10-09", value: 1.25 }],
+  });
+  render(await dashboard());
+  for (const [label, value] of [
+    ["Active students, 7 days", "12"],
+    ["Sessions, 7 days", "27"],
+    ["Open reviews", "4"],
+    ["Spend this month", "$14.25 of $100"],
+  ]) {
+    const card = within(screen.getByText(label).closest("dl")!);
+    expect(card.getByText(value, { exact: true })).toBeInTheDocument();
+  }
+  expect(screen.getByText("+3")).toBeInTheDocument();
+  expect(screen.getByText("vs 9 previous 7")).toBeInTheDocument();
+  expect(screen.getByText("oldest 2 days")).toBeInTheDocument();
+  expect(screen.getByText("63 sessions")).toBeInTheDocument();
+  expect(screen.getByText("$19.75")).toBeInTheDocument();
+  expect(
+    screen.getByRole("img", { name: "Sessions per day, last 30 days" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("img", { name: "AI spend per day, last 30 days" }),
+  ).toBeInTheDocument();
+  expect(screen.getAllByRole("status").map((s) => s.textContent)).toEqual([
+    "3",
+    "$1.25",
+  ]);
+  expect(screen.getByRole("progressbar")).toHaveAttribute(
+    "aria-valuetext",
+    "$81.50 of $100 (82%)",
+  );
+  expect(screen.getByRole("link", { name: /spend at 82%/ })).toHaveAttribute(
+    "href",
+    "/admin/spend",
+  );
+});
+it.each([
+  [3, 9, "−6"],
+  [9, 9, "±0"],
+])(
+  "keeps the active-student comparison for %i vs %i",
+  async (now, prev, delta) => {
+    mocks.loadDashboard.mockResolvedValue({ ...data, active: { now, prev } });
+    render(await dashboard());
+    expect(screen.getByText(delta)).toBeInTheDocument();
+  },
+);
+it("retains zero spend and both charts on an empty install", async () => {
+  mocks.loadDashboard.mockResolvedValue({ ...data, students: 0 });
+  render(await dashboard());
+  expect(screen.getByText("$0.00 of $100")).toBeInTheDocument();
+  expect(screen.getByText("0 sessions")).toBeInTheDocument();
+  expect(screen.getAllByRole("img")).toHaveLength(2);
+  expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+  expect(screen.getAllByRole("status").map((s) => s.textContent)).toEqual([
+    "0",
+    "$0.00",
+  ]);
+});
 it("uses a real attention heading and handles students with no finished sessions", async () => {
   render(await dashboard());
   expect(

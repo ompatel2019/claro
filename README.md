@@ -63,6 +63,23 @@ Mark my answer defaults to the Claro bank. Set the server flag `ENABLE_OWN_QUEST
 Deck size (20 selected by default) and Answer by sit beside Mode. Study lets students type or speak before flipping and self-rating; Test checks their answer. Typing remains available if speech is unsupported or denied. List view and missed-card repeats remain available.
 Tests: `src/components/flashcard-{builder,runner}.test.tsx`, `e2e/flashcard-{builder,session}.spec.ts` cover setup, bounds, empty decks, answer drafts, speech fallback, repeats and mobile/desktop flows. Run heavy checks through `Q_MIN_GB=3 Q_SLOTS=1 q-run` on the shared box.
 
+## Admin dashboard (Karan A1)
+
+A1 in `/workspace/claro/karan-items.md` explicitly says to keep the dashboard as-is,
+especially AI spend per day. The four KPIs, 30-day sessions/spend charts, attention
+links and latest finished sessions remain as defined in `FEATURE_SPEC.md` §4.1.
+Dashboard numbers come from the admin-only `admin_dashboard` SQL RPC; each chart
+lets admins inspect a Sydney day using its graph or keyboard-accessible selector.
+No migration or runtime change is needed for A1.
+
+Regression coverage: `src/app/admin/page.test.tsx`, `src/lib/admin-data.test.ts`
+and `src/components/daily-chart.test.tsx` cover totals, zero/empty states, spend
+caps, permissions, errors and daily inspection. `e2e/admin-dashboard.spec.ts`
+checks the authenticated dashboard and chart controls on desktop and mobile.
+Run `q-run npm run check` and
+`q-run npm run test:e2e -- e2e/admin-dashboard.spec.ts --workers=1` with public
+app/Supabase settings and synthetic `ADMIN_EMAIL` / `ADMIN_PASSWORD` exported.
+
 ## Question imports
 
 Questions enter through offline import scripts as drafts; the bank's Import action opens Import review. Manual creation is closed. Existing drafts and published questions remain editable, with numbered Topic then Subtopic selectors (also used for bulk moves and import-review filters). Tests in `e2e/admin-questions.spec.ts` and the question editor/page/action unit suites cover import review, editing, validation, errors and responsive layouts.

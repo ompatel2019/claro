@@ -8,6 +8,71 @@ test.describe("Admin dashboard", () => {
   );
   test.setTimeout(120000);
 
+  for (const width of [390, 1280]) {
+    test(`daily stats remain readable and selectable at ${width}px (A1)`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 844 });
+      await signInAdmin(page);
+      for (const title of ["Sessions per day", "AI spend per day"]) {
+        const card = page.locator('[data-slot="card"]').filter({
+          has: page.getByRole("heading", { name: title, exact: true }),
+        });
+        const select = card.getByRole("combobox", { name: `${title} day` });
+        await expect(select).toBeVisible();
+        // Wait for the client chart to hydrate before changing its state.
+        await expect
+          .poll(() =>
+            select.evaluate((el) =>
+              Object.keys(el).some((key) => key.startsWith("__reactProps$")),
+            ),
+          )
+          .toBe(true);
+        const days = await select
+          .locator("option")
+          .evaluateAll((options) =>
+            options.map((option) => (option as HTMLOptionElement).value),
+          );
+        expect(days).toHaveLength(30);
+        expect(new Set(days).size).toBe(30);
+        expect(days).toEqual([...days].sort());
+        await expect(select).toHaveValue(days[29]);
+        const marks = card
+          .locator("svg > g")
+          .filter({ has: page.locator("rect, circle") });
+        await expect(marks).toHaveCount(30);
+        const valueForDay = async (index: number) => {
+          const text = await marks.nth(index).locator("title").textContent();
+          expect(text).toContain("(Sydney) · ");
+          return text!.split(" · ")[1];
+        };
+        await expect(card.getByRole("status")).toHaveText(
+          await valueForDay(29),
+        );
+        // The native day selector works with the keyboard, including zero days.
+        await select.focus();
+        await page.keyboard.press("Home");
+        await page.keyboard.press("Enter");
+        await page.keyboard.press("Tab");
+        await expect(select).toHaveValue(days[0]);
+        await expect(card.getByRole("status")).toHaveText(await valueForDay(0));
+        // Touch/mouse users can inspect a day directly on the graph.
+        await marks.nth(14).dispatchEvent("click");
+        await expect(select).toHaveValue(days[14]);
+        await expect(card.getByRole("status")).toHaveText(
+          await valueForDay(14),
+        );
+      }
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth <= window.innerWidth,
+          ),
+        )
+        .toBe(true);
+    });
+  }
+
   test("KPIs, charts, needs attention and the latest sessions", async ({
     page,
   }) => {
