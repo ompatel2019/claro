@@ -40,49 +40,52 @@ async function signInAs(
   page: Page,
   email: string,
   password: string,
-  destination: RegExp,
+  destination: "/student" | "/admin" | "/student/sprint",
   nextPath?: string,
 ) {
   await page.goto(
     nextPath ? `/sign-in?next=${encodeURIComponent(nextPath)}` : "/sign-in",
   );
-  if (destination.test(new URL(page.url()).pathname)) return;
-  // Wait for React to attach the form handlers before filling a cold dev page.
-  await expect
-    .poll(
-      () =>
-        page
-          .getByLabel("Email")
-          .evaluate((element) =>
-            Object.keys(element).some((key) => key.startsWith("__reactProps$")),
-          ),
-      { timeout: 30_000 },
-    )
-    .toBe(true);
+  const authenticated = async () =>
+    (await page.context().cookies()).some((cookie) =>
+      /^sb-.+-auth-token(?:\.\d+)?$/.test(cookie.name),
+    );
   await expect(async () => {
-    if (destination.test(new URL(page.url()).pathname)) return;
-    await page.getByLabel("Email").fill(email);
-    await page.getByLabel("Password").fill(password);
-    await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await expect(page).toHaveURL(destination, { timeout: 15_000 });
+    if (!(await authenticated())) {
+      await page.getByLabel("Email").fill(email);
+      await page.getByLabel("Password").fill(password);
+      await page.getByRole("button", { name: "Sign in", exact: true }).click();
+      await expect.poll(authenticated).toBe(true);
+    }
+    // Establish a session on a protected page, independent of cold dev redirect timing.
+    await page.goto(destination);
+    await expect(page).toHaveURL(new RegExp(`${destination}$`), {
+      timeout: 5000,
+    });
   }).toPass({ timeout: 60000 });
 }
-export async function signIn(page: Page, nextPath?: "/student/sprint") {
+/** Accept a sprint destination or isolated synthetic credentials. */
+export async function signIn(
+  page: Page,
+  emailOrNext = process.env.STUDENT_EMAIL!,
+  password = process.env.STUDENT_PASSWORD!,
+) {
+  const nextPath = emailOrNext === "/student/sprint" ? emailOrNext : undefined;
   await signInAs(
     page,
-    process.env.STUDENT_EMAIL!,
-    process.env.STUDENT_PASSWORD!,
-    nextPath ? /\/student\/sprint$/ : /\/student$/,
+    nextPath ? process.env.STUDENT_EMAIL! : emailOrNext,
+    password,
+    nextPath ?? "/student",
     nextPath,
   );
 }
-/** Signs in with the admin account and waits for hydration when submitting. */
+/** Signs in as the administrator and opens their protected dashboard. */
 export async function signInAdmin(page: Page) {
   await signInAs(
     page,
     process.env.ADMIN_EMAIL!,
     process.env.ADMIN_PASSWORD!,
-    /\/admin$/,
+    "/admin",
   );
 }
 export function adminClient() {

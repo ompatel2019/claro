@@ -69,6 +69,85 @@ test.describe("Flashcard session and results", () => {
     ).toBeVisible();
     return data.id as string;
   }
+  for (const width of [400, 1280]) {
+    test(`Study drafts before reveal with speech fallback at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.addInitScript(() => {
+        (window as unknown as Record<string, unknown>).SpeechRecognition =
+          class {
+            onerror: ((event: { error: string }) => void) | null = null;
+            start() {
+              queueMicrotask(() => this.onerror?.({ error: "not-allowed" }));
+            }
+            stop() {}
+          };
+      });
+      await deck(page, "study");
+      await page
+        .getByRole("textbox", { name: "Your answer" })
+        .fill("Synthetic practice answer");
+      await expect(
+        page.getByRole("heading", { name: "Model answer", exact: true }),
+      ).toHaveCount(0);
+      await page.getByRole("button", { name: "Speak", exact: true }).click();
+      await expect(
+        page.getByText(/Speech isn't supported|Couldn't use the microphone/),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("textbox", { name: "Your answer" }),
+      ).toHaveValue("Synthetic practice answer");
+      await page
+        .getByRole("button", { name: "Flip card", exact: true })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: "Model answer", exact: true }),
+      ).toBeVisible();
+    });
+  }
+
+  for (const width of [400, 1280]) {
+    test(`Study can speak and compare the draft after revealing at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 800 });
+      await page.addInitScript(() => {
+        (window as unknown as Record<string, unknown>).SpeechRecognition =
+          class {
+            onresult:
+              | ((event: { results: { 0: { transcript: string } }[] }) => void)
+              | null = null;
+            start() {
+              queueMicrotask(() =>
+                this.onresult?.({
+                  results: [{ 0: { transcript: "Spoken synthetic answer" } }],
+                }),
+              );
+            }
+            stop() {}
+          };
+      });
+      await deck(page, "study");
+      await page.getByRole("button", { name: "Speak", exact: true }).click();
+      await expect(
+        page.getByRole("textbox", { name: "Your answer" }),
+      ).toHaveValue("Spoken synthetic answer");
+      await expect(
+        page.getByRole("heading", { name: "Model answer", exact: true }),
+      ).toHaveCount(0);
+      await page
+        .getByRole("button", { name: "Flip card", exact: true })
+        .click();
+      await expect(
+        page.getByRole("heading", { name: "Model answer", exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByText("Spoken synthetic answer", { exact: true }),
+      ).toBeVisible();
+    });
+  }
+
   test("study flip, list, resume, last skip, results actions and legacy redirects", async ({
     page,
   }) => {

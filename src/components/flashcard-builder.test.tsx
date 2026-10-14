@@ -89,7 +89,7 @@ it("has a disabled own-card choice and detects missing speech input for Test", (
   expect(screen.getByRole("button", { name: "My cards (0)" })).toBeDisabled();
   expect(
     screen.queryByRole("heading", { name: "Answer by" }),
-  ).not.toBeInTheDocument();
+  ).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Test" }));
   expect(screen.getByRole("button", { name: "Speaking" })).toBeDisabled();
   expect(
@@ -138,4 +138,19 @@ it("starts with no pressed topics and the All chip toggles its parent", () => {
   fireEvent.click(within(group).getByRole("button", { name: "Inflation · 1" }));
   expect(all).toHaveAttribute("aria-pressed", "false");
   expect(screen.getByText(/All topics · Study/)).toBeInTheDocument();
+});
+
+it("shows the selected default size alongside Mode before the filters", () => {
+  render(<FlashcardBuilder cards={cards} topics={topics} history={history} />);
+  expect(screen.getByRole("button", { name: "20" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  const headings = screen.getAllByRole("heading").map((h) => h.textContent);
+  expect(headings.slice(0, 4)).toEqual([
+    "Mode",
+    "Deck size",
+    "Answer by",
+    "Card type",
+  ]);
 });

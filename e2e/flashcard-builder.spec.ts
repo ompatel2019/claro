@@ -19,6 +19,28 @@ test.describe("Flashcard deck builder", () => {
     await signIn(page);
   });
 
+  for (const width of [400, 1280]) {
+    test(`size and answer choices appear beside Mode at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/student/flashcards");
+      const size = page.getByRole("group", { name: "Deck size" });
+      await expect(
+        size.getByRole("button", { name: "20", exact: true }),
+      ).toHaveAttribute("aria-pressed", "true");
+      await expect(size).toBeInViewport();
+      await expect(
+        page.getByRole("group", { name: "Answer by" }),
+      ).toBeInViewport();
+      await page.getByRole("button", { name: "Typing", exact: true }).click();
+      await page.getByRole("button", { name: "Test", exact: true }).click();
+      await expect(
+        page.getByRole("button", { name: "Typing", exact: true }),
+      ).toHaveAttribute("aria-pressed", "true");
+    });
+  }
+
   test("400px builder controls clear feedback and the sticky summary at page end", async ({
     page,
   }) => {

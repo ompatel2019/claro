@@ -183,9 +183,65 @@ export function FlashcardBuilder({
           />
           <p className="text-muted-foreground text-xs">
             {c.mode === "study"
-              ? "Flip and rate yourself."
+              ? "Type or say your answer, then flip and rate yourself."
               : "Type or say it, we check it."}
           </p>
+          <Options
+            title="Deck size"
+            value={sizeValue}
+            options={[10, 20, 30, 50]
+              .map((n) => ({ value: String(n), label: String(n) }))
+              .concat([
+                { value: "all", label: `All (${counts.total})` },
+                { value: "custom", label: "Custom" },
+              ])}
+            onChange={(value) => {
+              setCustom(value === "custom");
+              if (value !== "custom")
+                set({ size: value === "all" ? "all" : Number(value) });
+              else setCustomSize(String(c.size === "all" ? 20 : c.size));
+            }}
+          />
+          {custom && (
+            <Input
+              aria-label="Custom deck size"
+              type="number"
+              min={1}
+              max={200}
+              className="w-24"
+              value={customSize}
+              onChange={(e) => setCustomSize(e.target.value)}
+              onBlur={() => {
+                setCustomSize(String(customNumber));
+                set({ size: customNumber });
+              }}
+            />
+          )}
+          <p
+            className="text-muted-foreground text-sm tabular-nums"
+            role="status"
+          >
+            {size} of {plural(counts.total, "card")}
+          </p>
+          <Options
+            title="Answer by"
+            value={c.answer_by}
+            options={[
+              { value: "typing", label: "Typing" },
+              {
+                value: "speaking",
+                label: "Speaking",
+                disabled: !speech,
+                reason: !speech
+                  ? "Speech input is not available in this browser."
+                  : undefined,
+              },
+              { value: "either", label: "Either" },
+            ]}
+            onChange={(answer_by) =>
+              set({ answer_by: answer_by as DeckConfig["answer_by"] })
+            }
+          />
           <Options
             title="Card type"
             value={kinds}
@@ -316,43 +372,6 @@ export function FlashcardBuilder({
             onChange={(which) => set({ which: which as DeckConfig["which"] })}
           />
           <Options
-            title="Deck size"
-            value={sizeValue}
-            options={[10, 20, 30, 50]
-              .map((n) => ({ value: String(n), label: String(n) }))
-              .concat([
-                { value: "all", label: `All (${counts.total})` },
-                { value: "custom", label: "Custom" },
-              ])}
-            onChange={(value) => {
-              setCustom(value === "custom");
-              if (value !== "custom")
-                set({ size: value === "all" ? "all" : Number(value) });
-              else setCustomSize(String(c.size === "all" ? 20 : c.size));
-            }}
-          />
-          {custom && (
-            <Input
-              aria-label="Custom deck size"
-              type="number"
-              min={1}
-              max={200}
-              className="w-24"
-              value={customSize}
-              onChange={(e) => setCustomSize(e.target.value)}
-              onBlur={() => {
-                setCustomSize(String(customNumber));
-                set({ size: customNumber });
-              }}
-            />
-          )}
-          <p
-            className="text-muted-foreground text-sm tabular-nums"
-            role="status"
-          >
-            {size} of {plural(counts.total, "card")}
-          </p>
-          <Options
             title="Order"
             value={c.order}
             options={[
@@ -368,27 +387,6 @@ export function FlashcardBuilder({
             />
             Repeat missed cards
           </label>
-          {c.mode === "test" && (
-            <Options
-              title="Answer by"
-              value={c.answer_by}
-              options={[
-                { value: "typing", label: "Typing" },
-                {
-                  value: "speaking",
-                  label: "Speaking",
-                  disabled: !speech,
-                  reason: !speech
-                    ? "Speech input is not available in this browser."
-                    : undefined,
-                },
-                { value: "either", label: "Either" },
-              ]}
-              onChange={(answer_by) =>
-                set({ answer_by: answer_by as DeckConfig["answer_by"] })
-              }
-            />
-          )}
         </CardContent>
       </Card>
       {counts.total === 0 && (

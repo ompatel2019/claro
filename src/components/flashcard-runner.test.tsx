@@ -735,3 +735,74 @@ it("does not offer self rating after a missing-session check", async () => {
   );
   expect(screen.queryByRole("button", { name: "Knew it (3)" })).toBeNull();
 });
+
+it("lets Study students draft an answer before revealing and keeps typing as speech fallback", () => {
+  render(
+    <FlashcardRunner
+      session={session}
+      cards={cards}
+      reviews={[]}
+      topics={[]}
+      deckName="Deck"
+    />,
+  );
+  fireEvent.change(screen.getByRole("textbox", { name: "Your answer" }), {
+    target: { value: "Prices rise" },
+  });
+  expect(screen.queryByText(cards[0].back)).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("button", { name: /Check/ }),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Speak" }));
+  expect(screen.getByText(/Speech isn't supported/)).toBeVisible();
+  expect(screen.getByRole("textbox")).toHaveValue("Prices rise");
+  fireEvent.click(screen.getByRole("button", { name: "Flip card" }));
+  expect(screen.getByText(cards[0].back)).toBeVisible();
+  expect(screen.getByText("Prices rise")).toBeVisible();
+  expect(fetchMock).not.toHaveBeenCalled();
+});
+
+it("captures spoken Study answers and stops recognition before revealing", () => {
+  const recognition = {
+    lang: "",
+    continuous: false,
+    interimResults: false,
+    onresult: null as
+      null | ((event: { results: { 0: { transcript: string } }[] }) => void),
+    onerror: null,
+    onend: null,
+    start: vi.fn(),
+    stop: vi.fn(),
+  };
+  vi.stubGlobal(
+    "SpeechRecognition",
+    class {
+      constructor() {
+        return recognition;
+      }
+    },
+  );
+  render(
+    <FlashcardRunner
+      session={{
+        ...session,
+        config: { ...session.config, answer_by: "speaking" },
+      }}
+      cards={cards}
+      reviews={[]}
+      topics={[]}
+      deckName="Deck"
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Speak" }));
+  act(() =>
+    recognition.onresult!({
+      results: [{ 0: { transcript: "A sustained rise in prices" } }],
+    }),
+  );
+  expect(screen.getByRole("textbox")).toHaveValue("A sustained rise in prices");
+  expect(screen.queryByText(cards[0].back)).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Flip card" }));
+  expect(recognition.stop).toHaveBeenCalledOnce();
+  expect(screen.getByText(cards[0].back)).toBeVisible();
+});

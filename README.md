@@ -38,8 +38,6 @@ Sprint pace defaults to 1 min per multi and 1.5 min per short-answer mark, both 
 
 Flag for review sits in the bottom answer actions alongside Check answer; flags still persist in the question booklet.
 
-Use Node 22 (`nvm use`). Local checks need `NEXT_PUBLIC_APP_URL` set; authenticated Playwright tests additionally use synthetic `STUDENT_EMAIL` / `STUDENT_PASSWORD` and the Supabase settings from `.env.local`. Never commit credentials.
-
 Topic sprints offer Multiple choice, Short answer and Mixed (MC + shorts). Essays
 remain available in Mark my answer and existing results; they are excluded from
 new sprints, including legacy saved setups. Apply `0040_sprints_no_essays.sql`.
@@ -51,3 +49,10 @@ shuffled sprints resume in the same grouping. Apply `0041_sprints_exam_order.sql
 Setup is a four-step wizard (question type → topics → size → timer/feedback).
 The summary stays visible; Start and ⌘/Ctrl+Enter work on the last step. Back keeps
 choices, Reset returns to step one, and Advanced holds history and extra filters.
+
+Run checks on Node 22 (`nvm use`) with `.env.local` variables exported. Authenticated Playwright also needs `STUDENT_EMAIL` / `STUDENT_PASSWORD` and `ADMIN_EMAIL` / `ADMIN_PASSWORD`; keep credentials in the local environment.
+
+## Flashcards
+
+Deck size (20 selected by default) and Answer by sit beside Mode. Study lets students type or speak before flipping and self-rating; Test checks their answer. Typing remains available if speech is unsupported or denied. List view and missed-card repeats remain available.
+Tests: `src/components/flashcard-{builder,runner}.test.tsx`, `e2e/flashcard-{builder,session}.spec.ts` cover setup, bounds, empty decks, answer drafts, speech fallback, repeats and mobile/desktop flows. Run heavy checks through `Q_MIN_GB=3 Q_SLOTS=1 q-run` on the shared box.

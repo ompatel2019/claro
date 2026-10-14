@@ -561,6 +561,7 @@ export function FlashcardRunner({
         (e.metaKey || e.ctrlKey) &&
         e.key === "Enter" &&
         answer.trim() &&
+        session.config.mode === "test" &&
         !verdict &&
         !list
       ) {
@@ -578,7 +579,7 @@ export function FlashcardRunner({
       else if (k === "s" && !verdict) act(skip);
       else if (
         k === "m" &&
-        session.config.mode === "test" &&
+        session.config.answer_by !== "typing" &&
         !verdict &&
         !flipped
       )
@@ -610,6 +611,55 @@ export function FlashcardRunner({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+  const answerInput = (
+    <form
+      className="space-y-3"
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (session.config.mode === "test") act(check);
+      }}
+    >
+      <label className="grid gap-2">
+        Your answer
+        <Textarea
+          maxLength={1000}
+          value={answer}
+          disabled={busy}
+          onKeyDown={(e) => {
+            if (
+              (e.metaKey || e.ctrlKey) &&
+              e.key === "Enter" &&
+              answer.trim()
+            ) {
+              e.preventDefault();
+              if (session.config.mode === "test") act(check);
+            }
+          }}
+          onChange={(e) => setAnswer(e.target.value)}
+        />
+      </label>
+      <div className="flex gap-2">
+        {session.config.mode === "test" && (
+          <Button type="submit" disabled={busy || !answer.trim()}>
+            Check (⌘Enter)
+          </Button>
+        )}
+        {session.config.answer_by !== "typing" && (
+          <Button
+            type="button"
+            variant="outline"
+            aria-keyshortcuts="m"
+            aria-pressed={listening}
+            disabled={busy}
+            onClick={mic}
+          >
+            <Microphone />
+            {listening ? "Stop" : "Speak"}
+          </Button>
+        )}
+      </div>
+    </form>
+  );
   const ratingControls = (
     <div className="flex flex-wrap gap-2">
       {(
@@ -753,12 +803,27 @@ export function FlashcardRunner({
               flipped ? (
                 <>
                   {model}
+                  {answer.trim() && (
+                    <div>
+                      <h3 className="font-semibold">Your answer</h3>
+                      <p className="whitespace-pre-wrap">{answer}</p>
+                    </div>
+                  )}
                   {ratingControls}
                 </>
               ) : (
-                <Button disabled={busy} onClick={() => setFlipped(true)}>
-                  Flip card
-                </Button>
+                <>
+                  {answerInput}
+                  <Button
+                    disabled={busy}
+                    onClick={() => {
+                      stopSpeech();
+                      setFlipped(true);
+                    }}
+                  >
+                    Flip card
+                  </Button>
+                </>
               )
             ) : verdict ? (
               <>
@@ -814,49 +879,7 @@ export function FlashcardRunner({
               </>
             ) : (
               <>
-                <form
-                  className="space-y-3"
-                  onSubmit={(e) => {
-                    e.preventDefault();
-                    act(check);
-                  }}
-                >
-                  <label className="grid gap-2">
-                    Your answer
-                    <Textarea
-                      maxLength={1000}
-                      value={answer}
-                      disabled={busy}
-                      onKeyDown={(e) => {
-                        if (
-                          (e.metaKey || e.ctrlKey) &&
-                          e.key === "Enter" &&
-                          answer.trim()
-                        ) {
-                          e.preventDefault();
-                          act(check);
-                        }
-                      }}
-                      onChange={(e) => setAnswer(e.target.value)}
-                    />
-                  </label>
-                  <div className="flex gap-2">
-                    <Button type="submit" disabled={busy || !answer.trim()}>
-                      Check (⌘Enter)
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      aria-keyshortcuts="m"
-                      aria-pressed={listening}
-                      disabled={busy}
-                      onClick={mic}
-                    >
-                      <Microphone />
-                      {listening ? "Stop" : "Speak"}
-                    </Button>
-                  </div>
-                </form>
+                {answerInput}
                 <Button
                   variant="ghost"
                   disabled={busy}
