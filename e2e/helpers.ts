@@ -1,5 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
+import { assertTestSupabaseUrl } from "./guard";
 
 export async function expectStackedBelow(text: Locator, button: Locator) {
   await expect(text).toBeVisible();
@@ -97,7 +98,7 @@ export async function signInAdmin(page: Page) {
 export function adminClient() {
   return process.env.SUPABASE_SECRET_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL
     ? createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL,
+        assertTestSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL),
         process.env.SUPABASE_SECRET_KEY,
         { auth: { persistSession: false, autoRefreshToken: false } },
       )

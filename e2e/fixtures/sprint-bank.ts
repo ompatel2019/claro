@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { adminClient, cleanupSessions } from "../helpers";
+import { assertTestSupabaseUrl } from "../guard";
 
 /** Temporary synthetic bank: 12 MCs, 8/5/4-mark shorts and one excluded essay. */
 export async function seedSprintBank() {
@@ -100,7 +101,7 @@ export async function seedSprintBank() {
 }
 export async function sprintStudentClient() {
   const db = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    assertTestSupabaseUrl(process.env.NEXT_PUBLIC_SUPABASE_URL),
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     { auth: { persistSession: false, autoRefreshToken: false } },
   );
