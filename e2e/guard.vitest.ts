@@ -32,9 +32,9 @@ describe("assertTestSupabaseUrl", () => {
 
   it("refuses a lookalike host even when its apparent ref is listed", () => {
     vi.stubEnv("E2E_TEST_SUPABASE_REFS", "x");
-    expect(() => assertTestSupabaseUrl("https://x.supabase.co.evil.com")).toThrow(
-      "refusing to run against x.supabase.co.evil.com",
-    );
+    expect(() =>
+      assertTestSupabaseUrl("https://x.supabase.co.evil.com"),
+    ).toThrow("refusing to run against x.supabase.co.evil.com");
   });
 
   it("throws when the URL is unset", () => {
