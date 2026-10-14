@@ -179,3 +179,4 @@ Coverage: parser, shared renderer, sprint runner, owned-session loader and mark 
 Vitest suites; `e2e/mcq-explanation.spec.ts` exercises real marking, key withholding,
 resume, correct/wrong/unanswered results and mobile/desktop layouts with temporary
 synthetic students/questions. Run with the same queue and env settings above.
+E2E fixtures refuse non-local Supabase URLs unless the project ref is listed in `E2E_TEST_SUPABASE_REFS` (see `e2e/guard.ts`).

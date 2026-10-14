@@ -1,7 +1,11 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { readMcqExplanation, type McqExplanation } from "@/lib/mcq-explanation";
+import {
+  readMcqExplanation,
+  withoutCorrectOptionNote,
+  type McqExplanation,
+} from "@/lib/mcq-explanation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { ChevronDown, ChevronUp, Close, Plus } from "@/components/icons";
@@ -112,6 +116,14 @@ export function QuestionEditor({
     }));
     setDirty(true);
   };
+  const setExplanation = (
+    explanation: McqExplanation,
+    correctIndex = form.correct_index,
+  ) => {
+    const next = withoutCorrectOptionNote(explanation, correctIndex);
+    setMcExplanation(next);
+    set("explanation", JSON.stringify(next));
+  };
   const setCriteria = (criteria: Criterion[]) => {
     setCriteriaTouched(true);
     set("criteria", criteria);
@@ -209,7 +221,15 @@ export function QuestionEditor({
       setSummary(["You're offline. We'll save when you're back."]);
       return;
     }
-    const parsed = questionSchema.safeParse(form);
+    const parsed = questionSchema.safeParse({
+      ...form,
+      explanation:
+        mc && mcExplanation
+          ? JSON.stringify(
+              withoutCorrectOptionNote(mcExplanation, form.correct_index),
+            )
+          : form.explanation,
+    });
     const next: Record<string, string> = {};
     if (!parsed.success)
       for (const issue of parsed.error.issues)
@@ -487,9 +507,12 @@ export function QuestionEditor({
                 value={
                   form.correct_index == null ? "" : String(form.correct_index)
                 }
-                onValueChange={(v) =>
-                  set("correct_index", v === "" ? null : Number(v))
-                }
+                onValueChange={(v) => {
+                  const correctIndex = v === "" ? null : Number(v);
+                  set("correct_index", correctIndex);
+                  if (mcExplanation)
+                    setExplanation(mcExplanation, correctIndex);
+                }}
               >
                 {LETTERS.map((letter, i) => (
                   <div key={letter} className="flex items-center gap-3">
@@ -548,8 +571,7 @@ export function QuestionEditor({
                             ...mcExplanation,
                             [key]: e.target.value,
                           };
-                          setMcExplanation(next);
-                          set("explanation", JSON.stringify(next));
+                          setExplanation(next);
                         }}
                       />
                     </Field>
@@ -575,8 +597,7 @@ export function QuestionEditor({
                                 [letter]: e.target.value,
                               },
                             };
-                            setMcExplanation(next);
-                            set("explanation", JSON.stringify(next));
+                            setExplanation(next);
                           }}
                         />
                       </Field>
@@ -612,8 +633,7 @@ export function QuestionEditor({
                         why_correct: form.explanation ?? "",
                         distractors: {},
                       };
-                      setMcExplanation(next);
-                      set("explanation", JSON.stringify(next));
+                      setExplanation(next);
                     }}
                   >
                     Use concept-first explanation

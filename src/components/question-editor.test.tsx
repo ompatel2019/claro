@@ -255,6 +255,48 @@ it("edits structured MC explanations through named fields and serialises the sam
     distractors: { ...structuredMc.distractors, A: "New note." },
   });
 });
+it("publishes after clearing a distractor note and making that option correct", async () => {
+  mocks.save.mockResolvedValueOnce({
+    id: loaded.question.id,
+    updated_at: "2026-10-14T00:00:00Z",
+  });
+  mountMc(JSON.stringify(structuredMc));
+  fireEvent.change(screen.getByLabelText("Why option A is wrong"), {
+    target: { value: "" },
+  });
+  fireEvent.click(screen.getByRole("radio", { name: "A is correct" }));
+  expect(
+    screen.queryByLabelText("Why option A is wrong"),
+  ).not.toBeInTheDocument();
+  fireEvent.change(screen.getByLabelText("Why option C is wrong"), {
+    target: { value: "C note." },
+  });
+  fireEvent.click(screen.getByRole("combobox", { name: "Status" }));
+  const live = await screen.findByRole("option", { name: "Live" });
+  fireEvent.pointerDown(live, { pointerType: "mouse" });
+  fireEvent.click(live);
+  fireEvent.click(screen.getByRole("button", { name: /^Save$/ }));
+  await screen.findByText("Saved · ⌘S");
+  expect(mocks.save).toHaveBeenCalledTimes(1);
+  const saved = mocks.save.mock.calls[0][0];
+  expect(saved.status).toBe("live");
+  expect(saved.correct_index).toBe(0);
+  expect(JSON.parse(saved.explanation)).toEqual({
+    ...structuredMc,
+    distractors: { B: "Subsidy.", C: "C note.", D: "Quota." },
+  });
+});
+it("drops an existing correct-option note when serialising a saved explanation", async () => {
+  mountMc(
+    JSON.stringify({
+      ...structuredMc,
+      distractors: { ...structuredMc.distractors, C: "Stale note." },
+    }),
+  );
+  fireEvent.keyDown(window, { key: "s", metaKey: true });
+  await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(1));
+  expect(JSON.parse(mocks.save.mock.calls[0][0].explanation)).toEqual(structuredMc);
+});
 it("converts legacy prose without losing it and restores incomplete drafts as fields", () => {
   mountMc("Existing reasoning.");
   expect(screen.getByLabelText("Explanation")).toHaveValue(

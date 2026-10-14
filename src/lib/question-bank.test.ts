@@ -175,9 +175,19 @@ it("requires complete concept-first explanations to publish while accepting lega
   expect(
     publishProblems({ ...mc, explanation: JSON.stringify(structured) }),
   ).toEqual([]);
+  expect(
+    publishProblems({
+      ...mc,
+      explanation: JSON.stringify({
+        ...structured,
+        distractors: { ...structured.distractors, C: "" },
+      }),
+    }),
+  ).toEqual([]);
   for (const explanation of [
     { ...structured, concept: "" },
     { ...structured, distractors: { A: "A note." } },
+    { ...structured, distractors: { ...structured.distractors, A: " " } },
     { concept: "Incomplete" },
   ]) {
     expect(

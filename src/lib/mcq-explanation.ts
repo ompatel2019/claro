@@ -14,14 +14,19 @@ export const McqExplanationDraftSchema = z.object({
 export const McqExplanationSchema = McqExplanationDraftSchema.extend({
   concept: paragraph.min(1),
   why_correct: paragraph.min(1),
-  distractors: z.object({
-    A: paragraph.min(1).optional(),
-    B: paragraph.min(1).optional(),
-    C: paragraph.min(1).optional(),
-    D: paragraph.min(1).optional(),
-  }),
+  // Publishing checks note completeness against the question's correct index.
 });
 export type McqExplanation = z.infer<typeof McqExplanationSchema>;
+
+export function withoutCorrectOptionNote(
+  explanation: McqExplanation,
+  correctIndex: number | null,
+): McqExplanation {
+  const distractors = { ...explanation.distractors };
+  if (correctIndex !== null)
+    delete distractors["ABCD"[correctIndex] as keyof typeof distractors];
+  return { ...explanation, distractors };
+}
 
 /** Structured explanations live as JSON in the existing text column. */
 export function readMcqExplanation(
