@@ -36,6 +36,7 @@ it.each([
   [{ ...input[0], question: "unknown" }, /Unknown question/],
   [{ ...input[0], tutor_mark: question.marks + 1 }, /exceeds maximum/],
   [{ ...input[0], tutor_mark: -1 }, /too_small/],
+  [{ ...input[0], tutor_mark: 0.5 }, /invalid_type/],
   [{ ...input[0], tutor_mark: NaN }, /invalid_type/],
   [{ ...input[0], tutor_mark: "2" }, /invalid_type/],
   [{ ...input[0], answer_text: " \n " }, /too_small/],
@@ -57,8 +58,85 @@ it("rejects duplicate hashes, repeated scripts and normalised benchmark leakage"
   expect(() => prepare([])).toThrow();
 });
 
-it("keeps fractional human marks in calibration only, with zero having no band", () => {
-  const rows = prepare([{ ...input[0], tutor_mark: 0.5 }, ...input.slice(1)]);
-  expect(rows[0].split).toBe("example");
+it("keeps zero marks with no band", () => {
   expect(prepare([input[0]])[0].band).toBeNull();
+});
+
+it("redacts all comment prose without mutating the snapshot", () => {
+  const identifyingText =
+    "Priya Sharma, li, 李明, priya@example.com, student S-123 and 550e8400-e29b-41d4-a716-446655440000";
+  const snapshot = [
+    {
+      ...input[0],
+      accepted_tutor_comments: [
+        {
+          author: "tutor",
+          kind: "note",
+          quote: identifyingText,
+          body: identifyingText,
+        },
+        {
+          author: "ai",
+          kind: "strength",
+          quote: "",
+          body: "Clear explanation.",
+        },
+      ],
+      rejected_ai_comments: [
+        { kind: "improvement", quote: identifyingText, body: identifyingText },
+        { kind: null, quote: "", body: "More detail." },
+      ],
+    },
+  ];
+  const before = structuredClone(snapshot);
+  const [row] = prepare(snapshot);
+  expect(row.accepted_tutor_comments).toEqual([
+    { author: "tutor", kind: "note", quote: "[redacted]", body: "[redacted]" },
+    { author: "ai", kind: "strength", quote: "[redacted]", body: "[redacted]" },
+  ]);
+  expect(row.rejected_ai_comments).toEqual([
+    { kind: "improvement", quote: "[redacted]", body: "[redacted]" },
+    { kind: null, quote: "[redacted]", body: "[redacted]" },
+  ]);
+  expect(snapshot).toEqual(before);
+});
+
+it.each(["accepted_tutor_comments", "rejected_ai_comments"])(
+  "rejects malformed or identifying metadata in %s",
+  (field) => {
+    const comment = {
+      ...(field === "accepted_tutor_comments" ? { author: "tutor" } : {}),
+      kind: "strength",
+      quote: "",
+      body: "Clear explanation.",
+    };
+    for (const invalid of [
+      null,
+      "Priya Sharma",
+      [],
+      {},
+      { ...comment, kind: "Priya Sharma" },
+      { ...comment, author: "priya@example.com" },
+      { ...comment, student_id: "S-123" },
+      { ...comment, quote: { name: "Priya Sharma" } },
+      { ...comment, body: ["priya@example.com"] },
+      { ...comment, body: undefined },
+    ]) {
+      expect(() => prepare([{ ...input[0], [field]: [invalid] }])).toThrow();
+    }
+    expect(() => prepare([{ ...input[0], [field]: comment }])).toThrow();
+  },
+);
+
+it("requires an accepted comment author from the export's fixed metadata", () => {
+  expect(() =>
+    prepare([
+      {
+        ...input[0],
+        accepted_tutor_comments: [
+          { kind: "note", quote: "", body: "Feedback" },
+        ],
+      },
+    ]),
+  ).toThrow();
 });

@@ -2,15 +2,30 @@ import { z } from "zod";
 import type { MarkableQuestion } from "@/lib/marking/grade";
 import { splitExamples } from "./split";
 
+// The export has no name roster. Pattern matching cannot reliably identify names
+// or arbitrary student IDs, so retain only fixed metadata and redact all prose.
+const RedactedText = z.string().transform(() => "[redacted]");
+const CommentSchema = z.strictObject({
+  kind: z.enum(["note", "strength", "improvement"]),
+  quote: RedactedText,
+  body: RedactedText,
+});
+const AcceptedCommentSchema = CommentSchema.extend({
+  author: z.enum(["ai", "tutor"]),
+});
+const RejectedCommentSchema = CommentSchema.extend({
+  kind: CommentSchema.shape.kind.nullable(),
+});
+
 const SnapshotSchema = z
   .array(
     z.object({
       question: z.string().min(1),
       source_hash: z.string().regex(/^[a-f0-9]{32}$/),
       answer_text: z.string().trim().min(1),
-      tutor_mark: z.number().finite().nonnegative(),
-      accepted_tutor_comments: z.array(z.unknown()),
-      rejected_ai_comments: z.array(z.unknown()),
+      tutor_mark: z.number().int().finite().nonnegative(),
+      accepted_tutor_comments: z.array(AcceptedCommentSchema),
+      rejected_ai_comments: z.array(RejectedCommentSchema),
     }),
   )
   .min(1);
