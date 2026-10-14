@@ -39,6 +39,30 @@ npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts 
 
 Use the same frozen set and item selection for the separately saved A0 current-engine baseline. `--label` records provenance; it does not switch engine versions. The A0 engine must also receive the same final-row and leave-self-out exclusions. No baseline-switch CLI or bare-prompt experiment arm is supplied here. Reserve final for the later release decision; do not use it to tune the candidate.
 
+### Quota preview (free, local; no database or model calls)
+
+The first pass keeps band examples. Quota examples feed the check and reconcile passes. The second pass now waits for the first pass to obtain its mark, which adds latency compared with parallel passes.
+
+```bash
+npx --no-install tsx src/lib/ai/eval/quota-preview.mts --file=path/to/preview.json
+```
+
+The local JSON file contains `question` (`marks` and `criteria`), `answer`, `firstMark` (the first-pass mark, not the tutor target), and `pool` (rows with `answer_text`, `tutor_mark`, and optional `accepted_tutor_comments`). Supply the eligible pool in stable ID order, after excluding test/final rows and the dev answer itself as appropriate; the preview does not fetch or filter database rows. It prints the examples selected by the production `pickQuotaExamples` function, including rationales, with band fallback for fewer than ten eligible whole-mark rows. For example:
+
+```json
+{
+  "question": {
+    "marks": 2,
+    "criteria": [{ "min": 1, "max": 2, "descriptor": "Explains the link" }]
+  },
+  "answer": "Higher demand raises prices.",
+  "firstMark": 1,
+  "pool": [{ "answer_text": "Demand rises.", "tutor_mark": 1 }]
+}
+```
+
+Use local synthetic or authorised data and keep answer text and preview output out of committed files.
+
 ### Compare saved runs (free, local)
 
 ```bash
@@ -54,7 +78,7 @@ Default section is Held-out. Optional `--json=path` saves an aggregate report. R
 npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/feedback/run.mts --dry-run --limit=200 --seed=20261014
 ```
 
-`--live` additionally calls the feedback judge and checks spend before each call; it requires separate authorisation. For a free offline verification, use `feedback/run.test.ts`: it injects synthetic rows and mocked model/spend functions, and rejects accidental admin/model imports. No offline JSON-loader CLI is provided. The dry-run prints aggregate counts and a cost estimate, not comment text or row IDs.
+`--live` additionally calls the feedback judge and checks spend before each call; it requires separate authorisation and refuses unless `AIRO5_FEEDBACK_LIVE_OK=1` is set, before any database read or model call. For a free offline verification, use `feedback/run.test.ts`: it injects synthetic rows and mocked model/spend functions, and rejects accidental admin/model imports. No offline JSON-loader CLI is provided. The dry-run prints aggregate counts and a cost estimate, not comment text or row IDs.
 
 ### Re-score saved pass marks (free, local)
 
