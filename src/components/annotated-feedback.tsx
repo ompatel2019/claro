@@ -398,7 +398,11 @@ export function AnnotatedFeedback({
   const margin = useRef<HTMLDivElement>(null);
 
   const max = row.max_marks ?? row.marks;
-  const showMark = ["marked", "in_review", "reviewed"].includes(state);
+  const lowConfidence = row.feedback?.confidence === "low";
+  const showMark =
+    !lowConfidence &&
+    row.mark != null &&
+    ["marked", "in_review", "reviewed"].includes(state);
   const band = bandOf(row.criteria, row.band);
   const next =
     edit?.nextMark ??
@@ -728,6 +732,11 @@ export function AnnotatedFeedback({
             )}
             {pill && <StatusPill pill={pill} />}
           </div>
+          {lowConfidence && (
+            <p>
+              {String(row.feedback?.note ?? "We can't mark this reliably.")}
+            </p>
+          )}
           {!edit &&
             state === "in_review" &&
             row.review?.reason !== "student_dispute" && (

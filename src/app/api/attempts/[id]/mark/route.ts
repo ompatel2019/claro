@@ -60,6 +60,18 @@ export async function POST(
   }
   if (!session || !["sprint", "single"].includes(session.kind))
     return Response.json({ error: "Attempt not found" }, { status: 404 });
+  if (
+    session.kind === "single" &&
+    !attempt.question_id &&
+    process.env.ENABLE_OWN_QUESTION_MARKING !== "true"
+  )
+    return Response.json(
+      {
+        error:
+          "Own-question marking is currently unavailable. Choose a question from the Claro bank.",
+      },
+      { status: 403 },
+    );
   const finished = Boolean(session.finished_at);
   if (session.kind === "single") {
     if (!finished)

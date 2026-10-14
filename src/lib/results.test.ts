@@ -181,3 +181,14 @@ it("excludes internal uncertainty from student results payloads", () => {
   });
   expect(stored.feedback).toHaveProperty("flags");
 });
+
+it("excludes unscored and low-confidence own checks from totals and below-full-marks selection", () => {
+  const rows = [
+    row({ mark: null, feedback: { confidence: "low" } }),
+    row({ mark: 0, feedback: { confidence: "low" } }),
+    row({ mark: null }),
+    row({ mark: 3 }),
+  ];
+  expect(kpis(rows).score).toEqual({ mark: 3, max: 4 });
+  expect(firstBelow(rows)).toBe(3);
+});

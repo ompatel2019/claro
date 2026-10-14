@@ -106,11 +106,15 @@ function client(rows: unknown[], signedIn = true) {
 }
 
 beforeEach(() => {
+  vi.stubEnv("ENABLE_OWN_QUESTION_MARKING", "true");
   vi.resetAllMocks();
   vi.mocked(admin().rpc).mockResolvedValue({ data: 0, error: null } as never);
   vi.spyOn(console, "error").mockImplementation(() => {});
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 
 it.each([mark, transcribe, flashcard, finish])(
   "requires authentication for handler %#",

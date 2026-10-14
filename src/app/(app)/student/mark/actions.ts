@@ -27,6 +27,13 @@ async function create(input: unknown) {
   if (!user) throw new Error("Your session expired. Sign in to keep working.");
   const request = requestSchema.parse(input);
   if (
+    request.source === "own" &&
+    process.env.ENABLE_OWN_QUESTION_MARKING !== "true"
+  )
+    throw new Error(
+      "Own-question marking is currently unavailable. Choose a question from the Claro bank.",
+    );
+  if (
     request.source === "bank" &&
     !(await bankQuestions(db)).some((q) => q.id === request.question_id)
   )

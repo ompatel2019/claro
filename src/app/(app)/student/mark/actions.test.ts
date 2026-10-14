@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/utils/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/utils/supabase/admin", () => ({ admin: vi.fn() }));
@@ -55,7 +55,9 @@ function from(table: string) {
   };
   return chain;
 }
+afterEach(() => vi.unstubAllEnvs());
 beforeEach(() => {
+  vi.stubEnv("ENABLE_OWN_QUESTION_MARKING", "true");
   vi.clearAllMocks();
   sessions.clear();
   attempts.length = 0;
@@ -212,5 +214,19 @@ it.each([
     });
     expect(admin).not.toHaveBeenCalled();
     expect(read.eq).toHaveBeenCalledWith("user_id", "u");
+  },
+);
+
+it.each([undefined, "false", "TRUE"])(
+  "rejects own checks when the flag is %s before database writes",
+  async (flag) => {
+    vi.stubEnv("ENABLE_OWN_QUESTION_MARKING", flag);
+    expect(await createCheck({ source: "own", question })).toEqual({
+      error:
+        "Own-question marking is currently unavailable. Choose a question from the Claro bank.",
+    });
+    expect(admin).not.toHaveBeenCalled();
+    expect(sessions.size).toBe(0);
+    expect(attempts).toHaveLength(0);
   },
 );

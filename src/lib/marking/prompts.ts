@@ -53,6 +53,13 @@ export function gradeMessages(
   check = false,
   examples: MarkedExample[] = [],
 ): Message[] {
+  const restrictions = q.restrictions?.trim();
+  const restrictionText = restrictions
+    ? `\nMark restrictions (binding):\nApply every restriction and cap below. They override band selection and the mark otherwise earned. The depth-calibration-only wording for guideline notes and sample answers does not apply to these restrictions.\n${restrictions}`
+    : "";
+  const restrictionInstructions = restrictions
+    ? "\nApply the supplied Mark restrictions (binding) to band selection and the final mark, overriding the band otherwise earned. These restrictions and caps are mandatory; the calibration-only wording does not apply to them."
+    : "";
   const checklist = Object.hasOwn(checklists, q.id)
     ? checklists[q.id]
     : undefined;
@@ -76,7 +83,7 @@ Full marks are reachable without matching the sample answer wording. A different
 Respect countable demands such as TWO and the directive verb using NESA glossary meanings: identify means recognise and name; outline means sketch the main features; describe means provide characteristics and features; explain means relate cause and effect and make relationships evident; analyse means identify components and their relationships and draw out implications; assess means make a judgement of value, quality, outcomes or results; evaluate means judge against criteria; discuss means identify issues and provide points for and/or against; compare means show similarities and differences; distinguish means recognise differences.
 The sample answer and guideline notes are depth calibration only, never an extra checklist of requirements. Mark as strictly as an experienced HSC marker: the top band of a multi-mark question needs a developed answer with the depth of the sample answer (in any valid wording); a single brief sentence rarely satisfies the top band of a 3+ mark question. When the top band demands explain or analyse, it needs the mechanism linking cause and effect made explicit and the main effects covered; an answer that states one effect, or effects without the mechanism, describes rather than explains and belongs in the band below. In extended responses, calibrate to real HSC distributions: a coherent answer that names relevant factors and examples but explains them in general terms, without statistics or data woven into the analysis, belongs in the middle band (9-12). The second-top band needs relevant economic information such as data, trends and specific contemporary evidence applied to explain how each factor works; the top band needs that evidence and theory integrated throughout a sustained, cohesive response. Naming examples (an agreement, a firm, a year) is not the same as applying economic information.
 Before awarding a band, test EVERY element its descriptor names (e.g. both exports and imports, with an example, dimensions and trends, supported by data, the number of points demanded) against the student's own words, quoting the words that satisfy each in bands_considered. An element that is missing, generic, merely implied or inaccurate is not satisfied, so the band below applies. An example or evidence means something specific and real (a named policy, country, period or figure) applied to the point, not a hypothetical or textbook illustration. Distinguish and compare need an explicit contrast between the two things, not two separate definitions. A factual error in a key idea rules out the top band. When the evidence leaves you between two bands, award the lower one and say in why_not_higher exactly what would lift it.
-${guard}${checklistInstructions}
+${guard}${checklistInstructions}${restrictionInstructions}
 ${
   check
     ? `Return only ${checklist ? "checklist, " : ""}analysis (strengths, imprecise and missing ideas), bands_considered with evidence, band_selected, justification quoting the student's words, and mark, in schema order. Separate strengths, imprecision and missing ideas before evaluating bands. Keep every string concise and use Australian English.`
@@ -87,7 +94,7 @@ ${COMMENT_VOICE_EXAMPLES.map((example) => `- ${example}`).join("\n")}`
     },
     {
       role: "user",
-      content: `Source: ${q.source}\nType: ${q.type}\nMarks: ${q.marks}\nQuestion (including directive verb): ${q.stem}\nStimulus: ${q.stimulus ?? ""}\nOfficial marking guideline:\n${bands(q.criteria)}\nGuideline notes (depth calibration only): ${q.guideline_notes ?? ""}\nSample answer (depth calibration only): ${q.sample_answer ?? ""}${anchors(examples)}${checklistText}\n<student_answer>\n${answer}\n</student_answer>`,
+      content: `Source: ${q.source}\nType: ${q.type}\nMarks: ${q.marks}\nQuestion (including directive verb): ${q.stem}\nStimulus: ${q.stimulus ?? ""}\nOfficial marking guideline:\n${bands(q.criteria)}${restrictionText}\nGuideline notes (depth calibration only): ${q.guideline_notes ?? ""}\nSample answer (depth calibration only): ${q.sample_answer ?? ""}${anchors(examples)}${checklistText}\n<student_answer>\n${answer}\n</student_answer>`,
     },
   ];
 }

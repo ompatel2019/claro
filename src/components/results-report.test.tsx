@@ -1,4 +1,4 @@
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { OverallFeedback, ResultsAnswers } from "./results-report";
 import type { ReviewRow } from "@/lib/feedback";
@@ -146,3 +146,51 @@ it.each([
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   },
 );
+
+it.each([
+  [{ confidence: "low" }, "Needs review"],
+  [{}, "No mark available"],
+])("labels terminal unscored results instead of Pending", (feedback, label) => {
+  const row: ReviewRow = {
+    attempt_id: "unmarkable",
+    position: 1,
+    question_id: null,
+    type: "short",
+    marks: 6,
+    max_marks: 6,
+    mark: null,
+    status: "marked",
+    check_status: "skipped",
+    feedback,
+    stem: "Explain inflation.",
+    source: "Own question",
+    topic_id: null,
+    image_paths: [],
+    review: null,
+    stimulus: null,
+    options: null,
+    year: null,
+    choice_index: null,
+    correct_index: null,
+    answer_text: null,
+    transcript: null,
+    flagged: false,
+    band: null,
+    criteria: null,
+    sample_answer: null,
+    explanation: null,
+  };
+  render(
+    <ResultsAnswers
+      rows={[row]}
+      id="single"
+      name={() => ""}
+      photos={new Map()}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+  expect(screen.getByRole("table", { name: "Questions" })).toHaveTextContent(
+    label,
+  );
+  expect(screen.queryByText("Pending")).not.toBeInTheDocument();
+});

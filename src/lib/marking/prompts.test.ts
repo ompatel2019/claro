@@ -14,6 +14,7 @@ import {
   transcribeMessages,
 } from "./prompts";
 import type { MarkableQuestion } from "./grade";
+import priorMessages from "./prompts-baseline.json";
 
 const q: MarkableQuestion = {
   id: "q1",
@@ -29,6 +30,59 @@ const q: MarkableQuestion = {
   sample_answer: "Sample",
   source: "HSC",
 };
+
+it.each([false, true])(
+  "keeps unrestricted prompts byte-identical to the prior behaviour (check=%s)",
+  (check) => {
+    // Literal pre-change output, without snapshots or hashes.
+    const expected = priorMessages.map((message) => ({ ...message }));
+    if (check)
+      expected[0].content =
+        expected[0].content.split("Return the full JSON")[0] +
+        "Return only analysis (strengths, imprecise and missing ideas), bands_considered with evidence, band_selected, justification quoting the student's words, and mark, in schema order. Separate strengths, imprecision and missing ideas before evaluating bands. Keep every string concise and use Australian English.";
+    for (const question of [
+      q,
+      { ...q, restrictions: undefined },
+      { ...q, restrictions: "" },
+      { ...q, restrictions: "  \n " },
+    ]) {
+      const messages = gradeMessages(question, "Answer", check);
+      expect(messages).toEqual(expected);
+      expect(JSON.stringify(messages)).not.toContain("Mark restrictions");
+    }
+  },
+);
+
+it.each([false, true])(
+  "renders restrictions as binding outside calibration notes (check=%s)",
+  (check) => {
+    const restrictions =
+      "3 marks maximum if only one mechanism is explained.\nWithout evidence, cap at 2.";
+    const question = { ...q, restrictions };
+    const messages = gradeMessages(question, "Answer", check);
+    const system = messages[0].content as string;
+    const user = messages[1].content as string;
+    expect(system).toContain("restrictions and caps are mandatory");
+    expect(system).toContain("overriding the band otherwise earned");
+    expect(system).toContain("calibration-only wording does not apply to them");
+    expect(user).toContain("Mark restrictions (binding):");
+    expect(user).toContain("Apply every restriction and cap below.");
+    expect(user).toContain(
+      "They override band selection and the mark otherwise earned.",
+    );
+    expect(user).toContain("does not apply to these restrictions.");
+    expect(user).toContain(
+      `${restrictions}\nGuideline notes (depth calibration only): Consider demand`,
+    );
+    expect(user.indexOf("Mark restrictions (binding):")).toBeLessThan(
+      user.indexOf("Guideline notes (depth calibration only):"),
+    );
+    const assessment = { band_selected: "x", mark: 3, justification: "" };
+    expect(
+      reconcileMessages(question, "Answer", assessment, assessment).slice(0, 2),
+    ).toEqual(gradeMessages(question, "Answer", true));
+  },
+);
 
 it("keeps prompts unchanged for unknown IDs, including object prototype names", () => {
   for (const id of ["unknown-question", "toString", "constructor"]) {

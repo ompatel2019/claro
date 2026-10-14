@@ -112,6 +112,7 @@ function spendClient(options: { fail?: string; count?: number } = {}) {
           ? { id: "fake-student-a", full_name: "Student A" }
           : table === "attempts"
             ? {
+                mark: 1,
                 marked_at: "2026-10-09T02:30:00Z",
                 question_id: null,
                 question: null,
@@ -200,7 +201,7 @@ it("filters custom attempt dates server-side while preserving fixed recent usage
   const attempts = queries.find((q) => q.table === "attempts")!.query;
   expect(attempts.eq).toHaveBeenCalledWith("status", "marked");
   expect(attempts.select).toHaveBeenCalledWith(
-    "id,marked_at,max_marks,question_id,note:feedback->>note,question:questions(type,marks)",
+    "id,mark,marked_at,max_marks,question_id,note:feedback->>note,question:questions(type,marks)",
   );
   expect(attempts.gte).toHaveBeenCalledWith(
     "marked_at",

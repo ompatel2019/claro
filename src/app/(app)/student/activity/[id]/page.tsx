@@ -167,7 +167,7 @@ export default async function Page({
           <p className="text-sm font-semibold">
             {config.question.criteria_text
               ? "Your supplied guidelines"
-              : "Marked without official guidelines"}
+              : "No marking guidelines supplied"}
           </p>
           {config.question.criteria_text ? (
             <FeedbackDetails name="guidelines" title="Marking guidelines">
@@ -175,8 +175,7 @@ export default async function Page({
             </FeedbackDetails>
           ) : (
             <p className="text-muted-foreground text-sm">
-              This mark is an estimate against the directive verb and the marks
-              available.
+              We can’t give a reliable mark without clear marking guidelines.
             </p>
           )}
         </Card>

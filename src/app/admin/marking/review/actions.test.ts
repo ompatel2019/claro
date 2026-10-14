@@ -547,3 +547,37 @@ it("mark manually opens a spot check for a failed attempt, reusing an open one",
     "redirect:/admin/marking/review?tab=failed&notice=",
   );
 });
+
+it.each([0, 4])(
+  "clears unreliable feedback when an admin assigns %s marks",
+  async (mark) => {
+    const feedback = {
+      confidence: "low",
+      unreliable_reason: "missing",
+      note: "Add reliable criteria.",
+      justification: "Stored evidence",
+      comments: [],
+    };
+    vi.mocked(loadReview).mockResolvedValue(
+      loaded({}, { question_id: null, mark: null, feedback }) as never,
+    );
+    const attempt = query({ id: attemptId });
+    service(query([{ id: reviewId }]), attempt);
+    client();
+    vi.mocked(adjacentReview).mockResolvedValue({ id: "next-review" });
+    await expect(
+      resolveReview(
+        reviewId,
+        null,
+        form({ mark: String(mark), comments: "[]" }),
+      ),
+    ).rejects.toThrow("redirect:");
+    const saved = attempt.update.mock.calls[0][0];
+    expect(saved.mark).toBe(mark);
+    expect(saved.feedback).toMatchObject({ justification: "Stored evidence" });
+    expect(saved.feedback).not.toHaveProperty("confidence");
+    expect(saved.feedback).not.toHaveProperty("unreliable_reason");
+    expect(saved.feedback).not.toHaveProperty("note");
+    expect(feedback.confidence).toBe("low");
+  },
+);

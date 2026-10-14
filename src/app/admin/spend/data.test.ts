@@ -23,6 +23,7 @@ const students = [
   { id: "fake-student-b", full_name: "Student B" },
 ];
 const attempt = (extra: Partial<MarkedAttempt> = {}): MarkedAttempt => ({
+  mark: 1,
   marked_at: "2026-10-09T02:30:00Z",
   note: null,
   question_id: "fake-question",
@@ -429,4 +430,24 @@ it("shows zero average for a linked free call and no average for untracked answe
     trackedAnswers: 0,
     average: null,
   });
+});
+
+it("excludes null-mark results from marked-answer averages while retaining costs", () => {
+  const result = computeSpend(
+    { month: 0, all: 0 },
+    [usage({ attempt_id: "unmarkable", task: "transcribe_answer", usd: 0.03 })],
+    [attempt({ id: "unmarkable", mark: null, max_marks: 4 })],
+    students,
+    "month",
+    now,
+  );
+  expect(
+    result.byMarkValue.every(
+      (bucket) =>
+        bucket.answers === 0 &&
+        bucket.trackedAnswers === 0 &&
+        bucket.average === null,
+    ),
+  ).toBe(true);
+  expect(result.unattributedWrittenUsd).toBeCloseTo(0.03);
 });

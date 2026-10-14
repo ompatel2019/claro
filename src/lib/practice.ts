@@ -110,8 +110,8 @@ export function timer(seconds: number) {
   return s >= 3600 ? `${Math.floor(s / 3600)}:${clock}` : clock;
 }
 export function percentage(score: number | null, max: number | null) {
-  return max
-    ? `${Math.round((Number(score ?? 0) / max) * 100)}%`
+  return max && score != null
+    ? `${Math.round((score / max) * 100)}%`
     : "No score yet";
 }
 /** Score colour rule: ≥75% success, 50–74% warning, <50% destructive. */
