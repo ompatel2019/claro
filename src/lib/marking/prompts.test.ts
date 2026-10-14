@@ -271,3 +271,31 @@ it("adds tutor-marked band anchors before the student answer and nowhere else", 
     gradeMessages(q, "Answer", true, anchors),
   );
 });
+
+it("renders accepted tutor comments as bounded tutor rationales", () => {
+  const examples = [
+    {
+      answer_text: "Demand rises",
+      tutor_mark: 2,
+      accepted_tutor_comments: [
+        { body: " Clear cause. " },
+        { body: "Add the mechanism." },
+        null,
+        { body: 7 },
+      ],
+    },
+  ];
+  const user = gradeMessages(q, "Answer", true, examples)[1].content;
+  expect(user).toContain(
+    "<tutor_rationale>\nClear cause.\nAdd the mechanism.\n</tutor_rationale>",
+  );
+  const long = gradeMessages(q, "Answer", false, [
+    { ...examples[0], accepted_tutor_comments: [{ body: "x".repeat(1300) }] },
+  ])[1].content as string;
+  expect(long).toContain(`${"x".repeat(1199)}…\n</tutor_rationale>`);
+  expect(
+    gradeMessages(q, "Answer", false, [
+      { ...examples[0], accepted_tutor_comments: null },
+    ])[1].content,
+  ).not.toContain("tutor_rationale");
+});

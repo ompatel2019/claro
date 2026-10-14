@@ -5,14 +5,17 @@ import type { MarkableQuestion } from "./grade";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/ai/openai", () => ({ callJson: vi.fn() }));
-vi.mock("./examples", () => ({ bandExamples: vi.fn() }));
+vi.mock("./examples", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("./examples")>()),
+  examplePool: vi.fn(),
+}));
 vi.mock("@/utils/supabase/admin", () => {
   const client = { from: vi.fn() };
   return { admin: () => client };
 });
 
 import { callJson } from "@/lib/ai/openai";
-import { bandExamples } from "./examples";
+import { examplePool } from "./examples";
 import { admin } from "@/utils/supabase/admin";
 import {
   AlreadyMarking,
@@ -101,7 +104,7 @@ const mockedCall = vi.mocked(callJson);
 beforeEach(() => {
   vi.resetAllMocks();
   mockedCall.mockResolvedValue(grade);
-  vi.mocked(bandExamples).mockResolvedValue([]);
+  vi.mocked(examplePool).mockResolvedValue([]);
 });
 
 it("returns validated grade on the first reply and anchors quotes", async () => {
@@ -319,7 +322,7 @@ it("starts both blind passes before either resolves", async () => {
 });
 
 it("puts the question's band anchors in the grader, blind check and reconciler prompts", async () => {
-  vi.mocked(bandExamples).mockResolvedValue([
+  vi.mocked(examplePool).mockResolvedValue([
     { answer_text: "Anchor four", tutor_mark: 4 },
   ]);
   mockedCall
@@ -327,7 +330,7 @@ it("puts the question's band anchors in the grader, blind check and reconciler p
     .mockResolvedValueOnce(checkGrade(2))
     .mockResolvedValueOnce(checkGrade(4));
   await markWritten(q, "prices rise", "user");
-  expect(bandExamples).toHaveBeenCalledWith(q);
+  expect(examplePool).toHaveBeenCalledWith(q);
   expect(mockedCall).toHaveBeenCalledTimes(3);
   for (const [{ messages }] of mockedCall.mock.calls)
     expect(messages[1].content).toContain(
@@ -1079,7 +1082,47 @@ it("passes eval exclusions to retrieval for all marking passes", async () => {
     "locked-final",
     "dev-self",
   ]);
-  expect(bandExamples).toHaveBeenCalledWith(q, ["locked-final", "dev-self"]);
+  expect(examplePool).toHaveBeenCalledWith(q, ["locked-final", "dev-self"]);
+});
+
+it("waits for the first mark before retrieving quotas for check and reconciliation", async () => {
+  const examples = Array.from({ length: 12 }, (_, i) => ({
+    tutor_mark: i % 5,
+    answer_text: i >= 6 ? `prices rise ${i}` : `unrelated ${i}`,
+    accepted_tutor_comments: [{ body: `Rationale ${i}` }],
+  }));
+  vi.mocked(examplePool).mockResolvedValue(examples);
+  let resolveFirst!: (value: typeof grade) => void;
+  mockedCall
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        }),
+    )
+    .mockResolvedValueOnce(checkGrade(2))
+    .mockResolvedValueOnce(checkGrade(4));
+  const marking = markWritten(
+    q,
+    "prices rise",
+    null,
+    "eval:fixture",
+    undefined,
+    ["dev-self"],
+  );
+  await vi.waitFor(() => expect(mockedCall).toHaveBeenCalledTimes(1));
+  resolveFirst(grade);
+  await marking;
+  expect(examplePool).toHaveBeenCalledExactlyOnceWith(q, ["dev-self"]);
+  const firstPrompt = mockedCall.mock.calls[0][0].messages[1].content as string;
+  const checkPrompt = mockedCall.mock.calls[1][0].messages[1].content as string;
+  expect(checkPrompt).not.toEqual(firstPrompt);
+  expect(checkPrompt.match(/<marked_answer /g)).toHaveLength(6);
+  expect(checkPrompt).toContain(
+    '<marked_answer tutor_mark="4">\nprices rise 9',
+  );
+  expect(checkPrompt).toContain("Rationale 9");
+  expect(mockedCall.mock.calls[2][0].messages[1].content).toEqual(checkPrompt);
 });
 
 it.each([

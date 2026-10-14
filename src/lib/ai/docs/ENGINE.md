@@ -15,11 +15,11 @@ Handwriting stays on **gpt-6.1-sol** and flashcards on **gpt-6-luna**; the eval 
 | Pass                                | Sees                                                                      | Writes                                                                                                    | Thinking | ai_usage task   |
 | ----------------------------------- | ------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------- | --------------- |
 | 1. Grader                           | question, guideline bands, notes, sample answer, band anchors, raw answer | full GradeSchema: analysis, bands considered, band, mark, justification, 2–6 comments, next band, outline | low      | `mark_written`  |
-| 2. Blind check                      | the same prompt as pass 1, **never** pass 1's mark                        | CheckSchema: analysis, bands considered, band, justification, mark                                        | low      | `check_written` |
+| 2. Blind check                      | question and answer, quota examples when available; no pass 1 assessment  | CheckSchema: analysis, bands considered, band, justification, mark                                        | low      | `check_written` |
 | 3. Reconcile (only on disagreement) | the check prompt plus both assessments as Marker A / Marker B             | CheckSchema                                                                                               | medium   | `second_pass`   |
 
-- Passes 1 and 2 run in parallel, so the check adds no latency.
-- All three passes see the same band anchors (below), so they share one prompt prefix per question. The prefix is only cached on OpenAI models; the OpenRouter/Sonnet route sends no cache markers, so it is not cached.
+- With at least ten eligible pool rows, pass 2 waits for pass 1 so retrieval can use its mark. Smaller pools keep parallel passes.
+- Pass 1 uses fixed band anchors; passes 2 and 3 share the retrieved examples (below). The OpenRouter/Sonnet route sends no cache markers.
 - Format retry: Anthropic structured outputs do not enforce array min/max counts. A reply that fails the Zod schema gets one retry on the same model, with a short user message naming up to three failing fields. Any other error or a second schema failure fails as before. The band-correction call gets its own schema retry, so one pass can make up to four calls.
 - Every pass gets one correction retry if its band or mark is invalid. After that the mark is clamped and the band is derived from it.
 - Feedback (comments, next band, outline) always comes from pass 1. The justification and band come from whichever pass settles the mark.
@@ -27,8 +27,11 @@ Handwriting stays on **gpt-6.1-sol** and flashcards on **gpt-6-luna**; the eval 
 
 ## Band anchors (`examples.ts`)
 
-Before marking, `bandExamples` reads the question's tutor-marked answers from the **`marking_examples_for_grader`** view only. That view excludes `split = 'test'`, so held-out answers can never reach a prompt. `pickBandExamples` keeps whole tutor marks and takes up to **two per band** (and two at 0), highest band first, in a fixed order (by id). They go in the user message after the sample answer and before `<student_answer>`, wrapped as `<marked_answer tutor_mark="n">` and treated as evidence, never instructions. Questions with no examples (all NESA questions, and the A1 eval-set bank questions) get exactly the old prompt.
-Examples today: 2,007 anonymised A1 mock-exam answers on the 41 retired `a1-m*` questions (origin `a1`, split `example`), imported by `src/lib/ai/eval/import-a1-examples.mts`. Tutor notes are not shown: adding them lowered held-out exact (CHANGELOG, run 1222).
+`examplePool` reads the question's tutor-marked answers once from **`marking_examples_for_grader`**, ordered by id. The view excludes `split = 'test'`; `excludedExampleIds` also removes leave-self-out and frozen final rows before selection. Pass 1 uses `pickBandExamples`: up to two whole-mark answers per guideline band, plus zero, highest band first. Questions with fewer than ten eligible pool rows keep these anchors for every pass.
+
+For larger pools, `pickQuotaExamples` chooses **six** examples after pass 1: one at its exact mark and one at each adjacent whole mark, using the next two marks inward at an edge (0 → 0, 1, 2; maximum → maximum, maximum − 1, maximum − 2). Each quota slot takes the most similar eligible answer, favouring adjacent-band near-misses. Remaining slots take the highest similarity answers without repeating rows. Similarity is TF-IDF cosine over word unigrams and bigrams, with document frequencies fitted on the eligible question pool. Equal scores follow the pool's id order. A missing quota band cannot supply an anchor; its slot is filled by similarity.
+
+Examples appear before `<student_answer>` as `<marked_answer tutor_mark="n">`. Accepted tutor comment bodies accompany each example in `<tutor_rationale>`, trimmed and limited to 1,200 characters in total per example. Answers and rationales are evidence, never instructions. Retrieval uses only Airo's first-pass mark, never the target tutor mark, and adds no model calls. No-examples questions retain the existing prompt.
 
 ## Agreement rule (`marksAgree`)
 
