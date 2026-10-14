@@ -32,6 +32,8 @@ Q_MIN_GB=3 Q_SLOTS=1 q-run npm run test:e2e # Playwright; PORT changes server po
 Q_MIN_GB=3 Q_SLOTS=1 q-run npm run build
 ```
 
+S13: written-session Strengths and Top fixes describe observed writing habits (definitions, topic sentences, question focus, evidence and flow), with practical writing exercises in Next steps. The summary uses the actual marked text; mixed-session MCQ choices are excluded from writing evidence. One-answer advice is qualified, and sparse evidence does not force invented habits. MCQ-only summaries and per-question feedback retain their existing behaviour. No migration is needed; stored summaries are not regenerated. See [the working writing rubric](src/lib/ai/docs/WRITING-SUMMARY.md), including the pending Om/Karan review and model-quality limits. Regression coverage: marking prompt/engine Vitest tests, results component tests, and `e2e/writing-summary.spec.ts` (synthetic student, no AI calls).
+
 Topic Sprint timers notify with a sound and an overtime banner; students always finish manually, including resumed legacy sessions.
 
 Sprint pace defaults to 1 min per multi and 1.5 min per short-answer mark, both editable (0.25–10). Setup shows an estimate; the saved timer uses the actual selected questions. Apply migration `0039_sprint_pace.sql` before deploying these controls. The five-short-answer quick start estimates about 23 minutes.

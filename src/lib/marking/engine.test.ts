@@ -1173,3 +1173,119 @@ it("never persists uncertainty or pass marks in attempt feedback after reconcili
     }),
   );
 });
+
+it.each([
+  [
+    "typed writing",
+    "Your typed definition.\nYour explanation.",
+    null,
+    "Your typed definition.\nYour explanation.",
+  ],
+  [
+    "handwriting",
+    "Old typed draft",
+    "Your transcribed definition.\nYour explanation.",
+    "Your transcribed definition.\nYour explanation.",
+  ],
+  ["empty transcript", "Old typed draft", "", ""],
+  ["missing writing", null, null, ""],
+])(
+  "summarises %s from written evidence only in a mixed session",
+  async (_name, answer_text, transcript, answer) => {
+    const written = {
+      status: "marked",
+      mark: 2,
+      max_marks: 4,
+      band: q.criteria[1].descriptor,
+      answer_text,
+      transcript,
+      feedback: {
+        analysis: { strengths: ["Defines terms"] },
+        missing_points: ["Link the effects"],
+      },
+      question: q,
+    };
+    const mcq = {
+      ...written,
+      mark: 1,
+      max_marks: 1,
+      answer_text: "MCQ choices are not writing evidence",
+      feedback: { correct_index: 0 },
+      question: { ...q, type: "mcq", marks: 1 },
+    };
+    const summary = {
+      strengths: [
+        "In this answer, you introduce the key term before explaining its effects.",
+      ],
+      improvements: ["In this answer, connect each effect to its cause."],
+      next_steps: ["Rewrite one explanation using a because link."],
+    };
+    const save = query({ score: 3, max_score: 5, summary });
+    for (const chain of [
+      query({ user_id: "user", kind: "sprint" }),
+      query([mcq, written]),
+      save,
+    ])
+      vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+    mockedCall.mockResolvedValue(summary);
+    await finishSession("s");
+    expect(mockedCall).toHaveBeenCalledTimes(1);
+    const call = mockedCall.mock.calls[0][0];
+    expect(call.task).toBe("session_summary");
+    expect(call.userId).toBe("user");
+    expect(JSON.parse(call.messages[1].content as string)).toEqual([
+      {
+        source: q.source,
+        stem: q.stem,
+        mark: 2,
+        max: 4,
+        band: q.criteria[1].descriptor,
+        answer,
+        strengths: ["Defines terms"],
+        improvements: ["Link the effects"],
+      },
+    ]);
+    expect(save.update).toHaveBeenCalledWith(
+      expect.objectContaining({ score: 3, max_score: 5, summary }),
+    );
+  },
+);
+
+it("supplies legacy written answers without analysis and compares multiple answers", async () => {
+  const rows = [
+    "First definition. First explanation.",
+    "Second definition. Second explanation.",
+  ].map((answer_text) => ({
+    status: "marked",
+    mark: 4,
+    max_marks: 4,
+    answer_text,
+    transcript: null,
+    feedback: null,
+    question: q,
+  }));
+  const save = query({ score: 8, max_score: 8 });
+  for (const chain of [
+    query({ user_id: "user", kind: "sprint" }),
+    query(rows),
+    save,
+  ])
+    vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+  mockedCall.mockResolvedValue({
+    strengths: ["You define terms in both answers."],
+    improvements: [],
+    next_steps: [],
+  });
+  await finishSession("s");
+  const evidence = JSON.parse(
+    mockedCall.mock.calls[0][0].messages[1].content as string,
+  );
+  expect(evidence.map((item: { answer: string }) => item.answer)).toEqual(
+    rows.map((r) => r.answer_text),
+  );
+  expect(evidence[0]).toMatchObject({
+    strengths: [],
+    improvements: [],
+    answer: rows[0].answer_text,
+  });
+});

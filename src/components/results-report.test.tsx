@@ -111,3 +111,38 @@ it("uses a real heading and sprint unavailable copy without skeletons", () => {
   expect(screen.getByText(/isn’t available for this sprint/)).toBeVisible();
   expect(container.querySelector(".animate-pulse")).toBeNull();
 });
+
+it.each([
+  {
+    strengths: ["Across both answers, you define terms before using them."],
+    improvements: ["Connect your paragraphs with a cause-and-effect link."],
+    next_steps: ["Rewrite two topic sentences to answer the directive verb."],
+  },
+  {
+    strengths: ["In this answer, you define terms clearly."],
+    improvements: [],
+    next_steps: [],
+  },
+  {
+    strengths: [],
+    improvements: [],
+    next_steps: [
+      "There is not enough writing to assess habits. Try a short written answer.",
+    ],
+  },
+  {
+    strengths: ["Legacy strength"],
+    top_fixes: ["Legacy fix"],
+    next_steps: ["Legacy practice"],
+  },
+])(
+  "renders writing-pattern summaries and sparse or legacy lists faithfully: %j",
+  (summary) => {
+    render(<OverallFeedback summary={summary} pending={false} />);
+    for (const label of ["Strengths", "Top fixes", "Next steps"])
+      expect(screen.getByRole("heading", { name: label })).toBeVisible();
+    for (const line of Object.values(summary).flat())
+      expect(screen.getByText(line)).toBeVisible();
+    expect(screen.queryByRole("status")).not.toBeInTheDocument();
+  },
+);
