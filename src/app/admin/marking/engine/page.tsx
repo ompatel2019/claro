@@ -18,6 +18,8 @@ import { Markdown } from "./markdown";
 import { EngineTabs } from "./tabs";
 import { RunsTable } from "./runs-table";
 import { loadBucketRuns } from "./store";
+import { buildPerformance } from "./performance";
+import { PerformanceView } from "./performance-view";
 import { NewRun } from "./new-run";
 import { loadComparison } from "./compare-data";
 import { CompareView } from "./compare-view";
@@ -43,7 +45,12 @@ export default async function EnginePage({
   const comparing =
     params.tab === "runs" && (params.a !== undefined || params.b !== undefined);
   let dialogData: Awaited<ReturnType<typeof evalRunDialogData>> | null = null;
-  const tab = params.tab === "runs" ? "runs" : "docs";
+  const tab =
+    params.tab === "performance"
+      ? "performance"
+      : params.tab === "runs"
+        ? "runs"
+        : "docs";
   let content;
   if (comparing) {
     const data = await loadComparison(params.a, params.b);
@@ -56,6 +63,15 @@ export default async function EnginePage({
           Back to runs
         </Link>
       </div>
+    );
+  } else if (tab === "performance") {
+    const [cli, web] = await Promise.all([loadEvalRuns(), loadBucketRuns()]);
+    const runs = [...cli, ...web];
+    content = (
+      <PerformanceView
+        heldout={buildPerformance(runs, "heldout-196")}
+        a1={buildPerformance(runs, "a1-18")}
+      />
     );
   } else if (tab === "runs") {
     const [dialog, runs, web] = await Promise.all([

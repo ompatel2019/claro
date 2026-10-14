@@ -2,7 +2,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-export function EngineTabs({ tab }: { tab: "docs" | "runs" }) {
+export function EngineTabs({ tab }: { tab: "docs" | "runs" | "performance" }) {
   const router = useRouter();
   const params = useSearchParams();
   return (
@@ -20,6 +20,7 @@ export function EngineTabs({ tab }: { tab: "docs" | "runs" }) {
     >
       <ToggleGroupItem value="docs">Docs</ToggleGroupItem>
       <ToggleGroupItem value="runs">Eval runs</ToggleGroupItem>
+      <ToggleGroupItem value="performance">Performance</ToggleGroupItem>
     </ToggleGroup>
   );
 }

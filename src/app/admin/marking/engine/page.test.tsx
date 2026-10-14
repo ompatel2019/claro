@@ -71,3 +71,11 @@ it.each(["dialog", "docs", "cli", "bucket"] as const)(
     ).rejects.toThrow("Load failed");
   },
 );
+
+it("loads Performance from both result stores without loading run-dialog data", async () => {
+  await EnginePage({ searchParams: Promise.resolve({ tab: "performance" }) });
+  expect(mocks.cli).toHaveBeenCalledOnce();
+  expect(mocks.bucket).toHaveBeenCalledOnce();
+  expect(mocks.dialog).not.toHaveBeenCalled();
+  expect(mocks.docs).not.toHaveBeenCalled();
+});

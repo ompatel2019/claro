@@ -6,6 +6,10 @@ import {
 
 export type OfflineEvalRun = {
   meta: {
+    airo?: string;
+    benchmark?: ("heldout-196" | "a1-18")[];
+    sameQuestionExamples?: boolean;
+    blocked?: boolean;
     stamp: string;
     id?: string;
     startedAt?: string;
@@ -22,6 +26,14 @@ export type OfflineEvalRun = {
       effort?: string | { grade?: string; check?: string; reconcile?: string };
     };
   };
+  headline?: {
+    exact?: number | null;
+    within1?: number | null;
+    meanSigned?: number | null;
+    usdPerAnswer?: number | null;
+    secondsPerAnswer?: number | null;
+  };
+  heldOut?: OfflineEvalRun["headline"];
   items: (EvalItem & {
     usd?: number;
     judgeUsd?: number;
