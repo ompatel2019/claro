@@ -148,3 +148,71 @@ it("reselecting the current type after Back keeps its size unit and count", () =
   next();
   expect(screen.getByRole("textbox", { name: "Questions" })).toHaveValue("8");
 });
+
+it("mixed inputs stay linked at boundaries and reset to an even split for a preset", () => {
+  render(<SprintSetup topics={[]} params={{}} />);
+  fireEvent.click(screen.getByRole("button", { name: "Mixed" }));
+  next();
+  next();
+  const mc = screen.getByRole("spinbutton", {
+    name: "Multiple choice questions",
+  });
+  const shorts = screen.getByRole("spinbutton", { name: "Short answer marks" });
+  expect(mc).toHaveValue(23);
+  expect(shorts).toHaveValue(22);
+  fireEvent.change(mc, { target: { value: "0" } });
+  expect(shorts).toHaveValue(45);
+  fireEvent.change(shorts, { target: { value: "999" } });
+  expect(mc).toHaveValue(0);
+  expect(shorts).toHaveValue(45);
+  fireEvent.click(screen.getByRole("button", { name: "30" }));
+  expect(mc).toHaveValue(15);
+  expect(shorts).toHaveValue(15);
+  fireEvent.change(shorts, { target: { value: "5" } });
+  expect(mc).toHaveValue(25);
+  expect(
+    screen.getByText("25 multis + 5 marks of shorts = 30 marks"),
+  ).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Back" }));
+  next();
+  expect(shorts).toHaveValue(5);
+});
+it("mixed availability warns per bucket even when combined marks exceed the total", async () => {
+  mocks.rpc.mockResolvedValue({
+    data: { ...pool, marks: 100, mcq_questions: 2, short_marks: 98 },
+    error: null,
+  });
+  render(<SprintSetup topics={[]} params={{ type: "mixed", size: "30" }} />);
+  next();
+  next();
+  await waitFor(() =>
+    expect(
+      screen.getByText(/Only 2 multis and 98 marks of shorts match/),
+    ).toBeVisible(),
+  );
+});
+
+it("an empty requested bucket disables start even when the other type has questions", async () => {
+  mocks.rpc.mockResolvedValue({
+    data: {
+      ...pool,
+      questions: 3,
+      mcq_questions: 0,
+      mcq_new: 0,
+      short_marks: 17,
+    },
+    error: null,
+  });
+  render(<SprintSetup topics={[]} params={{ type: "mixed", size: "20" }} />);
+  next();
+  next();
+  fireEvent.change(
+    screen.getByRole("spinbutton", { name: "Multiple choice questions" }),
+    { target: { value: "20" } },
+  );
+  next();
+  await waitFor(() =>
+    expect(screen.getByText("No questions match")).toBeVisible(),
+  );
+  expect(start()).toBeDisabled();
+});

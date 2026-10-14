@@ -109,10 +109,29 @@ const TYPES: Record<string, string> = {
   "Short answer": "short",
   Mixed: "mixed",
 };
+/** Wait for hydration and each transition so rapid clicks cannot skip a step. */
+export async function goToSprintStep(page: Page, target: number) {
+  const status = page.getByText(/^Step [1-4] of 4$/);
+  let step = Number((await status.textContent())!.match(/Step (\d)/)![1]);
+  const next = page.getByRole("button", { name: "Next", exact: true });
+  if (step < target) {
+    await expect
+      .poll(() =>
+        next.evaluate((element) =>
+          Object.keys(element).some((key) => key.startsWith("__reactProps$")),
+        ),
+      )
+      .toBe(true);
+  }
+  while (step < target) {
+    await next.click();
+    step++;
+    await expect(status).toHaveText(`Step ${step} of 4`);
+  }
+}
 /** Reviews every setup step, preserving URL-prefilled settings. */
 export async function reviewSprintSetup(page: Page) {
-  const next = page.getByRole("button", { name: "Next", exact: true });
-  while (await next.count()) await next.click();
+  await goToSprintStep(page, 4);
 }
 /** Starts a sprint of one type on Inflation through the §3.2 setup page. */
 export async function start(
