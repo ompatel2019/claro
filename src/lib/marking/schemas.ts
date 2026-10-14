@@ -1,6 +1,16 @@
 import { z } from "zod";
 
 export const GradeSchema = z.strictObject({
+  checklist: z
+    .array(
+      z.strictObject({
+        id: z.string().min(1),
+        answer: z.enum(["yes", "no"]),
+        evidence: z.string(),
+      }),
+    )
+    .nullable()
+    .optional(),
   analysis: z.strictObject({
     strengths: z.array(z.string()),
     imprecise: z.array(
@@ -46,6 +56,7 @@ export const GradeSchema = z.strictObject({
 });
 
 export const CheckSchema = GradeSchema.pick({
+  checklist: true,
   analysis: true,
   bands_considered: true,
   band_selected: true,

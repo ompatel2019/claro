@@ -1,0 +1,188 @@
+{
+  "a1-m2-22a": [
+    {
+      "id": "correct-concepts",
+      "check": "Does the answer correctly identify both fixed and managed exchange rate systems, without swapping their meanings?",
+      "evidence": "Quote the words identifying a fixed rate maintained at a predetermined peg and a managed rate primarily set by market forces with central bank intervention.",
+      "effect": "Required for 2; if no, award at most 1 for a correct relevant idea. Wrong or swapped core definitions with no correct relevant idea earn 0."
+    },
+    {
+      "id": "explicit-contrast",
+      "check": "Does the answer explicitly contrast the fixed and managed exchange rate systems on a correct distinguishing factor?",
+      "evidence": "Quote the contrast between a fixed rate maintained at a predetermined peg and a managed rate primarily set by market forces with central bank intervention; two separate definitions alone do not demonstrate the contrast.",
+      "effect": "Required for 2; caps at 1 if no. Accept a concise contrast in any valid wording; no separate sentence or keyword is required."
+    }
+  ],
+  "a1-m3-23a": [
+    {
+      "id": "correct-concepts",
+      "check": "Does the answer correctly identify both capital and financial accounts, without swapping their meanings?",
+      "evidence": "Quote the words identifying capital transfers or non-produced non-financial assets in the capital account versus financial assets and liabilities in the financial account, without confusing the capital and current accounts.",
+      "effect": "Required for 2; if no, award at most 1 for a correct relevant idea. Wrong or swapped core definitions with no correct relevant idea earn 0."
+    },
+    {
+      "id": "explicit-contrast",
+      "check": "Does the answer explicitly contrast the capital and financial accounts on a correct distinguishing factor?",
+      "evidence": "Quote the contrast between capital transfers or non-produced non-financial assets in the capital account versus financial assets and liabilities in the financial account, without confusing the capital and current accounts; two separate definitions alone do not demonstrate the contrast.",
+      "effect": "Required for 2; caps at 1 if no. Accept a concise contrast in any valid wording; no separate sentence or keyword is required."
+    }
+  ],
+  "a1-m3-24a": [
+    {
+      "id": "correct-concepts",
+      "check": "Does the answer correctly identify both minimum wage and modern awards, without swapping their meanings?",
+      "evidence": "Quote the words identifying the general legal wage floor versus industry or occupation-specific minimum pay and employment conditions.",
+      "effect": "Required for 2; if no, award at most 1 for a correct relevant idea. Wrong or swapped core definitions with no correct relevant idea earn 0."
+    },
+    {
+      "id": "explicit-contrast",
+      "check": "Does the answer explicitly contrast the minimum wage and modern awards on a correct distinguishing factor?",
+      "evidence": "Quote the contrast between the general legal wage floor versus industry or occupation-specific minimum pay and employment conditions; two separate definitions alone do not demonstrate the contrast.",
+      "effect": "Required for 2; caps at 1 if no. Accept a concise contrast in any valid wording; no separate sentence or keyword is required."
+    }
+  ],
+  "a1-m4-21a": [
+    {
+      "id": "correct-concepts",
+      "check": "Does the answer correctly identify both IMF and World Bank roles, without swapping their meanings?",
+      "evidence": "Quote the words identifying IMF financial or balance-of-payments stability versus World Bank long-term development and poverty reduction.",
+      "effect": "Required for 2; if no, award at most 1 for a correct relevant idea. Wrong or swapped core definitions with no correct relevant idea earn 0."
+    },
+    {
+      "id": "explicit-contrast",
+      "check": "Does the answer explicitly contrast the IMF and World Bank roles on a correct distinguishing factor?",
+      "evidence": "Quote the contrast between IMF financial or balance-of-payments stability versus World Bank long-term development and poverty reduction; two separate definitions alone do not demonstrate the contrast.",
+      "effect": "Required for 2; caps at 1 if no. Accept a concise contrast in any valid wording; no separate sentence or keyword is required."
+    }
+  ],
+  "a1-m4-24a": [
+    {
+      "id": "correct-concepts",
+      "check": "Does the answer correctly identify both structural and cyclical budget components, without swapping their meanings?",
+      "evidence": "Quote the words identifying discretionary government revenue or spending decisions versus automatic changes caused by the business cycle, without confusing structural budgets with supply-side policy.",
+      "effect": "Required for 2; if no, award at most 1 for a correct relevant idea. Wrong or swapped core definitions with no correct relevant idea earn 0."
+    },
+    {
+      "id": "explicit-contrast",
+      "check": "Does the answer explicitly contrast the structural and cyclical budget components on a correct distinguishing factor?",
+      "evidence": "Quote the contrast between discretionary government revenue or spending decisions versus automatic changes caused by the business cycle, without confusing structural budgets with supply-side policy; two separate definitions alone do not demonstrate the contrast.",
+      "effect": "Required for 2; caps at 1 if no. Accept a concise contrast in any valid wording; no separate sentence or keyword is required."
+    }
+  ],
+  "a1-m2-21a": [
+    {
+      "id": "domestic-content",
+      "check": "Does the answer identify a requirement for a proportion of inputs or outputs to be sourced or produced domestically?",
+      "evidence": "Quote the domestic-content requirement, rather than a tariff, quota, labelling rule or blanket ban on foreign firms.",
+      "effect": "Required for 2; a wrong core concept alone earns 0, not the relevant-information mark."
+    },
+    {
+      "id": "protection-mechanism",
+      "check": "Does the answer link the domestic-content requirement to demand diverted from imports towards domestic producers?",
+      "evidence": "Quote the link from mandated local sourcing to demand for domestic production.",
+      "effect": "Required for 2; caps at 1 if no, provided there is correct relevant information."
+    }
+  ],
+  "a1-m3-21b": [
+    {
+      "id": "export-incentive",
+      "check": "Does the answer identify government support for domestic exporters, such as subsidies or tax concessions?",
+      "evidence": "Quote the support offered to domestic exporters.",
+      "effect": "Required for 2+; caps at 1 if no, provided there is correct relevant information."
+    },
+    {
+      "id": "protective-advantage",
+      "check": "Does the answer link export incentives to an artificial advantage for domestic exporters over foreign competitors?",
+      "evidence": "Quote how government support favours domestic export industries relative to foreign competition, not simply that exports rise.",
+      "effect": "Required for 2+; caps at 1 if no, provided there is correct relevant information."
+    },
+    {
+      "id": "protection-mechanism",
+      "check": "Does the answer explain how the incentive lowers costs or prices and gives domestic exporters an artificial advantage over foreign competitors?",
+      "evidence": "Quote the cause-and-effect link from the incentive to the competitive advantage that protects domestic export industries.",
+      "effect": "Required for 3; caps at 2 if no. Award 2 only if the protective-advantage check is yes; merely naming an incentive earns at most 1."
+    }
+  ],
+  "a1-m3-22b": [
+    {
+      "id": "trade-weighted-basket",
+      "check": "Does the answer correctly contrast a trade-weighted basket of major trading-partner currencies with a single bilateral rate?",
+      "evidence": "Quote the basket, weighting by trade importance and comparison with one foreign currency.",
+      "effect": "Required for 3; partial correct information may earn 1 or 2 under the guideline."
+    },
+    {
+      "id": "why-more-accurate",
+      "check": "Does the answer say why the TWI is more representative of overall currency value or international competitiveness than a bilateral rate?",
+      "evidence": "Quote the explanation that currencies can move differently and a trade-weighted basket reflects the overall trade position, whereas one bilateral movement can mislead. Accept an equivalent explanation.",
+      "effect": "Required for 2+; caps at 1 if no. For 3 the relationship must be explained, rather than merely claiming greater accuracy."
+    }
+  ],
+  "a1-m2-23c": [
+    {
+      "id": "cause-effect-implication",
+      "check": "Does the answer develop accurate cause, effect and implication links for high inflation, covering effects on the Australian economy?",
+      "evidence": "Quote the linked reasoning from inflation to an economic effect and then its implication, such as purchasing power, spending, investment, competitiveness or the inflation-growth conflict; definitions, lists or assertions alone are insufficient.",
+      "effect": "Required for 4+; caps at 3 if no. Apply the lower guideline bands to fragments or inaccurate reasoning."
+    },
+    {
+      "id": "applied-evidence",
+      "check": "Does the answer apply specific Australian evidence or statistics to support its analysis?",
+      "evidence": "Quote the specific evidence together with the reasoning it supports; an isolated figure or undated generic claim is not applied evidence.",
+      "effect": "Supports the 4/5 depth decision; missing evidence alone is not an automatic cap where the guideline does not require statistics. Use tutor depth calibration without rejecting a sound, concise analysis for lacking a particular statistic."
+    }
+  ],
+  "a1-m3-23c": [
+    {
+      "id": "cause-effect-implication",
+      "check": "Does the answer develop accurate cause, effect and implication links for recent changes in Australia's external stability, covering both causes and effects?",
+      "evidence": "Quote the linked reasoning from a cause of a recent change in external stability, the resulting external change and a further implication for growth, employment or competitiveness; definitions, lists or assertions alone are insufficient.",
+      "effect": "Required for 4+; caps at 3 if no. Apply the lower guideline bands to fragments or inaccurate reasoning."
+    },
+    {
+      "id": "applied-evidence",
+      "check": "Does the answer apply specific Australian evidence or statistics to support its analysis?",
+      "evidence": "Quote the specific evidence together with the reasoning it supports; an isolated figure or undated generic claim is not applied evidence.",
+      "effect": "Supports the 4/5 depth decision; missing evidence alone is not an automatic cap where the guideline does not require statistics. Use tutor depth calibration without rejecting a sound, concise analysis for lacking a particular statistic."
+    }
+  ],
+  "a1-m4-23c": [
+    {
+      "id": "cause-effect-implication",
+      "check": "Does the answer develop accurate cause, effect and implication links for greater income inequality, covering effects on Australian economic growth?",
+      "evidence": "Quote the linked reasoning from inequality to consumption, saving, investment or human capital and then growth; MPC/MPS and multiplier effects or short-run versus long-run effects are valid mechanisms, not mandatory keywords; definitions, lists or assertions alone are insufficient.",
+      "effect": "Required for 4+; caps at 3 if no. Apply the lower guideline bands to fragments or inaccurate reasoning."
+    },
+    {
+      "id": "applied-evidence",
+      "check": "Does the answer apply specific Australian evidence or statistics to support its analysis?",
+      "evidence": "Quote the specific evidence together with the reasoning it supports; an isolated figure or undated generic claim is not applied evidence.",
+      "effect": "Supports the 4/5 depth decision; missing evidence alone is not an automatic cap where the guideline does not require statistics. Use tutor depth calibration without rejecting a sound, concise analysis for lacking a particular statistic."
+    }
+  ],
+  "a1-m4-22c": [
+    {
+      "id": "trade-flows",
+      "check": "Does the answer explain the impact of recent global changes on Australian trade flows?",
+      "evidence": "Quote a recent global change, its mechanism and its impact on exports or imports, such as demand, prices, revenue, expenditure or trade direction.",
+      "effect": "Required for 4+; caps at 3 if no, even if financial flows are developed."
+    },
+    {
+      "id": "financial-flows",
+      "check": "Does the answer explain the impact of recent global changes on Australian financial flows?",
+      "evidence": "Quote the link to investment, borrowing or capital inflows/outflows. Trade revenue alone is not financial-flow analysis.",
+      "effect": "Required for 4+; caps at 3 if no, even if trade flows are developed."
+    },
+    {
+      "id": "assessment",
+      "check": "Does the answer make a supported judgement about the impact of recent global changes on both types of flows?",
+      "evidence": "Quote the judgement and the explanation supporting it, rather than merely a list of changes.",
+      "effect": "Required for 4+ assessment; a clear, comprehensive judgement is required for 6. Both flow checks must also be yes."
+    },
+    {
+      "id": "applied-evidence",
+      "check": "Does the answer apply specific evidence or statistics to its assessment of the changes?",
+      "evidence": "Quote the evidence and the impact it supports.",
+      "effect": "Calibrates sound versus comprehensive depth; do not impose a particular statistic or an automatic cap solely for absent statistics."
+    }
+  ]
+}
