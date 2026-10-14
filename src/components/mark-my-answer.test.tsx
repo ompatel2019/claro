@@ -106,7 +106,7 @@ it("shows the daily cap and keeps submit disabled", () => {
 });
 
 it("keeps a manually selected verb when question text changes", async () => {
-  setup();
+  setup(20, true);
   fireEvent.click(screen.getByRole("button", { name: "My own question" }));
   const stem = screen.getByRole("textbox", { name: /Question text/ });
   fireEvent.change(stem, { target: { value: "Assess fiscal policy." } });
