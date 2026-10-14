@@ -295,7 +295,9 @@ it("drops an existing correct-option note when serialising a saved explanation",
   );
   fireEvent.keyDown(window, { key: "s", metaKey: true });
   await waitFor(() => expect(mocks.save).toHaveBeenCalledTimes(1));
-  expect(JSON.parse(mocks.save.mock.calls[0][0].explanation)).toEqual(structuredMc);
+  expect(JSON.parse(mocks.save.mock.calls[0][0].explanation)).toEqual(
+    structuredMc,
+  );
 });
 it("converts legacy prose without losing it and restores incomplete drafts as fields", () => {
   mountMc("Existing reasoning.");
