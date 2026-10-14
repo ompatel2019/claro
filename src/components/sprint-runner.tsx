@@ -636,7 +636,7 @@ export function SprintRunner({
             >
               Next question
             </TooltipTrigger>
-            <TooltipContent>
+            <TooltipContent role="tooltip">
               You’ve selected an answer, check it first?
             </TooltipContent>
           </Tooltip>

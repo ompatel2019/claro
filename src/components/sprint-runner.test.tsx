@@ -1,5 +1,6 @@
 import {
   cleanup,
+  act,
   fireEvent,
   render,
   screen,
@@ -216,12 +217,16 @@ it("keeps flagging locked for a checked answer", () => {
 });
 
 const nextAttempt = { ...attempt, id: "a2", question_id: "q2", position: 2 };
-it("highlights an unchecked answer without blocking navigation", async () => {
+it("highlights an unchecked answer and warns on keyboard focus without blocking navigation", async () => {
   show([attempt, nextAttempt]);
   const check = screen.getByRole("button", { name: "Check answer" });
   expect(check).toHaveAccessibleDescription("You have an unchecked answer.");
   const next = screen.getByRole("button", { name: "Next question" });
   expect(next).toBeEnabled();
+  act(() => next.focus());
+  expect(await screen.findByRole("tooltip")).toHaveTextContent(
+    "check it first?",
+  );
   fireEvent.click(next);
   await waitFor(() => expect(screen.getByText(/Question 2 ·/)).toBeVisible());
   expect(mocks.fetch).not.toHaveBeenCalled();
