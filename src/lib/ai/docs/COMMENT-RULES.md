@@ -7,7 +7,9 @@ See [ENGINE](/admin/marking/engine?tab=docs&doc=ENGINE) for comment shape, count
 The prompt in `src/lib/marking/prompts.ts` requires:
 
 - `quote`: the shortest phrase that makes the point, copied character for character, never paraphrased or a whole paragraph.
-- `body`: 1–2 concise sentences speaking to the student, in Australian English.
+- `body`: 1–2 concise sentences speaking directly to the student, in Australian English. Use “you”/“your” or a clear imperative (“Try”, “Explain”). Name the specific strength or change in a warm, plain, direct tone; apply the same voice to `next_mark`.
+- Avoid stock openings and boilerplate: “This demonstrates”, “The response”, “The student”, “Overall”, “It is important to note”, “Consider”, “well done”. Specific praise should say what you did well.
+- `COMMENT_VOICE_EXAMPLES` in `prompts.ts` holds five editable, original, anonymised A1-style examples. They guide voice only, never marking requirements or answer content.
 - `next_mark`: the specific change that earns the next mark, on fixes only; null on strengths.
 - At least one strength and one fix unless full marks, then strengths only. Phrase advice as what earns the next mark, rather than what the student “should have” done.
 - `earned` and `missing_points`, plus **3–6** `better_answer_outline` bullets.
@@ -41,3 +43,9 @@ The strict schema in `src/lib/marking/schemas.ts` checks field types, kinds, tag
 `src/components/annotated-feedback.tsx` shows kind, tag, body and fix advice, links comments to text highlights, groups unanchored comments under “Overall”, and exposes the outline under “How to reach full marks”.
 
 Admin edits in `src/app/admin/marking/review/actions.ts` have separate limits: up to 100 comments, quote up to 20,000 characters, trimmed non-empty body up to 4,000, and next-mark text up to 4,000. New comments require an exact selected quote/offset and a tag; changed legacy comments require a tag. AI count and strength/fix requirements are not applied to these edits.
+
+## Offline tone report
+
+`src/lib/ai/eval/tone.ts` reports the share of non-empty comments containing a stock phrase, second-person address (`you`/`your` or a recognised sentence-start imperative), and third-person references (“the student”/“the response”). Phrase and imperative lists are editable. Matching ignores case and repeated whitespace, uses word boundaries, and counts each comment once per metric; rates can overlap. Empty samples return null rates.
+
+The eval report includes a pooled run summary in JSON, Markdown and console output, excluding fixture exclusions. It prefers structured comment bodies plus `next_mark`, never quotes. For older text feedback, it extracts numbered rendered comments; unstructured feedback counts as one comment. These are free lexical indicators, not a judgement of feedback quality; the imperative list is deliberately finite.

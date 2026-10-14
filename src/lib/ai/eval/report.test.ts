@@ -29,7 +29,17 @@ it("excludes fixture bugs and failures from headline metrics, but reports their 
       lowConfidence: false,
       reasoning: "Specific",
     },
-    feedback: "Clear feedback",
+    feedbackComments: [
+      {
+        quote: "the student",
+        start: null,
+        kind: "strength",
+        tag: "Analysis",
+        body: "You explain the link clearly.",
+        next_mark: null,
+      },
+    ],
+    feedback: "Overall, the response is clear",
     error: null,
     score: { delta: 0, exact: true, within1: true, band: true },
   };
@@ -136,7 +146,21 @@ it("excludes fixture bugs and failures from headline metrics, but reports their 
     blindAgreement: 1,
   });
   expect(result.items).toHaveLength(6);
+  expect(result.tone).toEqual({
+    n: 5,
+    stockPhraseRate: 0,
+    secondPersonRate: 1,
+    thirdPersonRate: 0,
+  });
   const markdown = String(calls[1][1]);
+  expect(markdown).toContain("## Comment tone (offline, pooled run)");
+  expect(markdown).toContain("| 5 | 0.0% | 100.0% | 0.0% |");
+  expect(console.log).toHaveBeenCalledWith(
+    expect.stringContaining("Comment tone (offline)"),
+  );
+  expect(console.log).toHaveBeenCalledWith(
+    expect.stringContaining("| 5 | 0.0% | 100.0% | 0.0% |"),
+  );
   expect(markdown).toContain("Blind-check agreement");
   expect(markdown).toContain("Uncertain exact");
   expect(markdown).toContain("Certain exact");

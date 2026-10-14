@@ -1,10 +1,10 @@
 // @vitest-environment node
 import { expect, it } from "vitest";
-import { createHash } from "node:crypto";
 import a1Questions from "../ai/eval/a1-questions.json";
 import mockQuestions from "../ai/eval/a1-mock-questions.json";
 import { checklists } from "./checklists";
 import {
+  COMMENT_VOICE_EXAMPLES,
   bandCorrection,
   flashcardMessages,
   gradeMessages,
@@ -37,22 +37,34 @@ it("keeps prompts unchanged for unknown IDs, including object prototype names", 
   }
 });
 
-// SHA-256 baselines captured from the pre-checklist prompts for every A1 question.
-// Hash the complete messages so even whitespace changes fail this regression test.
-it.each([
-  [false, "022013f0b394ea82c99910f84a450bfaa91d7623bf5660419f53d6038e27fbce"],
-  [true, "a6eab14409c3ad113157dfb017d663c13ed2db05222f3261cb19962fbe6e614d"],
-] as const)(
-  "retains byte-identical prompts for questions without checklists (check=%s)",
-  (check, hash) => {
-    const messages = (a1Questions as MarkableQuestion[]).map((question) =>
-      gradeMessages(question, "Synthetic answer", check, [
+it.each([false, true])(
+  "omits checklist instructions and content for every non-checklist question (check=%s)",
+  (check) => {
+    for (const question of a1Questions as MarkableQuestion[]) {
+      expect(Object.hasOwn(checklists, question.id)).toBe(false);
+      const messages = gradeMessages(question, "Synthetic answer", check, [
         { answer_text: "Synthetic anchor", tutor_mark: 1 },
-      ]),
-    );
-    expect(
-      createHash("sha256").update(JSON.stringify(messages)).digest("hex"),
-    ).toBe(hash);
+      ]);
+      expect(messages).toEqual(
+        gradeMessages(
+          { ...question, id: "unknown-question" },
+          "Synthetic answer",
+          check,
+          [{ answer_text: "Synthetic anchor", tutor_mark: 1 }],
+        ),
+      );
+      const text = JSON.stringify(messages);
+      for (const instruction of [
+        "Before analysis, bands or marking",
+        "Return checklist first",
+        "Return only checklist, analysis",
+        "Question-specific evidence checklist:",
+      ])
+        expect(text).not.toContain(instruction);
+      for (const checklist of Object.values(checklists)) {
+        for (const item of checklist) expect(text).not.toContain(item.check);
+      }
+    }
   },
 );
 
@@ -141,7 +153,7 @@ it("requests concise tagged comments and actionable next marks", () => {
     "copied character for character",
     "never a paraphrase",
     "never a whole paragraph",
-    "body is 1–2 sentences speaking to the student",
+    "body is 1–2 sentences speaking directly to the student",
     "null on strengths",
     "at least one strength and one fix unless full marks (then strengths only)",
     'Don\'t tell the student what they "should have" done',
@@ -298,4 +310,23 @@ it("renders accepted tutor comments as bounded tutor rationales", () => {
       { ...examples[0], accepted_tutor_comments: null },
     ])[1].content,
   ).not.toContain("tutor_rationale");
+});
+
+it("requests direct tutor voice with editable examples only in full grading", () => {
+  const system = gradeMessages(q, "Answer")[0].content;
+  for (const line of [
+    'use "you"/"your" or a clear imperative',
+    "Name the specific strength or change",
+    "Apply this voice to body and next_mark",
+    '"This demonstrates", "The response", "The student", "Overall", "It is important to note", "Consider", "well done"',
+    "style only; use the student's evidence, never copy these points",
+  ])
+    expect(system).toContain(line);
+  expect(COMMENT_VOICE_EXAMPLES.length).toBeGreaterThanOrEqual(4);
+  expect(COMMENT_VOICE_EXAMPLES.length).toBeLessThanOrEqual(6);
+  for (const example of COMMENT_VOICE_EXAMPLES) {
+    expect(system).toContain(`- ${example}`);
+    expect(gradeMessages(q, "Answer", true)[0].content).not.toContain(example);
+    expect(example).toMatch(/\bYou\b|^(Try|Be)\b/);
+  }
 });
