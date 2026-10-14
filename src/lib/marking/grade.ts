@@ -10,6 +10,7 @@ export type MarkableQuestion = {
   stimulus: string | null;
   criteria: Criterion[];
   guideline_notes: string | null;
+  restrictions?: string;
   sample_answer: string | null;
   source: string;
 };

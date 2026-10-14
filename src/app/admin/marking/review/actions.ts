@@ -232,6 +232,11 @@ export async function resolveReview(
     comments: finalComments,
     ...(!unchanged ? { next_mark_line: nextLine } : {}),
   };
+  if (feedback.confidence === "low") {
+    delete feedback.confidence;
+    delete feedback.unreliable_reason;
+    delete feedback.note;
+  }
   if (mark > 0 && feedback.note === "No answer") delete feedback.note;
   // Same mark-to-band rule as the marking engine: zero satisfies no band.
   const band =

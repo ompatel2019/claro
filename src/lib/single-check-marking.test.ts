@@ -39,7 +39,8 @@ const question = {
   marks: 4,
   verb: "explain",
   topic_id: null,
-  criteria_text: "Relates causes and effects.",
+  criteria_text:
+    "3–4 marks: Explains causes and their effects.\n1–2: Identifies relevant causes of inflation.",
 };
 beforeEach(() => vi.clearAllMocks());
 it("reuses the blind-check engine and persists a provisional disagreement for own questions", async () => {
@@ -65,7 +66,15 @@ it("reuses the blind-check engine and persists a provisional disagreement for ow
     feedback: { comments: [], flags: { uncertain: true, marks: [3, 1] } },
     check: { status: "in_review", marks: [3, 1, 2] },
   } as never);
-  await expect(markOwnCheck("a", "u", { question })).resolves.toMatchObject({
+  const restrictions = "3 marks maximum if only one mechanism is explained";
+  await expect(
+    markOwnCheck("a", "u", {
+      question: {
+        ...question,
+        criteria_text: `${question.criteria_text}\n${restrictions}`,
+      },
+    }),
+  ).resolves.toMatchObject({
     mark: 3,
     status: "marked",
   });
@@ -73,10 +82,26 @@ it("reuses the blind-check engine and persists a provisional disagreement for ow
     expect.objectContaining({
       stem: question.stem,
       marks: 4,
-      guideline_notes: question.criteria_text,
+      criteria: [
+        { min: 3, max: 4, descriptor: "Explains causes and their effects." },
+        {
+          min: 1,
+          max: 2,
+          descriptor: "Identifies relevant causes of inflation.",
+        },
+      ],
+      guideline_notes: expect.stringContaining("Mark strictly"),
+      restrictions,
     }),
     "Prices rise as demand grows",
     "u",
+    undefined,
+    undefined,
+    [],
+    expect.any(Function),
+  );
+  expect(vi.mocked(markWritten).mock.calls[0][0].guideline_notes).not.toContain(
+    restrictions,
   );
   expect(review.insert).toHaveBeenCalledWith(
     expect.objectContaining({
@@ -89,10 +114,13 @@ it("reuses the blind-check engine and persists a provisional disagreement for ow
   );
   expect(save.update).toHaveBeenCalledWith(
     expect.objectContaining({
-      feedback: { comments: [] },
       check_status: "in_review",
       status: "marked",
       max_marks: 4,
+      feedback: expect.objectContaining({
+        comments: [],
+        confidence: "estimate",
+      }),
     }),
   );
 });

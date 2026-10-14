@@ -388,7 +388,7 @@ export async function loadSpend(range: Range = "month", now = new Date()) {
       let query = db
         .from("attempts")
         .select(
-          "id,marked_at,max_marks,question_id,note:feedback->>note,question:questions(type,marks)",
+          "id,mark,marked_at,max_marks,question_id,note:feedback->>note,question:questions(type,marks)",
         )
         .eq("status", "marked")
         .lt("marked_at", window.until);

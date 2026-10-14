@@ -711,8 +711,8 @@ export function MarkMyAnswer({
                 </label>
                 {fieldError("criteria_text")}
                 <p className="text-muted-foreground text-sm">
-                  Without guidelines we mark against the verb and the marks
-                  available, so treat the mark as an estimate.
+                  Provide clear mark bands covering every available mark.
+                  Without reliable criteria, we can’t give a mark.
                 </p>
               </>
             )}

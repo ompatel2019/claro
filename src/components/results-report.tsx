@@ -107,7 +107,13 @@ export function ResultsAnswers({
             type: TYPE_LABEL[r.type],
             topic: name(r.topic_id),
             source: r.source,
-            mark: scored(r) ? markLabel(r) : null,
+            mark: scored(r)
+              ? markLabel(r)
+              : r.feedback?.confidence === "low"
+                ? "Needs review"
+                : r.status === "marked" && r.mark == null
+                  ? "No mark available"
+                  : null,
             tone: scored(r)
               ? markTone(r.mark ?? 0, r.max_marks ?? r.marks)
               : "",

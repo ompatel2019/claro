@@ -65,6 +65,8 @@ it("distinguishes no answer from option A and confirmed empty transcript", () =>
 it("formats scores without inventing an average", () => {
   expect(percentage(1, 3)).toBe("33%");
   expect(percentage(null, 0)).toBe("No score yet");
+  expect(percentage(null, 6)).toBe("No score yet");
+  expect(percentage(0, 6)).toBe("0%");
 });
 
 import { orderedComments } from "./practice";

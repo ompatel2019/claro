@@ -161,9 +161,14 @@ export function uncertainParts(text: string) {
 
 /** The settled or provisional mark; internal pass marks never form a range. */
 export function markLabel(
-  row: Pick<ReviewRow, "mark" | "max_marks" | "marks">,
+  row: Pick<ReviewRow, "mark" | "max_marks" | "marks"> & {
+    feedback?: ReviewRow["feedback"];
+  },
 ) {
-  return `${num(row.mark ?? 0)} / ${row.max_marks ?? row.marks}`;
+  if (row.feedback?.confidence === "low")
+    return String(row.feedback.note ?? "We can't mark this reliably.");
+  if (row.mark == null) return "No mark available";
+  return `${num(row.mark)} / ${row.max_marks ?? row.marks}`;
 }
 
 /** Comment cards are placed level with their highlight; collisions push down by `gap`. */

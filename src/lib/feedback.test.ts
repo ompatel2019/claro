@@ -287,3 +287,14 @@ it("strips uncertainty and pass marks from student feedback without changing the
   expect(stored.feedback.flags).toEqual({ uncertain: true, marks: [3, 2] });
   expect(studentMarking({ feedback: null })).toEqual({ feedback: null });
 });
+
+it("shows a reliability note or no-mark label instead of coercing null to zero", () => {
+  const row = { mark: null, max_marks: 6, marks: 6, review: null };
+  expect(markLabel(row)).toBe("No mark available");
+  expect(
+    markLabel({
+      ...row,
+      feedback: { confidence: "low", note: "Add reliable criteria." },
+    }),
+  ).toBe("Add reliable criteria.");
+});

@@ -295,3 +295,29 @@ it("admin read-only mode preserves failed answers without an AI retry control", 
     screen.queryByRole("button", { name: /Retry/ }),
   ).not.toBeInTheDocument();
 });
+
+it.each([null, 0, 3])(
+  "shows the reliability note instead of a score for low-confidence marking (%s)",
+  (mark) => {
+    const note =
+      "We can't mark this reliably: your marking criteria don't add up to 6 marks.";
+    render(
+      <AnnotatedFeedback
+        row={{
+          ...row,
+          question_id: null,
+          mark,
+          band: null,
+          check_status: "skipped",
+          feedback: { note, confidence: "low" },
+        }}
+        photos={[]}
+      />,
+    );
+    expect(screen.getByText(note)).toBeInTheDocument();
+    expect(screen.queryByText(`${mark ?? 0} / 6`)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("What gets you the next mark"),
+    ).not.toBeInTheDocument();
+  },
+);

@@ -15,6 +15,7 @@ export type Usage = {
 };
 export type Student = { id: string; full_name: string };
 export type MarkedAttempt = {
+  mark: number | null;
   id?: string;
   max_marks?: number | null;
   marked_at: string;
@@ -213,6 +214,7 @@ export function computeSpend(
     .filter((g) => g.name !== "Other" || g.tasks.length);
   const writtenAttempts = attempts.filter(
     (a) =>
+      a.mark != null &&
       inRange(a.marked_at) &&
       a.note !== "No answer" &&
       (a.question_id === null ||

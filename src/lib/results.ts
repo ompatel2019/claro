@@ -26,7 +26,10 @@ const SCORED: MarkingState[] = [
   "reviewed",
   "not_answered",
 ];
-export const scored = (r: ReviewRow) => SCORED.includes(markingState(r));
+export const scored = (r: ReviewRow) =>
+  r.mark != null &&
+  r.feedback?.confidence !== "low" &&
+  SCORED.includes(markingState(r));
 const max = (r: Pick<ReviewRow, "max_marks" | "marks">) =>
   Number(r.max_marks ?? r.marks);
 export const below = (r: ReviewRow) =>

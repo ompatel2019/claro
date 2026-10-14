@@ -8,9 +8,10 @@ import {
   STALE_CLAIM_MS,
 } from "@/lib/marking/engine";
 import type { MarkableQuestion } from "@/lib/marking/grade";
+import { assessOwnCriteria } from "./marking/own-criteria";
 import { ownQuestionSchema } from "./single-check";
 
-/** Compatibility for the current bank-only engine; keep the same blind-check pipeline. */
+/** Own checks use only the student’s validated rubric, without tutor examples. */
 export async function markOwnCheck(
   id: string,
   userId: string,
@@ -19,24 +20,25 @@ export async function markOwnCheck(
   const question = ownQuestionSchema.parse(
     (config as { question: unknown }).question,
   );
-  const criteria = Array.from({ length: question.marks }, (_, i) => ({
-    min: i + 1,
-    max: i + 1,
-    descriptor: `${i + 1} of ${question.marks} marks: meets approximately ${Math.round(((i + 1) / question.marks) * 100)}% of the question's requirements, including the directive ${question.verb || "in the question"}, with proportionate accuracy, detail and supporting reasoning. ${i + 1 === question.marks ? "Fully satisfies all parts of the question." : "Significant omissions prevent the next mark."}`,
-  }));
-  return markCheck(id, userId, {
-    id: `single:${id}`,
-    type: question.marks > 8 ? "extended" : "short",
-    marks: question.marks,
-    stem: question.stem,
-    stimulus: null,
-    criteria,
-    guideline_notes:
-      question.criteria_text ||
-      "No official guidelines supplied. This is an estimated mark against the question, directive verb and available marks.",
-    sample_answer: null,
-    source: "Student's own question — estimated mark",
-  });
+  const assessment = assessOwnCriteria(question);
+  return markCheck(
+    id,
+    userId,
+    {
+      id: `single:${id}`,
+      type: question.marks > 8 ? "extended" : "short",
+      marks: question.marks,
+      stem: question.stem,
+      stimulus: null,
+      criteria: assessment.ok ? assessment.criteria : [],
+      guideline_notes:
+        "Mark strictly against the student’s parsed criteria and available marks. Apply every supplied restriction and cap. Do not invent criteria or award marks outside these bands.",
+      restrictions: assessment.ok ? assessment.restrictions : undefined,
+      sample_answer: null,
+      source: "Student's own question — estimated mark",
+    },
+    assessment,
+  );
 }
 
 /** Bank singles use the identical engine question shape and blind-check pipeline. */
@@ -60,6 +62,7 @@ async function markCheck(
   id: string,
   userId: string,
   question: MarkableQuestion,
+  ownAssessment?: ReturnType<typeof assessOwnCriteria>,
 ) {
   const db = admin();
   const { data: a } = await db
@@ -83,6 +86,29 @@ async function markCheck(
     .throwOnError();
   if (!claimed?.length) throw new AlreadyMarking();
   try {
+    if (ownAssessment && !ownAssessment.ok) {
+      const { data } = await db
+        .from("attempts")
+        .update({
+          mark: null,
+          max_marks: question.marks,
+          band: null,
+          check_status: "skipped",
+          marked_by_model: "deterministic",
+          feedback: {
+            note: ownAssessment.message,
+            confidence: "low",
+            unreliable_reason: ownAssessment.reason,
+          },
+          status: "marked",
+          marked_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+        .select("*")
+        .single()
+        .throwOnError();
+      return data;
+    }
     const answer = a.transcript ?? a.answer_text ?? "";
     if (!answer.trim()) {
       const { data } = await db
@@ -103,7 +129,17 @@ async function markCheck(
         .throwOnError();
       return data;
     }
-    const { check, ...marked } = await markWritten(question, answer, userId);
+    const { check, ...marked } = await (ownAssessment
+      ? markWritten(
+          question,
+          answer,
+          userId,
+          undefined,
+          undefined,
+          [],
+          async () => [],
+        )
+      : markWritten(question, answer, userId));
     if (check.status === "in_review") {
       const { error } = await db.from("mark_reviews").insert({
         attempt_id: id,
@@ -121,6 +157,10 @@ async function markCheck(
       .from("attempts")
       .update({
         ...studentMarking(marked),
+        feedback: {
+          ...studentMarking(marked).feedback,
+          ...(ownAssessment && { confidence: "estimate" }),
+        },
         max_marks: question.marks,
         check_status: check.status,
         marked_by_model: MARKER.model,
