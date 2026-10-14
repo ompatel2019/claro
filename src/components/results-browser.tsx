@@ -226,7 +226,7 @@ export function ResultsBrowser({
               aria-current={i === index ? "true" : undefined}
               onClick={() => setIndex(i)}
               className={cn(
-                "size-9 rounded-full border bg-white text-sm font-medium tabular-nums",
+                "bg-card size-9 rounded-full border text-sm font-medium tabular-nums",
                 it.tone,
                 i === index && "ring-primary ring-2 ring-offset-2",
               )}

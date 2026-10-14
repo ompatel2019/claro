@@ -15,8 +15,8 @@ function Mark({ result }: { result: CompareRow["a"] }) {
         result.agrees == null
           ? "text-muted-foreground"
           : result.agrees
-            ? "text-emerald-700 dark:text-emerald-400"
-            : "text-red-700 dark:text-red-400"
+            ? "text-success"
+            : "text-destructive"
       }
     >
       {result.state ?? (

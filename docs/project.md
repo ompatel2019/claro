@@ -35,3 +35,7 @@ sessions, answer modalities, skipped/failed answers, user isolation and Sydney
 range boundaries in a transaction that rolls back. Run checks and browsers
 serially through
 `Q_MIN_GB=3 Q_SLOTS=1 q-run` on the shared box.
+
+The student and admin headers include a keyboard-accessible Dark mode toggle. The initial theme follows your system, and explicit choices are saved in this browser. Choose “Use system theme” in the account menu to reset it. A synchronous head script sets the theme before paint; panels, controls, charts and activity shades share light/dark tokens.
+
+Theme validation: `e2e/theme.spec.ts` (student and admin toggle, persistence, system default, blocked storage, 360px and 1280px) runs with the normal Playwright config.

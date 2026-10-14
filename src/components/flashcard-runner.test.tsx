@@ -565,7 +565,7 @@ it("preserves keyboard activation on focused controls and focuses ratings after 
   for (const name of ["Missed it (1)", "Mostly (2)", "Knew it (3)"])
     expect(screen.getByRole("button", { name })).toHaveClass(
       "border-border",
-      "bg-white",
+      "bg-card",
     );
   expect(
     screen.getByRole("heading", { name: "Model answer" }).parentElement,

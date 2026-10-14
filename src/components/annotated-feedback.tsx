@@ -55,7 +55,7 @@ export function FeedbackDetails({
   return (
     <details
       ref={ref}
-      className="group rounded-xl border bg-white"
+      className="group bg-card rounded-xl border"
       onToggle={(e) => {
         try {
           localStorage.setItem(key, e.currentTarget.open ? "1" : "0");
@@ -100,7 +100,7 @@ function CommentFields({
         <label className="grid gap-1">
           Kind
           <select
-            className="h-9 rounded-md border bg-white px-2"
+            className="bg-card h-9 rounded-md border px-2"
             value={value.kind}
             onChange={(e) =>
               onChange({
@@ -118,7 +118,7 @@ function CommentFields({
         <label className="grid gap-1">
           Tag
           <select
-            className="h-9 rounded-md border bg-white px-2"
+            className="bg-card h-9 rounded-md border px-2"
             value={value.tag ?? ""}
             onChange={(e) =>
               onChange({
@@ -188,7 +188,7 @@ function CommentCard({
       {...props}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="bg-ink flex size-5 items-center justify-center rounded-full text-[11px] font-semibold text-white tabular-nums">
+        <span className="bg-ink text-surface flex size-5 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums">
           {n}
         </span>
         <span
@@ -605,7 +605,7 @@ export function AnnotatedFeedback({
               <sup
                 key={c.id}
                 aria-hidden
-                className="bg-ink mx-0.5 rounded-full px-1 text-[10px] font-semibold text-white"
+                className="bg-ink text-surface mx-0.5 rounded-full px-1 text-[10px] font-semibold"
               >
                 {c.n}
               </sup>

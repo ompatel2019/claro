@@ -39,7 +39,7 @@ export function McReview({ row }: { row: ReviewRow }) {
         Correct: {letter(correct) ?? "unavailable"}
       </p>
       {row.explanation && (
-        <details open={!right} className="rounded-xl border bg-white">
+        <details open={!right} className="bg-card rounded-xl border">
           <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">
             Explanation
           </summary>

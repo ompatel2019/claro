@@ -145,7 +145,7 @@ export function Calculator({ onClose }: { onClose: () => void }) {
             onClick={() => press(k)}
             className={cn(
               "hover:bg-muted h-9 rounded-lg border text-sm font-medium",
-              k === "=" && "bg-ink border-ink hover:bg-ink/90 text-white",
+              k === "=" && "bg-ink border-ink hover:bg-ink/90 text-surface",
             )}
           >
             {k}

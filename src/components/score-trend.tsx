@@ -78,7 +78,7 @@ function ScorePlot({
         cx={x(p)}
         cy={y(p.pct)}
         r={4}
-        className="fill-primary group-focus-visible:stroke-ink stroke-white"
+        className="fill-primary group-focus-visible:stroke-ink stroke-card"
         strokeWidth={2}
       />
     </>

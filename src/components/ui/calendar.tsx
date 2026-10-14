@@ -77,7 +77,7 @@ export function Calendar({
             onClick={() => onChange(day)}
             className={cn(
               "h-8 rounded-md text-xs focus-visible:outline-2 focus-visible:outline-offset-2",
-              day === value ? "bg-ink text-white" : "hover:bg-muted",
+              day === value ? "bg-ink text-surface" : "hover:bg-muted",
               day.slice(0, 7) !== month && "text-muted-foreground",
             )}
           >

@@ -69,7 +69,7 @@ function Thumb({ file, onRemove }: { file: File; onRemove: () => void }) {
         type="button"
         aria-label={`Remove ${file.name}`}
         onClick={onRemove}
-        className="bg-ink absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full text-white"
+        className="bg-ink text-surface absolute -top-1.5 -right-1.5 flex size-5 items-center justify-center rounded-full"
       >
         <Close className="size-3" />
       </button>
@@ -179,7 +179,7 @@ export function FeedbackWidget({
           type="button"
           onClick={() => show()}
           aria-label="Feedback"
-          className="group bg-ink fixed right-6 bottom-6 z-40 hidden h-12 min-w-12 items-center justify-center gap-2 rounded-full px-3.5 text-white shadow-lg lg:flex print:hidden"
+          className="group bg-ink text-surface fixed right-6 bottom-6 z-40 hidden h-12 min-w-12 items-center justify-center gap-2 rounded-full px-3.5 shadow-lg lg:flex print:hidden"
         >
           <Message aria-hidden className="size-5" />
           <span className="hidden text-sm font-medium group-hover:inline group-focus-visible:inline">

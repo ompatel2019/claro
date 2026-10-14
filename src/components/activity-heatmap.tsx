@@ -193,7 +193,7 @@ export function ActivityHeatmap({
               {tip && col >= 0 && (
                 <div
                   role="tooltip"
-                  className="bg-ink pointer-events-none absolute left-0 z-10 w-max max-w-full -translate-y-full rounded-md px-2 py-1 text-xs whitespace-normal text-white"
+                  className="bg-ink text-surface pointer-events-none absolute left-0 z-10 w-max max-w-full -translate-y-full rounded-md px-2 py-1 text-xs whitespace-normal"
                   style={{
                     top: 20 + row * CELL - 4,
                   }}

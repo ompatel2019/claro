@@ -425,7 +425,7 @@ export function ReviewEditor({
             </label>
           </div>
           {!readonly && (
-            <div className="fixed inset-x-0 bottom-0 z-20 space-y-2 border-t bg-white px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:static lg:shrink-0 lg:px-0 lg:pt-4 lg:pb-0">
+            <div className="bg-card fixed inset-x-0 bottom-0 z-20 space-y-2 border-t px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:static lg:shrink-0 lg:px-0 lg:pt-4 lg:pb-0">
               <input
                 type="hidden"
                 name="comments"

@@ -10,10 +10,10 @@ export const TYPE_LABEL = {
 /** Chip colour for a marked question: full, part or no marks. */
 export const markTone = (mark: unknown, max: unknown) =>
   Number(mark) >= Number(max)
-    ? "bg-success border-success text-white"
+    ? "bg-success-soft border-success text-success"
     : Number(mark) > 0
-      ? "bg-warning border-warning text-white"
-      : "bg-destructive border-destructive text-white";
+      ? "bg-warning-soft border-warning text-warning"
+      : "bg-destructive-soft border-destructive text-destructive";
 
 const SCORED: MarkingState[] = [
   "marked",

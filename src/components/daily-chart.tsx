@@ -192,7 +192,7 @@ export function DailyChart({
               Day
               <select
                 aria-label={`${title} day`}
-                className="field h-9 w-auto bg-white py-0"
+                className="field bg-card h-9 w-auto py-0"
                 value={current.day}
                 onChange={(e) => setSelected(e.target.value)}
               >

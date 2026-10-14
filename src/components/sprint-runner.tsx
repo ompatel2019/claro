@@ -427,8 +427,8 @@ export function SprintRunner({
                     className={cn(
                       "relative size-9 rounded-full border text-sm font-medium tabular-nums",
                       answered(row)
-                        ? "bg-ink border-ink text-white"
-                        : "bg-white",
+                        ? "bg-ink border-ink text-surface"
+                        : "bg-card",
                       index === i && "ring-primary ring-2 ring-offset-2",
                       row.status === "marked" &&
                         markTone(row.mark, row.max_marks),
@@ -556,7 +556,7 @@ export function SprintRunner({
                   className={cn(
                     "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
                     a.choice_index === i &&
-                      "bg-primary border-primary text-white",
+                      "bg-primary border-primary text-primary-foreground",
                   )}
                 >
                   {LETTERS[i]}

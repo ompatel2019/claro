@@ -54,9 +54,9 @@ test.describe("App shell", () => {
   test("Bricolage Grotesque is the only font", async ({ page }) => {
     const families = await page.evaluate(() => [
       ...new Set(
-        [...document.querySelectorAll("body, body *")].map(
-          (el) => getComputedStyle(el).fontFamily,
-        ),
+        [...document.querySelectorAll("body, body *")]
+          .filter((el) => !el.closest("nextjs-portal")) // dev-only overlay
+          .map((el) => getComputedStyle(el).fontFamily),
       ),
     ]);
     expect(families.length).toBeGreaterThan(0);

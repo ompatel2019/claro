@@ -1,4 +1,5 @@
 "use client";
+import { ThemeToggle, setTheme } from "./theme-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef } from "react";
@@ -254,35 +255,41 @@ export function AppShell({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="min-w-0">
-        <header className="sticky top-0 z-10 flex h-16 items-center gap-3 border-b bg-white px-4 md:px-6">
+        <header className="bg-card sticky top-0 z-10 flex h-16 items-center gap-3 border-b px-4 md:px-6">
           <SidebarTrigger className="-ml-1" />
-          <p className="truncate text-sm font-semibold">{pageLabel}</p>
-          {kind === "student" && <HeaderFeedback />}
-          <form ref={signOutForm} action={signOut} className="hidden" />
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className={`ml-auto rounded-full ${kind === "student" ? "max-lg:ml-0" : ""}`}
-              aria-label="Account menu"
-            >
-              <Avatar className="size-9">
-                <AvatarFallback className="bg-accent text-ink font-semibold">
-                  {initials(name)}
-                </AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-44">
-              <DropdownMenuItem render={<Link href="/student/profile" />}>
-                <User />
-                Profile
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => signOutForm.current?.requestSubmit()}
+          <p className="min-w-0 truncate text-sm font-semibold">{pageLabel}</p>
+          <div className="ml-auto flex shrink-0 items-center gap-1">
+            {kind === "student" && <HeaderFeedback />}
+            <ThemeToggle />
+            <form ref={signOutForm} action={signOut} className="hidden" />
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className={`ml-auto rounded-full ${kind === "student" ? "max-lg:ml-0" : ""}`}
+                aria-label="Account menu"
               >
-                <SignOut />
-                Sign out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <Avatar className="size-9">
+                  <AvatarFallback className="bg-accent text-ink font-semibold">
+                    {initials(name)}
+                  </AvatarFallback>
+                </Avatar>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-44">
+                <DropdownMenuItem onClick={() => setTheme("system")}>
+                  Use system theme
+                </DropdownMenuItem>
+                <DropdownMenuItem render={<Link href="/student/profile" />}>
+                  <User />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => signOutForm.current?.requestSubmit()}
+                >
+                  <SignOut />
+                  Sign out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </header>
         <div
           id="main"

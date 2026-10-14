@@ -106,3 +106,5 @@ invoking Playwright (for example,
 Database assertions in `supabase/tests/weak-topic-samples.sql` run after migration
 0047 via `q-run bash scripts/sql.sh supabase/tests/weak-topic-samples.sql`; fixtures
 and all their writes roll back.
+
+The student and admin headers include a keyboard-accessible Dark mode toggle. The initial theme follows your system, and explicit choices are saved in this browser. Choose “Use system theme” in the account menu to reset it. A synchronous head script sets the theme before paint; panels, controls, charts and activity shades share light/dark tokens.

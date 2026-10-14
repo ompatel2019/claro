@@ -108,7 +108,7 @@ export function FilterBar({
                 <select
                   // The wrapping label's name would also include the selected option.
                   aria-label={f.label}
-                  className="field h-9 w-full max-w-64 bg-white py-0"
+                  className="field bg-card h-9 w-full max-w-64 py-0"
                   name={f.name}
                   defaultValue={values[f.name] ?? ""}
                   onChange={(e) => {

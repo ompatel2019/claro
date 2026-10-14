@@ -9,10 +9,10 @@ export function Logo({ wordClassName }: { wordClassName?: string }) {
         aria-hidden="true"
         className="shrink-0"
       >
-        <rect width="40" height="40" rx="11" fill="#f54f1b" />
+        <rect width="40" height="40" rx="11" fill="var(--color-brand)" />
         <path
           d="M27 14.5a8 8 0 1 0 0 11"
-          stroke="var(--color-surface)"
+          stroke="var(--primary-foreground)"
           strokeWidth="5"
           strokeLinecap="round"
         />

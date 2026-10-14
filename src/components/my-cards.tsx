@@ -215,7 +215,7 @@ export function MyCards({
         </p>
       )}
       {selected.size > 0 && (
-        <div className="flex flex-wrap items-center gap-2 rounded-2xl border bg-white p-3">
+        <div className="bg-card flex flex-wrap items-center gap-2 rounded-2xl border p-3">
           <p className="text-sm">{selected.size} selected</p>
           <form action={deckAction}>
             {[...selected].map((id) => (
@@ -267,7 +267,7 @@ export function MyCards({
           }
         />
       ) : (
-        <div className="min-w-0 overflow-hidden rounded-2xl border bg-white">
+        <div className="bg-card min-w-0 overflow-hidden rounded-2xl border">
           <Table aria-label="My cards" className="table-fixed sm:table-auto">
             <TableHeader>
               <TableRow>

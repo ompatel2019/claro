@@ -28,7 +28,7 @@ export function BookletLegend() {
   return (
     <ul className="text-muted-foreground space-y-1 text-xs">
       <li className="flex items-center gap-2">
-        <span className="size-3 rounded-full border bg-white" /> Not answered
+        <span className="bg-card size-3 rounded-full border" /> Not answered
       </li>
       <li className="flex items-center gap-2">
         <span className="bg-ink size-3 rounded-full" /> Answered
