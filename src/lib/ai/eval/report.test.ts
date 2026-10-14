@@ -125,6 +125,7 @@ it("excludes fixture bugs and failures from headline metrics, but reports their 
     n: 1,
     exact: 1,
     within1: 1,
+    agreement: 1,
     band: 1,
     meanSigned: 0,
     meanAbs: 0,
@@ -135,6 +136,7 @@ it("excludes fixture bugs and failures from headline metrics, but reports their 
     n: 1,
     exact: 0,
     within1: 1,
+    agreement: 0,
     band: 0,
     uncertainty: {
       uncertain: { n: 0, exact: null },
@@ -164,8 +166,10 @@ it("excludes fixture bugs and failures from headline metrics, but reports their 
   expect(markdown).toContain("Blind-check agreement");
   expect(markdown).toContain("Uncertain exact");
   expect(markdown).toContain("Certain exact");
+  expect(markdown).toContain("Human-mark agreement");
+  expect(markdown).toContain("separately from blind-check agreement");
   expect(markdown).toContain("## Held-out A1 mock answers");
-  expect(markdown).toContain("| 1 | 0.0% | 100.0% | 0.0% | -1.00 |");
+  expect(markdown).toContain("| 1 | 0.0% | 100.0% | 0.0% | 0.0% | -1.00 |");
   expect(markdown).toContain("First pass only | 0.0% | 0.0% | 0.0%");
   expect(markdown).toContain("2nd pass 1·3·3");
   expect(markdown).toContain("review 3·1·0");

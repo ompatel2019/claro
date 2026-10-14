@@ -435,6 +435,8 @@ async function loadExcludedStudents(
 export type EvalRun = {
   meta: {
     stamp: string;
+    blocked?: boolean;
+    status?: string;
     label: string;
     items?: unknown;
     limit?: number | null;
@@ -447,7 +449,13 @@ export function latestEval(runs: EvalRun[]) {
   for (const run of [...runs].sort((a, b) =>
     b.meta.stamp.localeCompare(a.meta.stamp),
   )) {
-    if (run.meta.items != null || run.meta.limit != null) continue;
+    if (
+      run.meta.items != null ||
+      run.meta.limit != null ||
+      run.meta.blocked ||
+      (run.meta.status != null && run.meta.status !== "completed")
+    )
+      continue;
     const summary = evalAgreement(run.items);
     if (summary.n)
       return {

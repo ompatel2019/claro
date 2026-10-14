@@ -4,49 +4,26 @@
 //   npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/import-a1-examples.mts <snapshot.json> [--dry-run]
 // Rows upsert on source_hash (md5 of the A1 submission and question ids), so re-runs add nothing new.
 import { readFileSync } from "node:fs";
-import { admin } from "@/utils/supabase/admin";
 import type { MarkableQuestion } from "@/lib/marking/grade";
 import evalSet from "./a1-eval-set.json";
 import questionsJson from "./a1-mock-questions.json";
-import { splitExamples } from "./split";
+import { prepareA1Snapshot } from "./a1-snapshot";
 
-type Snapshot = {
-  question: string;
-  source_hash: string;
-  answer_text: string;
-  tutor_mark: number;
-  accepted_tutor_comments: unknown[];
-  rejected_ai_comments: unknown[];
-};
 const [path, ...flags] = process.argv.slice(2);
 if (!path || flags.some((f) => f !== "--dry-run"))
   throw new Error("Usage: import-a1-examples.mts <snapshot.json> [--dry-run]");
 const dry = flags.includes("--dry-run");
-const questions = new Map(
-  (questionsJson as MarkableQuestion[]).map((q) => [q.id, q]),
+const rows = prepareA1Snapshot(
+  JSON.parse(readFileSync(path, "utf8")),
+  questionsJson as MarkableQuestion[],
+  evalSet.map((e) => e.studentResponse),
 );
-const norm = (s: string) => s.replace(/\s+/g, " ").trim().toLowerCase();
-const evalAnswers = new Set(evalSet.map((e) => norm(e.studentResponse)));
-const snapshot = JSON.parse(readFileSync(path, "utf8")) as Snapshot[];
-const rows = splitExamples(snapshot).map((r) => {
-  const q = questions.get(r.question);
-  if (!q) throw new Error(`Unknown question ${r.question}`);
-  if (evalAnswers.has(norm(r.answer_text)))
-    throw new Error(`An A1 eval-set answer is in the snapshot (${r.question})`);
-  return {
-    question_id: `a1-${r.question}`,
-    answer_text: r.answer_text,
-    tutor_mark: r.tutor_mark,
-    band:
-      q.criteria.find((c) => r.tutor_mark >= c.min && r.tutor_mark <= c.max)
-        ?.descriptor ?? null,
-    accepted_tutor_comments: r.accepted_tutor_comments,
-    rejected_ai_comments: r.rejected_ai_comments,
-    split: r.split,
-    origin: "a1",
-    source_hash: r.source_hash,
-  };
-});
+const count = (split: string) => rows.filter((r) => r.split === split).length;
+console.log(
+  `${rows.length} answers over ${new Set(rows.map((r) => r.question_id)).size} questions: ${count("test")} test, ${count("example")} example.`,
+);
+if (dry) process.exit(0);
+const { admin } = await import("@/utils/supabase/admin");
 const db = admin();
 const { data: present } = await db
   .from("questions")
@@ -56,17 +33,12 @@ const { data: present } = await db
 const missing = [...new Set(rows.map((r) => r.question_id))].filter(
   (id) => !present?.some((p) => p.id === id),
 );
-const count = (split: string) => rows.filter((r) => r.split === split).length;
-console.log(
-  `${rows.length} answers over ${questions.size} questions: ${count("test")} test, ${count("example")} example.`,
-);
 if (missing.length) {
   console.error(
     `Missing Claro questions (${missing.length}): ${missing.join(", ")}`,
   );
-  if (!dry) process.exit(1);
+  process.exit(1);
 }
-if (dry) process.exit(0);
 for (let i = 0; i < rows.length; i += 500)
   await db
     .from("marking_examples")

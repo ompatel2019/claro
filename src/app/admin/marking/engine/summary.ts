@@ -7,6 +7,7 @@ import {
 export type OfflineEvalRun = {
   meta: {
     stamp: string;
+    blocked?: boolean;
     id?: string;
     startedAt?: string;
     updatedAt?: string;

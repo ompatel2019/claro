@@ -91,3 +91,19 @@ Student marking responses, practice loaders and results strip `feedback.flags`.
 Eval rows record `flags.uncertain` for two-pass results and retain both marks in
 `check.marks`; reports give scored, non-excluded uncertain/certain counts and exact
 rates. Single-pass and historical rows without the flag are outside those groups.
+
+## A1 backlog calibration (A5)
+
+The **Eval runs** tab shows the latest full held-out mock-backlog run, independently of the 20-answer Karan benchmark and newer partial runs. It reports the number of successfully scored scripts, exact human marks and **human-mark agreement** (same guideline band, plus within one mark for questions worth six or more). Failed and excluded scripts are omitted. This compares the engine to A1 human marks; blind-check agreement compares two AI passes. Student disputes change neither backlog metric. Offline reports now include human-mark agreement explicitly as well.
+
+A1 remains read-only. The existing anonymising SELECT is `/workspace/claro/a1-export/export.sql`; its private snapshot is never committed. The bank in `a1-mock-questions.json` contains 41 mock questions, separate from `a1-questions.json` / `a1-eval-set.json` (Karan's benchmark). Do not add benchmark answers to calibration exemplars.
+
+Validate a new anonymised export without credentials or database access:
+
+```bash
+npx tsx --conditions=react-server src/lib/ai/eval/import-a1-examples.mts /path/to/snapshot.json --dry-run
+```
+
+The importer rejects unknown questions, empty scripts, out-of-range/non-numeric marks, duplicate source hashes and normalised duplicate or benchmark answer text before database access. This prevents a repeated script with different source hashes leaking between calibration and held-out evaluation. Fractional human marks can be stored as examples but are never selected as whole-mark held-out tests or band anchors.
+
+Only after validation, an import without `--dry-run` checks the questions exist and upserts into **Claro** using `source_hash`, ignoring already imported rows. It uses Claro's server credentials (`--env-file=.env.local`); never point those at A1. Existing split assignments use the unchanged seed in `split.ts`. No migration is needed for this change.

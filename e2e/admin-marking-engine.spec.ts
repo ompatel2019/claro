@@ -68,6 +68,15 @@ test.describe("admin marking engine", () => {
     await expect(page).toHaveURL(/[?&]doc=ENGINE(&|$)/);
     await page.getByRole("button", { name: "Eval runs", exact: true }).click();
     await expect(page).toHaveURL(/[?&]tab=runs(&|$)/);
+    const calibration = page.getByLabel("A1 mock backlog calibration");
+    await expect(calibration).toBeVisible();
+    await expect(calibration).toContainText("Latest full backlog run:");
+    await expect(calibration).toContainText("194");
+    await expect(calibration).toContainText("Exact human mark");
+    await expect(calibration).toContainText("Human-mark agreement");
+    await expect(calibration).toContainText("student disputes do not affect");
+    await expect(calibration).toContainText("Partial runs");
+    await expect(calibration).not.toContainText("NaN");
     const wrapper = page.getByTestId("runs-region");
     expect(
       await wrapper.evaluate((el) => el.scrollWidth <= el.clientWidth + 1),
@@ -109,6 +118,77 @@ test.describe("admin marking engine", () => {
       page.getByRole("button", { name: "Compare", exact: true }),
     ).toBeDisabled();
   });
+  for (const width of [360, 1280]) {
+    test(`human-mark backlog agreement is readable at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await signInAdmin(page);
+      await page.goto("/admin/marking/engine?tab=runs");
+      const card = page.getByLabel("A1 mock backlog calibration");
+      await expect(card).toBeVisible();
+      // Independently derive expected metrics from the shipped human-marked run.
+      const run = JSON.parse(
+        await readFile(
+          join(process.cwd(), "src/lib/ai/eval/results/2026-10-09-1415.json"),
+          "utf8",
+        ),
+      ) as {
+        items: {
+          section: string;
+          mark: number | null;
+          expected: number;
+          marks: number;
+          error: string | null;
+          flags: { excluded?: string };
+          score?: { band: boolean };
+        }[];
+      };
+      const scored = run.items.filter(
+        (item) =>
+          item.section === "Held-out" &&
+          item.mark !== null &&
+          !item.error &&
+          !item.flags.excluded,
+      );
+      const exact = scored.filter((item) => item.mark === item.expected).length;
+      const agreed = scored.filter(
+        (item) =>
+          item.score?.band &&
+          (item.marks < 6 || Math.abs(item.mark! - item.expected) <= 1),
+      ).length;
+      for (const [label, value] of [
+        ["Scored scripts", String(scored.length)],
+        ["Exact human mark", `${((100 * exact) / scored.length).toFixed(1)}%`],
+        [
+          "Human-mark agreement",
+          `${((100 * agreed) / scored.length).toFixed(1)}%`,
+        ],
+      ])
+        await expect(
+          card
+            .locator("dl > div")
+            .filter({ has: page.getByText(label, { exact: true }) })
+            .locator("dd"),
+        ).toHaveText(value);
+      await expect(card).toContainText("14:15");
+      await expect(card).toContainText("Partial runs");
+      expect(await noOverflow(page)).toBe(true);
+      expect(
+        await card.evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true);
+      await page.getByRole("button", { name: "Docs", exact: true }).click();
+      await expect(
+        page.getByRole("navigation", { name: "Engine documents" }),
+      ).toBeVisible();
+      await page
+        .getByRole("button", { name: "Eval runs", exact: true })
+        .click();
+      await expect(card).toBeVisible();
+    });
+  }
   test("compares two saved CLI runs without starting a run", async ({
     page,
   }) => {
@@ -215,6 +295,10 @@ test.describe("admin marking engine", () => {
       ).toBe(true);
     }
     await page.goto("/admin/marking/engine?tab=runs");
+    await expect(page.getByLabel("A1 mock backlog calibration")).toBeVisible();
+    await expect(page.getByLabel("A1 mock backlog calibration")).toContainText(
+      "Human-mark agreement",
+    );
     await expect(page.getByRole("list", { name: "Eval runs" })).toBeVisible();
     expect(await noOverflow(page)).toBe(true);
     expect(

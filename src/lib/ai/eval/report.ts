@@ -76,6 +76,11 @@ export function writeResults(
         uncertain: uncertaintyGroup(true),
         certain: uncertaintyGroup(false),
       },
+      agreement: scored.length
+        ? scored.filter(
+            (r) => r.score.band && ((r.marks ?? 0) < 6 || r.score.within1),
+          ).length / scored.length
+        : null,
       judgeUsd: sectionRows.reduce((sum, r) => sum + r.judgeUsd, 0),
       blindAgreement: marked.length
         ? marked.filter((r) => r.check?.status === "agreed").length /
@@ -141,6 +146,7 @@ export function writeResults(
         "Exact",
         "Within-1",
         "Band",
+        "Human-mark agreement",
         "Mean signed (+ = lenient)",
         "Mean |Δ|",
         "Pros kept",
@@ -163,6 +169,7 @@ export function writeResults(
           pct(h.exact),
           pct(h.within1),
           pct(h.band),
+          pct(h.agreement),
           fmt(h.meanSigned),
           fmt(h.meanAbs),
           pct(h.prosKept),
@@ -221,6 +228,7 @@ export function writeResults(
       meta.set
         ? `## ${evalSection} frozen answers (marking_examples; no judge, no tutor critique)`
         : "## Held-out A1 mock answers (marking_examples split test; no judge, no tutor critique)",
+      "Human-mark agreement: same guideline band, and within one mark on questions worth six or more marks. This compares against human marks, separately from blind-check agreement. Failed and excluded scripts are omitted.",
       heldOut.n ? heldHead : "Not run.",
       "## Comment tone (offline, pooled run)",
       toneTable,

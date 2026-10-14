@@ -21,6 +21,7 @@ import { loadBucketRuns } from "./store";
 import { NewRun } from "./new-run";
 import { loadComparison } from "./compare-data";
 import { CompareView } from "./compare-view";
+import { BacklogSummary } from "./backlog-summary";
 import { evalRunDialogData } from "./actions";
 
 export const maxDuration = 300;
@@ -65,14 +66,19 @@ export default async function EnginePage({
     ]);
     dialogData = dialog;
     const rows = mergeRuns(runs, web);
-    content = rows.length ? (
-      <RunsTable rows={rows} />
-    ) : (
-      <EmptyState
-        icon={Target}
-        title="No eval runs yet"
-        description="Bundled offline evaluation runs will appear here."
-      />
+    content = (
+      <div className="space-y-4">
+        <BacklogSummary runs={[...runs, ...web]} />
+        {rows.length ? (
+          <RunsTable rows={rows} />
+        ) : (
+          <EmptyState
+            icon={Target}
+            title="No eval runs yet"
+            description="Bundled offline evaluation runs will appear here."
+          />
+        )}
+      </div>
     );
   } else {
     const [dialog, docs] = await Promise.all([evalRunDialogData(), loadDocs()]);

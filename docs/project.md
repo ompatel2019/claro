@@ -65,3 +65,13 @@ The loader pages Auth users and resolved dispute history and fails on read error
 identifiers remain server-side. Exclusions never hide staff-initiated reviews.
 Checker-status charts remain a current snapshot and may change during reviews,
 as the accessible Check agreement tooltip explains. No migration is needed.
+
+## A5: A1 backlog calibration
+
+The existing `a1-mock-questions.json` bank and private anonymised A1 export extend the separate 20-answer Karan benchmark, without bundling student scripts. Calibration already runs through `marking_examples_for_grader` and the same band anchors in grader, blind check and reconciliation. Test scripts remain in `marking_examples` with `split = 'test'`.
+
+Engine → Eval runs now displays the latest full held-out backlog result. Exact means an identical human mark; agreement means the same guideline band and, for six or more marks, at most one mark apart. Failures and exclusions are omitted; newer partial runs and other eval sets cannot replace the full backlog summary. Offline JSON/Markdown reports include this metric separately from blind-check agreement.
+
+The importer validates the entire export before database access. Its local dry-run has no database calls. Invalid snapshots and duplicate/benchmark answer text fail before writes; actual imports only upsert into Claro, never A1. Existing source hashes and the seeded split are preserved; no migration or import is needed for this code change.
+
+Validation: snapshot/importer Vitest tests cover invalid data, reproducible splits and leakage; backlog card tests cover agreement boundaries, run selection, empty states and private content. Report tests distinguish human agreement from blind checks. `e2e/admin-marking-engine.spec.ts` covers the card, docs and runs on desktop/mobile without starting paid evals.
