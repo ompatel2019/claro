@@ -27,12 +27,17 @@ export function pickBandExamples(
 }
 
 /** Band anchors for a question. Reads only the grader view, which never holds split 'test' rows. */
-export async function bandExamples(q: MarkableQuestion) {
-  const { data, error } = await admin()
+export async function bandExamples(
+  q: MarkableQuestion,
+  excludedIds: readonly string[] = [],
+) {
+  let query = admin()
     .from("marking_examples_for_grader")
     .select("answer_text, tutor_mark")
-    .eq("question_id", q.id)
-    .order("id");
+    .eq("question_id", q.id);
+  if (excludedIds.length)
+    query = query.not("id", "in", `(${excludedIds.join(",")})`);
+  const { data, error } = await query.order("id");
   if (error) throw new Error(`marking examples: ${error.message}`);
   return pickBandExamples(q.criteria, data ?? []);
 }

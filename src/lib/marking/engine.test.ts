@@ -1073,3 +1073,11 @@ it("stops configured eval corrections when the step signal aborts", async () => 
   ).rejects.toThrow("deadline");
   expect(mockedCall).toHaveBeenCalledTimes(1);
 });
+
+it("passes eval exclusions to retrieval for all marking passes", async () => {
+  await markWritten(q, "prices rise", null, "eval:fixture", undefined, [
+    "locked-final",
+    "dev-self",
+  ]);
+  expect(bandExamples).toHaveBeenCalledWith(q, ["locked-final", "dev-self"]);
+});

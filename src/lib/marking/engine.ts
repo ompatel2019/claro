@@ -52,6 +52,7 @@ export async function markWritten(
     signal?: AbortSignal;
     timeoutMs?: number;
   },
+  excludedExampleIds: readonly string[] = [],
 ) {
   async function pass<S extends z.ZodType<z.infer<typeof CheckSchema>>>(
     schema: S,
@@ -121,7 +122,9 @@ export async function markWritten(
     return { grade, mark, criterion, validated: validation.ok };
   }
 
-  const examples = await bandExamples(q);
+  const examples = excludedExampleIds.length
+    ? await bandExamples(q, excludedExampleIds)
+    : await bandExamples(q);
   const passes = [
     pass(
       GradeSchema,

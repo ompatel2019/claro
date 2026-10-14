@@ -47,14 +47,17 @@ export async function markEvalItem(
   task: string,
   cost: () => Promise<number>,
   config?: Parameters<typeof markWritten>[4],
+  excludedExampleIds: readonly string[] = [],
 ) {
   const started = performance.now();
   let result;
   try {
-    // Keep the CLI's four-argument call unchanged.
-    result = config
-      ? await markWritten(q, answer, null, task, config)
-      : await markWritten(q, answer, null, task);
+    // Preserve the default call for callers without eval exclusions.
+    result = excludedExampleIds.length
+      ? await markWritten(q, answer, null, task, config, excludedExampleIds)
+      : config
+        ? await markWritten(q, answer, null, task, config)
+        : await markWritten(q, answer, null, task);
   } finally {
     row.seconds = (performance.now() - started) / 1000;
     row.usd = await cost();

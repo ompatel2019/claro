@@ -6,6 +6,7 @@ const query = vi.hoisted(() => ({
   from: vi.fn(),
   select: vi.fn(),
   eq: vi.fn(),
+  not: vi.fn(),
   order: vi.fn(),
 }));
 vi.mock("@/utils/supabase/admin", () => ({
@@ -51,4 +52,15 @@ it("reads the grader view for the question, which excludes test rows", async () 
   expect(query.eq).toHaveBeenCalledWith("question_id", "a1-m2-21a");
   query.order.mockResolvedValue({ data: null, error: { message: "boom" } });
   await expect(bandExamples(q)).rejects.toThrow("marking examples: boom");
+});
+
+it("applies eval exclusions before fetching band anchors", async () => {
+  query.from.mockReturnValue(query);
+  query.select.mockReturnValue(query);
+  query.eq.mockReturnValue(query);
+  query.not.mockReturnValue(query);
+  query.order.mockResolvedValue({ data: [ex(2)], error: null });
+  const q = { id: "fixture-question", criteria } as MarkableQuestion;
+  expect(await bandExamples(q, ["locked-final", "dev-self"])).toEqual([ex(2)]);
+  expect(query.not).toHaveBeenCalledWith("id", "in", "(locked-final,dev-self)");
 });

@@ -178,3 +178,58 @@ it.each([
   expect(header.includes("(priority)")).toBe(priority);
   vi.restoreAllMocks();
 });
+
+it.each(["dev", "final"] as const)(
+  "summarises the frozen %s section",
+  (set) => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(writeFileSync).mockClear();
+    const section = set === "dev" ? "Dev" : "Final";
+    writeResults(
+      {
+        stamp: "2026-10-14-2000",
+        git: "abc123",
+        dirty: false,
+        label: "",
+        limit: 1,
+        set,
+        marker: {
+          model: "anthropic/claude-sonnet-5.5",
+          effort: { grade: "low", check: "low", reconcile: "medium" },
+        },
+        judge: { model: "gpt-6-astra", effort: "low" },
+        spentBefore: 0,
+        spentAfter: 0,
+        blocked: false,
+      },
+      [
+        {
+          id: "fixture-question",
+          section,
+          label: "",
+          marks: 2,
+          expected: 2,
+          mark: 2,
+          band: "Sound",
+          check: { status: "agreed", marks: [2, 2] },
+          delta: 0,
+          flags: {},
+          usd: 0,
+          judgeUsd: 0,
+          seconds: 0,
+          verdict: null,
+          feedback: null,
+          error: null,
+          score: { delta: 0, exact: true, within1: true, band: true },
+        },
+      ],
+    );
+    const calls = vi.mocked(writeFileSync).mock.calls;
+    expect(JSON.parse(String(calls[0][1])).heldOut).toMatchObject({
+      n: 1,
+      exact: 1,
+    });
+    expect(String(calls[1][1])).toContain(`## ${section} frozen answers`);
+    vi.restoreAllMocks();
+  },
+);

@@ -2,6 +2,7 @@
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
 import a1 from "./a1-eval-set.json";
 import claro from "./claro-set.json";
+import { evalSets } from "./sets";
 import questions from "./a1-questions.json";
 
 const mocks = vi.hoisted(() => ({
@@ -11,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   judge: vi.fn(),
   write: vi.fn(),
   report: vi.fn(),
+  examples: vi.fn(),
 }));
 vi.mock("node:fs", async (original) => ({
   ...(await original<typeof import("node:fs")>()),
@@ -34,7 +36,7 @@ vi.mock("@/lib/marking/engine", () => ({
 }));
 vi.mock("../openai", () => ({ callJson: mocks.judge }));
 vi.mock("@/lib/marking/examples", () => ({
-  bandExamples: async () => [{ answer_text: "Anchor", tutor_mark: 2 }],
+  bandExamples: mocks.examples,
 }));
 vi.mock("./report", () => ({ writeResults: mocks.report }));
 
@@ -69,14 +71,19 @@ beforeEach(() => {
   vi.spyOn(console, "log").mockImplementation(() => {});
   vi.spyOn(console, "error").mockImplementation(() => {});
   mocks.rpc.mockResolvedValue({ data: 1, error: null });
+  mocks.examples.mockResolvedValue([{ answer_text: "Anchor", tutor_mark: 2 }]);
   mocks.from.mockImplementation((table: string) => {
     let selected = "";
+    let ids: string[] | undefined;
     const query = {
       select: vi.fn((fields: string) => {
         selected = fields;
         return query;
       }),
-      in: vi.fn(() => query),
+      in: vi.fn((field: string, values: string[]) => {
+        if (field === "id") ids = values;
+        return query;
+      }),
       eq: vi.fn(() => query),
       not: vi.fn(() => query),
       order: vi.fn(() => query),
@@ -89,14 +96,21 @@ beforeEach(() => {
                 { ...questions[0], id: "a1-m2-21a" },
               ]
             : table === "marking_examples"
-              ? [
-                  {
-                    id: "stable-held-id",
+              ? ids
+                ? ids.map((id) => ({
+                    id,
                     question_id: "a1-m2-21a",
-                    answer_text: "x",
+                    answer_text: "Frozen mock answer",
                     tutor_mark: "2",
-                  },
-                ]
+                  }))
+                : [
+                    {
+                      id: "stable-held-id",
+                      question_id: "a1-m2-21a",
+                      answer_text: "x",
+                      tutor_mark: "2",
+                    },
+                  ]
               : selected === "usd"
                 ? [{ usd: 0.02 }]
                 : [],
@@ -163,6 +177,8 @@ it("--items marks only the selected position and records it in the meta", async 
     "x",
     null,
     expect.stringMatching(/^eval:\d{4}-\d{2}-\d{2}-\d{4}:0:mark$/),
+    undefined,
+    evalSets.final,
   );
   expect(mocks.judge).not.toHaveBeenCalled();
   expect(mocks.report).toHaveBeenCalledTimes(1);
@@ -221,6 +237,8 @@ it("costs each item by its own eval task, judges only A1 and clamps the judge sc
       expect.stringMatching(
         new RegExp(`^eval:\\d{4}-\\d{2}-\\d{2}-\\d{4}:${i}:mark$`),
       ),
+      undefined,
+      evalSets.final,
     ]),
   );
   expect(mocks.judge).toHaveBeenCalledTimes(1);
@@ -302,3 +320,40 @@ it("rechecks spend before the judge and saves completed work when blocked", asyn
   expect(rows[0].error).toContain("Eval refused before judge");
   expect(process.exitCode).toBe(1);
 });
+
+it.each(["dev", "final"] as const)(
+  "selects frozen %s rows with limit and passes retrieval exclusions through marking",
+  async (set) => {
+    process.argv.push(`--set=${set}`);
+    await run();
+    const [meta, rows] = mocks.report.mock.calls[0];
+    expect(meta.set).toBe(set);
+    expect(rows).toHaveLength(3);
+    expect(rows[1]).toMatchObject({
+      section: set === "dev" ? "Dev" : "Final",
+      exampleId: evalSets[set][0],
+      expected: 2,
+      error: null,
+    });
+    expect(mocks.mark.mock.calls[1][5]).toEqual(
+      set === "dev" ? [...evalSets.final, evalSets.dev[0]] : evalSets.final,
+    );
+    expect(mocks.mark.mock.calls[0][5]).toEqual(evalSets.final);
+    expect(mocks.mark.mock.calls[2][5]).toEqual(evalSets.final);
+  },
+);
+
+it.each(["dev", "final"] as const)(
+  "uses the same exclusions in a frozen %s dry-run",
+  async (set) => {
+    process.argv.push(`--set=${set}`, "--dry-run");
+    await expect(run()).rejects.toThrow("exit 0");
+    expect(mocks.examples.mock.calls[1][1]).toEqual(
+      set === "dev" ? [...evalSets.final, evalSets.dev[0]] : evalSets.final,
+    );
+    expect(mocks.examples.mock.calls[0][1]).toEqual(evalSets.final);
+    expect(mocks.examples.mock.calls[2][1]).toEqual(evalSets.final);
+    expect(mocks.mark).not.toHaveBeenCalled();
+    expect(mocks.judge).not.toHaveBeenCalled();
+  },
+);
