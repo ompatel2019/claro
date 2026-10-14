@@ -2,6 +2,12 @@
 
 Eval = A1 set, 18 headline items (fm-1 and ei-4 excluded). Signed error: + = lenient. Marker anthropic/claude-sonnet-5.5 (OpenRouter); earlier runs used gpt-6.1-sol (Fast). Judge gpt-6-astra/low. Result files are in `src/lib/ai/eval/results/`. Runs marked dirty were made on an uncommitted change (the eval varied one setting), and the setting is recorded in the file.
 
+## 14 Oct 2026: Airo 5.0 (built and unit-tested only)
+
+Airo 5.0 combines frozen dev/final sets (A1), paired statistics (A2), the separate feedback harness (A3), quota retrieval with tutor rationales (B1), an internal uncertainty flag (B2), question-specific evidence checklists (B3), offline reconcile re-scoring (B4), and direct tutor comment voice with a free tone check (S14). The comparison and re-score tools share one question-level bootstrap.
+
+**Built and unit-tested only: no paid Airo 5.0 eval run yet, and no accuracy, feedback-quality or improvement numbers claimed.** Historical reconcile re-scoring is a local analysis of saved older runs, not a new engine evaluation. No deployment or database migration accompanies this work. See [AIRO-5](/admin/marking/engine?tab=docs&doc=AIRO-5) for components, commands, leak guards and the proposed first paid test.
+
 ## 10 Oct 2026: eval storage reads bypass the CDN cache
 
 Eval storage JSON reads use a fresh cache nonce, so a step never loads a stale copy of a run, lease or cancel marker (a stale run read made a production run's second step refuse to save). The run version guard is unchanged.

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { bootstrap, type Pair } from "./stats";
 
 const rowSchema = z.object({
   id: z.string().min(1), // Question id, shared by all answers to that question.
@@ -82,52 +83,21 @@ export function readRescoreRuns(input: unknown) {
   });
 }
 
-function random(seed: number) {
-  let state = seed >>> 0;
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let value = Math.imul(state ^ (state >>> 15), 1 | state);
-    value ^= value + Math.imul(value ^ (value >>> 7), 61 | value);
-    return ((value ^ (value >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-/** Paired percentile CI for exact-rate gain (fractions, not percentage points).
- * Sample whole questions with replacement, retaining every answer/observation.
- * Pooled runs share question clusters, including repeat observations.
+/** Share the paired question bootstrap with the comparison CLI.
+ * Pooled run observations stay in one cluster per question.
  */
 function gainInterval(rows: RescoreRow[], rule: RescoreRule) {
-  if (!rows.length) return null;
-  const questions = new Map<string, { n: number; gain: number }>();
-  for (const row of rows) {
-    const group = questions.get(row.id) ?? { n: 0, gain: 0 };
-    group.n++;
-    group.gain +=
-      Number(ruleMark(row, rule) === row.expected) -
-      Number(row.mark === row.expected);
-    questions.set(row.id, group);
-  }
-  const groups = [...questions.entries()]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, group]) => group);
-  const next = random(BOOTSTRAP.seed);
-  const gains = Array.from({ length: BOOTSTRAP.samples }, () => {
-    let n = 0;
-    let gain = 0;
-    for (let i = 0; i < groups.length; i++) {
-      const group = groups[Math.floor(next() * groups.length)];
-      n += group.n;
-      gain += group.gain;
-    }
-    return gain / n;
-  }).sort((a, b) => a - b);
-  // Linear interpolation at the 2.5th and 97.5th percentiles.
-  const quantile = (p: number) => {
-    const index = (gains.length - 1) * p;
-    const low = Math.floor(index);
-    return gains[low] + (gains[Math.ceil(index)] - gains[low]) * (index - low);
-  };
-  return { low: quantile(0.025), high: quantile(0.975) };
+  const pairs: Pair[] = [...rows]
+    .sort((a, b) => a.id.localeCompare(b.id))
+    .map((row) => {
+      const baseline = { ...row, section: "Rescore" };
+      return {
+        baseline,
+        candidate: { ...baseline, mark: ruleMark(row, rule) },
+      };
+    });
+  const interval = bootstrap(pairs, BOOTSTRAP.seed, BOOTSTRAP.samples).exact;
+  return interval ? { low: interval[0], high: interval[1] } : null;
 }
 
 export function rescore(rows: RescoreRow[]) {

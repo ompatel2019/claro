@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+import { bootstrap } from "./stats";
 import passes from "./sets/past-passes.json";
 import flags from "./sets/flagged-tutor-marks.json";
 import {
@@ -140,4 +141,20 @@ it("reproduces appendix 7.3 against the real saved passes", () => {
   expect(pooled.withFlagged[2].disagreementExactCount).toBe(11);
   expect(run1415.flagged).toBe(10);
   expect(run1415.withoutFlagged[0].n).toBe(184);
+});
+
+it("uses the comparison bootstrap for the same paired question observations", () => {
+  const rows = [row(), row({ id: "question-b", expected: 1, mark: 1 })];
+  const interval = bootstrap(
+    rows.map((r) => ({
+      baseline: { ...r, section: "Rescore" },
+      candidate: { ...r, section: "Rescore", mark: ruleMark(r, "higher") },
+    })),
+    BOOTSTRAP.seed,
+    BOOTSTRAP.samples,
+  ).exact!;
+  expect(rescore(rows)[1].gain95).toEqual({
+    low: interval[0],
+    high: interval[1],
+  });
 });

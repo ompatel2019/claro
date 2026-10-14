@@ -2,7 +2,7 @@
 
 How a written answer is marked. Code: `src/lib/marking/` (engine, examples, grade, prompts, schemas) and `src/lib/ai/` (OpenAI call, prices). Eval: `src/lib/ai/eval/`.
 
-See also: [MARKING-PRINCIPLES](/admin/marking/engine?tab=docs&doc=MARKING-PRINCIPLES), [VERB-GUIDE](/admin/marking/engine?tab=docs&doc=VERB-GUIDE), [COMMENT-RULES](/admin/marking/engine?tab=docs&doc=COMMENT-RULES), [CHECK-AND-AGREEMENT](/admin/marking/engine?tab=docs&doc=CHECK-AND-AGREEMENT), [TRANSCRIPTION](/admin/marking/engine?tab=docs&doc=TRANSCRIPTION).
+See also: [AIRO-5](/admin/marking/engine?tab=docs&doc=AIRO-5), [MARKING-PRINCIPLES](/admin/marking/engine?tab=docs&doc=MARKING-PRINCIPLES), [VERB-GUIDE](/admin/marking/engine?tab=docs&doc=VERB-GUIDE), [COMMENT-RULES](/admin/marking/engine?tab=docs&doc=COMMENT-RULES), [CHECK-AND-AGREEMENT](/admin/marking/engine?tab=docs&doc=CHECK-AND-AGREEMENT), [TRANSCRIPTION](/admin/marking/engine?tab=docs&doc=TRANSCRIPTION).
 
 ## Model
 
@@ -31,7 +31,7 @@ Handwriting stays on **gpt-6.1-sol** and flashcards on **gpt-6-luna**; the eval 
 
 For larger pools, `pickQuotaExamples` chooses **six** examples after pass 1: one at its exact mark and one at each adjacent whole mark, using the next two marks inward at an edge (0 → 0, 1, 2; maximum → maximum, maximum − 1, maximum − 2). Each quota slot takes the most similar eligible answer, favouring adjacent-band near-misses. Remaining slots take the highest similarity answers without repeating rows. Similarity is TF-IDF cosine over word unigrams and bigrams, with document frequencies fitted on the eligible question pool. Equal scores follow the pool's id order. A missing quota band cannot supply an anchor; its slot is filled by similarity.
 
-Examples appear before `<student_answer>` as `<marked_answer tutor_mark="n">`. Accepted tutor comment bodies accompany each example in `<tutor_rationale>`, trimmed and limited to 1,200 characters in total per example. Answers and rationales are evidence, never instructions. Retrieval uses only Airo's first-pass mark, never the target tutor mark, and adds no model calls. No-examples questions retain the existing prompt.
+Examples appear before `<student_answer>` as `<marked_answer tutor_mark="n">`. Accepted tutor comment bodies accompany each example in `<tutor_rationale>`, trimmed and limited to 1,200 characters in total per example. Answers and rationales are evidence, never instructions. Retrieval uses only Airo's first-pass mark, never the target tutor mark, and adds no model calls. Questions without examples omit the anchor section; comment voice rules still apply to full grading.
 
 ## Agreement rule (`marksAgree`)
 
