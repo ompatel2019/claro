@@ -205,6 +205,14 @@ export async function markWritten(
       next_band: grade.next_band,
       better_answer_outline: grade.better_answer_outline,
       validated: first.validated,
+      ...(second && first.mark !== second.mark
+        ? {
+            flags: {
+              uncertain: true as const,
+              marks: [first.mark, second.mark],
+            },
+          }
+        : {}),
     },
   };
 }

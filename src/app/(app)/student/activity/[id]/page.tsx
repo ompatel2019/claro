@@ -13,7 +13,7 @@ import {
   type Attempt,
   type Topic,
 } from "@/lib/practice";
-import { type ReviewRow, markingState } from "@/lib/feedback";
+import { studentMarking, type ReviewRow, markingState } from "@/lib/feedback";
 import { PageHeader } from "@/components/page-header";
 import { ResultsAnswers } from "@/components/results-report";
 import { RetryAnswer } from "@/components/retry-answer";
@@ -62,7 +62,8 @@ export default async function Page({
   ]);
   if (attempts.error || topics.error)
     throw new Error("Couldn't load this check.");
-  const a = attempts.data[0];
+  const rawAttempt = attempts.data[0];
+  const a = rawAttempt ? studentMarking(rawAttempt) : null;
   if (!a) notFound();
   if (!s.finished_at) {
     const bank = await bankQuestions(db);
@@ -130,6 +131,7 @@ export default async function Page({
     if (error) throw error;
     rows = data as ReviewRow[];
   }
+  rows = rows.map(studentMarking);
   const paths = rows.flatMap((r) => r.image_paths ?? []);
   const { data: signed, error: photoError } = paths.length
     ? await db.storage.from("answers").createSignedUrls(paths, 3600)

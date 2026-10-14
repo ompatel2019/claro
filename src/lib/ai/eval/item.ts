@@ -66,6 +66,8 @@ export async function markEvalItem(
   row.mark = result.mark;
   row.band = result.band;
   row.check = config?.blind === false ? null : result.check;
+  if (result.check.marks.length >= 2)
+    row.flags.uncertain = result.feedback.flags?.uncertain === true;
   row.flags.validated = result.feedback.validated;
   row.feedbackComments = result.feedback.comments;
   const feedback = renderFeedback(result.feedback);

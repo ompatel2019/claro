@@ -1,5 +1,15 @@
 import { orderedComments, type Attempt, type Comment } from "./practice";
 
+/** Strip internal marking flags before serialising a student attempt or result. */
+export function studentMarking<
+  T extends { feedback: Record<string, unknown> | null },
+>(row: T): T {
+  if (!row.feedback || !("flags" in row.feedback)) return row;
+  const { flags: _flags, ...feedback } = row.feedback;
+  void _flags;
+  return { ...row, feedback };
+}
+
 /** claro-ml's comment tags (Comment["tag"]), for checking stored rows at runtime. */
 export const TAGS = [
   "Verb",
@@ -209,7 +219,7 @@ export function inlineSprintFeedback(a: Attempt): ReviewRow {
     mark: a.mark,
     max_marks: a.max_marks,
     band: a.band,
-    feedback: a.feedback,
+    feedback: studentMarking(a).feedback,
     correct_index: null,
     criteria: null,
     sample_answer: a.sample_answer ?? null,

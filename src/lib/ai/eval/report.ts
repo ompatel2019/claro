@@ -21,6 +21,7 @@ export type Row = {
   flags: {
     excluded?: string;
     validated?: boolean;
+    uncertain?: boolean;
     inRange?: boolean;
     lowConfidence?: boolean;
   };
@@ -59,8 +60,21 @@ export function writeResults(
       !r.error && r.score ? [{ ...r, score: r.score }] : [],
     );
     const marked = sectionRows.filter((r) => r.mark !== null);
+    const uncertaintyGroup = (uncertain: boolean) => {
+      const group = scored.filter((r) => r.flags.uncertain === uncertain);
+      return {
+        n: group.length,
+        exact: group.length
+          ? group.filter((r) => r.score.exact).length / group.length
+          : null,
+      };
+    };
     return {
       ...summarise(scored),
+      uncertainty: {
+        uncertain: uncertaintyGroup(true),
+        certain: uncertaintyGroup(false),
+      },
       judgeUsd: sectionRows.reduce((sum, r) => sum + r.judgeUsd, 0),
       blindAgreement: marked.length
         ? marked.filter((r) => r.check?.status === "agreed").length /
@@ -124,6 +138,10 @@ export function writeResults(
         "Blind-check agreement",
         "second_pass",
         "in_review",
+        "Uncertain n",
+        "Uncertain exact",
+        "Certain n",
+        "Certain exact",
       ],
       [
         [
@@ -142,6 +160,10 @@ export function writeResults(
           pct(h.blindAgreement),
           h.secondPass,
           h.inReview,
+          h.uncertainty.uncertain.n,
+          pct(h.uncertainty.uncertain.exact),
+          h.uncertainty.certain.n,
+          pct(h.uncertainty.certain.exact),
         ],
       ],
     );

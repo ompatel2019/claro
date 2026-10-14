@@ -79,3 +79,12 @@ The NESA directive verb glossary, highest band fully satisfied, and the sample a
 - Feedback is judged by a pinned **gpt-6-astra** (low thinking), separate from the marker so runs stay comparable. The judge reports Pros kept and Cons fixed, the way A1's judge does.
 - Results: JSON in `src/lib/ai/eval/results/` (the `evals` bucket doesn't exist yet), plus a markdown summary in `/workspace/claro/eval-runs/`.
 - Stamps have minute resolution: two runs started in the same minute overwrite each other.
+
+When the two initial written passes return unequal marks, `feedback.flags` stores
+`{ uncertain: true, marks: [firstMark, secondMark] }` in the existing attempts
+JSONB field. This remains set after reconciliation, including differences accepted
+by the same-band agreement rule. Equal marks and single-pass runs have no flag.
+Student marking responses, practice loaders and results strip `feedback.flags`.
+Eval rows record `flags.uncertain` for two-pass results and retain both marks in
+`check.marks`; reports give scored, non-excluded uncertain/certain counts and exact
+rates. Single-pass and historical rows without the flag are outside those groups.

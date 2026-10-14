@@ -168,3 +168,16 @@ it("counts successful marks separately from failures and only waits for active m
   });
   expect(resultsState(rows, {}).summaryPending).toBe(false);
 });
+
+it("excludes internal uncertainty from student results payloads", () => {
+  const stored = row({
+    feedback: {
+      justification: "Evidence",
+      flags: { uncertain: true, marks: [3, 2] },
+    },
+  });
+  expect(visibleResults([stored])[0].feedback).toEqual({
+    justification: "Evidence",
+  });
+  expect(stored.feedback).toHaveProperty("flags");
+});

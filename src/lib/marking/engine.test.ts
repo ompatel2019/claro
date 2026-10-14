@@ -1081,3 +1081,57 @@ it("passes eval exclusions to retrieval for all marking passes", async () => {
   ]);
   expect(bandExamples).toHaveBeenCalledWith(q, ["locked-final", "dev-self"]);
 });
+
+it.each([
+  [4, undefined],
+  [3, { uncertain: true, marks: [4, 3] }],
+  [2, { uncertain: true, marks: [4, 2] }],
+])(
+  "records unequal initial marks (%s) even after reconciliation",
+  async (second, flags) => {
+    mockedCall
+      .mockResolvedValueOnce(grade)
+      .mockResolvedValueOnce(checkGrade(second))
+      .mockResolvedValueOnce(checkGrade(4));
+    const result = await markWritten(q, "The prices rise rapidly", null);
+    expect(result.feedback.flags).toEqual(flags);
+  },
+);
+
+it("leaves a single-pass result unflagged", async () => {
+  const result = await markWritten(q, "The prices rise rapidly", null, "eval", {
+    model: MARKER.model,
+    effort: "low",
+    blind: false,
+  });
+  expect(result.feedback).not.toHaveProperty("flags");
+});
+
+it("persists both initial marks in feedback JSONB after reconciliation", async () => {
+  const save = query({ id: "attempt", status: "marked" });
+  vi.mocked(admin().from)
+    .mockReturnValueOnce(
+      query({
+        id: "attempt",
+        user_id: "user",
+        status: "pending",
+        answer_text: "The prices rise rapidly",
+        question: q,
+      }) as never,
+    )
+    .mockReturnValueOnce(query([{ id: "attempt" }]) as never)
+    .mockReturnValueOnce(save as never);
+  mockedCall
+    .mockResolvedValueOnce(grade)
+    .mockResolvedValueOnce(checkGrade(2))
+    .mockResolvedValueOnce(checkGrade(4));
+  await markAttempt("attempt");
+  expect(save.update).toHaveBeenCalledWith(
+    expect.objectContaining({
+      check_status: "second_pass",
+      feedback: expect.objectContaining({
+        flags: { uncertain: true, marks: [4, 2] },
+      }),
+    }),
+  );
+});
