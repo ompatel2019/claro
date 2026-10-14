@@ -6,3 +6,8 @@ drizzle/migrations
 playwright-report
 test-results
 package-lock.json
+# Frozen research ID lists are copied verbatim.
+src/lib/ai/eval/sets/dev-ids.json
+src/lib/ai/eval/sets/final-ids.json
+# Compact saved pass fixture; preserve the supplied research snapshot.
+src/lib/ai/eval/sets/past-passes.json

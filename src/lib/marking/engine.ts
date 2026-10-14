@@ -5,6 +5,7 @@ import { ZodError, type z } from "zod";
 import { callJson, type Message } from "@/lib/ai/openai";
 import { MODELS, type Model } from "@/lib/ai/prices";
 import { admin } from "@/utils/supabase/admin";
+import { studentMarking } from "@/lib/feedback";
 import { firstReviews, type FlashcardReview } from "@/lib/flashcards";
 import {
   anchorComments,
@@ -16,7 +17,12 @@ import {
   validateGrade,
   type MarkableQuestion,
 } from "./grade";
-import { bandExamples } from "./examples";
+import {
+  examplePool,
+  pickBandExamples,
+  pickQuotaExamples,
+  type MarkedExample,
+} from "./examples";
 import {
   bandCorrection,
   flashcardMessages,
@@ -52,6 +58,8 @@ export async function markWritten(
     signal?: AbortSignal;
     timeoutMs?: number;
   },
+  excludedExampleIds: readonly string[] = [],
+  loadExamplePool?: () => Promise<MarkedExample[]>,
 ) {
   async function pass<S extends z.ZodType<z.infer<typeof CheckSchema>>>(
     schema: S,
@@ -121,22 +129,38 @@ export async function markWritten(
     return { grade, mark, criterion, validated: validation.ok };
   }
 
-  const examples = await bandExamples(q);
-  const passes = [
+  const pool = loadExamplePool
+    ? await loadExamplePool()
+    : excludedExampleIds.length
+      ? await examplePool(q, excludedExampleIds)
+      : await examplePool(q);
+  let examples = pickBandExamples(q.criteria, pool);
+  const firstPass = pass(
+    GradeSchema,
+    gradeMessages(q, answer, false, examples),
+    MARKER.effort.grade,
+    "mark_written",
+  );
+  const checkPass = () =>
     pass(
-      GradeSchema,
-      gradeMessages(q, answer, false, examples),
-      MARKER.effort.grade,
-      "mark_written",
-    ),
+      CheckSchema,
+      gradeMessages(q, answer, true, examples),
+      MARKER.effort.check,
+      "check_written",
+    );
+  const passes = [
+    firstPass,
     config?.blind === false
       ? Promise.resolve(null)
-      : pass(
-          CheckSchema,
-          gradeMessages(q, answer, true, examples),
-          MARKER.effort.check,
-          "check_written",
-        ),
+      : pool.length >= 10
+        ? firstPass.then((first) => {
+            // Quotas use Airo's normalised first-pass mark, never the tutor target.
+            // Keep existing anchors for that pass; only checks/reconciliation
+            // retrieve by similarity, with no extra model call or pool read.
+            examples = pickQuotaExamples(q, pool, answer, first.mark);
+            return checkPass();
+          })
+        : checkPass(),
   ] as const;
   const [first, second] =
     config && task === "eval"
@@ -357,7 +381,7 @@ export async function markAttempt(attemptId: string) {
           if (error && error.code !== "23505") throw error;
         }
         result = {
-          ...marked,
+          ...studentMarking(marked),
           max_marks: q.marks,
           check_status: check.status,
           marked_by_model: MARKER.model,

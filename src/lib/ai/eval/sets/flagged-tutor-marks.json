@@ -1,0 +1,82 @@
+[
+  {
+    "miss": 4,
+    "question": "a1-m2-21c",
+    "exampleIdSha256": "3dfba1753ca0b5951026915f853e6dce240bd9ae1d2bfc1b1dab0e6ef605f24d",
+    "tutor": 3,
+    "ai": 2,
+    "label": "U3"
+  },
+  {
+    "miss": 13,
+    "question": "a1-m2-22c",
+    "exampleIdSha256": "aaedcc3e053c95fd4dfaee1bd7a62d001fa783281fa9d8319bd8912a04d9df53",
+    "tutor": 1,
+    "ai": 3,
+    "label": "O1"
+  },
+  {
+    "miss": 25,
+    "question": "a1-m2-24a",
+    "exampleIdSha256": "dee044c352a8e8f61263c3667f4d64df7b112819978c2d5c17d8908bb97affd1",
+    "tutor": 2,
+    "ai": 1,
+    "label": "U2"
+  },
+  {
+    "miss": 43,
+    "question": "a1-m3-22b",
+    "exampleIdSha256": "ba2836a00f75571d4427034b815f15fb0f13f4c8ec326ad67118a375871d67d9",
+    "tutor": 3,
+    "ai": 2,
+    "label": "U2"
+  },
+  {
+    "miss": 44,
+    "question": "a1-m3-22b",
+    "exampleIdSha256": "e080f2e9eab2bfabb6cf9860a19113839dd57bcfa5875abb4ab86d0dbc70026c",
+    "tutor": 1,
+    "ai": 2,
+    "label": "O3"
+  },
+  {
+    "miss": 45,
+    "question": "a1-m3-22b",
+    "exampleIdSha256": "ece682218acc2b2d7ec904176d9dda3b12f6c32e651596a4447893d6d8dec286",
+    "tutor": 2,
+    "ai": 1,
+    "label": "U3"
+  },
+  {
+    "miss": 63,
+    "question": "a1-m3-24a",
+    "exampleIdSha256": "3da120d22ff2f5c726780f04424f8f47b5b2d14d3498446668e115919355675f",
+    "tutor": 2,
+    "ai": 1,
+    "label": "U3"
+  },
+  {
+    "miss": 83,
+    "question": "a1-m4-22b",
+    "exampleIdSha256": "5b463a89a810b50d1fda8a8feafc0c61f28763582856834cf4e1a4fa85cbaee3",
+    "tutor": 3,
+    "ai": 2,
+    "label": "U3"
+  },
+  {
+    "miss": 85,
+    "question": "a1-m4-22c",
+    "exampleIdSha256": "5a35e4f102fb0aa02e3e1fd6491ed67f71c72eedaaa3a03c4947a51a1152fb66",
+    "tutor": 6,
+    "ai": 5,
+    "label": "U1"
+  },
+  {
+    "miss": 93,
+    "question": "a1-m4-23c",
+    "exampleIdSha256": "4df12070be2e015c634c1737b471bf05d514c81157f551b77c26056d1a34c2b1",
+    "tutor": 4,
+    "ai": 3,
+    "label": "U3"
+  }
+]

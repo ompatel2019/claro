@@ -18,7 +18,7 @@ it("excludes fixture bugs and failures from headline metrics, but reports their 
     check: { status: "second_pass", marks: [1, 3, 3] },
     firstScore: { delta: -2, exact: false, within1: false, band: false },
     delta: 0,
-    flags: {},
+    flags: { uncertain: true },
     usd: 0.01,
     judgeUsd: 0.02,
     seconds: 2,
@@ -29,7 +29,17 @@ it("excludes fixture bugs and failures from headline metrics, but reports their 
       lowConfidence: false,
       reasoning: "Specific",
     },
-    feedback: "Clear feedback",
+    feedbackComments: [
+      {
+        quote: "the student",
+        start: null,
+        kind: "strength",
+        tag: "Analysis",
+        body: "You explain the link clearly.",
+        next_mark: null,
+      },
+    ],
+    feedback: "Overall, the response is clear",
     error: null,
     score: { delta: 0, exact: true, within1: true, band: true },
   };
@@ -79,6 +89,7 @@ it("excludes fixture bugs and failures from headline metrics, but reports their 
         ...row,
         id: "a1-m2-21a",
         section: "Held-out",
+        flags: { uncertain: false },
         expected: 2,
         mark: 1,
         usd: 0,
@@ -103,6 +114,10 @@ it("excludes fixture bugs and failures from headline metrics, but reports their 
   const calls = vi.mocked(writeFileSync).mock.calls;
   const result = JSON.parse(String(calls[0][1]));
   expect(result.headline).toMatchObject({
+    uncertainty: {
+      uncertain: { n: 1, exact: 1 },
+      certain: { n: 0, exact: null },
+    },
     blindAgreement: 1 / 3,
     secondPass: 1,
     inReview: 1,
@@ -121,14 +136,34 @@ it("excludes fixture bugs and failures from headline metrics, but reports their 
     exact: 0,
     within1: 1,
     band: 0,
+    uncertainty: {
+      uncertain: { n: 0, exact: null },
+      certain: { n: 1, exact: 0 },
+    },
     meanSigned: -1,
     judgeMean: null,
     judgeUsd: 0,
     blindAgreement: 1,
   });
   expect(result.items).toHaveLength(6);
+  expect(result.tone).toEqual({
+    n: 5,
+    stockPhraseRate: 0,
+    secondPersonRate: 1,
+    thirdPersonRate: 0,
+  });
   const markdown = String(calls[1][1]);
+  expect(markdown).toContain("## Comment tone (offline, pooled run)");
+  expect(markdown).toContain("| 5 | 0.0% | 100.0% | 0.0% |");
+  expect(console.log).toHaveBeenCalledWith(
+    expect.stringContaining("Comment tone (offline)"),
+  );
+  expect(console.log).toHaveBeenCalledWith(
+    expect.stringContaining("| 5 | 0.0% | 100.0% | 0.0% |"),
+  );
   expect(markdown).toContain("Blind-check agreement");
+  expect(markdown).toContain("Uncertain exact");
+  expect(markdown).toContain("Certain exact");
   expect(markdown).toContain("## Held-out A1 mock answers");
   expect(markdown).toContain("| 1 | 0.0% | 100.0% | 0.0% | -1.00 |");
   expect(markdown).toContain("First pass only | 0.0% | 0.0% | 0.0%");
@@ -178,3 +213,58 @@ it.each([
   expect(header.includes("(priority)")).toBe(priority);
   vi.restoreAllMocks();
 });
+
+it.each(["dev", "final"] as const)(
+  "summarises the frozen %s section",
+  (set) => {
+    vi.spyOn(console, "log").mockImplementation(() => {});
+    vi.mocked(writeFileSync).mockClear();
+    const section = set === "dev" ? "Dev" : "Final";
+    writeResults(
+      {
+        stamp: "2026-10-14-2000",
+        git: "abc123",
+        dirty: false,
+        label: "",
+        limit: 1,
+        set,
+        marker: {
+          model: "anthropic/claude-sonnet-5.5",
+          effort: { grade: "low", check: "low", reconcile: "medium" },
+        },
+        judge: { model: "gpt-6-astra", effort: "low" },
+        spentBefore: 0,
+        spentAfter: 0,
+        blocked: false,
+      },
+      [
+        {
+          id: "fixture-question",
+          section,
+          label: "",
+          marks: 2,
+          expected: 2,
+          mark: 2,
+          band: "Sound",
+          check: { status: "agreed", marks: [2, 2] },
+          delta: 0,
+          flags: {},
+          usd: 0,
+          judgeUsd: 0,
+          seconds: 0,
+          verdict: null,
+          feedback: null,
+          error: null,
+          score: { delta: 0, exact: true, within1: true, band: true },
+        },
+      ],
+    );
+    const calls = vi.mocked(writeFileSync).mock.calls;
+    expect(JSON.parse(String(calls[0][1])).heldOut).toMatchObject({
+      n: 1,
+      exact: 1,
+    });
+    expect(String(calls[1][1])).toContain(`## ${section} frozen answers`);
+    vi.restoreAllMocks();
+  },
+);

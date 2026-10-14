@@ -1,3 +1,4 @@
+import { studentMarking } from "@/lib/feedback";
 import { withAttemptUsage } from "@/lib/ai/usage-context";
 import { singleSlotIds } from "@/lib/single-check";
 import { markOwnCheck, markBankCheck } from "@/lib/single-check-marking";
@@ -151,7 +152,7 @@ export async function POST(
       mark,
       max_marks,
       band,
-      feedback,
+      feedback: studentMarking({ feedback }).feedback,
       status,
       ...(explanation ? { explanation } : {}),
       ...(sample_answer ? { sample_answer } : {}),

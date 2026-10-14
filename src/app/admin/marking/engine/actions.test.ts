@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   mark: vi.fn(),
   cli: vi.fn(),
   beforeUpload: vi.fn(),
+  poolLoad: vi.fn(),
+  poolFrom: vi.fn(),
 }));
 vi.mock("@/lib/auth", () => ({ requireAdmin: mocks.auth }));
 vi.mock("@/lib/marking/engine", () => ({
@@ -21,6 +23,7 @@ vi.mock("../accuracy/eval", () => ({ loadEvalRuns: mocks.cli }));
 vi.mock("@/utils/supabase/admin", () => ({
   admin: () => ({
     rpc: mocks.spend,
+    from: mocks.poolFrom,
     storage: {
       from: () => ({
         upload: async (
@@ -61,6 +64,7 @@ import {
   type WebRun,
 } from "./store";
 import { mergeRuns } from "./summary";
+import { evalSets } from "@/lib/ai/eval/sets";
 import a1 from "@/lib/ai/eval/a1-eval-set.json";
 const options = { model: "gpt-6.1-sol", effort: "low", blind: true } as const;
 const result = {
@@ -291,7 +295,48 @@ it("marks exactly one item with task eval, then stores score, check, time and ac
     null,
     "eval",
     expect.objectContaining(options),
+    [],
+    expect.any(Function),
   );
+  const poolQuery = {
+    select: vi.fn(() => poolQuery),
+    eq: vi.fn(() => poolQuery),
+    order: vi.fn(() => poolQuery),
+    throwOnError: mocks.poolLoad,
+  };
+  mocks.poolFrom.mockReturnValue(poolQuery);
+  const example = (id: string, answer_text: string, split = "example") => ({
+    id,
+    question_id: a1[0].questionId,
+    answer_text,
+    split,
+    source_hash: `hash:${id}`,
+    tutor_mark: 2,
+  });
+  const eligible = example("safe", "Eligible synthetic answer");
+  mocks.poolLoad.mockResolvedValue({
+    data: [
+      example(a1[0].questionId, "Self with other text"),
+      example(
+        "self-copy",
+        `  ${a1[0].studentResponse.toUpperCase().replace(/\s+/g, "\t ")}  `,
+      ),
+      example(evalSets.dev[0], "Frozen dev answer"),
+      example(evalSets.final[0], "Frozen final answer"),
+      example("frozen-copy", "  FROZEN\n FINAL ANSWER "),
+      example("held-out", "Test answer", "test"),
+      eligible,
+    ],
+  });
+  const loadPool = mocks.mark.mock.calls[0][6];
+  expect(await loadPool()).toEqual([eligible]);
+  expect(mocks.poolFrom).toHaveBeenCalledWith("marking_examples");
+  expect(poolQuery.eq).toHaveBeenCalledExactlyOnceWith(
+    "question_id",
+    a1[0].questionId,
+  );
+  mocks.poolLoad.mockRejectedValueOnce(new Error("Pool unavailable"));
+  await expect(loadPool()).rejects.toThrow("Pool unavailable");
   const stored = JSON.parse(mocks.files.get(`runs/${run.id}.json`)!);
   expect(stored.items[0]).toMatchObject({
     exampleId: a1[0].questionId,

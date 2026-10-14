@@ -1,16 +1,21 @@
 // Offline marking eval against the current engine; --dry-run only reads the DB.
-// Run: npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts [--dry-run] [--limit=N | --items=0,1,...] [--label=text]
-// --items uses 0-based positions in the full array: A1, then Held-out, then Claro.
+// Run: npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts [--dry-run] [--limit=N | --items=0,1,...] [--label=text] [--set=dev|final]
+// --set replaces Held-out with frozen Dev/Final rows; --limit applies per section.
+// --items uses 0-based positions: A1, then Held-out (or Dev/Final), then Claro.
+// Every eval pool excludes both frozen sets and the current answer identity/text.
 // Results: src/lib/ai/eval/results/ and /workspace/claro/eval-runs/.
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { admin } from "@/utils/supabase/admin";
 import { MARKER } from "@/lib/marking/engine";
-import { bandExamples } from "@/lib/marking/examples";
+import { pickBandExamples } from "@/lib/marking/example-selection";
+import { evalExamplePool } from "./examples";
 import type { MarkableQuestion } from "@/lib/marking/grade";
 import { gradeMessages } from "@/lib/marking/prompts";
 import { callJson } from "../openai";
 import { openRouterSpend } from "../spend";
+import { parseArgs } from "./args";
+import { evalSets, evalRows, retrievalExclusions } from "./sets";
 import { evalBlocked } from "./metrics";
 import { JUDGE, JudgeSchema, judgeMessages } from "./judge";
 import { emptyRow, markEvalItem } from "./item";
@@ -19,30 +24,9 @@ import a1QuestionsJson from "./a1-questions.json";
 import claro from "./claro-set.json";
 import { writeResults, type Row } from "./report";
 
-const args = process.argv.slice(2);
-const dry = args.includes("--dry-run");
-const limit = Number(
-  args.find((a) => a.startsWith("--limit="))?.slice(8) ?? Infinity,
+const { dry, limit, label, selectedItems, set } = parseArgs(
+  process.argv.slice(2),
 );
-const label = args.find((a) => a.startsWith("--label="))?.slice(8) ?? "";
-const selectedItems =
-  args
-    .find((a) => a.startsWith("--items="))
-    ?.slice(8)
-    .split(",")
-    .map(Number) ?? null;
-if (
-  args.some(
-    (a) => !/^(--dry-run|--limit=\d+|--items=\d+(,\d+)*|--label=.*)$/.test(a),
-  ) ||
-  limit < 1 ||
-  selectedItems?.some((index) => !Number.isSafeInteger(index)) ||
-  (selectedItems !== null && args.some((a) => a.startsWith("--limit=")))
-) {
-  throw new Error(
-    "Use --dry-run, --limit=N (positive integer per section), --items=0,1,... (non-negative integer indices; cannot combine with --limit), --label=text",
-  );
-}
 const parts = new Intl.DateTimeFormat("en-AU", {
   timeZone: "Australia/Sydney",
   year: "numeric",
@@ -68,20 +52,27 @@ if (!dry && evalBlocked(spentBefore)) {
 }
 const a1Questions = a1QuestionsJson as MarkableQuestion[];
 const checks = claro.slice(0, limit);
-// Held-out: A1 mock-exam test rows (the A1 20 eval answers are also split 'test' and stay in their own section).
-const { data: heldOut } = await db
+// Frozen sets contain example rows; the default remains the existing held-out test split.
+let query = db
   .from("marking_examples")
-  .select("id, question_id, answer_text, tutor_mark")
-  .eq("split", "test")
-  .not(
-    "question_id",
-    "in",
-    `(${a1Questions.map((q) => `a1-${q.id}`).join(",")})`,
-  )
+  .select("id, question_id, answer_text, tutor_mark, source_hash");
+query = set
+  ? query.in("id", [...evalSets[set]])
+  : query
+      .eq("split", "test")
+      .not(
+        "question_id",
+        "in",
+        `(${a1Questions.map((q) => `a1-${q.id}`).join(",")})`,
+      );
+const { data: heldOut } = await query
   .order("question_id")
   .order("source_hash")
   .throwOnError();
-const held = (heldOut ?? []).slice(0, limit);
+const held = (set ? evalRows(heldOut ?? [], set) : (heldOut ?? [])).slice(
+  0,
+  limit,
+);
 const { data: questions } = await db
   .from("questions")
   .select(
@@ -103,7 +94,8 @@ const allItems = [
   ...held.map((h) => ({
     id: h.question_id,
     exampleId: String(h.id),
-    section: "Held-out",
+    sourceHash: h.source_hash,
+    section: set === "dev" ? "Dev" : set === "final" ? "Final" : "Held-out",
     q: (questions as MarkableQuestion[]).find((q) => q.id === h.question_id),
     answer: h.answer_text,
     expected: Number(h.tutor_mark) as number | number[],
@@ -129,13 +121,28 @@ if (selectedItems?.some((index) => index >= allItems.length)) {
 const items = allItems.filter(
   (_, index) => selectedItems === null || selectedItems.includes(index),
 );
+const excludedExampleIds = retrievalExclusions();
 mkdirSync(out, { recursive: true });
 if (dry) {
   const text = (
     await Promise.all(
       items.map(async (item) => {
         if (!item.q) throw new Error(`Missing question ${item.id}`);
-        return { item, examples: await bandExamples(item.q) };
+        return {
+          item,
+          examples: pickBandExamples(
+            item.q.criteria,
+            await evalExamplePool(
+              item.q,
+              {
+                id: item.exampleId,
+                answer_text: item.answer,
+                source_hash: "sourceHash" in item ? item.sourceHash : undefined,
+              },
+              excludedExampleIds,
+            ),
+          ),
+        };
       }),
     )
   )
@@ -192,6 +199,9 @@ async function evaluate(item: (typeof items)[number], index: number) {
       item.answer,
       `${task}:mark`,
       () => cost(`${task}:mark`),
+      undefined,
+      excludedExampleIds,
+      "sourceHash" in item ? item.sourceHash : undefined,
     );
     if (typeof item.expected === "number") {
       if (item.section !== "A1") return;
@@ -237,6 +247,7 @@ const meta = {
     },
   ).trim(),
   label,
+  set: set ?? null,
   limit: Number.isFinite(limit) ? limit : null,
   items: selectedItems,
   marker: MARKER,

@@ -1,5 +1,10 @@
 import { timer, type SprintConfig, type Topic } from "./practice";
-import { markingState, type MarkingState, type ReviewRow } from "./feedback";
+import {
+  studentMarking,
+  markingState,
+  type MarkingState,
+  type ReviewRow,
+} from "./feedback";
 
 export const TYPE_LABEL = {
   mcq: "Multiple choice",
@@ -127,7 +132,7 @@ export function nextActions(
 
 /** Exclude skipped rows; a skipped MC check can still have a marked answer. */
 export const visibleResults = (rows: ReviewRow[]) =>
-  rows.filter((r) => markingState(r) !== "skipped");
+  rows.filter((r) => markingState(r) !== "skipped").map(studentMarking);
 
 export function mcGridRows(rows: ReviewRow[]) {
   const letter = (i: number | null) =>

@@ -255,6 +255,14 @@ describe("inlineSprintFeedback", () => {
     expect(row.review).toBeNull();
     expect(row.check_status).toBe("skipped");
   });
+  it("excludes uncertainty from inline practice payloads", () => {
+    const stored = {
+      ...attempt,
+      feedback: { comments: [], flags: { uncertain: true, marks: [2, 3] } },
+    };
+    expect(inlineSprintFeedback(stored).feedback).toEqual({ comments: [] });
+    expect(stored.feedback).toHaveProperty("flags");
+  });
   it("keeps photo transcripts and handles empty feedback", () => {
     const row = inlineSprintFeedback({
       ...attempt,
@@ -267,4 +275,21 @@ describe("inlineSprintFeedback", () => {
     expect(readComments(row.feedback, row.transcript!)).toEqual([]);
     expect(row.image_paths).toEqual(["synthetic/photo.png"]);
   });
+});
+
+it("strips uncertainty and pass marks from student feedback without changing the stored result", async () => {
+  const { studentMarking } = await import("./feedback");
+  const stored = {
+    mark: 3,
+    feedback: {
+      justification: "Evidence",
+      flags: { uncertain: true, marks: [3, 2] },
+    },
+  };
+  expect(studentMarking(stored)).toEqual({
+    mark: 3,
+    feedback: { justification: "Evidence" },
+  });
+  expect(stored.feedback.flags).toEqual({ uncertain: true, marks: [3, 2] });
+  expect(studentMarking({ feedback: null })).toEqual({ feedback: null });
 });

@@ -1,4 +1,5 @@
 import "server-only";
+import { studentMarking } from "./feedback";
 import { notFound } from "next/navigation";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
@@ -54,7 +55,7 @@ export async function loadSprint(id: string) {
   }
   return {
     session: session as Session,
-    attempts: examOrder(rows),
+    attempts: examOrder(rows).map(studentMarking),
     profile,
   };
 }

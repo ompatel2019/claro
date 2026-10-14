@@ -101,6 +101,28 @@ it("checks require only assessment fields and reject feedback fields", () => {
     mark: 0,
   };
   expect(CheckSchema.parse(check)).toEqual(check);
+  const checklist = [
+    { id: "mechanism", answer: "yes", evidence: "Synthetic mechanism" },
+    { id: "implication", answer: "no", evidence: "" },
+  ];
+  for (const schema of [GradeSchema, CheckSchema]) {
+    // Pick the same field from both schemas to test the optional extension.
+    const field = schema.pick({ checklist: true });
+    expect(field.parse({})).toEqual({});
+    expect(field.parse({ checklist })).toEqual({ checklist });
+    expect(field.parse({ checklist: null })).toEqual({ checklist: null });
+    for (const invalid of [
+      [{ id: "mechanism", answer: true, evidence: "quote" }],
+      [{ id: "mechanism", answer: "maybe", evidence: "quote" }],
+      [{ id: "mechanism", answer: "yes" }],
+      [{ id: "", answer: "no", evidence: "" }],
+      [{ ...checklist[0], unexpected: true }],
+    ])
+      expect(field.safeParse({ checklist: invalid }).success).toBe(false);
+  }
+  expect(CheckSchema.parse({ ...check, checklist }).checklist).toEqual(
+    checklist,
+  );
   expect(CheckSchema.safeParse({ ...check, comments: [] }).success).toBe(false);
   expect(
     CheckSchema.safeParse({ ...check, justification: undefined }).success,

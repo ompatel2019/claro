@@ -173,3 +173,14 @@ it("does not read attempts or references for a session the caller cannot see", a
   expect(attempts.select).not.toHaveBeenCalled();
   expect(admin).not.toHaveBeenCalled();
 });
+
+it("strips pass flags on the checked model-answer read path", async () => {
+  const feedback = { comments: [], flags: { uncertain: true, marks: [2, 3] } };
+  setup([attempt("short", "short", "marked", feedback)]);
+  const [row] = (await loadSprint("sprint")).attempts;
+  expect(row.sample_answer).toBe("Short model answer.");
+  expect(row.feedback).toEqual({ comments: [] });
+  expect(row.feedback).not.toHaveProperty("flags.uncertain");
+  expect(row.feedback).not.toHaveProperty("flags.marks");
+  expect(feedback.flags).toEqual({ uncertain: true, marks: [2, 3] });
+});

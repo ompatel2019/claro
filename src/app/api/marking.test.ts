@@ -151,11 +151,17 @@ it("returns the MCQ answer key after marking an owned attempt", async () => {
     mark: 1,
     max_marks: 1,
     band: null,
-    feedback: { correct_index: 2, chosen_index: 2 },
+    feedback: {
+      correct_index: 2,
+      chosen_index: 2,
+      flags: { uncertain: true, marks: [1, 0] },
+    },
     status: "marked",
   } as never);
   const response = await mark(request(), ctx);
-  expect(await response.json()).toMatchObject({
+  const payload = await response.json();
+  expect(payload.feedback).toEqual({ correct_index: 2, chosen_index: 2 });
+  expect(payload).toMatchObject({
     mark: 1,
     correct_index: 2,
     status: "marked",
@@ -880,9 +886,16 @@ it("marks a nullable-question single session through the same marking endpoint",
     mark: 3,
     max_marks: 4,
     status: "marked",
-    feedback: null,
+    feedback: {
+      justification: "Evidence",
+      flags: { uncertain: true, marks: [3, 2] },
+    },
   } as never);
-  expect((await mark(request(), ctx)).status).toBe(200);
+  const response = await mark(request(), ctx);
+  expect(response.status).toBe(200);
+  expect((await response.json()).feedback).toEqual({
+    justification: "Evidence",
+  });
   expect(markOwnCheck).toHaveBeenCalledWith("id", userId, config);
   expect(markAttempt).not.toHaveBeenCalled();
   expect(rescoreSession).not.toHaveBeenCalled();
@@ -1140,9 +1153,16 @@ it("marks a bank single through the single pipeline and rescores its one questio
     mark: 3,
     max_marks: 4,
     status: "marked",
-    feedback: null,
+    feedback: {
+      justification: "Evidence",
+      flags: { uncertain: true, marks: [3, 2] },
+    },
   } as never);
-  expect((await mark(request(), ctx)).status).toBe(200);
+  const response = await mark(request(), ctx);
+  expect(response.status).toBe(200);
+  expect((await response.json()).feedback).toEqual({
+    justification: "Evidence",
+  });
   expect(markBankCheck).toHaveBeenCalledWith("id", userId, "q");
   expect(markAttempt).not.toHaveBeenCalled();
   expect(rescoreSession).not.toHaveBeenCalled();

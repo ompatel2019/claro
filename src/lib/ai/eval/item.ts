@@ -1,5 +1,6 @@
 import { markWritten } from "@/lib/marking/engine";
 import type { MarkableQuestion } from "@/lib/marking/grade";
+import { evalExamplePool } from "./examples";
 import { scoreItem } from "./metrics";
 import { renderFeedback } from "./judge";
 import type { Row } from "./report";
@@ -47,14 +48,26 @@ export async function markEvalItem(
   task: string,
   cost: () => Promise<number>,
   config?: Parameters<typeof markWritten>[4],
+  excludedExampleIds: readonly string[] = [],
+  sourceHash?: string,
 ) {
   const started = performance.now();
   let result;
   try {
-    // Keep the CLI's four-argument call unchanged.
-    result = config
-      ? await markWritten(q, answer, null, task, config)
-      : await markWritten(q, answer, null, task);
+    result = await markWritten(
+      q,
+      answer,
+      null,
+      task,
+      config,
+      excludedExampleIds,
+      () =>
+        evalExamplePool(
+          q,
+          { id: row.exampleId, answer_text: answer, source_hash: sourceHash },
+          excludedExampleIds,
+        ),
+    );
   } finally {
     row.seconds = (performance.now() - started) / 1000;
     row.usd = await cost();
@@ -63,6 +76,8 @@ export async function markEvalItem(
   row.mark = result.mark;
   row.band = result.band;
   row.check = config?.blind === false ? null : result.check;
+  if (result.check.marks.length >= 2)
+    row.flags.uncertain = result.check.marks[0] !== result.check.marks[1];
   row.flags.validated = result.feedback.validated;
   row.feedbackComments = result.feedback.comments;
   const feedback = renderFeedback(result.feedback);

@@ -1,4 +1,10 @@
-import { cleanup, render, screen, fireEvent } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, it, expect, vi } from "vitest";
 import { WrittenAnswer } from "./written-answer";
 import { type Attempt } from "@/lib/practice";
@@ -33,6 +39,37 @@ function answer(inputOnly = true, disabled = false) {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+});
+it("polls the server status route and applies its student feedback", async () => {
+  const marked = {
+    status: "marked",
+    mark: 3,
+    max_marks: 4,
+    band: "Sound",
+    feedback: { comments: [] },
+  };
+  const fetchMock = vi.fn().mockResolvedValue({
+    ok: true,
+    json: async () => marked,
+  });
+  vi.stubGlobal("fetch", fetchMock);
+  const local = vi.fn();
+  render(
+    <WrittenAnswer
+      attempt={{ ...attempt, status: "marking" }}
+      disabled={false}
+      userId="u"
+      onBusy={vi.fn()}
+      edit={vi.fn()}
+      save={vi.fn()}
+      flush={vi.fn()}
+      local={local}
+    />,
+  );
+  await waitFor(() => expect(local).toHaveBeenCalledWith(marked));
+  expect(fetchMock).toHaveBeenCalledExactlyOnceWith("/api/attempts/a/status", {
+    cache: "no-store",
+  });
 });
 it("locks typing and photo upload together while disabled", () => {
   answer(true, true);

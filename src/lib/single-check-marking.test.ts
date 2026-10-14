@@ -62,7 +62,7 @@ it("reuses the blind-check engine and persists a provisional disagreement for ow
   vi.mocked(markWritten).mockResolvedValue({
     mark: 3,
     band: "some band",
-    feedback: { comments: [] },
+    feedback: { comments: [], flags: { uncertain: true, marks: [3, 1] } },
     check: { status: "in_review", marks: [3, 1, 2] },
   } as never);
   await expect(markOwnCheck("a", "u", { question })).resolves.toMatchObject({
@@ -89,6 +89,7 @@ it("reuses the blind-check engine and persists a provisional disagreement for ow
   );
   expect(save.update).toHaveBeenCalledWith(
     expect.objectContaining({
+      feedback: { comments: [] },
       check_status: "in_review",
       status: "marked",
       max_marks: 4,

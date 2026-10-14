@@ -3,6 +3,7 @@ import type { z } from "zod";
 import type { MARKER, markWritten } from "@/lib/marking/engine";
 import type { JUDGE, JudgeSchema } from "./judge";
 import { type scoreItem, summarise } from "./metrics";
+import { summariseTone } from "./tone";
 
 export type Row = {
   id: string;
@@ -21,6 +22,7 @@ export type Row = {
   flags: {
     excluded?: string;
     validated?: boolean;
+    uncertain?: boolean;
     inRange?: boolean;
     lowConfidence?: boolean;
   };
@@ -41,6 +43,7 @@ export function writeResults(
     label: string;
     limit: number | null;
     items?: number[] | null;
+    set?: "dev" | "final" | null;
     marker: typeof MARKER;
     judge: typeof JUDGE;
     spentBefore: number;
@@ -58,8 +61,21 @@ export function writeResults(
       !r.error && r.score ? [{ ...r, score: r.score }] : [],
     );
     const marked = sectionRows.filter((r) => r.mark !== null);
+    const uncertaintyGroup = (uncertain: boolean) => {
+      const group = scored.filter((r) => r.flags.uncertain === uncertain);
+      return {
+        n: group.length,
+        exact: group.length
+          ? group.filter((r) => r.score.exact).length / group.length
+          : null,
+      };
+    };
     return {
       ...summarise(scored),
+      uncertainty: {
+        uncertain: uncertaintyGroup(true),
+        certain: uncertaintyGroup(false),
+      },
       judgeUsd: sectionRows.reduce((sum, r) => sum + r.judgeUsd, 0),
       blindAgreement: marked.length
         ? marked.filter((r) => r.check?.status === "agreed").length /
@@ -75,15 +91,19 @@ export function writeResults(
       ),
     };
   };
+  const tone = summariseTone(rows);
   const headline = summary("A1");
-  const heldOut = summary("Held-out");
+  const evalSection =
+    meta.set === "dev" ? "Dev" : meta.set === "final" ? "Final" : "Held-out";
+  const heldOut = summary(evalSection);
   const claroRows = rows.filter((r) => r.section === "Claro");
   const successfulChecks = claroRows.filter((r) => !r.error && r.mark !== null);
   const results = new URL("./results/", import.meta.url);
   mkdirSync(results, { recursive: true });
   writeFileSync(
     new URL(`${meta.stamp}.json`, results),
-    JSON.stringify({ meta, headline, heldOut, items: rows }, null, 2) + "\n",
+    JSON.stringify({ meta, headline, heldOut, tone, items: rows }, null, 2) +
+      "\n",
   );
   const fmt = (n: number | null, digits = 2) =>
     n === null ? "—" : n.toFixed(digits);
@@ -102,6 +122,17 @@ export function writeResults(
             .join(" | ")} |`,
       )
       .join("\n");
+  const toneTable = table(
+    ["Comments", "Stock phrases", "Second person / imperative", "Third person"],
+    [
+      [
+        tone.n,
+        pct(tone.stockPhraseRate),
+        pct(tone.secondPersonRate),
+        pct(tone.thirdPersonRate),
+      ],
+    ],
+  );
   const judgeUsd = rows.reduce((sum, r) => sum + r.judgeUsd, 0);
   const headTable = (h: typeof headline) =>
     table(
@@ -121,6 +152,10 @@ export function writeResults(
         "Blind-check agreement",
         "second_pass",
         "in_review",
+        "Uncertain n",
+        "Uncertain exact",
+        "Certain n",
+        "Certain exact",
       ],
       [
         [
@@ -139,6 +174,10 @@ export function writeResults(
           pct(h.blindAgreement),
           h.secondPass,
           h.inReview,
+          h.uncertainty.uncertain.n,
+          pct(h.uncertainty.uncertain.exact),
+          h.uncertainty.certain.n,
+          pct(h.uncertainty.certain.exact),
         ],
       ],
     );
@@ -179,8 +218,12 @@ export function writeResults(
       "## A1 headline",
       head,
       firstPass,
-      "## Held-out A1 mock answers (marking_examples split test; no judge, no tutor critique)",
+      meta.set
+        ? `## ${evalSection} frozen answers (marking_examples; no judge, no tutor critique)`
+        : "## Held-out A1 mock answers (marking_examples split test; no judge, no tutor critique)",
       heldOut.n ? heldHead : "Not run.",
+      "## Comment tone (offline, pooled run)",
+      toneTable,
       "## Excluded",
       table(
         ["Question", "Reason", "Karan", "Mark", "Δ", "Band", "Judge", "Error"],
@@ -264,6 +307,6 @@ export function writeResults(
     ].join("\n\n") + "\n";
   writeFileSync(`${out}/${meta.stamp}.md`, markdown);
   console.log(
-    `A1 headline\n${head}\n\n${firstPass}\n\nHeld-out\n${heldOut.n ? heldHead : "Not run."}\n\nClaro: ${checksSummary}\n${out}/${meta.stamp}.md`,
+    `A1 headline\n${head}\n\n${firstPass}\n\n${evalSection}\n${heldOut.n ? heldHead : "Not run."}\n\nComment tone (offline)\n${toneTable}\n\nClaro: ${checksSummary}\n${out}/${meta.stamp}.md`,
   );
 }
