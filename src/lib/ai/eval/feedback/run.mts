@@ -1,4 +1,4 @@
-// BUILD ONLY: --live must not be run without Om's approval.
+// --live requires explicit authorisation via AIRO5_FEEDBACK_LIVE_OK=1.
 // npx tsx --conditions=react-server src/lib/ai/eval/feedback/run.mts [--dry-run | --live] [--limit=200] [--seed=20261014]
 // Default dry-run reads Claro only and prints aggregate counts/cost; it never calls a model.
 // No answer IDs, comment text or student data are written to disk.
@@ -12,6 +12,16 @@ import {
   type Loader,
   type ModelFunction,
 } from "./harness";
+
+export function assertLiveAllowed(
+  live: boolean,
+  approval = process.env.AIRO5_FEEDBACK_LIVE_OK,
+) {
+  if (live && approval !== "1")
+    throw new Error(
+      "Feedback eval refused: --live requires AIRO5_FEEDBACK_LIVE_OK=1.",
+    );
+}
 
 // Lazy imports keep admin/model clients out of offline tests and argument parsing.
 async function loadClaroRows(): Promise<unknown[]> {
@@ -86,6 +96,7 @@ export async function main(
     seed > 0xffffffff
   )
     throw new Error("Use a positive even limit and a uint32 seed");
+  assertLiveAllowed(live);
   const rows = await deps.load();
   const trials = prepareTrials(rows, { limit, seed });
   const report = {

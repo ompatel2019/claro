@@ -37,7 +37,10 @@ const deps = () => ({
     .mockResolvedValue({ evidence: "Supported", verdict: "accepted" }),
   spend: vi.fn().mockResolvedValue(0),
 });
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllEnvs();
+});
 
 it.each([[[]], [["--dry-run"]]])(
   "defaults to a dry-run with an injectable mocked loader %j",
@@ -60,6 +63,7 @@ it.each([[[]], [["--dry-run"]]])(
 );
 
 it("runs live only through injected mocks and enforces the eval spend guard", async () => {
+  vi.stubEnv("AIRO5_FEEDBACK_LIVE_OK", "1");
   vi.spyOn(console, "log").mockImplementation(() => {});
   const mocks = deps();
   const report = await (
@@ -87,4 +91,26 @@ it.each(
   const mocks = deps();
   await expect((await main())(args, mocks)).rejects.toThrow();
   expect(mocks.load).not.toHaveBeenCalled();
+});
+
+it.each([undefined, "", "0", "true"])(
+  "refuses live without exact approval %j before any IO",
+  async (approval) => {
+    vi.stubEnv("AIRO5_FEEDBACK_LIVE_OK", approval);
+    const mocks = deps();
+    await expect((await main())(["--live"], mocks)).rejects.toThrow(
+      "AIRO5_FEEDBACK_LIVE_OK=1",
+    );
+    for (const dependency of Object.values(mocks))
+      expect(dependency).not.toHaveBeenCalled();
+  },
+);
+
+it("allows dry mode without approval and live only with 1", async () => {
+  const { assertLiveAllowed } = await import("./run.mjs");
+  expect(() => assertLiveAllowed(false, "0")).not.toThrow();
+  expect(() => assertLiveAllowed(true, "1")).not.toThrow();
+  expect(() => assertLiveAllowed(true, "true")).toThrow(
+    "Feedback eval refused",
+  );
 });
