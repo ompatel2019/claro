@@ -439,7 +439,13 @@ export async function finishSession(sessionId: string) {
     const rows = await markRemaining(sessionId, session.user_id);
     ({ score, max } = totals(rows));
     const marked = rows.filter((a) => a.status === "marked");
-    if (marked.length && marked.every((a) => a.question.type === "mcq")) {
+    const written = marked.filter(
+      (a) =>
+        a.question.type !== "mcq" &&
+        a.feedback?.note !== "No answer" &&
+        (a.transcript ?? a.answer_text ?? "").trim().length > 0,
+    );
+    if (marked.length && !written.length) {
       summary = topicSummary(
         marked.map((a) => ({
           topic: a.question.topic?.name ?? "this topic",
@@ -448,18 +454,16 @@ export async function finishSession(sessionId: string) {
       );
     } else if (marked.length) {
       summary = await summariseSession(
-        marked
-          .filter((a) => a.question.type !== "mcq")
-          .map((a) => ({
-            source: a.question.source,
-            stem: a.question.stem,
-            mark: Number(a.mark ?? 0),
-            max: a.max_marks ?? a.question.marks,
-            band: a.band,
-            answer: a.transcript ?? a.answer_text ?? "",
-            strengths: a.feedback?.analysis?.strengths ?? [],
-            improvements: a.feedback?.missing_points ?? [],
-          })),
+        written.map((a) => ({
+          source: a.question.source,
+          stem: a.question.stem,
+          mark: Number(a.mark ?? 0),
+          max: a.max_marks ?? a.question.marks,
+          band: a.band,
+          answer: (a.transcript ?? a.answer_text ?? "").slice(0, 3000),
+          strengths: a.feedback?.analysis?.strengths ?? [],
+          improvements: a.feedback?.missing_points ?? [],
+        })),
         session.user_id,
       ).catch((error) => {
         console.error(error);

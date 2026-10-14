@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from "vitest";
 import { z, ZodError } from "zod";
-import type { MarkableQuestion } from "./grade";
+import { topicSummary, type MarkableQuestion } from "./grade";
 
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/ai/openai", () => ({ callJson: vi.fn() }));
@@ -942,6 +942,7 @@ it("waits for fresh in-flight marking and uses a deterministic topic summary", a
 });
 it("finishes even when the AI summary fails", async () => {
   const row = {
+    answer_text: "Prices rise.",
     status: "marked",
     mark: 2,
     max_marks: 4,
@@ -1187,8 +1188,7 @@ it.each([
     "Your transcribed definition.\nYour explanation.",
     "Your transcribed definition.\nYour explanation.",
   ],
-  ["empty transcript", "Old typed draft", "", ""],
-  ["missing writing", null, null, ""],
+  ["long answer", "a".repeat(3001), null, "a".repeat(3000)],
 ])(
   "summarises %s from written evidence only in a mixed session",
   async (_name, answer_text, transcript, answer) => {
@@ -1289,3 +1289,104 @@ it("supplies legacy written answers without analysis and compares multiple answe
     answer: rows[0].answer_text,
   });
 });
+
+it.each([
+  ["missing writing and analysis", null, null, null],
+  ["blank writing", " \n\t ", null, null],
+  ["empty transcript overriding a draft", "Old typed draft", "", null],
+  ["blank writing with analysis", "", null, { analysis: { strengths: [] } }],
+  ["No answer marker", "Old draft", null, { note: "No answer" }],
+])(
+  "uses a free topic summary for %s",
+  async (_name, answer_text, transcript, feedback) => {
+    const written = {
+      status: "marked",
+      mark: 0,
+      max_marks: 4,
+      answer_text,
+      transcript,
+      feedback,
+      question: { ...q, topic: { name: "Inflation" } },
+    };
+    const save = query({ score: 0, max_score: 4 });
+    for (const chain of [
+      query({ user_id: "user", kind: "sprint" }),
+      query([written]),
+      save,
+    ])
+      vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+    await finishSession("s");
+    expect(mockedCall).not.toHaveBeenCalled();
+    expect(save.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        score: 0,
+        max_score: 4,
+        summary: topicSummary([{ topic: "Inflation", correct: false }]),
+      }),
+    );
+  },
+);
+
+it.each([false, true])(
+  "filters blank and No answer attempts in a mixed session (usable writing: %s)",
+  async (hasWriting) => {
+    const written = {
+      status: "marked",
+      mark: 4,
+      max_marks: 4,
+      answer_text: "Prices rise because demand exceeds supply.",
+      transcript: null,
+      feedback: { analysis: { strengths: ["Explains cause and effect"] } },
+      question: { ...q, topic: { name: "Inflation" } },
+    };
+    const rows = [
+      {
+        ...written,
+        mark: 1,
+        max_marks: 1,
+        question: { ...written.question, type: "mcq", marks: 1 },
+      },
+      { ...written, mark: 0, answer_text: " \n\t " },
+      { ...written, mark: 0, transcript: "" },
+      { ...written, mark: 0, answer_text: null },
+      { ...written, mark: 0, feedback: { note: "No answer" } },
+      ...(hasWriting ? [written] : []),
+    ];
+    const summary = {
+      strengths: ["You explain causes."],
+      improvements: [],
+      next_steps: [],
+    };
+    const save = query(null);
+    for (const chain of [
+      query({ user_id: "user", kind: "sprint" }),
+      query(rows),
+      save,
+    ])
+      vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+    mockedCall.mockResolvedValue(summary);
+    await finishSession("s");
+    expect(mockedCall).toHaveBeenCalledTimes(hasWriting ? 1 : 0);
+    if (hasWriting) {
+      const evidence = JSON.parse(
+        mockedCall.mock.calls[0][0].messages[1].content as string,
+      );
+      expect(evidence).toHaveLength(1);
+      expect(evidence[0].answer).toBe(written.answer_text);
+    }
+    expect(save.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        score: hasWriting ? 5 : 1,
+        max_score: hasWriting ? 21 : 17,
+        summary: hasWriting
+          ? summary
+          : topicSummary(
+              rows.map((a) => ({
+                topic: "Inflation",
+                correct: a.mark === a.max_marks,
+              })),
+            ),
+      }),
+    );
+  },
+);
