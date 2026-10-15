@@ -95,18 +95,30 @@ transaction that locks and re-reads the attempts before saving the score/summary
 A conflicting save causes re-marking, re-scoring and summary regeneration, with
 at most three finalization attempts, then a clear retryable error. Written answer
 saves take the same locks and recheck session-open: a save that loses to Finish
-is rejected. Unchanged answers keep their marks and do not spend again.
+is rejected. Unchanged answers keep their marks and are not re-marked.
 
 Disagreement reviews are inserted only after a successful result save, stamped
 with its answer version. A database trigger locks/rechecks the attempt at insert,
-discards superseded reviews, and removes older unresolved `check_disagreed`
+uses `FOR NO KEY UPDATE` to allow concurrent legacy FK checks, discards
+superseded reviews, and removes older unresolved `check_disagreed`
 reviews (including legacy null versions) before the one-open-review index is
-checked. Written answer saves also remove superseded open auto reviews, even if
-the next mark agrees. Student disputes, spot checks and resolved reviews are preserved.
+checked. A failed review insert leaves its own saved result retryable, guarded by
+version, claim, marking timestamp and review status. Written answer saves also
+remove superseded open auto reviews, even if the next mark agrees. Student
+disputes, spot checks and resolved reviews are preserved.
 
 0049 is written, **NOT applied to production**, and awaits Om/master sign-off.
-The rollback-only assertions in `supabase/tests/answer-version.sql` were written
-but not run; engine/route tests mock all database and model access.
+Apply the migration before the new server code; reversing that order causes
+missing-column/RPC errors for sprint saves, marking and Finish. Old callers
+remain compatible after migration, but need the new code to gain the race fixes.
+The migration was rerun and `supabase/tests/answer-version.sql` passed against a
+disposable local PostgreSQL 17 cluster with stub tables. Separate local concurrent
+lock probes exercised both save/Finish outcomes, stale reviews and competing
+claims, plus legacy column grants and null/zero versions. A separate probe
+reproduced the legacy-review FK deadlock with `FOR UPDATE` and verified its fix.
+`supabase/tests/specs/answer-version-locks.spec` preserves that interleaving as a
+local PostgreSQL isolation regression test with expected output. Engine/route tests mock
+all database and model access. No remote database or paid calls were used.
 
 The five-minute claim lease cannot prevent provider work continuing after a
 worker times out. Autofill's daily allowance and the shared spend cap still use

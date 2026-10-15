@@ -1,0 +1,11 @@
+Parsed test spec with 3 sessions
+
+starting permutation: pause legacy_insert versioned_insert resume check
+step pause: do $$ begin perform pg_advisory_lock(424242); end $$;
+step legacy_insert: insert into public.mark_reviews(attempt_id,user_id,reason) values ('20000000-0000-0000-0000-000000000002',current_setting('claro.test_student_id')::uuid,'check_disagreed'); <waiting ...>
+step versioned_insert: insert into public.mark_reviews(attempt_id,user_id,reason,answer_version) values ('20000000-0000-0000-0000-000000000002',current_setting('claro.test_student_id')::uuid,'check_disagreed',0); <waiting ...>
+step resume: do $$ begin perform pg_advisory_unlock(424242); end $$;
+step legacy_insert: <... completed>
+step versioned_insert: <... completed>
+ERROR:  duplicate key value violates unique constraint "mark_reviews_one_open"
+step check: do $$ begin if (select count(*) from public.mark_reviews where attempt_id = '20000000-0000-0000-0000-000000000002' and answer_version is null) <> 1 then raise exception 'Legacy review must win'; end if; end $$;

@@ -580,13 +580,20 @@ it.each([null, "23505", "42501"])(
     });
     const error = code ? { code, message: "Review insert failed" } : null;
     const review = { insert: vi.fn().mockResolvedValue({ error }) };
-    const save = query({ id: "attempt", mark: 4, status: "marked" });
+    const savedAt = "2026-10-16T00:00:01.000+00:00";
+    const save = query({
+      id: "attempt",
+      mark: 4,
+      status: "marked",
+      marked_at: savedAt,
+    });
+    const release = query(null);
     vi.mocked(admin().from)
       .mockReturnValueOnce(load as never)
       .mockReturnValueOnce(query([{ id: "attempt" }]) as never)
       .mockReturnValueOnce(save as never)
       .mockReturnValueOnce(review as never)
-      .mockReturnValueOnce(query(null) as never);
+      .mockReturnValueOnce(release as never);
     mockedCall
       .mockResolvedValueOnce(grade)
       .mockResolvedValueOnce(checkGrade(2))
@@ -594,11 +601,21 @@ it.each([null, "23505", "42501"])(
 
     if (code === "42501") {
       await expect(markAttempt("attempt")).rejects.toBe(error);
+      expect(release.update).toHaveBeenCalledWith({ status: "failed" });
+      expect(release.eq).toHaveBeenCalledWith("status", "marked");
+      expect(release.eq).toHaveBeenCalledWith("marked_at", savedAt);
+      expect(release.eq).toHaveBeenCalledWith("check_status", "in_review");
+      expect(release.eq).toHaveBeenCalledWith("answer_version", 0);
+      expect(release.eq).toHaveBeenCalledWith(
+        "claimed_at",
+        save.eq.mock.calls.find(([key]) => key === "claimed_at")?.[1],
+      );
       expect(save.update).toHaveBeenCalledWith(
         expect.objectContaining({ status: "marked" }),
       );
     } else {
       await expect(markAttempt("attempt")).resolves.toMatchObject({ mark: 4 });
+      expect(release.update).not.toHaveBeenCalled();
       expect(save.update).toHaveBeenCalledWith(
         expect.objectContaining({
           mark: 4,

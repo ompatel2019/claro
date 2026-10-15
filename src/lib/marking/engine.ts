@@ -316,6 +316,7 @@ export async function markAttempt(attemptId: string) {
   let claim: string | undefined;
   let version: number | null = 0;
   let review: Record<string, unknown> | undefined;
+  let savedAt: string | undefined;
   try {
     const { data } = await admin()
       .from("attempts")
@@ -435,6 +436,7 @@ export async function markAttempt(attemptId: string) {
       .throwOnError();
     if (!updated) throw new AlreadyMarking();
     if (review) {
+      savedAt = updated.marked_at;
       // The DB trigger locks/rechecks the version and removes older open auto reviews.
       const { error } = await admin().from("mark_reviews").insert(review);
       if (error && error.code !== "23505") throw error;
@@ -442,15 +444,20 @@ export async function markAttempt(attemptId: string) {
     return updated as Attempt;
   } catch (error) {
     if (claim) {
-      // Only this worker's claim may be released; an edited answer has a new version.
+      // A failed review insert must leave this result retryable too.
+      // Only this worker's result/claim may be released.
       let releasing = admin()
         .from("attempts")
         .update({
           status: error instanceof AlreadyMarking ? "pending" : "failed",
         })
         .eq("id", attemptId)
-        .eq("status", "marking")
+        .eq("status", savedAt ? "marked" : "marking")
         .eq("claimed_at", claim);
+      if (savedAt)
+        releasing = releasing
+          .eq("marked_at", savedAt)
+          .eq("check_status", "in_review");
       releasing =
         version === null
           ? releasing.is("answer_version", null)

@@ -19,13 +19,14 @@ for each row execute function public.bump_answer_version();
 
 -- Lock the answer through the insert: no check/insert gap or stale open-review conflict.
 -- Null versions preserve inserts by old workers during rollout.
+-- NO KEY UPDATE also permits their FK KEY SHARE checks while the unique index waits.
 create or replace function public.guard_review_answer_version()
 returns trigger language plpgsql security invoker set search_path = '' as $$
 declare v integer;
 begin
   if new.reason <> 'check_disagreed' or new.answer_version is null then return new; end if;
   select coalesce(answer_version, 0) into v from public.attempts
-    where id = new.attempt_id for update;
+    where id = new.attempt_id for no key update;
   if v is distinct from new.answer_version then return null; end if;
   delete from public.mark_reviews where attempt_id = new.attempt_id
     and reason = 'check_disagreed' and status = 'open'
