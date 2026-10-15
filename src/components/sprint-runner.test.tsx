@@ -617,3 +617,29 @@ it("Submit answer queues silently and deduplicates repeated submissions", async 
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
   expect(screen.getByRole("textbox", { name: "Your answer" })).toBeEnabled();
 });
+
+it("queues a new photo version even when its transcript is unchanged", async () => {
+  const a = { ...written(), image_paths: ["u/first.png"] };
+  mocks.fetch.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ saved: true }),
+  });
+  vi.stubGlobal("fetch", mocks.fetch);
+  show([a], { ...session.config, feedback: "end" });
+  fireEvent.click(screen.getByRole("button", { name: "Submit answer" }));
+  await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(1));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Submit answer" })).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Remove page 1" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Submit answer" })).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Submit answer" }));
+  await waitFor(() =>
+    expect(
+      mocks.fetch.mock.calls.filter(([, options]) => options.method === "POST"),
+    ).toHaveLength(2),
+  );
+});

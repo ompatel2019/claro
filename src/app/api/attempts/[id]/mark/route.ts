@@ -122,7 +122,7 @@ export async function POST(
             : await markOwnCheck(id, user.id, session.config)
           : await markAttempt(id),
     );
-    if (feedback?.note === "No answer")
+    if (session.kind === "single" && feedback?.note === "No answer")
       await admin()
         .from("attempts")
         .update({ check_status: "skipped" })

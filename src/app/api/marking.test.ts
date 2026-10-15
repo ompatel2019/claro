@@ -533,10 +533,8 @@ it.each([
     expect(body).toMatchObject(result);
     expect(body).not.toHaveProperty("sample_answer");
     expect(admin().from).not.toHaveBeenCalledWith("questions");
-    if (result.feedback && "note" in result.feedback) {
-      expect(save.update).toHaveBeenCalledWith({ check_status: "skipped" });
-      expect(save.eq).toHaveBeenCalledWith("user_id", userId);
-    }
+    // The engine saves skipped status atomically with its version-guarded mark.
+    expect(save.update).not.toHaveBeenCalled();
   },
 );
 it("rescores a finished session after a retry", async () => {

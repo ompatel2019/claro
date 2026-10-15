@@ -163,16 +163,13 @@ export async function markWritten(
           })
         : checkPass(),
   ] as const;
-  const [first, second] =
-    config && task === "eval"
-      ? await (async () => {
-          const settled = await Promise.allSettled(passes);
-          const [first, second] = settled;
-          if (first.status === "rejected") throw first.reason;
-          if (second.status === "rejected") throw second.reason;
-          return [first.value, second.value] as const;
-        })()
-      : await Promise.all(passes);
+  // Keep the claim until both paid passes settle, including when one fails.
+  const settled = await Promise.allSettled(passes);
+  const [firstPassResult, secondPassResult] = settled;
+  if (firstPassResult.status === "rejected") throw firstPassResult.reason;
+  if (secondPassResult.status === "rejected") throw secondPassResult.reason;
+  const first = firstPassResult.value;
+  const second = secondPassResult.value;
   const agrees = (a: number, b: number) =>
     marksAgree(q.criteria, q.marks, a, b);
   const check: {
@@ -349,6 +346,7 @@ export async function markAttempt(attemptId: string) {
           max_marks: q.marks,
           band: null,
           feedback: { note: "No answer" },
+          check_status: "skipped",
           marked_by_model: "deterministic",
         };
       } else {
@@ -417,7 +415,13 @@ export async function markAttempt(attemptId: string) {
           ? saving.is(key, null)
           : saving.eq(key, attempt[key]);
     if (claim) saving = saving.eq("status", "marking").eq("claimed_at", claim);
-    else saving = saving.eq("status", attempt.status);
+    else {
+      saving = saving.eq("status", attempt.status);
+      saving =
+        attempt.claimed_at == null
+          ? saving.is("claimed_at", null)
+          : saving.eq("claimed_at", attempt.claimed_at);
+    }
     const { data: updated } = await saving
       .select("*")
       .maybeSingle()

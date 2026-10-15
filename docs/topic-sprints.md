@@ -76,7 +76,7 @@ their existing behaviour.
 
 Background failures show no mid-sprint error. Finish saves the current answer,
 waits for active calls, then marks queued/unmarked answers and retries failures.
-It cannot finalize while another live marking claim remains. Abandoned claims
+It checks for live marking claims before finalizing. Abandoned claims
 can be recovered after five minutes, longer than the per-answer route timeout.
 No schema changes are required; answer comparisons and `claimed_at` guard writes.
 
@@ -85,3 +85,13 @@ Finish and the two-call cap. Engine and mark-route tests cover conditional write
 and save permissions. `e2e/sprint-background.spec.ts` runs the real runner in a
 synthetic browser harness with mocked auth/storage and intercepted marking and
 Finish calls; it requires no account, database or paid API.
+
+Known concurrency limits: the answer save's session-open check and Finish's final
+session write are separate database requests. Another tab can edit during Finish
+(including summary generation), leaving the stored score/summary out of date.
+Review inserts also run separately from version-guarded mark writes: an edited
+answer can leave a stale `check_disagreed` review. Atomic session finalization and
+versioned review writes need database transaction support; the current flow does
+not provide those guarantees. The five-minute claim lease also cannot prevent
+provider work continuing after a worker times out. Autofill's daily allowance and
+the shared spend cap use logged usage rather than atomic reservations.

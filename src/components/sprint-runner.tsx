@@ -100,7 +100,10 @@ export function SprintRunner({
     !checkMode && a.question.type !== "mcq";
   function enqueueAnswer(a: Attempt) {
     if (backgroundAnswer(a) && answered(a))
-      background.enqueue(a.id, JSON.stringify([a.answer_text, a.transcript]));
+      background.enqueue(
+        a.id,
+        JSON.stringify([a.answer_text, a.transcript, a.image_paths]),
+      );
   }
 
   function local(id: string, patch: Partial<Attempt>) {
