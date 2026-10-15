@@ -33,6 +33,13 @@ const reduced = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 const WIDE = 1100;
 
+/** Display only: keep UTF-16 offsets, including both characters of a lone CRLF. */
+export function displayAnswer(text: string) {
+  return text.replace(/(?:\r\n|\r|\n)+/g, (breaks) =>
+    /^(?:\r\n|\r|\n)$/.test(breaks) ? " ".repeat(breaks.length) : breaks,
+  );
+}
+
 /** Opens and closes like <details>, remembering the choice per browser. */
 export function FeedbackDetails({
   name,
@@ -181,7 +188,10 @@ function CommentCard({
       data-card={c.id}
       tabIndex={-1}
       className={cn(
-        "bg-card rounded-xl border p-3 text-sm transition-shadow outline-none",
+        "rounded-xl border p-3 text-sm transition-shadow outline-none",
+        strength
+          ? "border-success/25 bg-success-soft"
+          : "border-destructive/25 bg-destructive-soft",
         active && "ring-ink/40 ring-2",
         className,
       )}
@@ -193,8 +203,10 @@ function CommentCard({
         </span>
         <span
           className={cn(
-            "inline-flex items-center gap-1 font-semibold",
-            strength ? "text-success" : "text-ink",
+            "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold",
+            strength
+              ? "border-success/25 text-success"
+              : "border-destructive/25 text-destructive",
           )}
         >
           <Icon aria-hidden className="size-4" />
@@ -352,6 +364,7 @@ export function AnnotatedFeedback({
   );
   const state = markingState(row);
   const text = row.transcript ?? row.answer_text ?? "";
+  const displayedText = displayAnswer(text);
   const comments = useMemo(
     () =>
       edit
@@ -428,7 +441,7 @@ export function AnnotatedFeedback({
   useLayoutEffect(() => {
     const d = doc.current;
     const m = margin.current;
-    if (!wide || !d || !m) return;
+    if (!wide || filter !== "all" || !d || !m) return;
     function place() {
       const area = m!.querySelector<HTMLElement>("[data-anchor-area]")!;
       const top = area.getBoundingClientRect().top;
@@ -519,9 +532,13 @@ export function AnnotatedFeedback({
     before.selectNodeContents(doc.current);
     before.setEnd(range.startContainer, range.startOffset);
     const start = plain(before).length;
-    const quote = plain(range);
-    if (!quote.trim() || text.slice(start, start + quote.length) !== quote)
+    const selectedText = plain(range);
+    if (
+      !selectedText.trim() ||
+      displayedText.slice(start, start + selectedText.length) !== selectedText
+    )
       return;
+    const quote = text.slice(start, start + selectedText.length);
     setPopover(null);
     setDraft({
       quote,
@@ -561,7 +578,7 @@ export function AnnotatedFeedback({
       onKeyUp={edit && !edit.disabled ? captureSelection : undefined}
       className="relative max-w-[70ch] text-base leading-[26px] whitespace-pre-wrap"
     >
-      {highlightSegments(text, anchored).map((seg) => {
+      {highlightSegments(displayedText, anchored).map((seg) => {
         const covering = seg.comments
           .map((i) => anchored[i])
           .filter((c) => showMark && shown(c));
@@ -649,7 +666,7 @@ export function AnnotatedFeedback({
   const overall = visible.filter((c) => c.start === null);
   const marginCards = showMark && comments.length > 0 && (
     <div>
-      {wide ? (
+      {wide && filter === "all" ? (
         <div ref={margin}>
           <div data-anchor-area className="relative">
             {visible

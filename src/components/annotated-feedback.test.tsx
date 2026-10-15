@@ -1,12 +1,26 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("sonner", () => ({ toast: vi.fn() }));
 import { toast } from "sonner";
 import type { ReviewRow } from "@/lib/feedback";
-import { AnnotatedFeedback, type FeedbackEdit } from "./annotated-feedback";
+import {
+  AnnotatedFeedback,
+  displayAnswer,
+  type FeedbackEdit,
+} from "./annotated-feedback";
 import { McReview } from "./mc-review";
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
 beforeAll(() => {
   globalThis.ResizeObserver = class {
     observe() {}
@@ -259,7 +273,9 @@ it("edit mode makes comments and the next-mark line editable; read-only view has
   );
   expect(edit.onChange).toHaveBeenLastCalledWith(edit.comments, "Cite CPI.");
   const removeAllRanges = vi.fn();
-  window.getSelection = () => ({ removeAllRanges }) as unknown as Selection;
+  vi.spyOn(window, "getSelection").mockReturnValue({
+    removeAllRanges,
+  } as unknown as Selection);
   fireEvent.keyDown(window, { key: "Escape" });
   expect(removeAllRanges).toHaveBeenCalled();
 });
@@ -321,3 +337,178 @@ it.each([null, 0, 3])(
     ).not.toBeInTheDocument();
   },
 );
+
+it.each([
+  ["one\ntwo", "one two"],
+  ["one\rtwo", "one two"],
+  ["one\r\ntwo", "one  two"],
+  ["one\n\ntwo", "one\n\ntwo"],
+  ["one\r\n\r\ntwo", "one\r\n\r\ntwo"],
+  ["one\r\rtwo", "one\r\rtwo"],
+  ["one\n\r\ntwo", "one\n\r\ntwo"],
+  ["one\r\n\ntwo", "one\r\n\ntwo"],
+  ["one\n\n\ntwo", "one\n\n\ntwo"],
+  ["\n😀\r\nend\n", " 😀  end "],
+  ["one\n \ntwo", "one   two"],
+  ["unchanged", "unchanged"],
+])(
+  "reflows only single breaks, preserving every offset in %j",
+  (input, expected) => {
+    const displayed = displayAnswer(input);
+    expect(displayed).toBe(expected);
+    expect(displayed.length).toBe(input.length);
+    for (let i = 0; i < input.length; i++) {
+      expect(displayed[i]).toBe(
+        /[\r\n]/.test(input[i]) ? expected[i] : input[i],
+      );
+    }
+  },
+);
+
+it.each(["answer_text", "transcript"] as const)(
+  "reflows %s across highlight boundaries without changing source quotes or paragraphs",
+  (source) => {
+    const answer = "First\r\nclaim\n\nLast\npoint.";
+    const quote = "First\r\nclaim\n";
+    const fixture = {
+      ...row,
+      [source]: answer,
+      feedback: {
+        comments: [
+          { quote, start: 0, kind: "strength", body: "First comment." },
+          {
+            quote: "point",
+            start: answer.indexOf("point"),
+            kind: "fix",
+            body: "Last comment.",
+          },
+        ],
+      },
+    };
+    const { container } = render(<AnnotatedFeedback row={fixture} />);
+    expect(
+      screen.getByRole("button", { name: /^Strength 1/ }).textContent,
+    ).toBe("First  claim\n");
+    expect(screen.getByRole("button", { name: /^Fix 2/ }).textContent).toBe(
+      "point",
+    );
+    const doc = container
+      .querySelector(".whitespace-pre-wrap")!
+      .cloneNode(true) as HTMLElement;
+    doc.querySelectorAll("sup").forEach((el) => el.remove());
+    expect(doc.textContent).toBe(displayAnswer(answer));
+    expect(doc.textContent!.length).toBe(answer.length);
+    expect(fixture[source]).toBe(answer);
+    expect(fixture.feedback.comments[0].quote).toBe(quote);
+  },
+);
+
+it("keeps original line breaks in quotes selected for editing", async () => {
+  const onChange = vi.fn();
+  const answer = "First\r\nclaim.";
+  const { container } = render(
+    <AnnotatedFeedback
+      row={{ ...row, answer_text: answer, feedback: { comments: [] } }}
+      edit={{ comments: [], nextMark: "", onChange, onUndo: vi.fn() }}
+    />,
+  );
+  const doc = container.querySelector(".whitespace-pre-wrap")!;
+  const range = document.createRange();
+  range.selectNodeContents(doc);
+  range.getBoundingClientRect = () => new DOMRect();
+  vi.spyOn(window, "getSelection").mockReturnValue({
+    rangeCount: 1,
+    isCollapsed: false,
+    getRangeAt: () => range,
+    removeAllRanges: vi.fn(),
+  } as unknown as Selection);
+  fireEvent.pointerUp(doc);
+  await waitFor(() => expect(screen.getByLabelText("Comment")).toBeVisible());
+  fireEvent.change(screen.getByLabelText("Comment"), {
+    target: { value: "Explain this." },
+  });
+  fireEvent.click(screen.getByRole("button", { name: /Add comment/ }));
+  expect(onChange).toHaveBeenCalledWith(
+    [
+      expect.objectContaining({
+        start: 0,
+        quote: answer,
+        body: "Explain this.",
+      }),
+    ],
+    "",
+  );
+});
+
+it("uses green and destructive soft cards with matching pills in the narrow list and popover", () => {
+  const { container } = render(<AnnotatedFeedback row={row} />);
+  const strength = container.querySelector('[data-card="0"]')!;
+  const fix = container.querySelector('[data-card="1"]')!;
+  expect(strength).toHaveClass("bg-success-soft", "border-success/25");
+  expect(fix).toHaveClass("bg-destructive-soft", "border-destructive/25");
+  expect(screen.getByText("Strength")).toHaveClass(
+    "text-success",
+    "rounded-full",
+  );
+  expect(screen.getAllByText("Fix")[0]).toHaveClass(
+    "text-destructive",
+    "rounded-full",
+  );
+  fireEvent.click(screen.getByRole("button", { name: /^Fix 1/ }));
+  expect(screen.getByRole("dialog").querySelector("[data-card]")).toHaveClass(
+    "bg-destructive-soft",
+  );
+});
+
+it("stacks filtered wide cards in normal flow and restores highlight alignment for All", () => {
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(private callback: ResizeObserverCallback) {}
+      observe(target: Element) {
+        if (target.hasAttribute("data-comment-navigation")) {
+          this.callback(
+            [{ contentRect: { width: 1200 } } as ResizeObserverEntry],
+            this as unknown as ResizeObserver,
+          );
+        }
+      }
+      disconnect() {}
+    },
+  );
+  vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(
+    function (this: HTMLElement) {
+      const anchor = this.getAttribute("data-anchors");
+      return new DOMRect(
+        0,
+        anchor === "1" ? 200 : anchor === "0" ? 800 : 0,
+        300,
+        100,
+      );
+    },
+  );
+  vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(100);
+  const { container } = render(<AnnotatedFeedback row={row} />);
+  const anchored = () => [
+    ...container.querySelectorAll<HTMLElement>("[data-anchored]"),
+  ];
+  expect(anchored()).toHaveLength(2);
+  expect(anchored().every((card) => card.classList.contains("absolute"))).toBe(
+    true,
+  );
+  for (const filter of ["Strengths (1)", "Fixes (2)"]) {
+    fireEvent.click(screen.getByRole("button", { name: filter }));
+    expect(anchored()).toHaveLength(0);
+    const list = container.querySelector("ol")!;
+    expect(list).toHaveClass("space-y-2");
+    const cards = [...list.querySelectorAll("[data-card]")];
+    expect(cards).toHaveLength(filter.startsWith("Strengths") ? 1 : 2);
+    cards.forEach((card) => {
+      expect(card).not.toHaveClass("absolute");
+      expect((card as HTMLElement).style.top).toBe("");
+    });
+  }
+  fireEvent.click(screen.getByRole("button", { name: "All (3)" }));
+  expect(anchored()).toHaveLength(2);
+  expect(anchored().map((card) => card.style.top)).toEqual(["200px", "800px"]);
+});
