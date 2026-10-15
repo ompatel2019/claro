@@ -238,7 +238,7 @@ export async function PATCH(
     const { data: row, error } = await admin()
       .from("attempts")
       .select(
-        "answer_text,transcript,image_paths,status,claimed_at,session:sessions(kind,config,finished_at),question:questions(type)",
+        "answer_text,transcript,image_paths,status,answer_version,session:sessions(kind,config,finished_at),question:questions(type)",
       )
       .eq("id", id)
       .eq("user_id", user.id)
@@ -252,7 +252,7 @@ export async function PATCH(
       transcript: string | null;
       image_paths: string[] | null;
       status: string;
-      claimed_at: string | null;
+      answer_version: number | null;
       session: {
         kind: string;
         config: { feedback?: string } | null;
@@ -279,42 +279,32 @@ export async function PATCH(
         key in patch &&
         JSON.stringify(patch[key]) !== JSON.stringify(attempt[key]),
     );
-    let update = admin()
-      .from("attempts")
-      .update({
-        ...patch,
-        ...(changed
-          ? {
-              status: "pending",
-              claimed_at: new Date(
-                Math.max(
-                  Date.now(),
-                  new Date(attempt.claimed_at ?? 0).getTime() + 1,
-                ),
-              ).toISOString(),
-              mark: null,
-              max_marks: null,
-              band: null,
-              feedback: null,
-              marked_at: null,
-              check_status: "skipped",
-              marked_by_model: null,
-            }
-          : {}),
-      })
-      .eq("id", id)
-      .eq("user_id", user.id)
-      .eq("status", attempt.status);
-    // Compare the snapshot so a completed mark or another save cannot be overwritten.
-    for (const key of ["answer_text", "transcript", "claimed_at"] as const)
-      update =
-        attempt[key] === null
-          ? update.is(key, null)
-          : update.eq(key, attempt[key]);
-    const { data, error: saveError } = await update.select("id");
+    const changes = {
+      ...patch,
+      ...(changed
+        ? {
+            status: "pending",
+            claimed_at: null,
+            mark: null,
+            max_marks: null,
+            band: null,
+            feedback: null,
+            marked_at: null,
+            check_status: "skipped",
+            marked_by_model: null,
+          }
+        : {}),
+    };
+    const { data, error: saveError } = await admin().rpc("save_sprint_answer", {
+      p_id: id,
+      p_user: user.id,
+      p_version: attempt.answer_version ?? 0,
+      p_status: attempt.status,
+      p_patch: changes,
+    });
     if (saveError)
       return Response.json({ error: "Could not save answer" }, { status: 500 });
-    if (data?.length) return Response.json({ saved: true });
+    if (data) return Response.json({ saved: true });
   }
   return Response.json(
     { error: "Answer changed while saving. Please retry." },

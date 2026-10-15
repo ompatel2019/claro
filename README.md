@@ -1,5 +1,11 @@
 # Claro portal
 
+Migration `0049_answer_version.sql` is written, **NOT applied to production**, and
+awaiting Om/master sign-off. It adds atomic answer versions, guarded auto reviews
+and transactional sprint answer saves/finalization. Deploy the migration before
+the new server code. No database access or paid calls were used for validation;
+`supabase/tests/answer-version.sql` is an unexecuted rollback-only check.
+
 Student portal for Claro: NSW HSC Economics practice with instant AI marking.
 Next.js 16 (App Router, `src/proxy.ts`), Supabase (auth, Postgres with RLS, storage), OpenAI.
 

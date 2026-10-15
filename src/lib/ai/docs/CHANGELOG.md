@@ -1,5 +1,11 @@
 # Engine changelog
 
+Migration `0049_answer_version.sql` is written, **NOT applied to production**, and
+awaiting Om/master sign-off. It adds atomic answer versions, guarded auto reviews
+and transactional sprint answer saves/finalization. Deploy the migration before
+the new server code. No database access or paid calls were used for validation;
+`supabase/tests/answer-version.sql` is an unexecuted rollback-only check.
+
 - S16 own-question caps: make rubric restrictions binding outside guideline notes and accept digit-leading cap lines without relaxing band validation.
 - S16 review fixes: gate saved own checks before paid work, retain rubric restrictions, reject malformed/duplicate bands, and restore visibility of admin final marks.
 

@@ -281,6 +281,8 @@ type Attempt = {
   user_id: string;
   status: string;
   claimed_at?: string | null;
+  answer_version?: number | null;
+  marked_at?: string | null;
   choice_index: number | null;
   answer_text: string | null;
   transcript: string | null;
@@ -312,6 +314,8 @@ export class AlreadyMarking extends Error {
 
 export async function markAttempt(attemptId: string) {
   let claim: string | undefined;
+  let version: number | null = 0;
+  let review: Record<string, unknown> | undefined;
   try {
     const { data } = await admin()
       .from("attempts")
@@ -320,6 +324,8 @@ export async function markAttempt(attemptId: string) {
       .single()
       .throwOnError();
     const attempt = data as AttemptQuestion;
+    version =
+      attempt.answer_version === null ? null : (attempt.answer_version ?? 0);
     if (attempt.status === "marked") {
       const { question: _question, ...row } = attempt;
       void _question;
@@ -358,11 +364,15 @@ export async function markAttempt(attemptId: string) {
           .from("attempts")
           .update({ status: "marking", claimed_at: claim })
           .eq("id", attemptId);
-        for (const key of ["answer_text", "transcript", "claimed_at"] as const)
-          claiming =
-            attempt[key] == null
-              ? claiming.is(key, null)
-              : claiming.eq(key, attempt[key]);
+        claiming =
+          version === null
+            ? claiming.is("answer_version", null)
+            : claiming.eq("answer_version", version);
+        // The timestamp identifies a worker, including lease takeovers of one version.
+        claiming =
+          attempt.claimed_at == null
+            ? claiming.is("claimed_at", null)
+            : claiming.eq("claimed_at", attempt.claimed_at);
         const { data: claimed } = await claiming
           .or(
             `status.in.(pending,transcribed,failed),and(status.eq.marking,claimed_at.lt.${stale})`,
@@ -379,19 +389,17 @@ export async function markAttempt(attemptId: string) {
           attempt.user_id,
         );
         if (check.status === "in_review") {
-          const { error } = await admin()
-            .from("mark_reviews")
-            .insert({
-              attempt_id: attemptId,
-              user_id: attempt.user_id,
-              reason: "check_disagreed",
-              ai_mark: check.marks[0],
-              ai_model: MARKER.model,
-              check_mark: check.marks[1],
-              check_model: MARKER.model,
-              check_notes: `Reconciling pass: ${check.marks[2]}`,
-            });
-          if (error && error.code !== "23505") throw error;
+          review = {
+            attempt_id: attemptId,
+            user_id: attempt.user_id,
+            answer_version: version ?? 0,
+            reason: "check_disagreed",
+            ai_mark: check.marks[0],
+            ai_model: MARKER.model,
+            check_mark: check.marks[1],
+            check_model: MARKER.model,
+            check_notes: `Reconciling pass: ${check.marks[2]}`,
+          };
         }
         result = {
           ...studentMarking(marked),
@@ -409,11 +417,10 @@ export async function markAttempt(attemptId: string) {
         marked_at: new Date().toISOString(),
       })
       .eq("id", attemptId);
-    for (const key of ["answer_text", "transcript", "choice_index"] as const)
-      saving =
-        attempt[key] == null
-          ? saving.is(key, null)
-          : saving.eq(key, attempt[key]);
+    saving =
+      version === null
+        ? saving.is("answer_version", null)
+        : saving.eq("answer_version", version);
     if (claim) saving = saving.eq("status", "marking").eq("claimed_at", claim);
     else {
       saving = saving.eq("status", attempt.status);
@@ -427,11 +434,16 @@ export async function markAttempt(attemptId: string) {
       .maybeSingle()
       .throwOnError();
     if (!updated) throw new AlreadyMarking();
+    if (review) {
+      // The DB trigger locks/rechecks the version and removes older open auto reviews.
+      const { error } = await admin().from("mark_reviews").insert(review);
+      if (error && error.code !== "23505") throw error;
+    }
     return updated as Attempt;
   } catch (error) {
     if (claim) {
       // Only this worker's claim may be released; an edited answer has a new version.
-      await admin()
+      let releasing = admin()
         .from("attempts")
         .update({
           status: error instanceof AlreadyMarking ? "pending" : "failed",
@@ -439,12 +451,25 @@ export async function markAttempt(attemptId: string) {
         .eq("id", attemptId)
         .eq("status", "marking")
         .eq("claimed_at", claim);
+      releasing =
+        version === null
+          ? releasing.is("answer_version", null)
+          : releasing.eq("answer_version", version);
+      await releasing;
     }
     throw error;
   }
 }
 
-export async function finishSession(sessionId: string) {
+export async function finishSession(
+  sessionId: string,
+  retry = 0,
+): Promise<{
+  score: number | null;
+  max_score: number | null;
+  summary: unknown;
+  [key: string]: unknown;
+}> {
   const { data: session } = await admin()
     .from("sessions")
     .select("*")
@@ -455,6 +480,7 @@ export async function finishSession(sessionId: string) {
   let score = 0;
   let max = 0;
   let summary = null;
+  let snapshot: Record<string, unknown> = {};
   if (session.kind === "flashcards") {
     const { data: reviews } = await admin()
       .from("flashcard_reviews")
@@ -471,6 +497,12 @@ export async function finishSession(sessionId: string) {
     max = first.length;
   } else {
     const rows = await markRemaining(sessionId, session.user_id);
+    snapshot = Object.fromEntries(
+      rows.map((a) => [
+        a.id,
+        [a.answer_version ?? 0, a.status, a.mark ?? null, a.marked_at ?? null],
+      ]),
+    );
     ({ score, max } = totals(rows));
     const marked = rows.filter((a) => a.status === "marked");
     const written = marked.filter(
@@ -507,6 +539,20 @@ export async function finishSession(sessionId: string) {
         return null;
       });
     }
+  }
+  if (session.kind !== "flashcards") {
+    const { data: finished } = await admin()
+      .rpc("finish_versioned_session", {
+        p_id: sessionId,
+        p_answers: snapshot,
+        p_result: { score, max_score: max, summary },
+      })
+      .throwOnError();
+    if (finished) return finished;
+    if (retry < 2) return finishSession(sessionId, retry + 1);
+    throw new Error(
+      "Answers changed while finishing. Your answers are saved; please try Finish again.",
+    );
   }
   const { data: finished } = await admin()
     .from("sessions")
@@ -566,6 +612,10 @@ async function markRemaining(sessionId: string, userId: string) {
   if (rows.some(inFlight))
     throw new Error(
       "Some answers are still being marked. Your answers are saved; try Finish again shortly.",
+    );
+  if (rows.some((a) => ["pending", "transcribed"].includes(a.status)))
+    throw new Error(
+      "Answers changed while marking. Your answers are saved; please try Finish again.",
     );
   return rows;
 }
