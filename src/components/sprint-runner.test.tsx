@@ -543,3 +543,77 @@ it("restores a checked MC explanation without another marking request", () => {
   expect(screen.getByText("A decrease is deflation.")).toBeVisible();
   expect(mocks.fetch).not.toHaveBeenCalled();
 });
+
+it("saves before background marking, keeps a resumed mark editable and hides failures", async () => {
+  const written: Attempt = {
+    ...attempt,
+    choice_index: null,
+    answer_text: "Original saved answer",
+    status: "marked",
+    mark: 2,
+    max_marks: 4,
+    question: { ...attempt.question, type: "short", marks: 4 },
+  };
+  mocks.fetch.mockImplementation(
+    async (_url: string, options: RequestInit) => ({
+      ok: options.method === "PATCH",
+      status: options.method === "PATCH" ? 200 : 500,
+      json: async () => ({ saved: true }),
+    }),
+  );
+  vi.stubGlobal("fetch", mocks.fetch);
+  show([written, { ...attempt, id: "b", question_id: "qb", position: 2 }], {
+    ...session.config,
+    feedback: "end",
+  });
+  const box = screen.getByRole("textbox", { name: "Your answer" });
+  expect(box).toBeEnabled();
+  fireEvent.change(box, { target: { value: "Edited final answer" } });
+  expect(
+    screen.getByRole("button", { name: /^Question 1:/ }),
+  ).not.toHaveAccessibleName(/marks/);
+  fireEvent.click(screen.getByRole("button", { name: /^Question 2:/ }));
+  await waitFor(() =>
+    expect(mocks.fetch).toHaveBeenCalledWith(
+      "/api/attempts/a/mark",
+      expect.objectContaining({ method: "POST" }),
+    ),
+  );
+  expect(mocks.fetch.mock.calls[0]).toEqual([
+    "/api/attempts/a/mark",
+    expect.objectContaining({
+      method: "PATCH",
+      body: JSON.stringify({ answer_text: "Edited final answer" }),
+    }),
+  ]);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /^Question 1:/ }));
+  expect(
+    await screen.findByRole("textbox", { name: "Your answer" }),
+  ).toHaveValue("Edited final answer");
+});
+
+it("Submit answer queues silently and deduplicates repeated submissions", async () => {
+  const a = written();
+  mocks.fetch.mockImplementation(
+    async (_url: string, options: RequestInit) => ({
+      ok: options.method === "PATCH",
+      status: options.method === "PATCH" ? 200 : 500,
+      json: async () => ({ saved: true }),
+    }),
+  );
+  vi.stubGlobal("fetch", mocks.fetch);
+  show([a], { ...session.config, feedback: "end" });
+  fireEvent.click(screen.getByRole("button", { name: "Submit answer" }));
+  await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(1));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Submit answer" })).toBeEnabled(),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Submit answer" }));
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Submit answer" })).toBeEnabled(),
+  );
+  expect(mocks.fetch).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: "Your answer" })).toBeEnabled();
+});

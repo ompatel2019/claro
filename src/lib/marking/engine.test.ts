@@ -482,6 +482,8 @@ function query(data: unknown) {
   const chain = {
     select: vi.fn(),
     eq: vi.fn(),
+    is: vi.fn(),
+    maybeSingle: vi.fn(),
     in: vi.fn(),
     or: vi.fn(),
     order: vi.fn(),
@@ -492,6 +494,8 @@ function query(data: unknown) {
   for (const key of [
     "select",
     "eq",
+    "is",
+    "maybeSingle",
     "in",
     "or",
     "order",
@@ -1396,3 +1400,98 @@ it.each([false, true])(
     );
   },
 );
+
+it("discards a result if the answer was edited while the model was marking", async () => {
+  const attempt = {
+    id: "a",
+    user_id: "user",
+    status: "pending",
+    answer_text: "The prices rise rapidly",
+    transcript: null,
+    question: q,
+  };
+  const claim = query([{ id: "a" }]);
+  const staleSave = query(null);
+  const release = query(null);
+  for (const chain of [query(attempt), claim, staleSave, release])
+    vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+  mockedCall.mockResolvedValueOnce(grade).mockResolvedValueOnce(checkGrade());
+  await expect(markAttempt("a")).rejects.toBeInstanceOf(AlreadyMarking);
+  expect(claim.eq).toHaveBeenCalledWith("answer_text", attempt.answer_text);
+  expect(claim.is).toHaveBeenCalledWith("transcript", null);
+  expect(staleSave.eq).toHaveBeenCalledWith("answer_text", attempt.answer_text);
+  expect(staleSave.eq).toHaveBeenCalledWith(
+    "claimed_at",
+    claim.update.mock.calls[0][0].claimed_at,
+  );
+  expect(release.eq).toHaveBeenCalledWith(
+    "claimed_at",
+    claim.update.mock.calls[0][0].claimed_at,
+  );
+  expect(release.update).toHaveBeenCalledWith({ status: "pending" });
+});
+
+it("does not finalize a session while background marking is still running", async () => {
+  vi.useFakeTimers();
+  try {
+    const load = query({ user_id: "user", kind: "sprint" });
+    const running = query([
+      {
+        id: "a",
+        status: "marking",
+        claimed_at: new Date().toISOString(),
+        question: q,
+      },
+    ]);
+    vi.mocked(admin().from)
+      .mockReturnValueOnce(load as never)
+      .mockReturnValue(running as never);
+    const finished = finishSession("s").catch((error) => error);
+    await vi.advanceTimersByTimeAsync(240_000);
+    expect(await finished).toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining("still being marked"),
+      }),
+    );
+    expect(running.update).not.toHaveBeenCalled();
+    expect(mockedCall).not.toHaveBeenCalled();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("a concurrent background/Finish caller that loses the claim never calls the model", async () => {
+  const attempt = {
+    id: "a",
+    user_id: "user",
+    status: "pending",
+    claimed_at: null,
+    answer_text: "The prices rise rapidly",
+    transcript: null,
+    question: q,
+  };
+  const winner = query([{ id: "a" }]);
+  for (const chain of [
+    query(attempt),
+    winner,
+    query({ ...attempt, status: "marking" }),
+    query([]),
+    query({ id: "a", status: "marked", mark: 4 }),
+  ])
+    vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+  let resolve!: (value: typeof grade) => void;
+  mockedCall
+    .mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    )
+    .mockResolvedValueOnce(checkGrade());
+  const background = markAttempt("a");
+  await vi.waitFor(() => expect(mockedCall).toHaveBeenCalledTimes(2));
+  await expect(markAttempt("a")).rejects.toBeInstanceOf(AlreadyMarking);
+  expect(mockedCall).toHaveBeenCalledTimes(2);
+  resolve(grade);
+  expect(await background).toMatchObject({ status: "marked", mark: 4 });
+});

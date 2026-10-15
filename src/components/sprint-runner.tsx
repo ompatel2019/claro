@@ -13,6 +13,7 @@ import {
   type Attempt,
   type Session,
 } from "@/lib/practice";
+import { createSprintMarkQueue } from "@/lib/sprint-mark-queue";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Button } from "./ui/button";
@@ -80,16 +81,71 @@ export function SprintRunner({
   const [explanations, setExplanations] =
     useState<Record<string, string | McqExplanation>>(initialExplanations);
 
+  const [background] = useState(() =>
+    createSprintMarkQueue(async (id) => {
+      const post = () =>
+        fetch(`/api/attempts/${id}/mark`, {
+          method: "POST",
+          credentials: "same-origin",
+        });
+      let response = await post();
+      if (response.status === 401) {
+        await ensureSession(db);
+        response = await post();
+      }
+      if (!response.ok) throw new Error("Background marking failed");
+    }),
+  );
+  const backgroundAnswer = (a: Attempt) =>
+    !checkMode && a.question.type !== "mcq";
+  function enqueueAnswer(a: Attempt) {
+    if (backgroundAnswer(a) && answered(a))
+      background.enqueue(a.id, JSON.stringify([a.answer_text, a.transcript]));
+  }
+
   function local(id: string, patch: Partial<Attempt>) {
-    rows.current = rows.current.map((a) =>
-      a.id === id ? { ...a, ...patch } : a,
-    );
+    rows.current = rows.current.map((a) => {
+      if (a.id !== id) return a;
+      const changed =
+        backgroundAnswer(a) &&
+        (["answer_text", "transcript", "image_paths"] as const).some(
+          (key) =>
+            key in patch &&
+            JSON.stringify(patch[key]) !== JSON.stringify(a[key]),
+        );
+      return {
+        ...a,
+        ...patch,
+        ...(changed
+          ? {
+              status: "pending",
+              mark: null,
+              max_marks: null,
+              band: null,
+              feedback: null,
+            }
+          : {}),
+      };
+    });
     setAttempts(rows.current);
   }
   function save(id: string, patch: Partial<Attempt>) {
     setSaveState("saving");
     const operation = queue.current.then(() =>
       withAuthRetry(db, async () => {
+        if (backgroundAnswer(rows.current.find((a) => a.id === id)!)) {
+          const response = await fetch(`/api/attempts/${id}/mark`, {
+            method: "PATCH",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(patch),
+          });
+          if (!response.ok)
+            throw new Error(
+              (await response.json()).error ?? "Could not save answer",
+            );
+          return;
+        }
         const { error, data } = await db
           .from("attempts")
           .update(patch)
@@ -152,7 +208,7 @@ export function SprintRunner({
     for (const a of rows.current) {
       const draft = localStorage.getItem(draftKey(a.id));
       if (!draft) continue;
-      if (["pending", "transcribed"].includes(a.status))
+      if (backgroundAnswer(a) || ["pending", "transcribed"].includes(a.status))
         edit(a.id, JSON.parse(draft));
       else localStorage.removeItem(draftKey(a.id));
     }
@@ -221,6 +277,7 @@ export function SprintRunner({
       await fn();
     } catch (e) {
       setFinishing(false);
+      background.resume();
       window.scrollTo({ top: 0, behavior: "smooth" });
       setError(
         e instanceof Error
@@ -237,6 +294,7 @@ export function SprintRunner({
     // during the transition cannot land on the next question.
     await flush();
     await persistTime();
+    if (next !== index) enqueueAnswer(rows.current[index]);
     setIndex(next);
   }
   async function finish() {
@@ -246,6 +304,7 @@ export function SprintRunner({
     await ensureSession(db);
     await flush();
     await persistTime();
+    await background.finish();
     async function post() {
       const response = await fetch(`/api/sessions/${session.id}/finish`, {
         method: "POST",
@@ -269,7 +328,9 @@ export function SprintRunner({
   }
   const a = attempts[index];
   const editable =
-    !!a && ["pending", "transcribed"].includes(a.status) && checking !== a.id;
+    !!a &&
+    (backgroundAnswer(a) || ["pending", "transcribed"].includes(a.status)) &&
+    checking !== a.id;
   const answerKey =
     checkMode && a?.status === "marked" ? a.feedback?.correct_index : null;
   const needsCheck = checkMode && editable && answered(a);
@@ -576,17 +637,30 @@ export function SprintRunner({
           </fieldset>
         ) : checkMode && a.status === "marked" ? null : (
           <WrittenAnswer
-            inputOnly={checkMode}
+            inputOnly
             disabled={busy || !editable}
             onBusy={setBusy}
             key={a.question_id ?? a.id}
-            attempt={a}
+            attempt={backgroundAnswer(a) ? { ...a, status: "pending" } : a}
             userId={userId}
             edit={(patch) => edit(a.id, patch)}
             save={(patch) => save(a.id, patch)}
             flush={flush}
             local={(patch) => local(a.id, patch)}
           />
+        )}
+        {backgroundAnswer(a) && (
+          <Button
+            disabled={busy || !answered(a)}
+            onClick={() =>
+              void act(async () => {
+                await flush();
+                enqueueAnswer(rows.current[index]);
+              })
+            }
+          >
+            Submit answer
+          </Button>
         )}
         {checkMode && a.status === "marked" && (
           <CheckResult

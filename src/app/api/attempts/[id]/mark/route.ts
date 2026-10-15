@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { studentMarking } from "@/lib/feedback";
 import { readMcqExplanation } from "@/lib/mcq-explanation";
 import { withAttemptUsage } from "@/lib/ai/usage-context";
@@ -206,4 +207,117 @@ export async function POST(
       { status: 500 },
     );
   }
+}
+
+const sprintAnswerPatch = z
+  .object({
+    answer_text: z.string().max(100_000).nullable().optional(),
+    transcript: z.string().max(100_000).nullable().optional(),
+    image_paths: z.array(z.string()).max(8).nullable().optional(),
+    flagged: z.boolean().optional(),
+  })
+  .strict();
+
+// End-feedback sprint answers stay editable while their marks are prepared.
+export async function PATCH(
+  request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return Response.json({ error: "Unauthorised" }, { status: 401 });
+  const { id } = await params;
+  const parsed = sprintAnswerPatch.safeParse(
+    await request.json().catch(() => null),
+  );
+  if (!parsed.success)
+    return Response.json({ error: "Invalid answer" }, { status: 400 });
+  for (let retry = 0; retry < 3; retry++) {
+    const { data: row, error } = await admin()
+      .from("attempts")
+      .select(
+        "answer_text,transcript,image_paths,status,claimed_at,session:sessions(kind,config,finished_at),question:questions(type)",
+      )
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .maybeSingle();
+    if (error)
+      return Response.json({ error: "Could not save answer" }, { status: 500 });
+    if (!row)
+      return Response.json({ error: "Attempt not found" }, { status: 404 });
+    const attempt = row as unknown as {
+      answer_text: string | null;
+      transcript: string | null;
+      image_paths: string[] | null;
+      status: string;
+      claimed_at: string | null;
+      session: {
+        kind: string;
+        config: { feedback?: string } | null;
+        finished_at: string | null;
+      };
+      question: { type: string } | null;
+    };
+    if (
+      attempt.session?.kind !== "sprint" ||
+      attempt.session.finished_at ||
+      attempt.session.config?.feedback === "each" ||
+      attempt.question?.type === "mcq" ||
+      !attempt.question
+    )
+      return Response.json(
+        { error: "This answer is no longer editable" },
+        { status: 409 },
+      );
+    const patch = parsed.data;
+    const changed = (
+      ["answer_text", "transcript", "image_paths"] as const
+    ).some(
+      (key) =>
+        key in patch &&
+        JSON.stringify(patch[key]) !== JSON.stringify(attempt[key]),
+    );
+    let update = admin()
+      .from("attempts")
+      .update({
+        ...patch,
+        ...(changed
+          ? {
+              status: "pending",
+              claimed_at: new Date(
+                Math.max(
+                  Date.now(),
+                  new Date(attempt.claimed_at ?? 0).getTime() + 1,
+                ),
+              ).toISOString(),
+              mark: null,
+              max_marks: null,
+              band: null,
+              feedback: null,
+              marked_at: null,
+              check_status: "skipped",
+              marked_by_model: null,
+            }
+          : {}),
+      })
+      .eq("id", id)
+      .eq("user_id", user.id)
+      .eq("status", attempt.status);
+    // Compare the snapshot so a completed mark or another save cannot be overwritten.
+    for (const key of ["answer_text", "transcript", "claimed_at"] as const)
+      update =
+        attempt[key] === null
+          ? update.is(key, null)
+          : update.eq(key, attempt[key]);
+    const { data, error: saveError } = await update.select("id");
+    if (saveError)
+      return Response.json({ error: "Could not save answer" }, { status: 500 });
+    if (data?.length) return Response.json({ saved: true });
+  }
+  return Response.json(
+    { error: "Answer changed while saving. Please retry." },
+    { status: 409 },
+  );
 }

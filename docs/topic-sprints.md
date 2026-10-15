@@ -63,3 +63,25 @@ and `src/lib/practice-data.test.ts` cover response and admin-read boundaries.
 `e2e/sprint-model-answer.spec.ts` skips without `STUDENT_EMAIL` and mocks the
 mark API; it covers UI behavior only, not real marking or server-side
 model-answer reads.
+
+## Background written marking
+
+With feedback at the end, Submit answer or leaving an answered written question queues its marking
+in the background (at most two calls at once). Answers stay editable. Changing
+saved text, a transcript or photos clears the old mark; a worker can only store a
+result for the answer version it claimed. Unchanged answers reuse their marks,
+including when a background request races Finish. Existing rate limits and the
+AI budget still apply to background calls. MC marking and check-as-you-go keep
+their existing behaviour.
+
+Background failures show no mid-sprint error. Finish saves the current answer,
+waits for active calls, then marks queued/unmarked answers and retries failures.
+It cannot finalize while another live marking claim remains. Abandoned claims
+can be recovered after five minutes, longer than the per-answer route timeout.
+No schema changes are required; answer comparisons and `claimed_at` guard writes.
+
+`src/lib/sprint-mark-queue.test.ts` covers versions, failures, deduplication,
+Finish and the two-call cap. Engine and mark-route tests cover conditional writes
+and save permissions. `e2e/sprint-background.spec.ts` runs the real runner in a
+synthetic browser harness with mocked auth/storage and intercepted marking and
+Finish calls; it requires no account, database or paid API.
