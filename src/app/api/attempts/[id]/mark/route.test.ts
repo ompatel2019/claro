@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   mark: vi.fn(),
   rescore: vi.fn(),
   adminFrom: vi.fn(),
+  rpc: vi.fn(),
   rate: vi.fn(),
 }));
 vi.mock("@/utils/supabase/server", () => ({
@@ -24,7 +25,7 @@ vi.mock("@/utils/supabase/server", () => ({
   }),
 }));
 vi.mock("@/utils/supabase/admin", () => ({
-  admin: () => ({ from: mocks.adminFrom }),
+  admin: () => ({ from: mocks.adminFrom, rpc: mocks.rpc }),
 }));
 vi.mock("@/lib/ai/usage-context", () => ({
   withAttemptUsage: (_id: string, fn: () => unknown) => fn(),
@@ -61,6 +62,15 @@ const send = () =>
   });
 beforeEach(() => {
   vi.resetAllMocks();
+  mocks.rpc.mockImplementation((_name, p) =>
+    mocks
+      .adminFrom("attempts")
+      .update(p.p_patch)
+      .eq("status", p.p_status)
+      .eq("answer_version", p.p_version)
+      .select("id")
+      .then((r: { data: unknown[] }) => ({ data: Boolean(r.data?.length) })),
+  );
   mocks.user.mockResolvedValue({ data: { user: { id: "u" } } });
   mocks.ownAttempt.mockResolvedValue({ data: attempt() });
   mocks.explanation.mockResolvedValue({
@@ -148,7 +158,7 @@ const savedAttempt = {
   transcript: null,
   image_paths: null,
   status: "marked",
-  claimed_at: "2026-10-16T00:00:00.000Z",
+  answer_version: 3,
   session: { kind: "sprint", config: { feedback: "end" }, finished_at: null },
   question: { type: "short" },
 };
@@ -178,16 +188,23 @@ it.each(["marked", "marking", "failed"])(
         mark: null,
         feedback: null,
         check_status: "skipped",
-        claimed_at: expect.any(String),
+        claimed_at: null,
       }),
     );
     expect(save.eq).toHaveBeenCalledWith("status", status);
-    expect(save.eq).toHaveBeenCalledWith("claimed_at", savedAttempt.claimed_at);
     expect(save.eq).toHaveBeenCalledWith(
-      "answer_text",
-      savedAttempt.answer_text,
+      "answer_version",
+      savedAttempt.answer_version,
     );
-    expect(save.is).toHaveBeenCalledWith("transcript", null);
+    expect(mocks.rpc).toHaveBeenCalledWith(
+      "save_sprint_answer",
+      expect.objectContaining({
+        p_id: "a",
+        p_user: "u",
+        p_version: 3,
+        p_status: status,
+      }),
+    );
   },
 );
 
@@ -272,19 +289,30 @@ it("returns a retryable conflict after three concurrent save conflicts", async (
   expect(mocks.adminFrom).toHaveBeenCalledTimes(6);
 });
 
-it("advances the answer version even when saved within the same millisecond", async () => {
-  vi.useFakeTimers();
-  try {
-    vi.setSystemTime(new Date(savedAttempt.claimed_at));
-    const save = saveQuery([{ id: "a" }]);
-    mocks.adminFrom
-      .mockReturnValueOnce(saveQuery(savedAttempt))
-      .mockReturnValueOnce(save);
-    expect((await patchAnswer({ answer_text: "new" })).status).toBe(200);
-    expect(new Date(save.update.mock.calls[0][0].claimed_at).getTime()).toBe(
-      Date.now() + 1,
+it("leaves version increments to the database and clears the superseded claim", async () => {
+  const save = saveQuery([{ id: "a" }]);
+  mocks.adminFrom
+    .mockReturnValueOnce(saveQuery(savedAttempt))
+    .mockReturnValueOnce(save);
+  expect((await patchAnswer({ answer_text: "new" })).status).toBe(200);
+  expect(save.update.mock.calls[0][0]).not.toHaveProperty("answer_version");
+  expect(save.update.mock.calls[0][0].claimed_at).toBeNull();
+});
+
+it("rejects a save when Finish wins after the editable snapshot was read", async () => {
+  mocks.adminFrom
+    .mockReturnValueOnce(saveQuery(savedAttempt))
+    .mockReturnValueOnce(
+      saveQuery({
+        ...savedAttempt,
+        session: { ...savedAttempt.session, finished_at: "done" },
+      }),
     );
-  } finally {
-    vi.useRealTimers();
-  }
+  mocks.rpc.mockResolvedValueOnce({ data: false, error: null });
+  const response = await patchAnswer({ answer_text: "new answer" });
+  expect(response.status).toBe(409);
+  expect(await response.json()).toEqual({
+    error: "This answer is no longer editable",
+  });
+  expect(mocks.rpc).toHaveBeenCalledTimes(1);
 });

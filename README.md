@@ -1,5 +1,14 @@
 # Claro portal
 
+Migration `0049_answer_version.sql` is written, **NOT applied to production**, and
+awaiting Om/master sign-off. It adds atomic answer versions, guarded auto reviews
+and transactional sprint answer saves/finalization. Deploy the migration before
+the new server code: sprint saves, marking and Finish require its columns/RPCs
+and fail if code is deployed first. Old callers remain compatible after migration.
+Validation used mocked engine/route tests and a disposable local PostgreSQL 17
+cluster with stub tables (migration rerun, rollback-only SQL assertions and
+concurrent lock probes). No remote database access or paid calls were used.
+
 Student portal for Claro: NSW HSC Economics practice with instant AI marking.
 Next.js 16 (App Router, `src/proxy.ts`), Supabase (auth, Postgres with RLS, storage), OpenAI.
 

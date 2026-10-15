@@ -11,7 +11,7 @@ vi.mock("./examples", async (importOriginal) => ({
   examplePool: vi.fn(),
 }));
 vi.mock("@/utils/supabase/admin", () => {
-  const client = { from: vi.fn() };
+  const client = { from: vi.fn(), rpc: vi.fn() };
   return { admin: () => client };
 });
 
@@ -106,6 +106,15 @@ beforeEach(() => {
   vi.resetAllMocks();
   mockedCall.mockResolvedValue(grade);
   vi.mocked(examplePool).mockResolvedValue([]);
+  vi.mocked(admin().rpc).mockImplementation((_name, args) => {
+    const p = args as { p_id: string; p_result: object };
+    return admin()
+      .from("sessions")
+      .update(p.p_result)
+      .eq("id", p.p_id)
+      .select("*")
+      .single() as never;
+  });
 });
 
 it("returns validated grade on the first reply and anchors quotes", async () => {
@@ -560,7 +569,7 @@ it("uses an empty confirmed transcript in preference to answer_text", async () =
 });
 
 it.each([null, "23505", "42501"])(
-  "queues a disagreement before saving, tolerating only duplicate reviews (%s)",
+  "queues a versioned disagreement after saving, tolerating only duplicate reviews (%s)",
   async (code) => {
     const load = query({
       id: "attempt",
@@ -571,12 +580,20 @@ it.each([null, "23505", "42501"])(
     });
     const error = code ? { code, message: "Review insert failed" } : null;
     const review = { insert: vi.fn().mockResolvedValue({ error }) };
-    const save = query({ id: "attempt", mark: 4, status: "marked" });
+    const savedAt = "2026-10-16T00:00:01.000+00:00";
+    const save = query({
+      id: "attempt",
+      mark: 4,
+      status: "marked",
+      marked_at: savedAt,
+    });
+    const release = query(null);
     vi.mocked(admin().from)
       .mockReturnValueOnce(load as never)
       .mockReturnValueOnce(query([{ id: "attempt" }]) as never)
+      .mockReturnValueOnce(save as never)
       .mockReturnValueOnce(review as never)
-      .mockReturnValueOnce(save as never);
+      .mockReturnValueOnce(release as never);
     mockedCall
       .mockResolvedValueOnce(grade)
       .mockResolvedValueOnce(checkGrade(2))
@@ -584,9 +601,21 @@ it.each([null, "23505", "42501"])(
 
     if (code === "42501") {
       await expect(markAttempt("attempt")).rejects.toBe(error);
-      expect(save.update).toHaveBeenCalledExactlyOnceWith({ status: "failed" });
+      expect(release.update).toHaveBeenCalledWith({ status: "failed" });
+      expect(release.eq).toHaveBeenCalledWith("status", "marked");
+      expect(release.eq).toHaveBeenCalledWith("marked_at", savedAt);
+      expect(release.eq).toHaveBeenCalledWith("check_status", "in_review");
+      expect(release.eq).toHaveBeenCalledWith("answer_version", 0);
+      expect(release.eq).toHaveBeenCalledWith(
+        "claimed_at",
+        save.eq.mock.calls.find(([key]) => key === "claimed_at")?.[1],
+      );
+      expect(save.update).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "marked" }),
+      );
     } else {
       await expect(markAttempt("attempt")).resolves.toMatchObject({ mark: 4 });
+      expect(release.update).not.toHaveBeenCalled();
       expect(save.update).toHaveBeenCalledWith(
         expect.objectContaining({
           mark: 4,
@@ -598,18 +627,19 @@ it.each([null, "23505", "42501"])(
       expect(save.update.mock.calls[0][0]).not.toHaveProperty("check");
       expect(save.update.mock.calls[0][0].feedback).not.toHaveProperty("check");
     }
-    expect(admin().from).toHaveBeenNthCalledWith(3, "mark_reviews");
+    expect(admin().from).toHaveBeenNthCalledWith(4, "mark_reviews");
     expect(review.insert).toHaveBeenCalledExactlyOnceWith({
       attempt_id: "attempt",
       user_id: "user",
       reason: "check_disagreed",
+      answer_version: 0,
       ai_mark: 4,
       ai_model: MARKER.model,
       check_mark: 2,
       check_model: MARKER.model,
       check_notes: "Reconciling pass: 0",
     });
-    expect(review.insert.mock.invocationCallOrder[0]).toBeLessThan(
+    expect(review.insert.mock.invocationCallOrder[0]).toBeGreaterThan(
       save.update.mock.invocationCallOrder[0],
     );
   },
@@ -1367,7 +1397,7 @@ it.each([false, true])(
       improvements: [],
       next_steps: [],
     };
-    const save = query(null);
+    const save = query({});
     for (const chain of [
       query({ user_id: "user", kind: "sprint" }),
       query(rows),
@@ -1417,9 +1447,9 @@ it("discards a result if the answer was edited while the model was marking", asy
     vi.mocked(admin().from).mockReturnValueOnce(chain as never);
   mockedCall.mockResolvedValueOnce(grade).mockResolvedValueOnce(checkGrade());
   await expect(markAttempt("a")).rejects.toBeInstanceOf(AlreadyMarking);
-  expect(claim.eq).toHaveBeenCalledWith("answer_text", attempt.answer_text);
-  expect(claim.is).toHaveBeenCalledWith("transcript", null);
-  expect(staleSave.eq).toHaveBeenCalledWith("answer_text", attempt.answer_text);
+  expect(claim.eq).toHaveBeenCalledWith("answer_version", 0);
+  expect(claim.is).toHaveBeenCalledWith("claimed_at", null);
+  expect(staleSave.eq).toHaveBeenCalledWith("answer_version", 0);
   expect(staleSave.eq).toHaveBeenCalledWith(
     "claimed_at",
     claim.update.mock.calls[0][0].claimed_at,
@@ -1465,6 +1495,7 @@ it("a concurrent background/Finish caller that loses the claim never calls the m
     id: "a",
     user_id: "user",
     status: "pending",
+    answer_version: 0,
     claimed_at: null,
     answer_text: "The prices rise rapidly",
     transcript: null,
@@ -1492,6 +1523,7 @@ it("a concurrent background/Finish caller that loses the claim never calls the m
   await vi.waitFor(() => expect(mockedCall).toHaveBeenCalledTimes(2));
   await expect(markAttempt("a")).rejects.toBeInstanceOf(AlreadyMarking);
   expect(mockedCall).toHaveBeenCalledTimes(2);
+  expect(winner.eq).toHaveBeenCalledWith("answer_version", 0);
   resolve(grade);
   expect(await background).toMatchObject({ status: "marked", mark: 4 });
 });
@@ -1555,3 +1587,239 @@ it.each([null, "2026-10-16T00:00:00.000Z"])(
     expect(mockedCall).not.toHaveBeenCalled();
   },
 );
+
+it.each([null, 0, 7])(
+  "guards claims and writes for legacy/current version %s",
+  async (answer_version) => {
+    const load = query({
+      id: "a",
+      user_id: "user",
+      status: "pending",
+      answer_version,
+      answer_text: "The prices rise rapidly",
+      question: q,
+    });
+    const claim = query([{ id: "a" }]);
+    const save = query({ id: "a", status: "marked", mark: 4 });
+    for (const chain of [load, claim, save])
+      vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+    mockedCall.mockResolvedValueOnce(grade).mockResolvedValueOnce(checkGrade());
+    await markAttempt("a");
+    for (const chain of [claim, save]) {
+      if (answer_version === null)
+        expect(chain.is).toHaveBeenCalledWith("answer_version", null);
+      else
+        expect(chain.eq).toHaveBeenCalledWith("answer_version", answer_version);
+    }
+    expect(mockedCall).toHaveBeenCalledTimes(2);
+  },
+);
+
+it("discards a superseded worker's result and disagreement, then creates the new version's review", async () => {
+  const attempt = {
+    id: "a",
+    user_id: "user",
+    status: "pending",
+    answer_version: 1,
+    answer_text: "The prices rise rapidly",
+    question: q,
+  };
+  const staleSave = query(null);
+  const freshSave = query({
+    ...attempt,
+    answer_version: 2,
+    status: "marked",
+    mark: 4,
+  });
+  const review = { insert: vi.fn().mockResolvedValue({ error: null }) };
+  for (const chain of [
+    query(attempt),
+    query([{ id: "a" }]),
+    staleSave,
+    query(null),
+    query({ ...attempt, answer_version: 2 }),
+    query([{ id: "a" }]),
+    freshSave,
+    review,
+  ])
+    vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+  for (let i = 0; i < 2; i++)
+    mockedCall
+      .mockResolvedValueOnce(grade)
+      .mockResolvedValueOnce(checkGrade(2))
+      .mockResolvedValueOnce(checkGrade(0));
+  await expect(markAttempt("a")).rejects.toBeInstanceOf(AlreadyMarking);
+  expect(review.insert).not.toHaveBeenCalled();
+  expect(staleSave.eq).toHaveBeenCalledWith("answer_version", 1);
+  await markAttempt("a");
+  expect(freshSave.eq).toHaveBeenCalledWith("answer_version", 2);
+  expect(review.insert).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ answer_version: 2, reason: "check_disagreed" }),
+  );
+});
+
+it("rejects a stale write during Finish and re-marks/re-scores the saved answer", async () => {
+  const old = {
+    id: "a",
+    user_id: "user",
+    status: "pending",
+    answer_version: 1,
+    answer_text: "The prices rise rapidly",
+    question: q,
+  };
+  const fresh = {
+    ...old,
+    answer_version: 2,
+    answer_text: "Demand falls very rapidly",
+  };
+  const marked = { ...fresh, status: "marked", mark: 2, max_marks: 4 };
+  const staleSave = query(null);
+  const freshSave = query(marked);
+  for (const chain of [
+    query({ user_id: "user", kind: "sprint" }),
+    query([old]),
+    query(old),
+    query([{ id: "a" }]),
+    staleSave,
+    query(null),
+    query([fresh]),
+    query(fresh),
+    query([{ id: "a" }]),
+    freshSave,
+    query([marked]),
+  ])
+    vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+  const summary = {
+    strengths: [],
+    improvements: ["Explain causes"],
+    next_steps: [],
+  };
+  mockedCall
+    .mockResolvedValueOnce(grade)
+    .mockResolvedValueOnce(checkGrade())
+    .mockResolvedValueOnce({ ...grade, ...checkGrade(2) })
+    .mockResolvedValueOnce(checkGrade(2))
+    .mockResolvedValueOnce(summary);
+  vi.mocked(admin().rpc).mockReturnValue({
+    throwOnError: async () => ({ data: { score: 2, max_score: 4, summary } }),
+  } as never);
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    expect(await finishSession("s")).toMatchObject({ score: 2, summary });
+    expect(staleSave.eq).toHaveBeenCalledWith("answer_version", 1);
+    expect(freshSave.eq).toHaveBeenCalledWith("answer_version", 2);
+    expect(admin().rpc).toHaveBeenCalledWith(
+      "finish_versioned_session",
+      expect.objectContaining({
+        p_answers: { a: [2, "marked", 2, null] },
+        p_result: { score: 2, max_score: 4, summary },
+      }),
+    );
+    const evidence = JSON.parse(
+      mockedCall.mock.calls[4][0].messages[1].content as string,
+    );
+    expect(evidence[0]).toMatchObject({ answer: fresh.answer_text, mark: 2 });
+  } finally {
+    log.mockRestore();
+  }
+});
+
+it("retries Finish if an edit lands during summary generation, and reuses unchanged marks", async () => {
+  const old = {
+    id: "a",
+    user_id: "user",
+    status: "marked",
+    answer_version: 0,
+    answer_text: "The prices rise rapidly",
+    mark: 4,
+    max_marks: 4,
+    question: q,
+  };
+  const fresh = {
+    ...old,
+    answer_version: 1,
+    answer_text: "Demand falls very rapidly",
+    mark: 2,
+  };
+  for (const chain of [
+    query({ user_id: "user", kind: "sprint" }),
+    query([old]),
+    query({ user_id: "user", kind: "sprint" }),
+    query([fresh]),
+  ])
+    vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+  const summaries = [
+    { strengths: ["old"], improvements: [], next_steps: [] },
+    { strengths: ["new"], improvements: [], next_steps: [] },
+  ];
+  mockedCall
+    .mockResolvedValueOnce(summaries[0])
+    .mockResolvedValueOnce(summaries[1]);
+  vi.mocked(admin().rpc)
+    .mockReturnValueOnce({
+      throwOnError: async () => ({ data: null }),
+    } as never)
+    .mockReturnValueOnce({
+      throwOnError: async () => ({ data: { score: 2, summary: summaries[1] } }),
+    } as never);
+  expect(await finishSession("s")).toMatchObject({
+    score: 2,
+    summary: summaries[1],
+  });
+  expect(mockedCall).toHaveBeenCalledTimes(2);
+  expect(
+    mockedCall.mock.calls.every(([args]) => args.task === "session_summary"),
+  ).toBe(true);
+  expect(admin().rpc).toHaveBeenLastCalledWith(
+    "finish_versioned_session",
+    expect.objectContaining({ p_answers: { a: [1, "marked", 2, null] } }),
+  );
+});
+
+it("bounds Finish retries when answers keep changing", async () => {
+  const load = query({ user_id: "user", kind: "sprint" });
+  const rows = query([]);
+  for (let i = 0; i < 3; i++)
+    vi.mocked(admin().from)
+      .mockReturnValueOnce(load as never)
+      .mockReturnValueOnce(rows as never);
+  vi.mocked(admin().rpc).mockReturnValue({
+    throwOnError: async () => ({ data: null }),
+  } as never);
+  await expect(finishSession("s")).rejects.toThrow(
+    "Answers changed while finishing. Your answers are saved; please try Finish again.",
+  );
+  expect(admin().rpc).toHaveBeenCalledTimes(3);
+  expect(load.update).not.toHaveBeenCalled();
+});
+
+it("does not finalize an answer left pending by repeated edits during marking", async () => {
+  const attempt = {
+    id: "a",
+    user_id: "user",
+    status: "pending",
+    answer_version: 1,
+    answer_text: "The prices rise rapidly",
+    question: q,
+  };
+  const chains = [query({ user_id: "user", kind: "sprint" }), query([attempt])];
+  for (let answer_version = 1; answer_version <= 2; answer_version++) {
+    chains.push(
+      query({ ...attempt, answer_version }),
+      query([]),
+      query([{ ...attempt, answer_version: answer_version + 1 }]),
+    );
+  }
+  for (const chain of chains)
+    vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    await expect(finishSession("s")).rejects.toThrow(
+      "Answers changed while marking",
+    );
+    expect(admin().rpc).not.toHaveBeenCalled();
+    expect(mockedCall).not.toHaveBeenCalled();
+  } finally {
+    log.mockRestore();
+  }
+});

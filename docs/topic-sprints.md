@@ -78,7 +78,11 @@ Background failures show no mid-sprint error. Finish saves the current answer,
 waits for active calls, then marks queued/unmarked answers and retries failures.
 It checks for live marking claims before finalizing. Abandoned claims
 can be recovered after five minutes, longer than the per-answer route timeout.
-No schema changes are required; answer comparisons and `claimed_at` guard writes.
+Migration `0049_answer_version.sql` adds a database-maintained `answer_version`.
+A BEFORE UPDATE trigger increments it whenever text, transcript, choice or photos
+change, including saves by older code. Claims, deterministic marks, results and
+claim releases compare that version; `claimed_at` identifies the worker only.
+Legacy version 0 (and nullable legacy snapshots) remains supported.
 
 `src/lib/sprint-mark-queue.test.ts` covers versions, failures, deduplication,
 Finish and the two-call cap. Engine and mark-route tests cover conditional writes
@@ -86,12 +90,36 @@ and save permissions. `e2e/sprint-background.spec.ts` runs the real runner in a
 synthetic browser harness with mocked auth/storage and intercepted marking and
 Finish calls; it requires no account, database or paid API.
 
-Known concurrency limits: the answer save's session-open check and Finish's final
-session write are separate database requests. Another tab can edit during Finish
-(including summary generation), leaving the stored score/summary out of date.
-Review inserts also run separately from version-guarded mark writes: an edited
-answer can leave a stale `check_disagreed` review. Atomic session finalization and
-versioned review writes need database transaction support; the current flow does
-not provide those guarantees. The five-minute claim lease also cannot prevent
-provider work continuing after a worker times out. Autofill's daily allowance and
-the shared spend cap use logged usage rather than atomic reservations.
+Finish passes the scored versions/statuses/marks/timestamps to a service-only
+transaction that locks and re-reads the attempts before saving the score/summary.
+A conflicting save causes re-marking, re-scoring and summary regeneration, with
+at most three finalization attempts, then a clear retryable error. Written answer
+saves take the same locks and recheck session-open: a save that loses to Finish
+is rejected. Unchanged answers keep their marks and are not re-marked.
+
+Disagreement reviews are inserted only after a successful result save, stamped
+with its answer version. A database trigger locks/rechecks the attempt at insert,
+uses `FOR NO KEY UPDATE` to allow concurrent legacy FK checks, discards
+superseded reviews, and removes older unresolved `check_disagreed`
+reviews (including legacy null versions) before the one-open-review index is
+checked. A failed review insert leaves its own saved result retryable, guarded by
+version, claim, marking timestamp and review status. Written answer saves also
+remove superseded open auto reviews, even if the next mark agrees. Student
+disputes, spot checks and resolved reviews are preserved.
+
+0049 is written, **NOT applied to production**, and awaits Om/master sign-off.
+Apply the migration before the new server code; reversing that order causes
+missing-column/RPC errors for sprint saves, marking and Finish. Old callers
+remain compatible after migration, but need the new code to gain the race fixes.
+The migration was rerun and `supabase/tests/answer-version.sql` passed against a
+disposable local PostgreSQL 17 cluster with stub tables. Separate local concurrent
+lock probes exercised both save/Finish outcomes, stale reviews and competing
+claims, plus legacy column grants and null/zero versions. A separate probe
+reproduced the legacy-review FK deadlock with `FOR UPDATE` and verified its fix.
+`supabase/tests/specs/answer-version-locks.spec` preserves that interleaving as a
+local PostgreSQL isolation regression test with expected output. Engine/route tests mock
+all database and model access. No remote database or paid calls were used.
+
+The five-minute claim lease cannot prevent provider work continuing after a
+worker times out. Autofill's daily allowance and the shared spend cap still use
+logged usage rather than atomic reservations.
