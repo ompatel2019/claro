@@ -10,6 +10,12 @@ export const PRICES = {
     cacheWrite: 2.5,
     output: 10,
   },
+  "openai/gpt-6-luna": {
+    input: 0.1,
+    cachedInput: 0.01,
+    cacheWrite: 0.125,
+    output: 0.5,
+  },
   "gpt-6-luna": {
     input: 0.1,
     cachedInput: 0.01,
@@ -25,6 +31,7 @@ export const MODELS = {
   marker: "anthropic/claude-sonnet-5.5",
   strong: "gpt-6.1-sol",
   cheap: "gpt-6-luna",
+  ownQuestionAutofill: "openai/gpt-6-luna",
 } as const satisfies Record<string, Model>;
 
 export const BUDGET_USD = 90;

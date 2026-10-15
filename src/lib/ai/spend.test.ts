@@ -54,11 +54,12 @@ it("excludes $61.00 of OpenAI spend and counts $19.20 of OpenRouter spend", asyn
     .reduce((total, row) => total + Number(row.usd), 0);
   expect(expected).toBeCloseTo(19.2);
   await expect(openRouterSpend(mocks.db)).resolves.toBe(expected);
-  expect(mocks.from).toHaveBeenCalledExactlyOnceWith("ai_usage");
-  expect(mocks.select).toHaveBeenCalledExactlyOnceWith("usd");
-  expect(mocks.like).toHaveBeenCalledExactlyOnceWith("model", "anthropic/%");
-  expect(mocks.order).toHaveBeenCalledExactlyOnceWith("id");
-  expect(mocks.range).toHaveBeenCalledExactlyOnceWith(0, 999);
+  expect(mocks.from).toHaveBeenCalledWith("ai_usage");
+  expect(mocks.select).toHaveBeenCalledWith("usd");
+  expect(mocks.like).toHaveBeenCalledWith("model", "anthropic/%");
+  expect(mocks.like).toHaveBeenCalledWith("model", "openai/%");
+  expect(mocks.order).toHaveBeenCalledWith("id");
+  expect(mocks.range).toHaveBeenCalledWith(0, 999);
 });
 
 it("paginates beyond the 1000-row cap", async () => {
@@ -69,7 +70,7 @@ it("paginates beyond the 1000-row cap", async () => {
     })),
   );
   await expect(openRouterSpend(mocks.db)).resolves.toBe(1251.25);
-  expect(mocks.range).toHaveBeenCalledTimes(2);
+  expect(mocks.range).toHaveBeenCalledTimes(3);
   expect(mocks.range).toHaveBeenNthCalledWith(1, 0, 999);
   expect(mocks.range).toHaveBeenNthCalledWith(2, 1000, 1999);
   expect(mocks.like).toHaveBeenNthCalledWith(2, "model", "anthropic/%");
@@ -107,4 +108,16 @@ it("rejects a missing spend result", async () => {
   await expect(openRouterSpend(mocks.db)).rejects.toThrow(
     "Invalid ai_spend result",
   );
+});
+
+it("counts OpenRouter OpenAI models without including direct OpenAI calls", async () => {
+  expect(isOpenRouterModel("openai/gpt-6-luna")).toBe(true);
+  await expect(
+    openRouterSpend(
+      mockDb([
+        { model: "openai/gpt-6-luna", usd: 0.1 },
+        { model: "gpt-6-luna", usd: 100 },
+      ]).db,
+    ),
+  ).resolves.toBe(0.1);
 });

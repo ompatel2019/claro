@@ -105,7 +105,7 @@ it("shows the daily cap and keeps submit disabled", () => {
   expect(screen.getByRole("button", { name: "Mark my answer" })).toBeDisabled();
 });
 
-it("keeps a manually selected verb when question text changes", async () => {
+it("re-detects the verb after a manual selection when the question changes", async () => {
   setup(20, true);
   fireEvent.click(screen.getByRole("button", { name: "My own question" }));
   const stem = screen.getByRole("textbox", { name: /Question text/ });
@@ -123,7 +123,7 @@ it("keeps a manually selected verb when question text changes", async () => {
   fireEvent.change(stem, { target: { value: "Outline fiscal policy." } });
   expect(
     screen.getByRole("combobox", { name: "Directive verb" }),
-  ).toHaveTextContent("Explain");
+  ).toHaveTextContent("Outline");
 });
 it("routes to live results while marking continues, using one saved attempt", async () => {
   const { createClient } = await import("@/utils/supabase/client");
@@ -406,4 +406,218 @@ it("an empty bank cannot start a check or expose own-question fields", () => {
     screen.queryByRole("button", { name: "My own question" }),
   ).not.toBeInTheDocument();
   expect(createCheck).not.toHaveBeenCalled();
+});
+
+const restoredOwn = {
+  source: "own",
+  selected: "",
+  sessionId: null,
+  mode: "type",
+  own: {
+    stem: "Explain inflation.",
+    marks: 0,
+    verb: "explain",
+    topic_id: null,
+    criteria_text: null,
+  },
+  answer: { answer_text: null, transcript: null, image_paths: null },
+};
+async function restoredForm(allowAutofill = true) {
+  localStorage.setItem("claro.single.u", JSON.stringify(restoredOwn));
+  render(
+    <MarkMyAnswer
+      questions={[]}
+      topics={[]}
+      userId="u"
+      left={20}
+      allowOwnQuestion
+      allowAutofill={allowAutofill}
+    />,
+  );
+  return screen.findByRole("textbox", { name: /Question text/ });
+}
+const generated = {
+  stem: "Assess monetary policy.",
+  marks: 4,
+  verb: "assess",
+  topic_id: "policy",
+  criteria_text:
+    "1-2: Identifies relevant monetary policy tools.\n3-4: Explains policy mechanisms and economic effects.",
+};
+it("restores drafts without disabling verb detection and keeps the checks card in flow", async () => {
+  const stem = await restoredForm(false);
+  fireEvent.change(stem, { target: { value: generated.stem } });
+  expect(
+    screen.getByRole("combobox", { name: "Directive verb" }),
+  ).toHaveTextContent("Assess");
+  expect(screen.getByText(/20 of 20/).parentElement?.className).not.toMatch(
+    /sticky|fixed|bottom-/,
+  );
+});
+it("autofills once on blur, and re-runs only for changed text", async () => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValue({ ok: true, json: async () => generated });
+  vi.stubGlobal("fetch", fetch);
+  const stem = await restoredForm();
+  fireEvent.change(stem, { target: { value: generated.stem } });
+  expect(fetch).not.toHaveBeenCalled();
+  fireEvent.blur(stem);
+  await waitFor(() =>
+    expect(screen.getByLabelText(/Marking guidelines/)).toHaveValue(
+      generated.criteria_text,
+    ),
+  );
+  fireEvent.blur(stem);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  fireEvent.change(stem, { target: { value: "Explain exchange rates." } });
+  fireEvent.blur(stem);
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+});
+it("preserves guidelines edited during a pending autofill", async () => {
+  let resolve!: (value: unknown) => void;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    ),
+  );
+  const stem = await restoredForm();
+  fireEvent.change(stem, { target: { value: generated.stem } });
+  fireEvent.blur(stem);
+  fireEvent.change(screen.getByLabelText(/Marking guidelines/), {
+    target: { value: "My own guidelines" },
+  });
+  resolve({ ok: true, json: async () => generated });
+  await waitFor(() =>
+    expect(screen.queryByText("Suggesting question details…")).toBeNull(),
+  );
+  expect(screen.getByLabelText(/Marking guidelines/)).toHaveValue(
+    "My own guidelines",
+  );
+});
+it("ignores responses for replaced questions", async () => {
+  let resolve!: (value: unknown) => void;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    ),
+  );
+  const stem = await restoredForm();
+  fireEvent.blur(stem);
+  fireEvent.change(stem, { target: { value: "Outline fiscal policy." } });
+  resolve({ ok: true, json: async () => generated });
+  await waitFor(() =>
+    expect(screen.queryByText("Suggesting question details…")).toBeNull(),
+  );
+  expect(screen.getByLabelText(/Marking guidelines/)).toHaveValue("");
+});
+it("does not request suggestions with the flag off or a short question", async () => {
+  const fetch = vi.fn();
+  vi.stubGlobal("fetch", fetch);
+  const stem = await restoredForm(false);
+  fireEvent.blur(stem);
+  fireEvent.change(stem, { target: { value: "Explain" } });
+  fireEvent.blur(stem);
+  expect(fetch).not.toHaveBeenCalled();
+});
+it("shows a retryable autofill error", async () => {
+  const fetch = vi
+    .fn()
+    .mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: "Please retry." }),
+    })
+    .mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...generated, stem: restoredOwn.own.stem }),
+    });
+  vi.stubGlobal("fetch", fetch);
+  const stem = await restoredForm();
+  fireEvent.blur(stem);
+  fireEvent.click(
+    await screen.findByRole("button", { name: "Retry autofill" }),
+  );
+  await waitFor(() =>
+    expect(screen.getByLabelText(/Marking guidelines/)).toHaveValue(
+      generated.criteria_text,
+    ),
+  );
+  expect(fetch).toHaveBeenCalledTimes(2);
+});
+
+it("queues a changed question blurred while the previous fill is pending", async () => {
+  let resolve!: (value: unknown) => void;
+  const fetch = vi
+    .fn()
+    .mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    )
+    .mockResolvedValue({
+      ok: true,
+      json: async () => ({ ...generated, stem: "Outline fiscal policy." }),
+    });
+  vi.stubGlobal("fetch", fetch);
+  const stem = await restoredForm();
+  fireEvent.blur(stem);
+  fireEvent.change(stem, { target: { value: "Outline fiscal policy." } });
+  fireEvent.blur(stem);
+  expect(fetch).toHaveBeenCalledTimes(1);
+  resolve({ ok: true, json: async () => generated });
+  await waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+  expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({
+    stem: "Outline fiscal policy.",
+  });
+});
+
+it("waits for autofill before accepting the keyboard submit shortcut", async () => {
+  localStorage.setItem(
+    "claro.single.u",
+    JSON.stringify({
+      ...restoredOwn,
+      own: { ...restoredOwn.own, marks: 4 },
+      answer: {
+        ...restoredOwn.answer,
+        answer_text: "Interest rates affect household spending.",
+      },
+    }),
+  );
+  let resolve!: (value: unknown) => void;
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    ),
+  );
+  render(
+    <MarkMyAnswer
+      questions={[]}
+      topics={[]}
+      userId="u"
+      left={20}
+      allowOwnQuestion
+      allowAutofill
+    />,
+  );
+  const stem = await screen.findByRole("textbox", { name: /Question text/ });
+  fireEvent.blur(stem);
+  fireEvent.keyDown(stem, { key: "Enter", ctrlKey: true });
+  expect(createCheck).not.toHaveBeenCalled();
+  resolve({ ok: true, json: async () => generated });
+  await waitFor(() =>
+    expect(screen.queryByText("Suggesting question details…")).toBeNull(),
+  );
 });
