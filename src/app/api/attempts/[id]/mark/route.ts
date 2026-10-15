@@ -192,8 +192,18 @@ export async function POST(
         { status: 503 },
       );
     }
-    await singleFailure("We couldn't mark this one. Retry.");
+    const ownAutofill =
+      session.kind === "single" &&
+      !attempt.question_id &&
+      process.env.ENABLE_OWN_QUESTION_AUTOFILL === "true";
+    const message = ownAutofill
+      ? "Couldn't generate guidelines or mark this answer. Your answer is saved. Please retry."
+      : "We couldn't mark this one. Retry.";
+    await singleFailure(message);
     console.error(error);
-    return Response.json({ error: "Could not mark answer" }, { status: 500 });
+    return Response.json(
+      { error: ownAutofill ? message : "Could not mark answer" },
+      { status: 500 },
+    );
   }
 }

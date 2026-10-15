@@ -164,3 +164,13 @@ it("keeps Send disabled until there is a message or a screenshot", async () => {
     message: "Screenshot attached.",
   });
 });
+
+it("keeps desktop feedback in page flow and opens the same dialog", async () => {
+  setup();
+  const button = screen.getByRole("button", { name: "Feedback" });
+  expect(button.className).not.toMatch(/fixed|sticky|bottom-/);
+  fireEvent.click(button);
+  expect(
+    await screen.findByRole("dialog", { name: "Send feedback" }),
+  ).toBeVisible();
+});

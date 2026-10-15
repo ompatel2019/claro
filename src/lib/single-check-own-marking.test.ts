@@ -1,8 +1,10 @@
 // @vitest-environment node
-import { beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
+vi.mock("./single-check-autofill", () => ({ generateOwnQuestion: vi.fn() }));
 vi.mock("@/lib/ai/openai", () => ({ callJson: vi.fn() }));
 vi.mock("@/utils/supabase/admin", () => ({ admin: vi.fn() }));
+import { generateOwnQuestion } from "./single-check-autofill";
 import { callJson } from "@/lib/ai/openai";
 import { admin } from "@/utils/supabase/admin";
 import { markOwnCheck } from "./single-check-marking";
@@ -140,4 +142,55 @@ it("marks valid criteria strictly with no example database read", async () => {
       feedback: expect.objectContaining({ confidence: "estimate" }),
     }),
   );
+});
+
+afterEach(() => vi.unstubAllEnvs());
+it("generates empty guidelines before marking when enabled", async () => {
+  vi.stubEnv("ENABLE_OWN_QUESTION_AUTOFILL", "true");
+  setup();
+  vi.mocked(generateOwnQuestion).mockResolvedValue({
+    ...question,
+    topic_id: "policy",
+  });
+  // The marking model is deliberately stopped after rubric generation.
+  vi.mocked(callJson).mockRejectedValue(new Error("mock marker stopped"));
+  await expect(
+    markOwnCheck("a", "u", { question: { ...question, criteria_text: null } }),
+  ).rejects.toThrow();
+  expect(generateOwnQuestion).toHaveBeenCalledExactlyOnceWith("u", {
+    stem: question.stem,
+    marks: 4,
+  });
+  expect(callJson).toHaveBeenCalled();
+});
+it("keeps generation failures retryable rather than storing an unmarkable card", async () => {
+  vi.stubEnv("ENABLE_OWN_QUESTION_AUTOFILL", "true");
+  const { save } = setup();
+  vi.mocked(generateOwnQuestion).mockRejectedValue(
+    new Error("Please retry guidelines"),
+  );
+  await expect(
+    markOwnCheck("a", "u", { question: { ...question, criteria_text: null } }),
+  ).rejects.toThrow("Please retry guidelines");
+  expect(save.update).toHaveBeenCalledWith({ status: "failed" });
+  expect(callJson).not.toHaveBeenCalled();
+});
+it("does not replace supplied guidelines", async () => {
+  vi.stubEnv("ENABLE_OWN_QUESTION_AUTOFILL", "true");
+  setup();
+  await markOwnCheck("a", "u", {
+    question: { ...question, criteria_text: "Vague" },
+  });
+  expect(generateOwnQuestion).not.toHaveBeenCalled();
+});
+
+it("does not generate again for an already marked attempt", async () => {
+  vi.stubEnv("ENABLE_OWN_QUESTION_AUTOFILL", "true");
+  vi.mocked(admin).mockReturnValue({
+    from: () => chain({ status: "marked", mark: 4 }),
+  } as never);
+  await expect(
+    markOwnCheck("a", "u", { question: { ...question, criteria_text: null } }),
+  ).resolves.toEqual({ status: "marked", mark: 4 });
+  expect(generateOwnQuestion).not.toHaveBeenCalled();
 });

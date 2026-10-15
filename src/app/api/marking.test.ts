@@ -1191,3 +1191,41 @@ it.each([mark, transcribe, finish])(
     expect(finishSession).not.toHaveBeenCalled();
   },
 );
+
+it("keeps an own-question guideline failure retryable on the saved report", async () => {
+  vi.stubEnv("ENABLE_OWN_QUESTION_AUTOFILL", "true");
+  const { markOwnCheck } = await import("@/lib/single-check-marking");
+  client([
+    {
+      session_id: singleSessionId,
+      question_id: null,
+      question: null,
+      session: {
+        kind: "single",
+        started_at: singleStarted,
+        finished_at: singleStarted,
+        config: {
+          question: {
+            stem: "Explain monetary policy.",
+            marks: 4,
+            criteria_text: null,
+          },
+        },
+      },
+    },
+  ]);
+  const save = adminQuery(null);
+  vi.mocked(admin().from).mockReturnValue(save as never);
+  vi.mocked(markOwnCheck).mockRejectedValue(
+    new Error("Guideline generation failed"),
+  );
+  const response = await mark(request(), ctx);
+  expect(response.status).toBe(500);
+  const { error } = await response.json();
+  expect(error).toContain("guidelines");
+  expect(error).toContain("Please retry");
+  expect(save.update).toHaveBeenCalledWith({
+    status: "failed",
+    feedback: { error },
+  });
+});

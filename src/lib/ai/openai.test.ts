@@ -33,7 +33,10 @@ vi.mock("openai", () => ({
   },
 }));
 vi.mock("@/env/server", () => ({ serverEnv: mocks.serverEnv }));
-vi.mock("./spend", () => ({ openRouterSpend: mocks.spend }));
+vi.mock("./spend", async (original) => ({
+  ...(await original<typeof import("./spend")>()),
+  openRouterSpend: mocks.spend,
+}));
 vi.mock("@/utils/supabase/admin", () => ({
   admin: () => ({
     from: () => ({ insert: mocks.insert }),
@@ -353,6 +356,35 @@ it("logs the attempt context for individual marking costs", async () => {
     expect.objectContaining({
       attempt_id: "synthetic-attempt",
       task: "mark_written",
+    }),
+  );
+});
+
+it("routes the cheapest autofill model through OpenRouter and logs its cost", async () => {
+  const { callJson } = await import("./openai");
+  await callJson({
+    task: "own-question-autofill",
+    model: MODELS.ownQuestionAutofill,
+    schema,
+    messages,
+    userId: "student",
+  });
+  expect(mocks.openrouterCreate).toHaveBeenCalledWith(
+    expect.objectContaining({
+      model: "openai/gpt-6-luna",
+      provider: { require_parameters: true },
+    }),
+    undefined,
+  );
+  expect(mocks.openaiCreate).not.toHaveBeenCalled();
+  expect(mocks.insert).toHaveBeenCalledWith(
+    expect.objectContaining({
+      task: "own-question-autofill",
+      model: "openai/gpt-6-luna",
+      input_tokens: 1000,
+      output_tokens: 100,
+      usd: 0.00015,
+      user_id: "student",
     }),
   );
 });
