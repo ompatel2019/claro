@@ -46,7 +46,13 @@ export function detectVerb(text: string) {
     `\\b(${[...NESA_VERBS].sort((a, b) => b.length - a.length).join("|")})\\b`,
     "i",
   );
-  return text.replace(/\s+/g, " ").match(pattern)?.[1].toLowerCase() ?? "";
+  return (
+    text
+      .replace(/[-–—]/g, " ")
+      .replace(/\s+/g, " ")
+      .match(pattern)?.[1]
+      .toLowerCase() ?? ""
+  );
 }
 export const ownQuestionSchema = z.object({
   stem: z

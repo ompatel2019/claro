@@ -163,16 +163,13 @@ export async function markWritten(
           })
         : checkPass(),
   ] as const;
-  const [first, second] =
-    config && task === "eval"
-      ? await (async () => {
-          const settled = await Promise.allSettled(passes);
-          const [first, second] = settled;
-          if (first.status === "rejected") throw first.reason;
-          if (second.status === "rejected") throw second.reason;
-          return [first.value, second.value] as const;
-        })()
-      : await Promise.all(passes);
+  // Keep the claim until both paid passes settle, including when one fails.
+  const settled = await Promise.allSettled(passes);
+  const [firstPassResult, secondPassResult] = settled;
+  if (firstPassResult.status === "rejected") throw firstPassResult.reason;
+  if (secondPassResult.status === "rejected") throw secondPassResult.reason;
+  const first = firstPassResult.value;
+  const second = secondPassResult.value;
   const agrees = (a: number, b: number) =>
     marksAgree(q.criteria, q.marks, a, b);
   const check: {
@@ -283,6 +280,7 @@ type Attempt = {
   id: string;
   user_id: string;
   status: string;
+  claimed_at?: string | null;
   choice_index: number | null;
   answer_text: string | null;
   transcript: string | null;
@@ -305,14 +303,15 @@ type AttemptQuestion = Attempt & {
 };
 
 /** A claim older than this belongs to a marking call that died; it may be taken over. */
-export const STALE_CLAIM_MS = 3 * 60_000;
-const WAIT_FOR_MARKING_MS = 90_000;
+export const STALE_CLAIM_MS = 5 * 60_000;
+const WAIT_FOR_MARKING_MS = 240_000;
 
 export class AlreadyMarking extends Error {
   message = "This answer is already being marked.";
 }
 
 export async function markAttempt(attemptId: string) {
+  let claim: string | undefined;
   try {
     const { data } = await admin()
       .from("attempts")
@@ -347,20 +346,33 @@ export async function markAttempt(attemptId: string) {
           max_marks: q.marks,
           band: null,
           feedback: { note: "No answer" },
+          check_status: "skipped",
           marked_by_model: "deterministic",
         };
       } else {
         const stale = new Date(Date.now() - STALE_CLAIM_MS).toISOString();
-        const { data: claimed } = await admin()
+        claim = new Date(
+          Math.max(Date.now(), new Date(attempt.claimed_at ?? 0).getTime() + 1),
+        ).toISOString();
+        let claiming = admin()
           .from("attempts")
-          .update({ status: "marking", claimed_at: new Date().toISOString() })
-          .eq("id", attemptId)
+          .update({ status: "marking", claimed_at: claim })
+          .eq("id", attemptId);
+        for (const key of ["answer_text", "transcript", "claimed_at"] as const)
+          claiming =
+            attempt[key] == null
+              ? claiming.is(key, null)
+              : claiming.eq(key, attempt[key]);
+        const { data: claimed } = await claiming
           .or(
             `status.in.(pending,transcribed,failed),and(status.eq.marking,claimed_at.lt.${stale})`,
           )
           .select("id")
           .throwOnError();
-        if (!claimed?.length) throw new AlreadyMarking();
+        if (!claimed?.length) {
+          claim = undefined;
+          throw new AlreadyMarking();
+        }
         const { check, ...marked } = await markWritten(
           q,
           answer,
@@ -389,24 +401,45 @@ export async function markAttempt(attemptId: string) {
         };
       }
     }
-    const { data: updated } = await admin()
+    let saving = admin()
       .from("attempts")
       .update({
         ...result,
         status: "marked",
         marked_at: new Date().toISOString(),
       })
-      .eq("id", attemptId)
+      .eq("id", attemptId);
+    for (const key of ["answer_text", "transcript", "choice_index"] as const)
+      saving =
+        attempt[key] == null
+          ? saving.is(key, null)
+          : saving.eq(key, attempt[key]);
+    if (claim) saving = saving.eq("status", "marking").eq("claimed_at", claim);
+    else {
+      saving = saving.eq("status", attempt.status);
+      saving =
+        attempt.claimed_at == null
+          ? saving.is("claimed_at", null)
+          : saving.eq("claimed_at", attempt.claimed_at);
+    }
+    const { data: updated } = await saving
       .select("*")
-      .single()
+      .maybeSingle()
       .throwOnError();
+    if (!updated) throw new AlreadyMarking();
     return updated as Attempt;
   } catch (error) {
-    if (!(error instanceof AlreadyMarking))
+    if (claim) {
+      // Only this worker's claim may be released; an edited answer has a new version.
       await admin()
         .from("attempts")
-        .update({ status: "failed" })
-        .eq("id", attemptId);
+        .update({
+          status: error instanceof AlreadyMarking ? "pending" : "failed",
+        })
+        .eq("id", attemptId)
+        .eq("status", "marking")
+        .eq("claimed_at", claim);
+    }
     throw error;
   }
 }
@@ -518,16 +551,22 @@ async function markRemaining(sessionId: string, userId: string) {
     await settle();
     const todo = rows.filter((a) => a.status !== "marked" && !inFlight(a));
     if (!todo.length) break;
-    const results = await Promise.allSettled(
-      todo.map((a) => markAttempt(a.id)),
-    );
-    results.forEach((result) => {
-      if (result.status === "rejected") console.error(result.reason);
-    });
+    for (let offset = 0; offset < todo.length; offset += 2) {
+      const results = await Promise.allSettled(
+        todo.slice(offset, offset + 2).map((a) => markAttempt(a.id)),
+      );
+      results.forEach((result) => {
+        if (result.status === "rejected") console.error(result.reason);
+      });
+    }
     rows = await sessionAttempts(sessionId, userId);
   }
   // A background mark may have claimed an answer while this call was marking the rest.
   await settle();
+  if (rows.some(inFlight))
+    throw new Error(
+      "Some answers are still being marked. Your answers are saved; try Finish again shortly.",
+    );
   return rows;
 }
 

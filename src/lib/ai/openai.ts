@@ -10,7 +10,7 @@ import { serverEnv } from "@/env/server";
 import { admin } from "@/utils/supabase/admin";
 
 import { BUDGET_USD, EVAL_BLOCK_USD, costUsd, type Model } from "./prices";
-import { openRouterSpend } from "./spend";
+import { isOpenRouterModel, openRouterSpend } from "./spend";
 
 import { bounded } from "./eval/deadline";
 
@@ -57,9 +57,9 @@ export async function callJson<S extends z.ZodType>(opts: {
   )
     throw new Error("AI budget reached");
 
-  const isAnthropic = opts.model.startsWith("anthropic/");
+  const isRouter = isOpenRouterModel(opts.model);
   let client: OpenAI;
-  if (isAnthropic) {
+  if (isRouter) {
     if (!openrouter) {
       const apiKey = process.env.OPENROUTER_API_KEY;
       if (!apiKey) throw new Error("OPENROUTER_API_KEY is not set");
@@ -84,7 +84,7 @@ export async function callJson<S extends z.ZodType>(opts: {
       model: opts.model,
       messages: opts.messages,
       reasoning_effort: opts.effort ?? "low",
-      ...(isAnthropic
+      ...(isRouter
         ? { provider: { require_parameters: true } }
         : opts.fast && { service_tier: "priority" as const }),
       response_format: zodResponseFormat(

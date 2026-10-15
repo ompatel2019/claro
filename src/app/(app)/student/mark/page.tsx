@@ -58,6 +58,10 @@ export default async function Page() {
         userId={user.id}
         left={left}
         allowOwnQuestion={allowOwnQuestion}
+        allowAutofill={
+          allowOwnQuestion &&
+          process.env.ENABLE_OWN_QUESTION_AUTOFILL === "true"
+        }
       />
       {recent.data.length ? (
         <Card>

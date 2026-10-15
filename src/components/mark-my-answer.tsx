@@ -102,12 +102,14 @@ export function MarkMyAnswer({
   left,
   initial,
   allowOwnQuestion = false,
+  allowAutofill = false,
 }: {
   questions: BankQuestion[];
   topics: Topic[];
   userId: string;
   left: number;
   allowOwnQuestion?: boolean;
+  allowAutofill?: boolean;
   initial?: {
     sessionId: string;
     attempt: Omit<Attempt, "question">;
@@ -137,7 +139,21 @@ export function MarkMyAnswer({
       criteria_text: "",
     },
   );
-  const [verbEdited, setVerbEdited] = useState(false);
+  const ownRef = useRef(own);
+  useEffect(() => {
+    ownRef.current = own;
+  }, [own]);
+  const edited = useRef({
+    marks: false,
+    topic_id: false,
+    criteria_text: false,
+    verb: false,
+  });
+  const lastAutofill = useRef("");
+  const autofillPending = useRef(false);
+  const autofillQueued = useRef(false);
+  const [filling, setFilling] = useState(false);
+  const [fillError, setFillError] = useState("");
   const [mode, setMode] = useState<"type" | "photo">(
     initial?.attempt.image_paths?.length ? "photo" : "type",
   );
@@ -272,7 +288,12 @@ export function MarkMyAnswer({
                   : draft.data.selected,
               );
               setOwn(draft.data.own);
-              setVerbEdited(true);
+              edited.current = {
+                marks: draft.data.own.marks > 0,
+                topic_id: !!draft.data.own.topic_id,
+                criteria_text: !!draft.data.own.criteria_text,
+                verb: false,
+              };
             }
             setMode(draft.data.mode);
             setAnswer((previous) => {
@@ -311,6 +332,67 @@ export function MarkMyAnswer({
       /* Keep the in-memory draft if storage is full. */
     }
   }, [restored, submitted, draftKey, source, selected, own, mode, answer]);
+  async function autofill(retry = false) {
+    const snapshot = ownRef.current;
+    const stem = snapshot.stem.trim();
+    if (
+      !allowAutofill ||
+      source !== "own" ||
+      questionLocked ||
+      offline ||
+      stem.length < 10 ||
+      (!retry && lastAutofill.current === stem)
+    )
+      return;
+    if (autofillPending.current) {
+      autofillQueued.current = true;
+      return;
+    }
+    lastAutofill.current = stem;
+    autofillPending.current = true;
+    setFilling(true);
+    setFillError("");
+    try {
+      const response = await fetch("/api/own-question/autofill", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          stem,
+          ...(edited.current.marks && snapshot.marks > 0
+            ? { marks: snapshot.marks }
+            : {}),
+        }),
+      });
+      const result = await response.json();
+      if (!response.ok)
+        throw new Error(result.error || "Autofill failed. Please retry.");
+      const generated = ownQuestionSchema.parse(result);
+      if (ownRef.current.stem.trim() !== stem || created.current) return;
+      setOwn((current) => ({
+        ...current,
+        ...(!edited.current.marks ? { marks: generated.marks } : {}),
+        ...(!edited.current.topic_id ? { topic_id: generated.topic_id } : {}),
+        ...(!edited.current.verb ? { verb: generated.verb } : {}),
+        ...(!edited.current.criteria_text &&
+        (!edited.current.marks || current.marks === generated.marks)
+          ? { criteria_text: generated.criteria_text }
+          : {}),
+      }));
+    } catch (error) {
+      setFillError(
+        error instanceof Error
+          ? error.message
+          : "Autofill failed. Please retry.",
+      );
+    } finally {
+      autofillPending.current = false;
+      setFilling(false);
+      if (autofillQueued.current) {
+        autofillQueued.current = false;
+        void autofill();
+      }
+    }
+  }
   function patch(p: Partial<Attempt>) {
     answerRef.current = { ...answerRef.current, ...p };
     setAnswer(answerRef.current);
@@ -388,7 +470,7 @@ export function MarkMyAnswer({
     setMode(next);
   }
   async function submit() {
-    if (!valid || locked || creating.current) return;
+    if (!valid || locked || filling || creating.current) return;
     setBusy(true);
     setError("");
     try {
@@ -627,16 +709,18 @@ export function MarkMyAnswer({
                     required
                     aria-invalid={!!fieldError("stem")}
                     aria-describedby="stem-help stem-error"
-                    onBlur={() => setTouched((t) => ({ ...t, stem: true }))}
-                    onChange={(e) =>
+                    onBlur={() => {
+                      setTouched((t) => ({ ...t, stem: true }));
+                      void autofill();
+                    }}
+                    onChange={(e) => {
+                      edited.current.verb = false;
                       setOwn({
                         ...own,
                         stem: e.target.value,
-                        ...(!verbEdited
-                          ? { verb: detectVerb(e.target.value) }
-                          : {}),
-                      })
-                    }
+                        verb: detectVerb(e.target.value),
+                      });
+                    }}
                   />
                   <span
                     id="stem-help"
@@ -651,6 +735,7 @@ export function MarkMyAnswer({
                     label="Marks"
                     value={String(own.marks)}
                     onChange={(v) => {
+                      edited.current.marks = true;
                       setOwn({ ...own, marks: Number(v) });
                       setTouched((t) => ({ ...t, marks: true }));
                     }}
@@ -667,7 +752,7 @@ export function MarkMyAnswer({
                     label="Directive verb"
                     value={own.verb}
                     onChange={(v) => {
-                      setVerbEdited(true);
+                      edited.current.verb = true;
                       setOwn({ ...own, verb: v });
                     }}
                     disabled={questionLocked}
@@ -684,7 +769,10 @@ export function MarkMyAnswer({
                 <Choice
                   label="Topic (optional)"
                   value={own.topic_id ?? ""}
-                  onChange={(v) => setOwn({ ...own, topic_id: v || null })}
+                  onChange={(v) => {
+                    edited.current.topic_id = true;
+                    setOwn({ ...own, topic_id: v || null });
+                  }}
                   disabled={questionLocked}
                   items={[
                     { value: "", label: "No topic selected" },
@@ -704,15 +792,30 @@ export function MarkMyAnswer({
                     onBlur={() =>
                       setTouched((t) => ({ ...t, criteria_text: true }))
                     }
-                    onChange={(e) =>
-                      setOwn({ ...own, criteria_text: e.target.value })
-                    }
+                    onChange={(e) => {
+                      edited.current.criteria_text = true;
+                      setOwn({ ...own, criteria_text: e.target.value });
+                    }}
                   />
                 </label>
                 {fieldError("criteria_text")}
+                {filling && <p role="status">Suggesting question details…</p>}
+                {fillError && (
+                  <div role="alert" className="text-sm">
+                    {fillError}{" "}
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => void autofill(true)}
+                    >
+                      Retry autofill
+                    </Button>
+                  </div>
+                )}
                 <p className="text-muted-foreground text-sm">
-                  Provide clear mark bands covering every available mark.
-                  Without reliable criteria, we can’t give a mark.
+                  {allowAutofill
+                    ? "Leave the question box to suggest a topic, marks and guidelines (10 AI calls per day). Empty guidelines are generated when you submit. All suggestions are editable."
+                    : "Provide clear mark bands covering every available mark. Without reliable criteria, we can’t give a mark."}
                 </p>
               </>
             )}
@@ -785,11 +888,11 @@ export function MarkMyAnswer({
             />
           </CardContent>
         </Card>
-        <Card className="z-10 flex flex-row flex-wrap items-center justify-between gap-3 p-4 sm:sticky sm:bottom-3">
+        <Card className="flex flex-row flex-wrap items-center justify-between gap-3 p-4">
           <p className="text-sm tabular-nums" role="status">
             {remaining} of {MARK_MY_ANSWER_DAILY_LIMIT} checks left today
           </p>
-          <Button type="submit" disabled={!valid || locked}>
+          <Button type="submit" disabled={!valid || locked || filling}>
             {busy ? "Marking…" : error ? "Retry" : "Mark my answer"}
           </Button>
           {remaining === 0 && answer.id === "draft" && (

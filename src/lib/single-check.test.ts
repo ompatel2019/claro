@@ -153,3 +153,12 @@ it("filters parent topics by their relation and searches year/source regardless 
     filterBankQuestions(questions, topics, { ...filters, search: "missing" }),
   ).toEqual([]);
 });
+
+it.each([
+  ["(a) EXPLAIN: the effects of inflation.", "explain"],
+  ["Account\nfor changes in spending.", "account for"],
+  ["CRITICALLY—EVALUATE monetary policy.", "critically evaluate"],
+  ["Q22. [4 marks] Analyse the trend.", "analyse"],
+])("detects directive punctuation and case in %s", (stem, verb) => {
+  expect(detectVerb(stem)).toBe(verb);
+});

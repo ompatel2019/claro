@@ -9,7 +9,8 @@ import {
 } from "@/lib/marking/engine";
 import type { MarkableQuestion } from "@/lib/marking/grade";
 import { assessOwnCriteria } from "./marking/own-criteria";
-import { ownQuestionSchema } from "./single-check";
+import { generateOwnQuestion } from "./single-check-autofill";
+import { ownQuestionSchema, type OwnQuestion } from "./single-check";
 
 /** Own checks use only the student’s validated rubric, without tutor examples. */
 export async function markOwnCheck(
@@ -38,6 +39,7 @@ export async function markOwnCheck(
       source: "Student's own question — estimated mark",
     },
     assessment,
+    question,
   );
 }
 
@@ -63,6 +65,7 @@ async function markCheck(
   userId: string,
   question: MarkableQuestion,
   ownAssessment?: ReturnType<typeof assessOwnCriteria>,
+  ownQuestion?: OwnQuestion,
 ) {
   const db = admin();
   const { data: a } = await db
@@ -86,6 +89,27 @@ async function markCheck(
     .throwOnError();
   if (!claimed?.length) throw new AlreadyMarking();
   try {
+    if (
+      ownQuestion &&
+      !ownQuestion.criteria_text &&
+      process.env.ENABLE_OWN_QUESTION_AUTOFILL === "true"
+    ) {
+      const generated = await generateOwnQuestion(userId, {
+        stem: ownQuestion.stem,
+        marks: ownQuestion.marks,
+      });
+      ownAssessment = assessOwnCriteria({
+        ...ownQuestion,
+        criteria_text: generated.criteria_text,
+      });
+      if (!ownAssessment.ok)
+        throw new Error("Couldn't generate marking guidelines. Please retry.");
+      question = {
+        ...question,
+        criteria: ownAssessment.criteria,
+        restrictions: ownAssessment.restrictions,
+      };
+    }
     if (ownAssessment && !ownAssessment.ok) {
       const { data } = await db
         .from("attempts")

@@ -482,6 +482,8 @@ function query(data: unknown) {
   const chain = {
     select: vi.fn(),
     eq: vi.fn(),
+    is: vi.fn(),
+    maybeSingle: vi.fn(),
     in: vi.fn(),
     or: vi.fn(),
     order: vi.fn(),
@@ -492,6 +494,8 @@ function query(data: unknown) {
   for (const key of [
     "select",
     "eq",
+    "is",
+    "maybeSingle",
     "in",
     "or",
     "order",
@@ -1027,7 +1031,7 @@ it("web eval blind and reconcile passes use the selected model/effort and task e
 });
 
 it.each([true, false])(
-  "settles the sibling before rejecting only for configured eval (configured: %s)",
+  "settles the sibling before rejecting for student and eval calls (configured: %s)",
   async (configured) => {
     let finish!: () => void;
     const usage = vi.fn();
@@ -1056,7 +1060,7 @@ it.each([true, false])(
       return error;
     });
     await vi.waitFor(() => expect(mockedCall).toHaveBeenCalledTimes(2));
-    expect(settled).toBe(!configured);
+    expect(settled).toBe(false);
     finish();
     expect(await marking).toEqual(new Error("first failed"));
     if (configured) expect(usage).toHaveBeenCalledWith(0.02);
@@ -1394,5 +1398,160 @@ it.each([false, true])(
             ),
       }),
     );
+  },
+);
+
+it("discards a result if the answer was edited while the model was marking", async () => {
+  const attempt = {
+    id: "a",
+    user_id: "user",
+    status: "pending",
+    answer_text: "The prices rise rapidly",
+    transcript: null,
+    question: q,
+  };
+  const claim = query([{ id: "a" }]);
+  const staleSave = query(null);
+  const release = query(null);
+  for (const chain of [query(attempt), claim, staleSave, release])
+    vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+  mockedCall.mockResolvedValueOnce(grade).mockResolvedValueOnce(checkGrade());
+  await expect(markAttempt("a")).rejects.toBeInstanceOf(AlreadyMarking);
+  expect(claim.eq).toHaveBeenCalledWith("answer_text", attempt.answer_text);
+  expect(claim.is).toHaveBeenCalledWith("transcript", null);
+  expect(staleSave.eq).toHaveBeenCalledWith("answer_text", attempt.answer_text);
+  expect(staleSave.eq).toHaveBeenCalledWith(
+    "claimed_at",
+    claim.update.mock.calls[0][0].claimed_at,
+  );
+  expect(release.eq).toHaveBeenCalledWith(
+    "claimed_at",
+    claim.update.mock.calls[0][0].claimed_at,
+  );
+  expect(release.update).toHaveBeenCalledWith({ status: "pending" });
+});
+
+it("does not finalize a session while background marking is still running", async () => {
+  vi.useFakeTimers();
+  try {
+    const load = query({ user_id: "user", kind: "sprint" });
+    const running = query([
+      {
+        id: "a",
+        status: "marking",
+        claimed_at: new Date().toISOString(),
+        question: q,
+      },
+    ]);
+    vi.mocked(admin().from)
+      .mockReturnValueOnce(load as never)
+      .mockReturnValue(running as never);
+    const finished = finishSession("s").catch((error) => error);
+    await vi.advanceTimersByTimeAsync(240_000);
+    expect(await finished).toEqual(
+      expect.objectContaining({
+        message: expect.stringContaining("still being marked"),
+      }),
+    );
+    expect(running.update).not.toHaveBeenCalled();
+    expect(mockedCall).not.toHaveBeenCalled();
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("a concurrent background/Finish caller that loses the claim never calls the model", async () => {
+  const attempt = {
+    id: "a",
+    user_id: "user",
+    status: "pending",
+    claimed_at: null,
+    answer_text: "The prices rise rapidly",
+    transcript: null,
+    question: q,
+  };
+  const winner = query([{ id: "a" }]);
+  for (const chain of [
+    query(attempt),
+    winner,
+    query({ ...attempt, status: "marking" }),
+    query([]),
+    query({ id: "a", status: "marked", mark: 4 }),
+  ])
+    vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+  let resolve!: (value: typeof grade) => void;
+  mockedCall
+    .mockImplementationOnce(
+      () =>
+        new Promise((done) => {
+          resolve = done;
+        }),
+    )
+    .mockResolvedValueOnce(checkGrade());
+  const background = markAttempt("a");
+  await vi.waitFor(() => expect(mockedCall).toHaveBeenCalledTimes(2));
+  await expect(markAttempt("a")).rejects.toBeInstanceOf(AlreadyMarking);
+  expect(mockedCall).toHaveBeenCalledTimes(2);
+  resolve(grade);
+  expect(await background).toMatchObject({ status: "marked", mark: 4 });
+});
+
+it("keeps the claim while the other paid grading pass is still running after a failure", async () => {
+  const release = query(null);
+  for (const chain of [
+    query({
+      id: "a",
+      user_id: "user",
+      status: "pending",
+      claimed_at: null,
+      answer_text: "The prices rise rapidly",
+      transcript: null,
+      question: q,
+    }),
+    query([{ id: "a" }]),
+    release,
+  ])
+    vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+  let complete!: (value: ReturnType<typeof checkGrade>) => void;
+  mockedCall
+    .mockRejectedValueOnce(new Error("First pass failed"))
+    .mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          complete = resolve;
+        }),
+    );
+  const marking = markAttempt("a").catch((error) => error);
+  await vi.waitFor(() => expect(mockedCall).toHaveBeenCalledTimes(2));
+  expect(release.update).not.toHaveBeenCalled();
+  complete(checkGrade());
+  expect(await marking).toEqual(new Error("First pass failed"));
+  expect(release.update).toHaveBeenCalledWith({ status: "failed" });
+});
+
+it.each([null, "2026-10-16T00:00:00.000Z"])(
+  "guards a deterministic result against an edited answer version (%s)",
+  async (claimed_at) => {
+    const save = query(null);
+    vi.mocked(admin().from)
+      .mockReturnValueOnce(
+        query({
+          id: "a",
+          status: "pending",
+          claimed_at,
+          answer_text: "",
+          transcript: null,
+          question: q,
+        }) as never,
+      )
+      .mockReturnValueOnce(save as never);
+    await expect(markAttempt("a")).rejects.toBeInstanceOf(AlreadyMarking);
+    if (claimed_at === null)
+      expect(save.is).toHaveBeenCalledWith("claimed_at", null);
+    else expect(save.eq).toHaveBeenCalledWith("claimed_at", claimed_at);
+    expect(save.update).toHaveBeenCalledWith(
+      expect.objectContaining({ check_status: "skipped" }),
+    );
+    expect(mockedCall).not.toHaveBeenCalled();
   },
 );

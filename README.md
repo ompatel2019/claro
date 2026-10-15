@@ -180,3 +180,9 @@ Vitest suites; `e2e/mcq-explanation.spec.ts` exercises real marking, key withhol
 resume, correct/wrong/unanswered results and mobile/desktop layouts with temporary
 synthetic students/questions. Run with the same queue and env settings above.
 E2E fixtures refuse non-local Supabase URLs unless the project ref is listed in `E2E_TEST_SUPABASE_REFS` (see `e2e/guard.ts`).
+
+Own-question suggestions: set `ENABLE_OWN_QUESTION_MARKING=true` and `ENABLE_OWN_QUESTION_AUTOFILL=true` (exact lowercase values). Autofill runs once on leaving a changed question of at least 10 characters. It suggests the topic, marks, directive verb and complete mark bands; student edits are preserved. Changing the question re-detects the verb, including after draft restore. Empty guidelines are generated server-side before marking; failures leave a saved answer with Retry. With autofill off, the existing criteria requirement applies.
+
+Autofill uses the existing cheapest priced model, `openai/gpt-6-luna`, through OpenRouter (`MODELS.ownQuestionAutofill`). It validates topics and complete band coverage, retrying invalid output once. A separate allowance checks for 10 logged model calls per student per Sydney day, including retries and submit fallbacks; it does not use the 20 marking checks. It follows the existing usage-count rate-limit pattern (concurrent requests can race the count). Calls use the shared spend cap and log tokens and USD to `ai_usage` as `own-question-autofill`; no migration is required. Tests mock all model calls. Run the credential-free browser regressions with `q-run npx playwright test --config=e2e/own-question.config.ts` (read-only local auth/data double).
+
+The checks-left card and desktop feedback button now sit in page flow. The student bottom-position audit found no other content bars to remove; admin review controls and dialog/sheet overlays retain their positioning.
