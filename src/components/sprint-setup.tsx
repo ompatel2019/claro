@@ -185,6 +185,7 @@ export function SprintSetup({
   }
 
   const s = size(c);
+  const invalidSize = c.target < s.min || c.target > s.max;
   const written = c.mode === "short" || c.mode === "mixed";
   const byMarks = c.size_by === "marks";
   const available = pool
@@ -461,7 +462,8 @@ export function SprintSetup({
                       short_marks: Math.floor(Number(e.target.value) / 2),
                     })
                   }
-                  onBlur={() => setC(withTarget(c, c.target))}
+                  aria-describedby="sprint-size-hint"
+                  aria-invalid={invalidSize}
                 />
                 <Button
                   type="button"
@@ -487,6 +489,15 @@ export function SprintSetup({
                   ))}
                 </div>
               </div>
+              <p
+                id="sprint-size-hint"
+                className="text-muted-foreground text-xs"
+                aria-live="polite"
+              >
+                {invalidSize
+                  ? `Enter ${s.min}–${s.max} ${unit} to continue.`
+                  : `Minimum ${s.min} ${unit}; maximum ${s.max}.`}
+              </p>
               {c.mode === "mixed" && (
                 <div className="space-y-2">
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -810,6 +821,7 @@ export function SprintSetup({
         action={action}
         onSubmit={(e) => {
           if (
+            invalidSize ||
             step !== 3 ||
             matching === 0 ||
             pending ||
@@ -848,6 +860,7 @@ export function SprintSetup({
           <Button
             type="submit"
             disabled={
+              invalidSize ||
               step !== 3 ||
               pending ||
               matching === 0 ||

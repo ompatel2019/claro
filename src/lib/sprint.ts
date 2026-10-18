@@ -52,7 +52,7 @@ export const SIZES: Record<string, Size> = {
   "mcq:questions": { min: 5, max: 40, step: 1, presets: [10, 20, 30, 40] },
   "short:marks": { min: 10, max: 60, step: 5, presets: [15, 30, 45, 60] },
   "short:questions": { min: 2, max: 15, step: 1, presets: [3, 5, 8, 10] },
-  "mixed:marks": { min: 20, max: 100, step: 5, presets: [30, 45, 60, 80, 100] },
+  "mixed:marks": { min: 5, max: 100, step: 5, presets: [30, 45, 60, 80, 100] },
 };
 const DEFAULT_SIZE: Record<string, number> = {
   "mcq:questions": 20,

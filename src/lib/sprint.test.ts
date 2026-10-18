@@ -33,7 +33,7 @@ it("switching type resets size to that type's default and range", () => {
   const short = { ...withMode(DEFAULTS, "short"), difficulty: ["standard"] };
   expect(withMode(short as typeof DEFAULTS, "mcq").difficulty).toEqual([]);
   expect(clampTarget(DEFAULTS, 99)).toBe(40);
-  expect(clampTarget(withMode(DEFAULTS, "mixed"), 3)).toBe(20);
+  expect(clampTarget(withMode(DEFAULTS, "mixed"), 3)).toBe(5);
 });
 
 it("estimates editable pace for each question type and untimed sessions", () => {
@@ -268,7 +268,7 @@ it("mixed estimate and summary follow the requested buckets, including zero-size
 });
 it("non-finite total input clamps safely", () => {
   expect(clampTarget(DEFAULTS, NaN)).toBe(5);
-  expect(clampTarget(withMode(DEFAULTS, "mixed"), Infinity)).toBe(20);
+  expect(clampTarget(withMode(DEFAULTS, "mixed"), Infinity)).toBe(5);
 });
 
 it("saved settings reject malformed arrays, unknown keys and non-finite size memories", () => {
@@ -300,4 +300,13 @@ it("saved settings reject malformed arrays, unknown keys and non-finite size mem
   expect(c.sizes).not.toHaveProperty("extended:questions");
   expect(fromParams({ type: "toString" }, DEFAULTS)?.mode).toBe("mcq");
   expect(restore({ mode: "toString" }).mode).toBe("mcq");
+});
+
+it("keeps five-mark mixed totals through links, saved settings and type switches", () => {
+  const c = withTarget(withMode(DEFAULTS, "mixed"), 5);
+  expect(c).toMatchObject({ target: 5, mcq_count: 3, short_marks: 2 });
+  expect(estimateMinutes(c)).toBe(6);
+  expect(restore(c)).toMatchObject(c);
+  expect(fromParams({ type: "mixed", size: "5" }, DEFAULTS)).toMatchObject(c);
+  expect(withMode(withMode(c, "mcq"), "mixed").target).toBe(5);
 });
