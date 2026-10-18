@@ -196,6 +196,7 @@ export default async function Results({
         summary={s.summary}
         pending={progress.summaryPending}
         actions={actions}
+        rows={rows}
       />
       <ResultsAnswers rows={rows} id={id} name={name} photos={url} />
     </div>

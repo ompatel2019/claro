@@ -106,12 +106,18 @@ export function nextActions(
   mode: SprintConfig["mode"],
   topics: Topic[],
   cards: Record<string, number>,
-) {
+): NextAction[] {
   const by = new Map<string, ReviewRow[]>();
   for (const r of rows.filter(scored))
     if (r.topic_id) by.set(r.topic_id, [...(by.get(r.topic_id) ?? []), r]);
   const weak = [...by]
-    .map(([id, rs]) => ({ id, t: tally(rs) }))
+    .map(([id, rs]) => ({
+      id,
+      t: tally(rs),
+      questions: rs
+        .filter(below)
+        .map(({ position, type }) => ({ position, type })),
+    }))
     .filter(({ t }) => t.mark < t.max)
     .sort((a, b) => pct(a.t)! - pct(b.t)! || a.id.localeCompare(b.id))
     .slice(0, 2);
@@ -119,10 +125,17 @@ export function nextActions(
     topics.find((t) => t.id === id)?.name ?? "this topic";
   const kind = KINDS[mode] ?? "questions";
   return [
-    ...weak.map(({ id }) => ({
-      label: `Practise ${name(id)} ${kind}`,
-      href: `/student/sprint?type=${mode}&sub=${id}`,
-    })),
+    ...weak.flatMap(({ id, questions }) => [
+      {
+        questions,
+        label: `Practise ${name(id)} ${kind}`,
+        href: `/student/sprint?type=${mode}&sub=${id}`,
+      },
+      {
+        label: `Retry mistakes on ${name(id)}`,
+        href: `/student/sprint?type=${mode}&sub=${id}&history=mistakes`,
+      },
+    ]),
     ...weak
       .slice(0, 1)
       .filter(({ id }) => cards[id])
@@ -168,3 +181,9 @@ export function resultsState(rows: ReviewRow[], summary: unknown) {
     summaryPending: summary == null && marking > 0,
   };
 }
+
+export type NextAction = {
+  label: string;
+  href: string;
+  questions?: Pick<ReviewRow, "position" | "type">[];
+};
