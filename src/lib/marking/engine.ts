@@ -277,6 +277,7 @@ export async function summariseSession(
 }
 
 type Attempt = {
+  position?: number;
   id: string;
   user_id: string;
   status: string;
@@ -528,6 +529,7 @@ export async function finishSession(
     } else if (marked.length) {
       summary = await summariseSession(
         written.map((a) => ({
+          question: a.position,
           source: a.question.source,
           stem: a.question.stem,
           mark: Number(a.mark ?? 0),
