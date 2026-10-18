@@ -143,3 +143,18 @@ Feedback is presented as Check as I go and Exam mode cards with dot-point descri
 ### Lane A integration dependency — S3
 
 The setup accepts five Mixed marks. Migration `0046` enforced a 20-mark Mixed minimum in the `start_sprint` RPC; migration `0050_mixed_min_5.sql` lowers it to 5 (only that bound changes). **0050 is not yet applied to production** (pending Om's approval); until it is, starting a Mixed sprint below 20 marks fails in the RPC even though the setup allows it.
+
+## Iteration 2 — Lane B: S7 and results date (S11)
+
+Next steps appears first within Overall feedback, before the answer browser.
+Weak-topic practice actions carry review links to the specific lost-mark questions;
+additional buttons retry mistakes in that topic or open its flashcards. Deterministic
+question chips separate full-mark answers from marks to recover and identify the
+question type. These are factual score groups, not claims that a stored AI bullet
+refers to a particular question. Stored summary text and marking prompts are intact.
+Pending/unavailable summaries still expose deterministic actions and review links.
+The result header's date uses Australia/Sydney without a clock time; duration stays.
+
+The local `e2e/sprint-results.config.ts` suite uses synthetic read-only responses,
+not accounts or marking. It covers question-anchor selection, action destinations,
+summary order, date formatting, rubric gaps, full-mark outlines and mobile overflow.

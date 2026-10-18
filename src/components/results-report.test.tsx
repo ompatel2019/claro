@@ -194,3 +194,63 @@ it.each([
   );
   expect(screen.queryByText("Pending")).not.toBeInTheDocument();
 });
+
+it("puts next steps first and links factual question chips without attributing AI text", () => {
+  const row = (
+    position: number,
+    mark: number,
+    type: ReviewRow["type"],
+    status = "marked",
+  ) =>
+    ({
+      position,
+      mark,
+      marks: 4,
+      max_marks: 4,
+      type,
+      status,
+      feedback: {},
+    }) as ReviewRow;
+  render(
+    <>
+      <OverallFeedback
+        pending={false}
+        summary={{ strengths: ["Stored advice"], top_fixes: ["Stored fix"] }}
+        rows={[
+          row(1, 4, "mcq"),
+          row(7, 2, "short"),
+          row(8, 0, "short", "failed"),
+        ]}
+        actions={[
+          { label: "Retry mistakes", href: "/student/sprint?history=mistakes" },
+        ]}
+      />
+      <ResultsAnswers rows={[]} id="test" name={() => ""} photos={new Map()} />
+    </>,
+  );
+  expect(screen.getAllByRole("heading").map((h) => h.textContent)).toEqual([
+    "Overall feedback",
+    "Next steps",
+    "Strengths",
+    "Top fixes",
+  ]);
+  expect(
+    screen.getByRole("link", { name: "Q1 · Multiple choice" }),
+  ).toHaveAttribute("href", "#q-1");
+  expect(
+    screen.getByRole("link", { name: "Q7 · Short answer" }),
+  ).toHaveAttribute("href", "#q-7");
+  expect(screen.queryByRole("link", { name: /Q8/ })).toBeNull();
+});
+it("keeps next-step actions available while a summary is pending", () => {
+  render(
+    <OverallFeedback
+      summary={null}
+      pending
+      actions={[{ label: "Practise", href: "/student/sprint?sub=topic" }]}
+    />,
+  );
+  expect(screen.getByRole("region", { name: "Next steps" })).toContainElement(
+    screen.getByRole("link", { name: "Practise" }),
+  );
+});

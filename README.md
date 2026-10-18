@@ -213,3 +213,32 @@ Feedback is presented as Check as I go and Exam mode cards with dot-point descri
 ### Lane A integration dependency — S3
 
 The setup accepts five Mixed marks, but the existing `start_sprint` RPC in migration 0046 still enforces a 20-mark Mixed minimum. Lane A does not change SQL or add a migration. Starting a five-mark Mixed sprint requires the database owner to resolve this separately; the synthetic tests exercise UI/config behaviour only.
+
+## Iteration 2 — Lane B: feedback guards (S8, S9, S10, S13)
+
+Student margin comments no longer repeat the per-comment “Next mark” line;
+its stored value, admin editor and aggregate next-mark summary remain intact.
+“How to reach full marks” is hidden for full-mark written answers in both sprint
+and single-answer results. Rubric tables and band labels require complete,
+non-overlapping integer coverage of 1..marks (an optional zero band is accepted).
+Incomplete tables show an unavailable message. The normal admin Questions
+“Missing or incomplete criteria” filter finds missing bands before pagination.
+Import review retains its existing missing-criteria filter. No data repair,
+migration or marking/prompt change is included.
+
+## Iteration 2 — Lane B: results next steps and date (S7, S11)
+
+Next steps now leads overall feedback in a full-width highlighted section above
+strengths and fixes. Deterministic actions practise weak topics, retry mistakes,
+and open available topic flashcards; question links beside practice actions and
+full-mark/lost-mark groups identify MC versus written answers without rewriting
+or attributing stored AI advice. Pending and unavailable summaries retain actions.
+The sprint header shows the Sydney calendar date without clock time; elapsed
+sprint duration remains. Prompt changes belong to claro-ml's Airo 5.1 work.
+
+Run the isolated, read-only results browser suite with
+`Q_MIN_GB=3 Q_SLOTS=1 q-run npm run test:e2e -- --config=e2e/sprint-results.config.ts`.
+It starts local Next/Supabase doubles, blocks marking/writes, and covers mobile,
+desktop and single-answer feedback. Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` when
+using system Chrome. Credential-dependent legacy specs are skipped without a
+configured test student. Never point these tests at production.

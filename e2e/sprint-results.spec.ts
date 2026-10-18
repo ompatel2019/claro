@@ -80,7 +80,7 @@ test.describe("Sprint results", () => {
     ).toBeVisible();
     await expect(
       page.getByText(
-        /^\w{3} \d+ \w{3}, \d+:\d{2} [ap]m · \d+:\d{2}( of \d+:\d{2}| over time)?$/,
+        /^\w{3} \d+ \w{3} · \d+:\d{2}( of \d+:\d{2}| over time)?$/,
       ),
     ).toBeVisible();
     await expect(page.getByText(/^\d+ \/ 5 · \d+%$/)).toBeVisible();

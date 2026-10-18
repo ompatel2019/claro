@@ -34,3 +34,17 @@ Feedback is presented as Check as I go and Exam mode cards with dot-point descri
 ### Lane A integration dependency — S3
 
 The setup accepts five Mixed marks, but the existing `start_sprint` RPC in migration 0046 still enforces a 20-mark Mixed minimum. Lane A does not change SQL or add a migration. Starting a five-mark Mixed sprint requires the database owner to resolve this separately; the synthetic tests exercise UI/config behaviour only.
+
+## Iteration 2 — Lane B (results and feedback)
+
+Implemented S7 UI only, S8 per-comment removal, S9 rubric coverage guard and normal
+admin list completeness filter, S10/S13 full-mark outline hiding, and S11 results
+header date only. No prompt/engine edits, migrations, data repairs, paid marking,
+benchmarks or production access. See `docs/annotated-feedback.md` and
+`docs/topic-sprints.md` for behaviour and local browser-test instructions.
+
+Import-review criteria filtering remains backed by its existing RPC (missing
+criteria only); extending that RPC would need work beyond this no-migration lane.
+Production screenshot/Claro Docs publication and prompt accuracy/leniency work
+remain for the integrator and claro-ml. Local fixture screenshots are generated
+under `test-results/` by the results browser spec.

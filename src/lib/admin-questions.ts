@@ -1,4 +1,5 @@
 import "server-only";
+import { criteriaCoverMarks } from "./marking/own-criteria";
 import { unstable_cache } from "next/cache";
 import { QUESTION_IMPORT_REVIEW_TAG } from "@/lib/question-review-cache";
 import { admin } from "@/utils/supabase/admin";
@@ -184,7 +185,7 @@ export async function loadQuestionList(f: QuestionFilters) {
   let q = admin()
     .from("questions")
     .select(
-      "id,source,year,type,topic_id,marks,verb,status,origin,updated_at,stem",
+      "id,source,year,type,topic_id,marks,verb,status,origin,updated_at,stem,criteria",
     )
     .eq("status", status);
   if (f.type && ["mcq", "short", "extended"].includes(f.type))
@@ -209,12 +210,15 @@ export async function loadQuestionList(f: QuestionFilters) {
     q = q.eq("type", "mcq").or('explanation.is.null,explanation.eq.""');
   if (f.missing === "sample")
     q = q.neq("type", "mcq").or('sample_answer.is.null,sample_answer.eq.""');
-  if (f.missing === "criteria")
-    q = q.neq("type", "mcq").or("criteria.is.null,criteria.eq.[]");
+
   if (f.missing === "stimulus")
     q = q.not("stimulus", "is", null).neq("stimulus", "");
   const data = await pages((from, to) => q.order("id").range(from, to));
-  const rows = (data ?? []) as Omit<
+  const rows = (data ?? []).filter(
+    (r) =>
+      f.missing !== "criteria" ||
+      (r.type !== "mcq" && !criteriaCoverMarks(r.criteria, r.marks)),
+  ) as Omit<
     QuestionListRow,
     "attempts" | "avg" | "disagreements" | "reports"
   >[];
