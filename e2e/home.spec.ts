@@ -7,74 +7,35 @@ test.describe("Student home", () => {
     await signIn(page);
   });
 
-  test("greeting, KPIs, heatmap and the side cards", async ({ page }) => {
+  test("greeting, term banner, four tiles and streak", async ({ page }) => {
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: /^Good (morning|afternoon|evening)(, \S+)?$/,
+        name: /^Good (morning|afternoon|evening)/,
       }),
     ).toBeVisible();
     await expect(
-      page.getByText(
-        /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday) \d{1,2} [A-Z][a-z]+$/,
-      ),
+      page.getByRole("region", { name: "Your study week" }),
     ).toBeVisible();
-    for (const label of [
-      "Questions this week",
-      "Average mark",
-      "Streak",
-      "Flashcards due",
-    ])
-      await expect(page.getByText(label, { exact: true })).toBeVisible();
-    await expect(page.getByText(/^vs \d+ last week$/)).toBeVisible();
-    await expect(page.getByText(/^Longest \d+$/)).toBeVisible();
-    await expect(page.getByText(/^\d+ more tomorrow$/)).toBeVisible();
-    await expect(page.getByText(/^Less\s*More$/)).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Recent activity" }),
-    ).toBeVisible();
-    await expect(page.getByRole("link", { name: "See all" })).toHaveAttribute(
-      "href",
-      "/student/activity",
-    );
-    await expect(
-      page.getByRole("heading", { name: "Weak topics" }),
-    ).toBeVisible();
-    // Either resume cards or one-click quick starts, never neither.
-    const resume = page.getByRole("heading", {
-      name: "Continue where you left off",
-    });
-    const quick = page.getByRole("heading", { name: "Quick start" });
-    await expect(resume.or(quick)).toBeVisible();
-    if (await quick.isVisible())
+    const quick = page.getByRole("region", { name: "Quick start" });
+    for (const [name, href] of [
+      ["Topic Sprint", "/student/sprint"],
+      ["Flashcards", "/student/flashcards"],
+      ["Mark my answer", "/student/mark"],
+      ["Activity", "/student/activity"],
+    ]) {
       await expect(
-        page.getByRole("button", { name: "20 MC questions · 20 min" }),
-      ).toBeVisible();
-    else
-      await expect(
-        page.getByRole("link", { name: "Continue" }).first(),
-      ).toHaveAttribute(
-        "href",
-        /^\/student\/(sprint|flashcards)\/[0-9a-f-]{36}$/,
-      );
-  });
-
-  test("score trend switches range", async ({ page }) => {
-    const chart = page.locator("svg[data-range]");
-    const heading = page.getByRole("heading", { name: "Score trend" });
-    const empty = page.getByText("Finish a sprint to see your trend.");
-    await expect(heading.or(empty)).toBeVisible();
-    if (await empty.isVisible()) return;
-    const sparse = page.getByText(
-      /^(No marked work in this range\.|Mark work on at least 3 days to see a trend\.)$/,
-    );
-    await expect(chart.or(sparse)).toBeVisible();
-    await page.getByRole("combobox", { name: "Range" }).click();
-    await page.getByRole("option", { name: "All time" }).click();
+        quick.getByRole("link", { name: new RegExp(`^${name}`) }),
+      ).toHaveAttribute("href", href);
+    }
+    await expect(page.getByText(/^Longest \d+ days?$/)).toBeVisible();
     await expect(
-      page.locator('svg[data-range="all"]').or(sparse),
-    ).toBeVisible();
-    await expect(page.getByTestId("previous-period")).toHaveCount(0);
+      page.getByRole("link", { name: "View progress and weak topics" }),
+    ).toHaveAttribute("href", "/student/progress");
+    for (const name of ["Score trend", "Recent activity", "Weak topics"])
+      await expect(
+        page.getByRole("heading", { name, exact: true }),
+      ).toHaveCount(0);
   });
 
   test("S starts a sprint and / redirects home", async ({ page }) => {

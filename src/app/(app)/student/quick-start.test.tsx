@@ -18,13 +18,6 @@ vi.mock("@/lib/auth", () => ({
     year_level: 12,
   }),
 }));
-vi.mock("@/lib/progress-data", () => ({
-  loadProgress: async () => ({ topics: [] }),
-}));
-vi.mock("@/app/(app)/actions", () => ({ startSprint: vi.fn() }));
-vi.mock("@/app/(app)/flashcards/actions", () => ({
-  startFlashcards: vi.fn(),
-}));
 vi.mock("@/components/welcome-dialog", () => ({ WelcomeDialog: () => null }));
 vi.mock("@/components/shortcut", () => ({ Shortcut: () => null }));
 vi.mock("next/navigation", () => ({
@@ -74,13 +67,6 @@ vi.mock("@/utils/supabase/server", () => ({
 }));
 
 beforeEach(() => {
-  vi.stubGlobal(
-    "ResizeObserver",
-    class {
-      observe() {}
-      disconnect() {}
-    },
-  );
   mocks.unfinished = [];
   mocks.due = 0;
   mocks.dueError = false;
@@ -88,11 +74,10 @@ beforeEach(() => {
 });
 afterEach(() => {
   cleanup();
-  vi.unstubAllGlobals();
 });
 
 it.each([false, true])(
-  "always puts launch boxes before stats with unfinished sessions: %s",
+  "keeps the four tiles between the banner and streak with unfinished history: %s",
   async (unfinished) => {
     if (unfinished)
       mocks.unfinished = [
@@ -107,83 +92,60 @@ it.each([false, true])(
         },
       ];
     render(await resolve(await Home()));
+    const banner = screen.getByRole("region", { name: "Your study week" });
     const launches = screen.getByRole("region", { name: "Quick start" });
-    expect(
-      screen.getByRole("heading", { level: 1 }).parentElement?.parentElement
-        ?.nextElementSibling,
-    ).toBe(launches);
+    expect(banner.nextElementSibling).toBe(launches);
     expect(
       within(launches)
         .getAllByRole("heading", { level: 2 })
         .map((h) => h.textContent),
-    ).toEqual(["Topic Sprint", "Flashcards"]);
+    ).toEqual(["Topic Sprint", "Flashcards", "Mark my answer", "Activity"]);
+    expect(within(launches).getAllByRole("link")).toHaveLength(4);
     expect(
-      within(launches).getByRole("button", {
-        name: "20 MC questions · 20 min",
-      }),
-    ).toBeVisible();
-    expect(
-      within(launches).getByRole("button", {
-        name: "5 short answers · about 23 min",
-      }),
-    ).toBeVisible();
-    expect(
-      within(launches).getByRole("link", { name: "Start sprint" }),
+      within(launches).getByRole("link", { name: /Topic Sprint/ }),
     ).toHaveAttribute("href", "/student/sprint");
     expect(
-      within(launches).getByRole("link", { name: "Choose a deck" }),
+      within(launches).getByRole("link", { name: /Flashcards 0 due/ }),
     ).toHaveAttribute("href", "/student/flashcards");
-    expect(within(launches).getByText("0 due")).toBeVisible();
-    let previous: Element = launches;
-    for (const title of [
-      "Questions this week",
-      "Activity",
+    const streak = screen.getByText("Longest 0 days");
+    expect(
+      launches.compareDocumentPosition(streak) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    for (const name of [
       "Score trend",
       "Recent activity",
-      ...(unfinished ? ["Continue where you left off"] : []),
       "Weak topics",
-    ]) {
-      const section = screen.getByText(title, { exact: true });
-      expect(
-        previous.compareDocumentPosition(section) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy();
-      previous = section;
-    }
+      "Questions this week",
+    ])
+      expect(screen.queryByText(name, { exact: true })).toBeNull();
+    const resume = screen.queryByRole("link", { name: "Continue" });
     if (unfinished)
-      expect(screen.getByRole("link", { name: "Continue" })).toHaveAttribute(
-        "href",
-        "/student/sprint/resume",
-      );
+      expect(resume).toHaveAttribute("href", "/student/sprint/resume");
+    else expect(resume).toBeNull();
   },
 );
-
-it("shows the due count and retains the direct review action", async () => {
+it("shows the due count inside the linked flashcards tile", async () => {
   mocks.due = 7;
   render(await resolve(await Home()));
   const launches = screen.getByRole("region", { name: "Quick start" });
   expect(
-    within(launches).getByRole("button", { name: "Flashcards · 7 due" }),
-  ).toBeVisible();
-  expect(launches.querySelector('input[name="due"]')).toHaveValue("1");
+    within(launches).getByRole("link", { name: /Flashcards 7 due/ }),
+  ).toHaveAttribute("href", "/student/flashcards");
 });
-
 it("keeps launches available when due counts and unfinished sessions fail", async () => {
   mocks.dueError = true;
   mocks.sessionError = true;
   render(await resolve(await Home()));
   const launches = screen.getByRole("region", { name: "Quick start" });
   expect(
-    within(launches).getByRole("button", { name: "20 MC questions · 20 min" }),
+    within(launches).getByRole("link", { name: /Topic Sprint/ }),
   ).toBeVisible();
   expect(
-    within(launches).getByRole("link", { name: "Choose a deck" }),
-  ).toBeVisible();
-  expect(within(launches).getByRole("alert")).toHaveTextContent(
-    "Couldn't load your due flashcards",
-  );
+    within(launches).getByRole("link", { name: /Flashcards Choose a deck/ }),
+  ).toHaveAttribute("href", "/student/flashcards");
   expect(within(launches).queryByText("0 due")).toBeNull();
-  expect(
-    screen.getByText("Couldn't load your unfinished sessions."),
-  ).toBeVisible();
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Couldn't load your unfinished sessions.",
+  );
 });
