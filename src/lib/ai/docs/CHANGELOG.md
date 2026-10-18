@@ -2,7 +2,7 @@
 
 ## 19 Oct 2026: Airo 5.1 (prompt tweak; unit-tested only)
 
-Written summaries cite question numbers, use a plain human voice and give concrete next actions tied to a question or topic. MC answers are not supplied and the summary makes no MC performance claims. Analysis comments and answer outlines request judgement or conclusions only when the question asks for them; outline bullets name concrete additions answering the question as asked. The check-mode shared prefix and `next_mark` generation are unchanged. S13 leniency changes are deferred.
+Written summaries cite question numbers, use a plain human voice and give concrete next actions tied to a question or topic. MC answers are not supplied and the summary makes no MC performance claims. Analysis comments and answer outlines request judgement or conclusions only when the question asks for them; outline bullets name concrete additions answering the question as asked. `next_mark` generation is unchanged. S13 leniency: both grading modes require accurate, complete descriptor-relevant parts for each mark, withholding the top mark for flawed key sentences in short 2-3 mark answers; unit-tested only, effect unmeasured.
 
 Unit-tested only: no paid model calls, paid eval or benchmark runs, and no accuracy or feedback-quality improvement claims.
 

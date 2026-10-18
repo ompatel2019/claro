@@ -34,7 +34,7 @@ const q: MarkableQuestion = {
 it.each([false, true])(
   "matches the literal Airo 5.1 full baseline and derived check variant (check=%s)",
   (check) => {
-    // Literal full-prompt baseline; check mode uses the unchanged shared prefix.
+    // Literal full-prompt baseline; check mode derives from the same shared prefix.
     const expected = baselineMessages.map((message) => ({ ...message }));
     if (check)
       expected[0].content =
@@ -50,6 +50,23 @@ it.each([false, true])(
       expect(messages).toEqual(expected);
       expect(JSON.stringify(messages)).not.toContain("Mark restrictions");
     }
+  },
+);
+
+it.each([false, true])(
+  "requires descriptor-relevant accuracy for short-answer top marks (check=%s)",
+  (check) => {
+    const system = gradeMessages(q, "Answer", check)[0].content;
+    for (const instruction of [
+      "each sentence or part it depends on is accurate and complete",
+      "only a flaw in a part required by the descriptor lowers the band, not stylistic issues",
+      "For a short 2-3 mark answer, a flawed, circular or imprecise key sentence",
+      "an inaccurate or incomplete definition",
+      "the top mark is not yet earned; name the flaw in why_not_higher",
+      "Imprecise is not missing: credit the idea and note the imprecision separately.",
+      "An improvement suggestion is not a deduction.",
+    ])
+      expect(system).toContain(instruction);
   },
 );
 
