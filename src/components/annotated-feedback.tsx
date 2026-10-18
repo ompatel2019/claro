@@ -412,7 +412,8 @@ export function AnnotatedFeedback({
     !lowConfidence &&
     row.mark != null &&
     ["marked", "in_review", "reviewed"].includes(state);
-  const band = bandOf(row.criteria, row.band);
+  const completeCriteria = criteriaCoverMarks(row.criteria, max);
+  const band = completeCriteria ? bandOf(row.criteria, row.band) : null;
   const next =
     edit?.nextMark ??
     nextMarkLine(comments, row.feedback, Number(row.mark) >= max);
