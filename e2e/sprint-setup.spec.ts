@@ -350,10 +350,7 @@ test.describe("Iteration 2 setup without services", () => {
         page.getByRole("button", { name: /^Start (sprint|with)/ }),
       ).toBeDisabled();
 
-      const check = page.getByRole("radio", {
-        name: "Check as I go",
-        exact: true,
-      });
+      const check = page.getByRole("radio", { name: /^Check as I go/ });
       await check.focus();
       await page.keyboard.press("Space");
       await expect(check).toBeChecked();
