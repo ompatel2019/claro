@@ -3,9 +3,10 @@
 Migration `0049_answer_version.sql` (atomic answer versions, guarded auto reviews,
 transactional sprint answer saves/finalization) **is applied to production** and has
 been live since 16 Oct. Migration `0050_mixed_min_5.sql` (lowers the Mixed sprint
-minimum in `start_sprint` from 20 to 5 marks, S3) is **NOT yet applied to
-production**: pending Om's approval, and it must be applied before or with the
-Iteration 2 merge, otherwise starting a Mixed sprint under 20 marks fails.
+minimum in `start_sprint` from 20 to 5 marks, S3) **is applied to production**
+(applied 19 Oct 2026, Mixed minimum 5). The S9 criteria data fix is also **applied
+to production**: 6 questions were repaired on 19 Oct 2026, with the original rows
+backed up in table `public.questions_criteria_backup_20261019`.
 
 Student portal for Claro: NSW HSC Economics practice with instant AI marking.
 Next.js 16 (App Router, `src/proxy.ts`), Supabase (auth, Postgres with RLS, storage), OpenAI.

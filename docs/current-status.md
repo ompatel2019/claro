@@ -59,3 +59,8 @@ under `test-results/` by the results browser spec.
 School dates use NSW Eastern division student attendance dates for [2026](https://education.nsw.gov.au/schooling/calendars/2026) and [2027](https://education.nsw.gov.au/schooling/calendars/2027), checked 19 October 2026. Weeks start Monday (a midweek return is Week 1); holidays show School break, unsupported years show Your study week. School-specific/Western division exceptions are not personalised.
 
 The offline Playwright suite exercises real page/component code with synthetic data and the app CSS; it performs no Supabase or AI calls. Authenticated specs require isolated test credentials. No live production screenshots or Claro Docs writes were performed from this lane.
+
+## Production status (19 Oct 2026)
+
+- Migration 0050 (Mixed sprint minimum 5) is applied to production.
+- The S9 criteria data fix is applied to production: 6 questions repaired, backup in `public.questions_criteria_backup_20261019`.
