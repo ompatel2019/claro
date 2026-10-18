@@ -255,3 +255,8 @@ The admin dashboard promotes clickable Needs attention above charts and replaces
 Validation: `Q_MIN_GB=3 Q_SLOTS=1 q-run npm run check`; offline browser coverage uses `q-run npm run test:e2e -- --config=e2e/pages.config.ts` (real pages/components and compiled app CSS, synthetic reads, installed Chrome). Credential-based home/activity/admin specs also cover the revised UI; use an isolated allow-listed test Supabase only. See `LANE_NOTES.md` for local outcomes and cross-lane follow-ups.
 
 Lane C annotated local page evidence: [Home, Activity and admin pages](docs/it2-lane-c.md).
+
+### Iteration 3 — small fixes
+
+- Results while Finish is still marking: `finished_at` is only set once marking and the summary complete, so the results URL used to redirect to the question page. It now shows a "Marking in progress" state with the usual progress bar (auto-refreshing) while an answer has a fresh `marking` claim (or, in exam mode, once any answer is marked), and fills in when done. With no marking in flight it still redirects to the question page. No migration.
+- Admin flashcards Add, Edit and Move dialogs: review found the single "Topic · Subtopic" list was ordered by raw `sort`, which restarts per topic, so subtopics from different topics interleaved. `subtopicOptions` now groups them by topic order. Selecting, saving and moving were otherwise correct (server validates a subtopic). Covered by Vitest (ordering, Add save, Edit save/change topic, Move); the admin page needs the service role, so no offline Playwright exists for it, and no production data was written to verify.

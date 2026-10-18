@@ -106,6 +106,22 @@ function undoToast(
   });
 }
 
+/** Subtopics as "Topic · Subtopic", grouped by topic order (subtopic `sort` restarts per topic). */
+export function subtopicOptions(topics: Topic[]) {
+  const parents = new Map(topics.map((t) => [t.id, t]));
+  return topics
+    .filter((t) => t.parent_id && parents.has(t.parent_id))
+    .sort(
+      (a, b) =>
+        parents.get(a.parent_id!)!.sort - parents.get(b.parent_id!)!.sort ||
+        a.sort - b.sort,
+    )
+    .map((t) => ({
+      value: t.id,
+      label: `${parents.get(t.parent_id!)!.name} · ${t.name}`,
+    }));
+}
+
 /** Add / Edit Dialog: Kind, Topic, Front ≤200, Back ≤1,000, Status. */
 function CardDialog({
   card,
@@ -121,8 +137,6 @@ function CardDialog({
   const [error, setError] = useState("");
   const [confirmRetire, setConfirmRetire] = useState(false);
   const [pending, start] = useTransition();
-  const name = (id: string | null) =>
-    topics.find((t) => t.id === id)?.name ?? "";
   const set = <K extends keyof CardInput>(k: K, v: CardInput[K]) =>
     setForm((f) => ({ ...f, [k]: v }));
   function save() {
@@ -204,12 +218,7 @@ function CardDialog({
               onValueChange={(value) => set("topic_id", value)}
               options={[
                 { value: "", label: "Choose a subtopic" },
-                ...topics
-                  .filter((t) => t.parent_id)
-                  .map((t) => ({
-                    value: t.id,
-                    label: `${name(t.parent_id)} · ${t.name}`,
-                  })),
+                ...subtopicOptions(topics),
               ]}
             />
           </label>
@@ -506,12 +515,7 @@ export function FlashcardsTable({
               onValueChange={(value) => setTopic(value)}
               options={[
                 { value: "", label: "Choose a subtopic" },
-                ...topics
-                  .filter((t) => t.parent_id)
-                  .map((t) => ({
-                    value: t.id,
-                    label: `${name(t.parent_id)} · ${t.name}`,
-                  })),
+                ...subtopicOptions(topics),
               ]}
             />
           </label>

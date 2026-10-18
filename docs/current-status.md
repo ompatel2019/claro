@@ -64,3 +64,8 @@ The offline Playwright suite exercises real page/component code with synthetic d
 
 - Migration 0050 (Mixed sprint minimum 5) is applied to production.
 - The S9 criteria data fix is applied to production: 6 questions repaired, backup in `public.questions_criteria_backup_20261019`.
+
+## Iteration 3 — small fixes
+
+- Results while Finish is still marking: `finished_at` is only set once marking and the summary complete, so the results URL used to redirect to the question page. It now shows a "Marking in progress" state with the usual progress bar (auto-refreshing) while an answer has a fresh `marking` claim (or, in exam mode, once any answer is marked), and fills in when done. With no marking in flight it still redirects to the question page. No migration.
+- Admin flashcards Add, Edit and Move dialogs: review found the single "Topic · Subtopic" list was ordered by raw `sort`, which restarts per topic, so subtopics from different topics interleaved. `subtopicOptions` now groups them by topic order. Selecting, saving and moving were otherwise correct (server validates a subtopic). Covered by Vitest (ordering, Add save, Edit save/change topic, Move); the admin page needs the service role, so no offline Playwright exists for it, and no production data was written to verify.

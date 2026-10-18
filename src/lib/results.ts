@@ -187,3 +187,24 @@ export type NextAction = {
   href: string;
   questions?: Pick<ReviewRow, "position" | "type">[];
 };
+
+/** Matches STALE_CLAIM_MS in the marking engine: older claims are abandoned, not in flight. */
+const CLAIM_FRESH_MS = 5 * 60_000;
+
+/**
+ * True while Finish is still marking: finished_at is only set once marking (and the
+ * summary) completes. Exam-mode answers are only marked by Finish, so any marked
+ * answer there also means Finish is under way.
+ */
+export function markingInFlight(
+  attempts: { status: string; claimed_at?: string | null }[],
+  feedback?: string,
+  now = Date.now(),
+) {
+  return attempts.some(
+    (a) =>
+      (a.status === "marking" &&
+        now - new Date(a.claimed_at ?? 0).getTime() < CLAIM_FRESH_MS) ||
+      (feedback === "end" && a.status === "marked"),
+  );
+}
