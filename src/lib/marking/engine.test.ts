@@ -1233,6 +1233,7 @@ it.each([
   "summarises %s from written evidence only in a mixed session",
   async (_name, answer_text, transcript, answer) => {
     const written = {
+      position: 3,
       status: "marked",
       mark: 2,
       max_marks: 4,
@@ -1247,6 +1248,7 @@ it.each([
     };
     const mcq = {
       ...written,
+      position: 2,
       mark: 1,
       max_marks: 1,
       answer_text: "MCQ choices are not writing evidence",
@@ -1255,10 +1257,10 @@ it.each([
     };
     const summary = {
       strengths: [
-        "In this answer, you introduce the key term before explaining its effects.",
+        "In Q3, you introduce the key term before explaining its effects.",
       ],
-      improvements: ["In this answer, connect each effect to its cause."],
-      next_steps: ["Rewrite one explanation using a because link."],
+      improvements: ["In Q3, connect each effect to its cause."],
+      next_steps: ["Rewrite the Q3 explanation using a because link."],
     };
     const save = query({ score: 3, max_score: 5, summary });
     for (const chain of [
@@ -1275,6 +1277,7 @@ it.each([
     expect(call.userId).toBe("user");
     expect(JSON.parse(call.messages[1].content as string)).toEqual([
       {
+        question: 3,
         source: q.source,
         stem: q.stem,
         mark: 2,

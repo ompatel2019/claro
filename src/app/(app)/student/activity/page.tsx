@@ -12,7 +12,6 @@ import { sessionLabels } from "@/lib/session-summary";
 import { sydneyToday } from "@/lib/flashcards";
 import { type Topic } from "@/lib/practice";
 import { PageHeader } from "@/components/page-header";
-import { StatCard } from "@/components/stat-card";
 import { ActivityBrowser } from "@/components/activity-browser";
 import { buttonVariants } from "@/components/ui/button";
 export const metadata = pageMetadata("Activity");
@@ -49,7 +48,6 @@ export default async function Activity({
     },
     total.count,
   );
-  const stats = data.stats;
   return (
     <div className="min-w-0 space-y-4">
       <PageHeader
@@ -61,36 +59,6 @@ export default async function Activity({
           </Link>
         }
       />
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatCard
-          label="Sessions"
-          value={stats.sessions}
-          caption="For your current filters"
-        />
-        <StatCard
-          label="Questions answered"
-          value={stats.questions}
-          caption="Excludes flashcards"
-        />
-        <StatCard
-          label="Average %"
-          empty={stats.average == null}
-          value={
-            stats.average == null
-              ? "No marks yet"
-              : `${Math.round(stats.average)}%`
-          }
-          caption="Scored sessions"
-        />
-        <StatCard
-          label="Best %"
-          empty={stats.best == null}
-          value={
-            stats.best == null ? "No marks yet" : `${Math.round(stats.best)}%`
-          }
-          caption="Scored sessions"
-        />
-      </div>
       <ActivityBrowser
         key={JSON.stringify(filters)}
         filters={filters}

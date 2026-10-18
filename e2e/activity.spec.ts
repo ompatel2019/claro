@@ -22,82 +22,18 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test.describe("Activity heatmap", () => {
-  test("home shows a year of activity with streaks; a day links to Activity", async ({
-    page,
-  }) => {
-    await expect(
-      page.getByText(
-        /^Current streak \d+ days? · Longest \d+ days? · \d+ active days? in the last year$/,
-      ),
-    ).toBeVisible();
-    const heatmap = page.getByTestId("activity-heatmap");
-    const grid = heatmap.getByRole("group", {
-      name: /^Activity from \d{4}-\d{2}-\d{2} to \d{4}-\d{2}-\d{2}$/,
-    });
-    const today = grid.locator("a[tabindex='0']");
-    await expect(today).toHaveCount(1);
-    const seen = new Set<string>();
-    const earlier = page.getByRole("button", { name: "Earlier weeks" });
-    do {
-      await expect(today).toHaveCount(1);
-      for (const day of await grid
-        .locator("a")
-        .evaluateAll((links) =>
-          links.map((link) => link.getAttribute("data-day")!),
-        ))
-        seen.add(day);
-      if (!(await earlier.count()) || (await earlier.isDisabled())) break;
-      const range = await grid.getAttribute("aria-label");
-      await expect(async () => {
-        if ((await grid.getAttribute("aria-label")) === range)
-          await earlier.click();
-        await expect(grid).not.toHaveAttribute("aria-label", range!, {
-          timeout: 1000,
-        });
-      }).toPass();
-    } while (true);
-    expect(seen.size).toBeGreaterThan(364);
-    const later = page.getByRole("button", { name: "Later weeks" });
-    while ((await later.count()) && (await later.isEnabled())) {
-      await later.click();
-      await expect(today).toHaveCount(1);
-    }
-    await expect(async () => {
-      await today.focus();
-      await expect(page.getByRole("tooltip")).toBeVisible({ timeout: 1000 });
-    }).toPass();
-    await page.keyboard.press("ArrowUp");
-    const day = await page.evaluate(() =>
-      document.activeElement?.getAttribute("data-day"),
-    );
-    await page.keyboard.press("Enter");
-    await expect(page).toHaveURL(
-      new RegExp(`/student/activity\\?date=${day}$`),
-    );
-    await expect(
-      page.getByRole("button", { name: "Remove day filter" }),
-    ).toBeVisible();
-  });
-
-  test("at 400px the legend clears the floating feedback button", async ({
-    page,
-  }) => {
-    await page.setViewportSize({ width: 400, height: 800 });
-    const more = page.getByText(/^Less\s*More$/);
-    // Worst case: the legend sits on the bottom edge, next to the button.
-    await more.evaluate((el) => el.scrollIntoView({ block: "end" }));
-    const a = (await more.boundingBox())!;
-    const b = (await page
-      .getByRole("button", { name: "Feedback", exact: true })
-      .boundingBox())!;
-    const overlap =
-      a.x < b.x + b.width &&
-      b.x < a.x + a.width &&
-      a.y < b.y + b.height &&
-      b.y < a.y + a.height;
-    expect(overlap).toBe(false);
-  });
+test("home streak links to Progress and Activity tile opens history", async ({
+  page,
+}) => {
+  await expect(page.getByText(/^Longest \d+ days?$/)).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "View progress and weak topics" }),
+  ).toHaveAttribute("href", "/student/progress");
+  await page
+    .getByRole("region", { name: "Quick start" })
+    .getByRole("link", { name: /^Activity/ })
+    .click();
+  await expect(page).toHaveURL(/\/student\/activity$/);
 });
 
 // Browsing only: no session starts, writes, marking calls or cleanup.
@@ -135,7 +71,7 @@ test.describe("Activity browser", () => {
     await expect
       .poll(async () => {
         const titles = await rows
-          .locator("td:nth-child(2) a:first-child")
+          .locator("td:first-child a:first-child")
           .allTextContents();
         return titles.every((t) => t.toLowerCase().includes("sprint"));
       })
@@ -155,6 +91,21 @@ test.describe("Activity browser", () => {
         .or(page.getByText("Nothing here yet")),
     ).toBeVisible();
   });
+  test("compact rows put scores beside titles and show dates without duration", async ({
+    page,
+  }) => {
+    const table = page.getByRole("table", { name: "Your activity" });
+    test.skip(!(await table.count()), "No existing activity");
+    await expect(table.getByRole("columnheader")).toHaveCount(2);
+    for (const name of ["Kind", "Items", "Time", "Status", "Action", "Score"])
+      await expect(
+        table.getByRole("columnheader", { name, exact: true }),
+      ).toHaveCount(0);
+    const first = table.locator("tbody tr").first();
+    await expect(first.locator("td").first().getByRole("link")).toBeVisible();
+    await expect(first.locator("td").last()).not.toContainText(/\d+:\d+/);
+    await expect(page.getByLabel("Sort", { exact: true })).toHaveValue("");
+  });
   test("row title links to the existing session report", async ({ page }) => {
     await expect(async () => {
       await page.getByLabel("Status", { exact: true }).selectOption("finished");
@@ -170,7 +121,7 @@ test.describe("Activity browser", () => {
     test.skip((await row.count()) === 0, "No existing reports to view");
     const href = await row.getAttribute("href");
     expect(href).toMatch(
-      /^\/student\/(?:sprint\/[^/]+\/results|flashcards\/[^/]+)$/,
+      /^\/student\/(?:sprint\/[^/]+\/results|flashcards\/[^/]+|activity\/[^/]+)$/,
     );
     await row.click();
     await expect(page).toHaveURL(new URL(href!, page.url()).href);

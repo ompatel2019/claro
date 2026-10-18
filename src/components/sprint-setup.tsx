@@ -185,6 +185,7 @@ export function SprintSetup({
   }
 
   const s = size(c);
+  const invalidSize = c.target < s.min || c.target > s.max;
   const written = c.mode === "short" || c.mode === "mixed";
   const byMarks = c.size_by === "marks";
   const available = pool
@@ -461,7 +462,8 @@ export function SprintSetup({
                       short_marks: Math.floor(Number(e.target.value) / 2),
                     })
                   }
-                  onBlur={() => setC(withTarget(c, c.target))}
+                  aria-describedby="sprint-size-hint"
+                  aria-invalid={invalidSize}
                 />
                 <Button
                   type="button"
@@ -487,6 +489,15 @@ export function SprintSetup({
                   ))}
                 </div>
               </div>
+              <p
+                id="sprint-size-hint"
+                className="text-muted-foreground text-xs"
+                aria-live="polite"
+              >
+                {invalidSize
+                  ? `Enter ${s.min}–${s.max} ${unit} to continue.`
+                  : `Minimum ${s.min} ${unit}; maximum ${s.max}.`}
+              </p>
               {c.mode === "mixed" && (
                 <div className="space-y-2">
                   <div className="grid gap-3 sm:grid-cols-2">
@@ -771,15 +782,57 @@ export function SprintSetup({
             </Section>
 
             <Section title="Feedback">
-              <Choice
-                label="Feedback"
+              <RadioGroup
+                aria-label="Feedback"
                 value={c.feedback}
-                onChange={(feedback) => set({ feedback })}
-                options={[
-                  ["end", "At the end (exam style)"],
-                  ["each", "After each question (check as you go)"],
-                ]}
-              />
+                onValueChange={(feedback) =>
+                  set({ feedback: feedback as SetupConfig["feedback"] })
+                }
+                className="grid gap-3 sm:grid-cols-2"
+              >
+                {(
+                  [
+                    [
+                      "each",
+                      "Check as I go",
+                      [
+                        "Check each answer when you’re ready.",
+                        "See feedback before moving on.",
+                      ],
+                    ],
+                    [
+                      "end",
+                      "Exam mode",
+                      [
+                        "Work through questions without feedback.",
+                        "See marks and explanations when you finish.",
+                      ],
+                    ],
+                  ] as const
+                ).map(([value, title, points]) => (
+                  <label
+                    key={value}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm",
+                      c.feedback === value && "border-primary bg-accent",
+                    )}
+                  >
+                    <RadioGroupItem
+                      value={value}
+                      aria-label={title}
+                      className="mt-1"
+                    />
+                    <div className="space-y-2">
+                      <span className="font-medium">{title}</span>
+                      <ul className="text-muted-foreground list-disc space-y-1 pl-4">
+                        {points.map((point) => (
+                          <li key={point}>{point}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </label>
+                ))}
+              </RadioGroup>
             </Section>
           </div>
           <div className="flex items-center justify-between gap-3 border-t pt-4">
@@ -810,6 +863,7 @@ export function SprintSetup({
         action={action}
         onSubmit={(e) => {
           if (
+            invalidSize ||
             step !== 3 ||
             matching === 0 ||
             pending ||
@@ -848,6 +902,7 @@ export function SprintSetup({
           <Button
             type="submit"
             disabled={
+              invalidSize ||
               step !== 3 ||
               pending ||
               matching === 0 ||

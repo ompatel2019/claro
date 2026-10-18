@@ -103,25 +103,34 @@ test.describe("Admin dashboard", () => {
       page.getByRole("heading", { name: "Needs attention" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Latest finished sessions" }),
+      page.getByRole("heading", { name: "Recent sessions" }),
     ).toBeVisible();
-    // Either rows that open a student's report, or the empty install state.
-    const table = page.getByRole("table", { name: "Latest finished sessions" });
+    const list = page.getByRole("list", { name: "Recent sessions" });
     const empty = page.getByText(
       /^(No students yet|No finished sessions yet)$/,
     );
-    await expect(table.or(empty)).toBeVisible();
-    if (await table.isVisible()) {
-      expect(await table.getByRole("row").count()).toBeLessThanOrEqual(11);
-      const first = table.getByRole("link").first();
-      await expect(first).toHaveAttribute(
+    await expect(list.or(empty)).toBeVisible();
+    if (await list.isVisible()) {
+      expect(await list.getByRole("listitem").count()).toBeLessThanOrEqual(3);
+      await expect(list.getByRole("link").first()).toHaveAttribute(
         "href",
-        /^\/admin\/students\/[0-9a-f-]{36}#session-[0-9a-f-]{36}$/,
+        /^\/admin\/students\/[0-9a-f-]{36}\?tab=sessions&session=[0-9a-f-]{36}$/,
       );
-      await expect(
-        table.getByText(/ago$|^just now$|^\d+ [A-Z][a-z]+ \d{4}$/).first(),
-      ).toBeVisible();
     }
+    const attention = page
+      .getByRole("heading", { name: "Needs attention" })
+      .locator('xpath=ancestor::*[@data-slot="card"]');
+    const chart = page.getByRole("img", {
+      name: "Sessions per day, last 30 days",
+    });
+    expect((await attention.boundingBox())!.y).toBeLessThan(
+      (await chart.boundingBox())!.y,
+    );
+    for (const link of await attention.getByRole("link").all())
+      await expect(link).toHaveAttribute("href", /^\/admin\//);
+    await expect(
+      page.getByRole("table", { name: "Latest finished sessions" }),
+    ).toHaveCount(0);
     // Each plotted day is also readable without a mouse.
     for (const title of ["Sessions per day", "AI spend per day"]) {
       await expect(

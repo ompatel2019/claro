@@ -1,5 +1,3 @@
-import { addDays, type ActivityDay } from "./activity";
-
 import { timer, modeLabel, topicNames } from "./practice";
 
 const SYDNEY = "Australia/Sydney";
@@ -30,79 +28,6 @@ export const longDate = (now = new Date()) =>
   })
     .format(now)
     .replace(",", "");
-
-/** Questions answered this Mon–Sun week and last (Sydney days). */
-export function weekCounts(days: ActivityDay[], today: string) {
-  const dow = (new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7;
-  const monday = addDays(today, -dow);
-  const lastMonday = addDays(monday, -7);
-  const sum = (from: string, to: string) =>
-    days
-      .filter((d) => d.day >= from && d.day <= to)
-      .reduce((n, d) => n + d.questions, 0);
-  return {
-    thisWeek: sum(monday, today),
-    lastWeek: sum(lastMonday, addDays(monday, -1)),
-  };
-}
-
-/** One marked attempt reduced to what Home needs. */
-export type Marked = {
-  day: string;
-  type: "mcq" | "short" | "extended";
-  mark: number;
-  max: number;
-};
-
-const pctOf = (rows: Marked[]) => {
-  const max = rows.reduce((n, r) => n + r.max, 0);
-  return max ? (rows.reduce((n, r) => n + r.mark, 0) / max) * 100 : null;
-};
-
-/** % of marks earned over the last 30 days and the 30 before that. */
-export function averages(rows: Marked[], today: string) {
-  const from = addDays(today, -29);
-  const prev = addDays(today, -59);
-  return {
-    avg30: pctOf(rows.filter((r) => r.day >= from)),
-    prev30: pctOf(rows.filter((r) => r.day >= prev && r.day < from)),
-  };
-}
-
-export type Range = "30" | "90" | "all";
-
-/** Daily % for the range, the same-length previous period shifted onto it, and per-type % for the range. */
-export function trend(rows: Marked[], today: string, range: Range) {
-  const first = rows.reduce((m, r) => (r.day < m ? r.day : m), today);
-  const span =
-    range === "all"
-      ? Math.round((Date.parse(today) - Date.parse(first)) / 86_400_000) + 1
-      : Number(range);
-  const from = addDays(today, -(span - 1));
-  const daily = (lo: string, hi: string, shift: number) => {
-    const by = new Map<string, Marked[]>();
-    for (const r of rows)
-      if (r.day >= lo && r.day <= hi)
-        by.set(r.day, [...(by.get(r.day) ?? []), r]);
-    return [...by]
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([day, rs]) => ({ day: addDays(day, shift), pct: pctOf(rs)! }));
-  };
-  const inRange = rows.filter((r) => r.day >= from);
-  return {
-    from,
-    span,
-    points: daily(from, today, 0),
-    previous:
-      range === "all"
-        ? []
-        : daily(addDays(from, -span), addDays(from, -1), span),
-    byType: (["mcq", "short", "extended"] as const).map((type) => ({
-      type,
-      pct: pctOf(inRange.filter((r) => r.type === type)),
-    })),
-  };
-}
 
 /** Paused sessions retain saved elapsed time. Recency uses started_at because
  * the runner only persists elapsed_s; only recent sessions show a timer. */
@@ -144,4 +69,49 @@ export function sessionTitle(
     ? session.config.subtopics
     : session.config.topics;
   return `${modeLabel(session.config.mode)} sprint · ${topicNames(ids, topics)}`;
+}
+
+// NSW Eastern division student dates. Week numbers follow Monday–Sunday school weeks.
+// Sources: https://education.nsw.gov.au/schooling/calendars/2026 and /2027 (19 Oct 2026).
+const TERMS: Record<string, [string, string][]> = {
+  "2026": [
+    ["02-02", "04-02"],
+    ["04-22", "07-03"],
+    ["07-21", "09-25"],
+    ["10-13", "12-17"],
+  ],
+  "2027": [
+    ["02-03", "04-09"],
+    ["04-29", "07-02"],
+    ["07-20", "09-24"],
+    ["10-12", "12-20"],
+  ],
+};
+export function schoolWeek(today: string) {
+  const year = today.slice(0, 4);
+  const terms = TERMS[year];
+  if (!terms) return "Your study week";
+  const index = terms.findIndex(
+    ([start, end]) => today >= `${year}-${start}` && today <= `${year}-${end}`,
+  );
+  if (index < 0) return "School break";
+  const start = new Date(`${year}-${terms[index][0]}T00:00:00Z`);
+  const offset = (start.getUTCDay() + 6) % 7;
+  const week =
+    Math.floor(
+      ((Date.parse(today) - start.getTime()) / 86400000 + offset) / 7,
+    ) + 1;
+  return `Term ${index + 1} · Week ${week}`;
+}
+const QUOTES = [
+  "One question is a good place to start.",
+  "Small steps make steady progress.",
+  "Give your next answer your full attention.",
+  "Make a little room for practice today.",
+  "Learn from the answer, then try again.",
+  "Build a habit, one study day at a time.",
+  "A short session still counts.",
+];
+export function dailyQuote(today: string) {
+  return QUOTES[Math.floor(Date.parse(today) / 86400000) % QUOTES.length];
 }

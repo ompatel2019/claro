@@ -1,6 +1,6 @@
 import { expect, it } from "vitest";
 import type { OwnQuestion } from "@/lib/single-check";
-import { assessOwnCriteria } from "./own-criteria";
+import { assessOwnCriteria, criteriaCoverMarks } from "./own-criteria";
 
 const question: OwnQuestion = {
   stem: "Explain the causes of inflation.",
@@ -142,3 +142,48 @@ it.each([descriptor, "EXPLAINS   causes with relevant evidence."])(
     });
   },
 );
+
+it.each([
+  [null, 5, false],
+  [[], 5, false],
+  [
+    [
+      { min: 5, max: 5 },
+      { min: 3, max: 3 },
+      { min: 1, max: 1 },
+    ],
+    5,
+    false,
+  ],
+  [
+    [
+      { min: 1, max: 2 },
+      { min: 2, max: 5 },
+    ],
+    5,
+    false,
+  ],
+  [[{ min: 1, max: 6 }], 5, false],
+  [[{ min: -1, max: 5 }], 5, false],
+  [[{ min: 1.5, max: 5 }], 5, false],
+  [[{ min: 1, max: 5 }], 5, true],
+  [
+    [
+      { min: 3, max: 5 },
+      { min: 0, max: 2 },
+    ],
+    5,
+    true,
+  ],
+  [
+    [
+      { min: 0, max: 0 },
+      { min: 1, max: 5 },
+    ],
+    5,
+    true,
+  ],
+  [[{ min: 1, max: 5 }], 0, false],
+])("checks exact rubric coverage: %j / %s", (bands, marks, complete) => {
+  expect(criteriaCoverMarks(bands, marks)).toBe(complete);
+});

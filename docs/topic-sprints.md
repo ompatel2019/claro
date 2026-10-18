@@ -123,3 +123,42 @@ all database and model access. No remote database or paid calls were used.
 The five-minute claim lease cannot prevent provider work continuing after a
 worker times out. Autofill's daily allowance and the shared spend cap still use
 logged usage rather than atomic reservations.
+
+## Iteration 2 — Lane A: S3
+
+Mixed sprints accept a five-mark minimum. Size inputs keep the entered value and show an inline range hint; invalid totals block Start instead of silently snapping on blur. Presets and saved settings use the same limits.
+
+## Iteration 2 — Lane A: S2
+
+The unfinished-sprint banner shows the actual Finish server error, catches network/non-JSON failures, prevents duplicate submissions, and offers View results on failure. A read-only session check recovers straight to results when the server finished despite a lost response. Reset remains a local setup reset. Synthetic browser tests never call real marking.
+
+## Iteration 2 — Lane A: S6
+
+Runner Finish failures check the session’s finished state before showing an error, recovering to results after a lost response. Unfinished failures keep answers editable, show the real error and a View results recovery link. The setup banner links to results when every attempt is marked. All-marked attempts alone do not trigger an automatic finish. Engine timing is unchanged.
+
+## Iteration 2 — Lane A: S4, S5 and S12
+
+Feedback is presented as Check as I go and Exam mode cards with dot-point descriptions. Stored values remain `each` and `end`, with no timer or migration change. The runner, banner Finish and Mark my answer submission share one simple full-page Claro marking screen. It uses polite status announcements and respects reduced motion, with no invented progress percentages. Mark my answer keeps its form mounted and draft intact during submission; its background marking/navigation flow is unchanged.
+
+### Lane A integration dependency — S3
+
+The setup accepts five Mixed marks. Migration `0046` enforced a 20-mark Mixed minimum in the `start_sprint` RPC; migration `0050_mixed_min_5.sql` lowers it to 5 (only that bound changes). **0050 is not yet applied to production** (pending Om's approval); until it is, starting a Mixed sprint below 20 marks fails in the RPC even though the setup allows it.
+
+## Iteration 2 — Lane B: S7 and results date (S11)
+
+Next steps appears first within Overall feedback, before the answer browser.
+Weak-topic practice actions carry review links to the specific lost-mark questions;
+additional buttons retry mistakes in that topic or open its flashcards. Deterministic
+question chips separate full-mark answers from marks to recover and identify the
+question type. These are factual score groups, not claims that a stored AI bullet
+refers to a particular question. Stored summary text and marking prompts are intact.
+Pending/unavailable summaries still expose deterministic actions and review links.
+The result header's date uses Australia/Sydney without a clock time; duration stays.
+
+The local `e2e/sprint-results.config.ts` suite uses synthetic read-only responses,
+not accounts or marking. It covers question-anchor selection, action destinations,
+summary order, date formatting, rubric gaps, full-mark outlines and mobile overflow.
+
+## Iteration 2 — Lane C: entry points and history
+
+Home's Topic Sprint tile opens `/student/sprint`; Activity opens `/student/activity`. The one Home resume card links to the latest saved session through the shared canonical session helper. The S keyboard shortcut and first-visit welcome flow remain. Weak-topic practice belongs to Progress, linked beside the Home streak. Activity removes elapsed time from its compact rows and places the score next to each title; filtering and date/score sorting remain available. This lane does not change sprint setup, marking, results or prompts.

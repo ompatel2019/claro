@@ -1,13 +1,12 @@
 # Claro portal
 
-Migration `0049_answer_version.sql` is written, **NOT applied to production**, and
-awaiting Om/master sign-off. It adds atomic answer versions, guarded auto reviews
-and transactional sprint answer saves/finalization. Deploy the migration before
-the new server code: sprint saves, marking and Finish require its columns/RPCs
-and fail if code is deployed first. Old callers remain compatible after migration.
-Validation used mocked engine/route tests and a disposable local PostgreSQL 17
-cluster with stub tables (migration rerun, rollback-only SQL assertions and
-concurrent lock probes). No remote database access or paid calls were used.
+Migration `0049_answer_version.sql` (atomic answer versions, guarded auto reviews,
+transactional sprint answer saves/finalization) **is applied to production** and has
+been live since 16 Oct. Migration `0050_mixed_min_5.sql` (lowers the Mixed sprint
+minimum in `start_sprint` from 20 to 5 marks, S3) **is applied to production**
+(applied 19 Oct 2026, Mixed minimum 5). The S9 criteria data fix is also **applied
+to production**: 6 questions were repaired on 19 Oct 2026, with the original rows
+backed up in table `public.questions_criteria_backup_20261019`.
 
 Student portal for Claro: NSW HSC Economics practice with instant AI marking.
 Next.js 16 (App Router, `src/proxy.ts`), Supabase (auth, Postgres with RLS, storage), OpenAI.
@@ -41,7 +40,7 @@ Q_MIN_GB=3 Q_SLOTS=1 q-run npm run test:e2e # Playwright; PORT changes server po
 Q_MIN_GB=3 Q_SLOTS=1 q-run npm run build
 ```
 
-S13: written-session Strengths and Top fixes describe observed writing habits (definitions, topic sentences, question focus, evidence and flow), with practical writing exercises in Next steps. The summary uses the actual marked text; mixed-session MCQ choices are excluded from writing evidence. One-answer advice is qualified, and sparse evidence does not force invented habits. MCQ-only summaries and per-question feedback retain their existing behaviour. No migration is needed; stored summaries are not regenerated. See [the working writing rubric](src/lib/ai/docs/WRITING-SUMMARY.md), including the pending Om/Karan review and model-quality limits. Regression coverage: marking prompt/engine Vitest tests, results component tests, and `e2e/writing-summary.spec.ts` (synthetic student, no AI calls).
+S13: written-session Strengths and Top fixes describe observed writing habits (definitions, topic sentences, question focus, evidence and flow), citing specific questions as “Q3”, with one concrete action per Next steps item tied to a named question or topic. The summary uses the actual marked text; mixed-session MCQ choices are excluded from writing evidence. The summary states that MC answers are not supplied and makes no MC performance claims. One-answer advice cites that question without claiming consistency, and sparse evidence does not force invented habits. MCQ-only summaries and per-question feedback retain their existing behaviour. No migration is needed; stored summaries are not regenerated. See [the working writing rubric](src/lib/ai/docs/WRITING-SUMMARY.md), including the pending Om/Karan review and model-quality limits. Regression coverage: marking prompt/engine Vitest tests, results component tests, and `e2e/writing-summary.spec.ts` (synthetic student, no AI calls).
 
 Topic Sprint timers notify with a sound and an overtime banner; students always finish manually, including resumed legacy sessions.
 
@@ -195,3 +194,64 @@ Own-question suggestions: set `ENABLE_OWN_QUESTION_MARKING=true` and `ENABLE_OWN
 Autofill uses the existing cheapest priced model, `openai/gpt-6-luna`, through OpenRouter (`MODELS.ownQuestionAutofill`). It validates topics and complete band coverage, retrying invalid output once. A separate allowance checks for 10 logged model calls per student per Sydney day, including retries and submit fallbacks; it does not use the 20 marking checks. It follows the existing usage-count rate-limit pattern (concurrent requests can race the count). Calls use the shared spend cap and log tokens and USD to `ai_usage` as `own-question-autofill`; no migration is required. Tests mock all model calls. Run the credential-free browser regressions with `q-run npx playwright test --config=e2e/own-question.config.ts` (read-only local auth/data double).
 
 The checks-left card and desktop feedback button now sit in page flow. The student bottom-position audit found no other content bars to remove; admin review controls and dialog/sheet overlays retain their positioning.
+
+## Iteration 2 — Lane A: S3
+
+Mixed sprints accept a five-mark minimum. Size inputs keep the entered value and show an inline range hint; invalid totals block Start instead of silently snapping on blur. Presets and saved settings use the same limits.
+
+## Iteration 2 — Lane A: S2
+
+The unfinished-sprint banner shows the actual Finish server error, catches network/non-JSON failures, prevents duplicate submissions, and offers View results on failure. A read-only session check recovers straight to results when the server finished despite a lost response. Reset remains a local setup reset. Synthetic browser tests never call real marking.
+
+## Iteration 2 — Lane A: S6
+
+Runner Finish failures check the session’s finished state before showing an error, recovering to results after a lost response. Unfinished failures keep answers editable, show the real error and a View results recovery link. The setup banner links to results when every attempt is marked. All-marked attempts alone do not trigger an automatic finish. Engine timing is unchanged.
+
+## Iteration 2 — Lane A: S4, S5 and S12
+
+Feedback is presented as Check as I go and Exam mode cards with dot-point descriptions. Stored values remain `each` and `end`, with no timer or migration change. The runner, banner Finish and Mark my answer submission share one simple full-page Claro marking screen. It uses polite status announcements and respects reduced motion, with no invented progress percentages. Mark my answer keeps its form mounted and draft intact during submission; its background marking/navigation flow is unchanged.
+
+### Lane A integration dependency — S3
+
+The setup accepts five Mixed marks, but the existing `start_sprint` RPC in migration 0046 still enforces a 20-mark Mixed minimum. Lane A does not change SQL or add a migration. Starting a five-mark Mixed sprint requires the database owner to resolve this separately; the synthetic tests exercise UI/config behaviour only.
+
+## Iteration 2 — Lane B: feedback guards (S8, S9, S10, S13)
+
+Student margin comments no longer repeat the per-comment “Next mark” line;
+its stored value, admin editor and aggregate next-mark summary remain intact.
+“How to reach full marks” is hidden for full-mark written answers in both sprint
+and single-answer results. Rubric tables and band labels require complete,
+non-overlapping integer coverage of 1..marks (an optional zero band is accepted).
+Incomplete tables show an unavailable message. The normal admin Questions
+“Missing or incomplete criteria” filter finds missing bands before pagination.
+Import review retains its existing missing-criteria filter. No data repair,
+migration or marking/prompt change is included.
+
+## Iteration 2 — Lane B: results next steps and date (S7, S11)
+
+Next steps now leads overall feedback in a full-width highlighted section above
+strengths and fixes. Deterministic actions practise weak topics, retry mistakes,
+and open available topic flashcards; question links beside practice actions and
+full-mark/lost-mark groups identify MC versus written answers without rewriting
+or attributing stored AI advice. Pending and unavailable summaries retain actions.
+The sprint header shows the Sydney calendar date without clock time; elapsed
+sprint duration remains. Prompt changes belong to claro-ml's Airo 5.1 work.
+
+Run the isolated, read-only results browser suite with
+`Q_MIN_GB=3 Q_SLOTS=1 q-run npm run test:e2e -- --config=e2e/sprint-results.config.ts`.
+It starts local Next/Supabase doubles, blocks marking/writes, and covers mobile,
+desktop and single-answer feedback. Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE` when
+using system Chrome. Credential-dependent legacy specs are skipped without a
+configured test student. Never point these tests at production.
+
+## Iteration 2 — Lane C: pages (S1, S11, A1, A2)
+
+Student Home now shows the date/greeting, a NSW term/week banner with a daily practice line, four launch tiles, streak and one latest unfinished session. Due-card and streak read failures keep the launch links available. Weak-topic practice and score history remain on Progress; the Home-only trend and its reads/helpers were removed. The custom icon set supplies all four tiles and the new streak glyph.
+
+Activity puts the score beside the title with a kind icon and date, hides finished status, and removes duration, item and action columns and the KPI card row. Existing newest-first ordering, filters, pagination and canonical report links remain.
+
+The admin dashboard promotes clickable Needs attention above charts and replaces the ten-row table with at most three recent sessions linking to the student's Sessions activity/report. Admin flashcard filters offer parent Topic followed by its Subtopic; changing parents clears stale subtopic selections. No database or marking changes.
+
+Validation: `Q_MIN_GB=3 Q_SLOTS=1 q-run npm run check`; offline browser coverage uses `q-run npm run test:e2e -- --config=e2e/pages.config.ts` (real pages/components and compiled app CSS, synthetic reads, installed Chrome). Credential-based home/activity/admin specs also cover the revised UI; use an isolated allow-listed test Supabase only. See `LANE_NOTES.md` for local outcomes and cross-lane follow-ups.
+
+Lane C annotated local page evidence: [Home, Activity and admin pages](docs/it2-lane-c.md).

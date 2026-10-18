@@ -40,3 +40,27 @@ it("keeps only icons that are used, and no stock icon library", () => {
     ).toString(),
   ).toBe("");
 });
+
+it("uses the same glyph contract for all Home tiles and the streak", () => {
+  const set = [
+    icons.Sprint,
+    icons.Cards,
+    icons.Pen,
+    icons.History,
+    icons.Flame,
+  ];
+  const { container } = render(
+    <>
+      {set.map((Glyph, index) => (
+        <Glyph key={index} size={32} />
+      ))}
+    </>,
+  );
+  expect(container.querySelectorAll("svg")).toHaveLength(5);
+  for (const svg of container.querySelectorAll("svg")) {
+    expect(svg).toHaveAttribute("width", "32");
+    expect(svg).toHaveAttribute("height", "32");
+    expect(svg).toHaveAttribute("stroke-linejoin", "round");
+    expect(svg.querySelector("path,rect")).not.toBeNull();
+  }
+});

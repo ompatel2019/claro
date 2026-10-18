@@ -78,8 +78,8 @@ describe("results", () => {
   it("builds next-step actions from the weakest subtopics, deterministically", () => {
     const actions = nextActions(
       [
-        row({ topic_id: "t3-inflation", mark: 1 }),
-        row({ topic_id: "t3-unemployment", mark: 3 }),
+        row({ position: 3, topic_id: "t3-inflation", mark: 1 }),
+        row({ position: 7, topic_id: "t3-unemployment", mark: 3 }),
         row({ topic_id: "t3-unemployment", mark: 4 }),
       ],
       "short",
@@ -88,12 +88,22 @@ describe("results", () => {
     );
     expect(actions).toEqual([
       {
+        questions: [{ position: 3, type: "short" }],
         label: "Practise Inflation short answers",
         href: "/student/sprint?type=short&sub=t3-inflation",
       },
       {
+        label: "Retry mistakes on Inflation",
+        href: "/student/sprint?type=short&sub=t3-inflation&history=mistakes",
+      },
+      {
+        questions: [{ position: 7, type: "short" }],
         label: "Practise Unemployment short answers",
         href: "/student/sprint?type=short&sub=t3-unemployment",
+      },
+      {
+        label: "Retry mistakes on Unemployment",
+        href: "/student/sprint?type=short&sub=t3-unemployment&history=mistakes",
       },
       {
         label: "Review 6 flashcards on Inflation",

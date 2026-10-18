@@ -1,6 +1,28 @@
 import type { OwnQuestion } from "@/lib/single-check";
 import type { Criterion } from "./grade";
 
+/** Complete, non-overlapping integer bands for 1..marks; zero is optional. */
+export function criteriaCoverMarks(
+  criteria: { min: number; max: number }[] | null | undefined,
+  marks: number,
+): boolean {
+  if (!Number.isInteger(marks) || marks < 1 || !criteria?.length) return false;
+  const bands = [...criteria].sort((a, b) => a.min - b.min);
+  let next = bands[0].min === 0 ? 0 : 1;
+  for (const band of bands) {
+    if (
+      !Number.isInteger(band.min) ||
+      !Number.isInteger(band.max) ||
+      band.min !== next ||
+      band.min > band.max ||
+      band.max > marks
+    )
+      return false;
+    next = band.max + 1;
+  }
+  return next === marks + 1;
+}
+
 type Assessment =
   | { ok: true; criteria: Criterion[]; restrictions: string }
   | {
@@ -51,14 +73,8 @@ export function assessOwnCriteria(question: OwnQuestion): Assessment {
         "We can't mark this reliably: give each mark band a clear description.",
     };
   criteria.sort((a, b) => a.min - b.min);
-  let next = criteria[0].min === 0 ? 0 : 1;
-  for (const band of criteria) {
-    // A zero band is optional; positive bands must cover every available mark.
-    if (band.min > band.max || band.max > question.marks || band.min !== next)
-      return inconsistent(question.marks);
-    next = band.max + 1;
-  }
-  if (next !== question.marks + 1) return inconsistent(question.marks);
+  if (!criteriaCoverMarks(criteria, question.marks))
+    return inconsistent(question.marks);
   if (
     criteria.some(
       (band) => band.descriptor.split(/\s+/).filter(Boolean).length < 4,

@@ -5,13 +5,16 @@ const mocks = vi.hoisted(() => ({
   counts: vi.fn(),
   list: vi.fn(),
   table: vi.fn(),
+  topics: vi.fn(),
+  filters: vi.fn(),
 }));
 vi.mock("@/lib/auth", () => ({ requireAdmin: vi.fn() }));
 vi.mock("@/lib/admin-flashcards", () => ({
   loadFlashcardCounts: mocks.counts,
   loadFlashcardList: mocks.list,
 }));
-vi.mock("@/lib/admin-content", () => ({ loadTopics: async () => [] }));
+vi.mock("@/lib/admin-content", () => ({ loadTopics: mocks.topics }));
+vi.mock("@/components/filter-bar", () => ({ FilterBar: mocks.filters }));
 vi.mock("@/components/flashcard-import", () => ({
   FlashcardImport: () => null,
 }));
@@ -24,6 +27,8 @@ import FlashcardsPage from "./page";
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.table.mockReturnValue(null);
+  mocks.filters.mockReturnValue(null);
+  mocks.topics.mockResolvedValue([]);
   mocks.counts.mockResolvedValue({ own: 1, live: 1101, draft: 0, retired: 2 });
   mocks.list.mockResolvedValue({ rows: [], status: "draft" });
 });
@@ -98,4 +103,42 @@ it("keeps populated cards and pagination when a status count fails", async () =>
   expect(
     screen.getByRole("link", { name: "Draft (count unavailable)" }),
   ).toHaveAttribute("aria-current", "page");
+});
+
+it("separates parents from dependent subtopics and clears stale selections", async () => {
+  mocks.topics.mockResolvedValue([
+    { id: "t1", name: "Global", parent_id: null, sort: 1 },
+    { id: "t3", name: "Issues", parent_id: null, sort: 2 },
+    { id: "inflation", name: "Inflation", parent_id: "t3", sort: 3 },
+    { id: "trade", name: "Trade", parent_id: "t1", sort: 4 },
+  ]);
+  render(
+    await FlashcardsPage({
+      searchParams: Promise.resolve({ topic: "t3", sub: "trade" }),
+    }),
+  );
+  const props = mocks.filters.mock.calls.at(-1)![0];
+  expect(props.values.sub).toBeUndefined();
+  expect(
+    props.filters.find((f: { name: string }) => f.name === "topic"),
+  ).toMatchObject({
+    clearOnChange: ["sub"],
+    options: [
+      { value: "t1", label: "Global" },
+      { value: "t3", label: "Issues" },
+    ],
+  });
+  expect(
+    props.filters.find((f: { name: string }) => f.name === "sub"),
+  ).toMatchObject({ options: [{ value: "inflation", label: "Inflation" }] });
+});
+it("offers no subtopics before choosing a topic", async () => {
+  render(
+    await FlashcardsPage({ searchParams: Promise.resolve({ sub: "stale" }) }),
+  );
+  const props = mocks.filters.mock.calls.at(-1)![0];
+  expect(props.values.sub).toBeUndefined();
+  expect(
+    props.filters.find((f: { name: string }) => f.name === "sub"),
+  ).toMatchObject({ all: "Choose a topic first", options: [] });
 });

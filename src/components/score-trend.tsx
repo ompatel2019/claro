@@ -1,22 +1,7 @@
 "use client";
 import { useId, useState } from "react";
 import Link from "next/link";
-import { trend, type Marked, type Range } from "@/lib/home";
 import { dateLabel } from "@/lib/practice";
-import { TYPE_LABEL } from "@/lib/results";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "./ui/select";
-
-const RANGES = [
-  { value: "30", label: "30 days" },
-  { value: "90", label: "90 days" },
-  { value: "all", label: "All time" },
-];
 const W = 600,
   H = 180,
   PAD = 8,
@@ -31,41 +16,29 @@ export type ScorePoint = {
   href: string | null;
 };
 
-/** Shared plot for Home's daily averages and Progress's individual sessions. */
+/** Score history for individual sessions on Progress. */
 function ScorePlot({
   points,
-  previous = [],
   from,
   to,
   title,
   range,
-  area = false,
-  sessions = false,
 }: {
   points: ScorePoint[];
-  previous?: { day: string; pct: number }[];
   from: string;
   to: string;
   title: string;
   range: string;
-  area?: boolean;
-  sessions?: boolean;
 }) {
   const id = useId();
   const [selected, setSelected] = useState<string | null>(null);
   const current = points.find((p) => p.id === selected) ?? points.at(-1);
-  const start = Date.parse(
-    sessions ? (points[0]?.at ?? points[0]?.day ?? from) : from,
-  );
-  const end = Date.parse(
-    sessions ? (points.at(-1)?.at ?? points.at(-1)?.day ?? to) : to,
-  );
+  const start = Date.parse(points[0]?.at ?? points[0]?.day ?? from);
+  const end = Date.parse(points.at(-1)?.at ?? points.at(-1)?.day ?? to);
   const span = Math.max(1, end - start);
   const x = (p: { day: string; at?: string }) =>
     LEFT +
-    (sessions && start === end
-      ? 0.5
-      : (Date.parse(p.at ?? p.day) - start) / span) *
+    (start === end ? 0.5 : (Date.parse(p.at ?? p.day) - start) / span) *
       (W - LEFT - PAD);
   const y = (pct: number) => PAD + (1 - pct / 100) * (BOTTOM - PAD);
   const line = (ps: { day: string; at?: string; pct: number }[]) =>
@@ -85,7 +58,7 @@ function ScorePlot({
   );
   return (
     <div className="space-y-3">
-      {sessions && current && (
+      {current && (
         <div>
           <p className="text-3xl font-semibold tabular-nums">
             {Math.round(current.pct)}%
@@ -133,7 +106,7 @@ function ScorePlot({
           fontSize={20}
           className="fill-muted-foreground"
         >
-          {dateLabel(sessions ? (points[0]?.day ?? from) : from)}
+          {dateLabel(points[0]?.day ?? from)}
         </text>
         <text
           x={W - PAD}
@@ -142,24 +115,8 @@ function ScorePlot({
           fontSize={20}
           className="fill-muted-foreground"
         >
-          {dateLabel(sessions ? (points.at(-1)?.day ?? to) : to)}
+          {dateLabel(points.at(-1)?.day ?? to)}
         </text>
-        {previous.length > 1 && (
-          <path
-            data-testid="previous-period"
-            d={line(previous)}
-            fill="none"
-            className="stroke-muted-foreground"
-            strokeDasharray="4 4"
-            strokeWidth={1.5}
-          />
-        )}
-        {area && points.length > 0 && (
-          <path
-            d={`${line(points)}L${x(points.at(-1)!)},${BOTTOM}L${x(points[0])},${BOTTOM}Z`}
-            className="fill-primary/15"
-          />
-        )}
         <path
           d={line(points)}
           fill="none"
@@ -192,7 +149,7 @@ function ScorePlot({
           ),
         )}
       </svg>
-      {sessions && current && (
+      {current && (
         <p
           role="tooltip"
           className="bg-muted rounded-lg px-3 py-2 text-xs leading-5"
@@ -223,88 +180,6 @@ export function SessionScoreTrend({
       to={today}
       title="Score history"
       range={range}
-      sessions
     />
-  );
-}
-
-/** §3.1 daily average % with a dashed previous period and per-type summaries. */
-export function ScoreTrend({ rows, today }: { rows: Marked[]; today: string }) {
-  const [range, setRange] = useState<Range>("30");
-  const t = trend(rows, today, range);
-  return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-muted-foreground text-[13px]">
-          Daily average of marked work
-        </p>
-        <Select
-          items={RANGES}
-          value={range}
-          onValueChange={(v) => setRange(v as Range)}
-        >
-          <SelectTrigger aria-label="Range" className="w-32">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {RANGES.map((r) => (
-              <SelectItem key={r.value} value={r.value}>
-                {r.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-      {t.points.length >= 3 ? (
-        <ScorePlot
-          points={t.points.map((p) => ({
-            ...p,
-            id: p.day,
-            href: `/student/activity?date=${p.day}`,
-            label: `${p.day}: ${Math.round(p.pct)}%`,
-          }))}
-          previous={t.previous}
-          from={t.from}
-          to={today}
-          title={`Score trend, ${RANGES.find((r) => r.value === range)!.label}`}
-          range={range}
-          area
-        />
-      ) : (
-        <div className="space-y-3 py-10 text-center text-sm">
-          <p className="text-muted-foreground">
-            {t.points.length
-              ? "Mark work on at least 3 days to see a trend."
-              : "No marked work in this range."}
-          </p>
-          {t.points.length > 0 && (
-            <ul className="space-y-2">
-              {t.points.map((p) => (
-                <li key={p.day}>
-                  <Link
-                    href={`/student/activity?date=${p.day}`}
-                    className="underline underline-offset-4"
-                  >
-                    {p.day}: {Math.round(p.pct)}%
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
-      <dl className="grid grid-cols-3 gap-3 text-sm">
-        {t.byType.map((b) => (
-          <div key={b.type}>
-            <dt className="text-muted-foreground text-[13px]">
-              {b.type === "mcq" ? "MC" : TYPE_LABEL[b.type].split(" ")[0]}
-            </dt>
-            <dd className="font-semibold tabular-nums">
-              {b.pct == null ? "No marks yet" : `${Math.round(b.pct)}%`}
-            </dd>
-          </div>
-        ))}
-      </dl>
-    </div>
   );
 }

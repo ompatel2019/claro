@@ -125,7 +125,7 @@ test.describe("Topic Sprint setup", () => {
     );
     const last = page.locator("label").filter({
       has: page.getByRole("radio", {
-        name: "After each question (check as you go)",
+        name: "Check as I go",
       }),
     });
     await expect(last).toBeInViewport({ ratio: 1 });
@@ -270,4 +270,97 @@ test.describe("Topic Sprint setup", () => {
       page.getByRole("button", { name: /^Economic Issues/ }),
     ).toHaveAttribute("aria-pressed", "true");
   });
+});
+
+// Real setup component, synthetic pool/actions: no accounts, DB writes or marking.
+test.describe("Iteration 2 setup without services", () => {
+  let setup: string;
+  test.beforeAll(async () => {
+    const { build } = await import("esbuild");
+    const result = await build({
+      stdin: {
+        contents: `import React from 'react'; import {createRoot} from 'react-dom/client';
+          import {SprintSetup} from './src/components/sprint-setup';
+          createRoot(document.getElementById('root')).render(<SprintSetup topics={[]} params={{type:'mixed'}} />);`,
+        resolveDir: process.cwd(),
+        loader: "tsx",
+      },
+      bundle: true,
+      write: false,
+      platform: "browser",
+      jsx: "automatic",
+      define: { "process.env.NODE_ENV": '"test"' },
+      plugins: [
+        {
+          name: "synthetic-setup",
+          setup(builder) {
+            builder.onResolve(
+              {
+                filter:
+                  /^(@\/app\/\(app\)\/actions|@\/utils\/supabase\/client)$/,
+              },
+              ({ path }) => ({ path, namespace: "mock" }),
+            );
+            builder.onLoad({ filter: /.*/, namespace: "mock" }, ({ path }) => ({
+              contents: path.endsWith("actions")
+                ? "export async function startSprint(){return {error:'Synthetic start disabled'}}"
+                : `export const createClient=()=>({rpc:async()=>({data:{questions:100,marks:100,mcq_questions:50,short_marks:50,any:100,new:100,mistakes:0,flagged:0,topics:{},subtopics:{},all_subtopics:100,verbs:{},difficulty:{},all_years:100,years:[2020,2025]},error:null})});`,
+            }));
+          },
+        },
+      ],
+    });
+    setup = result.outputFiles[0].text;
+  });
+  for (const width of [390, 1280])
+    test(`Mixed five-mark minimum at ${width}px`, async ({ page }) => {
+      test.setTimeout(25_000);
+      page.on("pageerror", (error) => {
+        throw error;
+      });
+      await page.setViewportSize({ width, height: 900 });
+      await page.route("**/__setup-test", (route) =>
+        route.fulfill({
+          contentType: "text/html",
+          body: '<!doctype html><div id="root"></div>',
+        }),
+      );
+      await page.goto("/__setup-test");
+      await page.addScriptTag({ content: setup });
+      const next = page.getByRole("button", { name: "Next", exact: true });
+      await next.click();
+      await next.click();
+      const marks = page.getByRole("textbox", { name: "Marks" });
+      await marks.fill("5");
+      await marks.blur();
+      await expect(marks).toHaveValue("5");
+      await expect(marks).toHaveAccessibleDescription(/Minimum 5 marks/);
+      await expect(
+        page.getByRole("spinbutton", { name: "Multiple choice questions" }),
+      ).toHaveValue("3");
+      await expect(
+        page.getByRole("spinbutton", { name: "Short answer marks" }),
+      ).toHaveValue("2");
+      await marks.fill("1");
+      await marks.blur();
+      await expect(marks).toHaveValue("1");
+      await expect(marks).toHaveAccessibleDescription(/Enter 5–100 marks/);
+      await next.click();
+      await expect(
+        page.getByRole("button", { name: /^Start (sprint|with)/ }),
+      ).toBeDisabled();
+
+      const check = page.getByRole("radio", { name: /^Check as I go/ });
+      await check.focus();
+      await page.keyboard.press("Space");
+      await expect(check).toBeChecked();
+      await expect(page.locator('input[name="config"]')).toHaveValue(
+        /"feedback":"each"/,
+      );
+      await page.getByRole("radio", { name: /^Exam mode/ }).focus();
+      await page.keyboard.press("Space");
+      await expect(page.locator('input[name="config"]')).toHaveValue(
+        /"feedback":"end"/,
+      );
+    });
 });

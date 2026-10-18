@@ -15,12 +15,14 @@ export function flashcardPage(
   const children = new Set(
     topics.filter((t) => t.parent_id === f.topic).map((t) => t.id),
   );
+  const sub = f.sub && children.has(f.sub) ? f.sub : undefined;
   const query = f.q?.trim().toLowerCase() ?? "";
   const filtered = rows.filter(
     (r) =>
       r.status === status &&
       (!f.kind || r.kind === f.kind) &&
       (!f.topic || r.topic_id === f.topic || children.has(r.topic_id)) &&
+      (!sub || r.topic_id === sub) &&
       (!f.origin || r.origin === f.origin) &&
       (!query ||
         [

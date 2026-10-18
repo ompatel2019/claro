@@ -85,6 +85,7 @@ const row: ReviewRow = {
   criteria: [
     { min: 5, max: 6, descriptor: "Thorough" },
     { min: 3, max: 4, descriptor: "Sound" },
+    { min: 1, max: 2, descriptor: "Basic" },
   ],
   sample_answer: "Model text.",
   explanation: null,
@@ -96,7 +97,8 @@ it("shows the summary, numbered highlights and an Overall group", () => {
   expect(screen.getByText("3 / 6")).toBeTruthy();
   expect(screen.getByText("Band: 3–4 marks")).toBeTruthy();
   expect(screen.getByText("Marked")).toBeTruthy();
-  expect(screen.getAllByText("Quote the 2022 CPI.")).toHaveLength(2);
+  expect(screen.getAllByText("Quote the 2022 CPI.")).toHaveLength(1);
+  expect(screen.queryByText("Next mark:")).not.toBeInTheDocument();
   const fix = screen.getByRole("button", {
     name: "Fix 1, Evidence: Give a CPI figure.",
   });
@@ -512,3 +514,34 @@ it("stacks filtered wide cards in normal flow and restores highlight alignment f
   expect(anchored()).toHaveLength(2);
   expect(anchored().map((card) => card.style.top)).toEqual(["200px", "800px"]);
 });
+
+it("replaces a rubric with gaps with an honest unavailable message and no band label", () => {
+  render(
+    <AnnotatedFeedback row={{ ...row, criteria: row.criteria!.slice(0, 2) }} />,
+  );
+  expect(screen.queryByRole("table", { hidden: true })).toBeNull();
+  expect(screen.queryByText("Band: 3–4 marks")).toBeNull();
+  expect(screen.getByText(/guidelines are incomplete/)).toBeInTheDocument();
+  expect(screen.getByText("Model answer")).toBeVisible();
+});
+it("keeps complete ranged guidelines and their matching band", () => {
+  render(<AnnotatedFeedback row={row} />);
+  expect(screen.getByRole("table", { hidden: true })).toHaveTextContent("1–2");
+  expect(screen.getByText("Band: 3–4 marks")).toBeVisible();
+});
+it.each(["short", "extended"] as const)(
+  "hides the outline at full marks for %s and keeps it below full marks",
+  (type) => {
+    const feedback = {
+      ...row.feedback,
+      better_answer_outline: ["Link demand to prices."],
+    };
+    const { rerender } = render(
+      <AnnotatedFeedback row={{ ...row, type, mark: 6, feedback }} />,
+    );
+    expect(screen.queryByText("How to reach full marks")).toBeNull();
+    expect(screen.getByText("Full marks. Nothing missing.")).toBeVisible();
+    rerender(<AnnotatedFeedback row={{ ...row, type, mark: 5, feedback }} />);
+    expect(screen.getByText("How to reach full marks")).toBeVisible();
+  },
+);

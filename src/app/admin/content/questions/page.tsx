@@ -142,7 +142,10 @@ export default async function QuestionsPage({
           all: "Any",
           options: Object.entries(COMPLETENESS).map(([value, label]) => ({
             value,
-            label,
+            label:
+              value === "criteria" && status !== "review"
+                ? "Missing or incomplete criteria"
+                : label,
           })),
         },
       ]}
