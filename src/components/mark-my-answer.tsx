@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
+import { MarkingScreen } from "./marking-screen";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
 import {
@@ -502,6 +503,7 @@ export function MarkMyAnswer({
   }
   return (
     <>
+      {busy && <MarkingScreen single />}
       {offline && (
         <p
           role="status"
@@ -511,6 +513,8 @@ export function MarkMyAnswer({
         </p>
       )}
       <form
+        hidden={busy}
+        inert={busy}
         className="space-y-4"
         onSubmit={(e) => {
           e.preventDefault();
