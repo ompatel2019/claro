@@ -123,3 +123,7 @@ all database and model access. No remote database or paid calls were used.
 The five-minute claim lease cannot prevent provider work continuing after a
 worker times out. Autofill's daily allowance and the shared spend cap still use
 logged usage rather than atomic reservations.
+
+## Iteration 2 — Lane C: entry points and history
+
+Home's Topic Sprint tile opens `/student/sprint`; Activity opens `/student/activity`. The one Home resume card links to the latest saved session through the shared canonical session helper. The S keyboard shortcut and first-visit welcome flow remain. Weak-topic practice belongs to Progress, linked beside the Home streak. Activity removes elapsed time from its compact rows and places the score next to each title; filtering and date/score sorting remain available. This lane does not change sprint setup, marking, results or prompts.

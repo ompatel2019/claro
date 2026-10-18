@@ -195,3 +195,15 @@ Own-question suggestions: set `ENABLE_OWN_QUESTION_MARKING=true` and `ENABLE_OWN
 Autofill uses the existing cheapest priced model, `openai/gpt-6-luna`, through OpenRouter (`MODELS.ownQuestionAutofill`). It validates topics and complete band coverage, retrying invalid output once. A separate allowance checks for 10 logged model calls per student per Sydney day, including retries and submit fallbacks; it does not use the 20 marking checks. It follows the existing usage-count rate-limit pattern (concurrent requests can race the count). Calls use the shared spend cap and log tokens and USD to `ai_usage` as `own-question-autofill`; no migration is required. Tests mock all model calls. Run the credential-free browser regressions with `q-run npx playwright test --config=e2e/own-question.config.ts` (read-only local auth/data double).
 
 The checks-left card and desktop feedback button now sit in page flow. The student bottom-position audit found no other content bars to remove; admin review controls and dialog/sheet overlays retain their positioning.
+
+## Iteration 2 — Lane C: pages (S1, S11, A1, A2)
+
+Student Home now shows the date/greeting, a NSW term/week banner with a daily practice line, four launch tiles, streak and one latest unfinished session. Due-card and streak read failures keep the launch links available. Weak-topic practice and score history remain on Progress; the Home-only trend and its reads/helpers were removed. The custom icon set supplies all four tiles and the new streak glyph.
+
+Activity puts the score beside the title with a kind icon and date, hides finished status, and removes duration, item and action columns and the KPI card row. Existing newest-first ordering, filters, pagination and canonical report links remain.
+
+The admin dashboard promotes clickable Needs attention above charts and replaces the ten-row table with at most three recent sessions linking to the student's Sessions activity/report. Admin flashcard filters offer parent Topic followed by its Subtopic; changing parents clears stale subtopic selections. No database or marking changes.
+
+Validation: `Q_MIN_GB=3 Q_SLOTS=1 q-run npm run check`; offline browser coverage uses `q-run npm run test:e2e -- --config=e2e/pages.config.ts` (real pages/components and compiled app CSS, synthetic reads, installed Chrome). Credential-based home/activity/admin specs also cover the revised UI; use an isolated allow-listed test Supabase only. See `LANE_NOTES.md` for local outcomes and cross-lane follow-ups.
+
+Lane C annotated local page evidence: [Home, Activity and admin pages](docs/it2-lane-c.md).
