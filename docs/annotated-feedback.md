@@ -19,3 +19,19 @@ offsets, paragraphs across highlight boundaries, original edit quotes, card
 colours and switching between wide layouts. The existing `e2e/feedback.spec.ts`
 requires a student account and database seeding; local placeholder-only checks
 use component coverage rather than adding a production fixture route.
+
+## Iteration 2 — Lane B: S8 / S9 / S10 / S13
+
+- S8: remove only the per-comment next-mark line, including the small-screen
+  popover. Keep dotted annotations, comment bodies, aggregate advice and editing.
+- S9: show a rubric table and its matching band only when integer bands cover
+  1..the available marks exactly, without gaps, overlaps or out-of-range bands.
+  Zero is optional. Incomplete stored guidelines display an unavailable message;
+  the model answer and feedback remain usable. No bands are invented.
+- S10/S13: show the full-marks outline only below full marks. This shared UI rule
+  applies to sprint and Mark my answer results; stored feedback is unchanged.
+
+Vitest covers missing/ranged/gapped/overlapping criteria, the admin list filter,
+comment display and full-mark versus partial-mark written answers. Browser
+coverage uses a local read-only service double, with no AI requests or data edits.
+Prompt accuracy, leniency and production guideline repairs belong to claro-ml/Om.

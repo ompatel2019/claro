@@ -123,3 +123,18 @@ all database and model access. No remote database or paid calls were used.
 The five-minute claim lease cannot prevent provider work continuing after a
 worker times out. Autofill's daily allowance and the shared spend cap still use
 logged usage rather than atomic reservations.
+
+## Iteration 2 — Lane B: S7 and results date (S11)
+
+Next steps appears first within Overall feedback, before the answer browser.
+Weak-topic practice actions carry review links to the specific lost-mark questions;
+additional buttons retry mistakes in that topic or open its flashcards. Deterministic
+question chips separate full-mark answers from marks to recover and identify the
+question type. These are factual score groups, not claims that a stored AI bullet
+refers to a particular question. Stored summary text and marking prompts are intact.
+Pending/unavailable summaries still expose deterministic actions and review links.
+The result header's date uses Australia/Sydney without a clock time; duration stays.
+
+The local `e2e/sprint-results.config.ts` suite uses synthetic read-only responses,
+not accounts or marking. It covers question-anchor selection, action destinations,
+summary order, date formatting, rubric gaps, full-mark outlines and mobile overflow.

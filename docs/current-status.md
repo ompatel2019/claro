@@ -14,3 +14,17 @@
   resumed checks, results and previews. Structured JSON text is supported alongside
   legacy Markdown; the owned mark API adds validated structured fields. No schema
   change. Existing bank prose still needs the separately tagged ML/content rewrite.
+
+## Iteration 2 — Lane B (results and feedback)
+
+Implemented S7 UI only, S8 per-comment removal, S9 rubric coverage guard and normal
+admin list completeness filter, S10/S13 full-mark outline hiding, and S11 results
+header date only. No prompt/engine edits, migrations, data repairs, paid marking,
+benchmarks or production access. See `docs/annotated-feedback.md` and
+`docs/topic-sprints.md` for behaviour and local browser-test instructions.
+
+Import-review criteria filtering remains backed by its existing RPC (missing
+criteria only); extending that RPC would need work beyond this no-migration lane.
+Production screenshot/Claro Docs publication and prompt accuracy/leniency work
+remain for the integrator and claro-ml. Local fixture screenshots are generated
+under `test-results/` by the results browser spec.
