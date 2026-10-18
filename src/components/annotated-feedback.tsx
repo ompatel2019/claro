@@ -257,11 +257,6 @@ function CommentCard({
       ) : (
         <p className="mt-1.5">{c.body}</p>
       )}
-      {!edit && c.next_mark && (
-        <p className="mt-1.5">
-          <span className="font-semibold">Next mark:</span> {c.next_mark}
-        </p>
-      )}
     </div>
   );
 }
