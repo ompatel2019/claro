@@ -35,7 +35,9 @@ test.beforeAll(async () => {
     stdin: {
       contents: `import React from 'react'; import { createRoot } from 'react-dom/client';
       import { SprintRunner } from './src/components/sprint-runner';
-      createRoot(document.getElementById('root')).render(<SprintRunner
+      import { FinishSprint } from './src/components/finish-sprint';
+      import { MarkMyAnswer } from './src/components/mark-my-answer';
+      createRoot(document.getElementById('root')).render(location.pathname === '/__mark-test' ? <MarkMyAnswer questions={[{id:'q',type:'short',stem:'Explain inflation.',marks:4,source:'Synthetic',year:2025,topic_id:'t',stimulus:null,options:null,verb:'explain'}]} topics={[]} userId='synthetic' left={20}/> : location.pathname === '/__finish-test' ? <FinishSprint id='s'/> : <SprintRunner
         session={{id:'s',kind:'sprint',config:{mode:'short',feedback:'end'},elapsed_s:0}}
         initial={${JSON.stringify(attempts)}} userId="u" title="Synthetic sprint" />);`,
       resolveDir: process.cwd(),
@@ -50,6 +52,13 @@ test.beforeAll(async () => {
       {
         name: "synthetic-auth",
         setup(builder) {
+          builder.onResolve(
+            { filter: /^@\/app\/\(app\)\/student\/mark\/actions$/ },
+            ({ path }) => ({ path, namespace: "mark-actions" }),
+          );
+          builder.onLoad({ filter: /.*/, namespace: "mark-actions" }, () => ({
+            contents: `export const createCheck=()=>new Promise(resolve=>window.__resolveCreate=resolve); export const finishCheck=async()=>({error:null}); export const restoreUnreadableCheck=async()=>({});`,
+          }));
           builder.onResolve(
             {
               filter:
@@ -66,7 +75,7 @@ test.beforeAll(async () => {
                   : path.endsWith("auth-client")
                     ? "export const ensureSession=async()=>{}; export const withAuthRetry=(_db,fn)=>fn();"
                     : `const chain={update(){return this},eq(){return this},in(){return this},
-            is:async()=>({error:null}),select:async()=>({data:[{id:'a'}],error:null})};
+            is:async()=>({error:null}),maybeSingle:async()=>({data:window.__finished ? {finished_at:'2026-10-19'} : null,error:null}),select(){return this},then(resolve){resolve({data:[{id:'a'}],error:null})}};
             export const createClient=()=>({from:()=>chain});`,
           }));
         },
@@ -155,10 +164,154 @@ test("queues background marks, keeps edits usable, and waits at Finish", async (
   await page.keyboard.press("Enter");
   await expect.poll(() => saved.a3).toBe("The final current answer");
   expect(finishCalls).toBe(0);
+  await expect(
+    page.getByRole("heading", { name: "Marking your answers", exact: true }),
+  ).toBeVisible();
   await held.shift()!();
   await held.shift()!();
   await expect.poll(() => finishCalls).toBe(1);
   expect(marks).toEqual(["a0", "a1", "a0"]);
   await expect(page).toHaveURL(/\/student\/sprint\/s\/results$/);
   await expect(page.getByText("Synthetic results")).toBeVisible();
+});
+
+for (const outcome of ["success", "error", "recovered", "network"] as const) {
+  test(`banner Finish: ${outcome}`, async ({ page }) => {
+    let release!: () => Promise<void>;
+    let calls = 0;
+    await page.route("**/api/sessions/s/finish", (route) => {
+      calls++;
+      return new Promise<void>((resolve) => {
+        release = async () => {
+          if (outcome === "network") await route.abort("failed");
+          else
+            await route.fulfill({
+              status: outcome === "success" ? 200 : 500,
+              json:
+                outcome === "success"
+                  ? { finished: true }
+                  : { error: "Answers changed while finishing" },
+            });
+          resolve();
+        };
+      });
+    });
+    await page.route("**/student/sprint/s/results", (route) =>
+      route.fulfill({ contentType: "text/html", body: "Synthetic results" }),
+    );
+    await page.route("**/__finish-test", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: '<!doctype html><div id="root"></div>',
+      }),
+    );
+    await page.goto("/__finish-test");
+    if (outcome === "recovered")
+      await page.evaluate(() => {
+        Object.assign(window, { __finished: true });
+      });
+    await page.addScriptTag({ content: runner });
+    await page
+      .getByRole("button", { name: "Finish and mark", exact: true })
+      .focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByRole("button")).toBeDisabled();
+    await expect.poll(() => calls).toBe(1);
+    await release();
+    if (outcome === "success" || outcome === "recovered") {
+      await expect(page).toHaveURL(/\/student\/sprint\/s\/results$/);
+    } else {
+      await expect(page.getByRole("alert")).toContainText(
+        outcome === "network"
+          ? "Failed to fetch"
+          : "Answers changed while finishing",
+      );
+      await expect(page.getByRole("button")).toBeEnabled();
+      await expect(
+        page.getByRole("link", { name: "View results" }),
+      ).toHaveAttribute("href", "/student/sprint/s/results");
+    }
+  });
+}
+
+for (const outcome of ["error", "recovered", "network"] as const)
+  test(`runner Finish recovery: ${outcome}`, async ({ page }) => {
+    await page.route("**/api/attempts/**", (route) =>
+      route.fulfill({ json: { saved: true, status: "marked" } }),
+    );
+    await page.route("**/api/sessions/s/finish", (route) =>
+      outcome === "network"
+        ? route.abort("failed")
+        : route.fulfill({ status: 500, json: { error: "Finish timed out" } }),
+    );
+    await page.route("**/student/sprint/s/results", (route) =>
+      route.fulfill({ contentType: "text/html", body: "Synthetic results" }),
+    );
+    await page.route("**/__runner-recovery", (route) =>
+      route.fulfill({
+        contentType: "text/html",
+        body: '<!doctype html><div id="root"></div>',
+      }),
+    );
+    await page.goto("/__runner-recovery");
+    if (outcome === "recovered")
+      await page.evaluate(() => Object.assign(window, { __finished: true }));
+    await page.addScriptTag({ content: runner });
+    const answer = page.getByRole("textbox", { name: "Your answer" });
+    await answer.fill("My saved answer");
+    await page
+      .getByRole("button", { name: "Finish", exact: true })
+      .first()
+      .click();
+    await page
+      .getByRole("dialog", { name: "Finish and mark?" })
+      .getByRole("button", { name: "Finish and mark", exact: true })
+      .focus();
+    await page.keyboard.press("Enter");
+    if (outcome === "recovered")
+      await expect(page).toHaveURL(/\/student\/sprint\/s\/results$/);
+    else {
+      await expect(page.getByRole("alert")).toContainText(
+        outcome === "network" ? "Failed to fetch" : "Finish timed out",
+      );
+      await expect(answer).toBeEnabled();
+      await expect(answer).toHaveValue("My saved answer");
+      await page.getByRole("link", { name: "View results" }).click();
+      await expect(page).toHaveURL(/\/student\/sprint\/s\/results$/);
+    }
+  });
+
+test("Mark my answer uses the shared screen and keeps the draft after submission failure", async ({
+  page,
+}) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.route("**/__mark-test", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: '<!doctype html><div id="root"></div>',
+    }),
+  );
+  await page.goto("/__mark-test");
+  await page.addScriptTag({ content: runner });
+  await page.getByRole("option", { name: /Explain inflation/ }).click();
+  const answer = page.getByRole("textbox", { name: "Your answer" });
+  await answer.fill("Demand rises faster than supply.");
+  await page
+    .getByRole("button", { name: "Mark my answer", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Marking your answer", exact: true }),
+  ).toBeVisible();
+  await expect(answer).toBeHidden();
+  await page.evaluate(() => {
+    (
+      window as unknown as { __resolveCreate: (value: unknown) => void }
+    ).__resolveCreate({ error: "Submission unavailable" });
+  });
+  await expect(page.getByRole("alert")).toContainText("Submission unavailable");
+  await expect(
+    page.getByRole("heading", { name: "Marking your answer", exact: true }),
+  ).toHaveCount(0);
+  await expect(answer).toBeVisible();
+  await expect(answer).toHaveValue("Demand rises faster than supply.");
 });

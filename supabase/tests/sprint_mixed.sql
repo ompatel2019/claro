@@ -41,6 +41,17 @@ begin
  s := public.start_sprint('{"mode":"mixed","target":20,"mcq_count":13,"short_marks":7,"topics":["t1"],"subtopics":["t1-lane2-split-check"],"timed":false}');
  select config into cfg from public.sessions where id=s;
  if (cfg->>'actual_mcq_count')::int<>12 or (cfg->>'actual_short_marks')::int<>8 then raise exception 'Nearest short total failed'; end if;
+ -- 0050: a five-mark Mixed total is accepted (was 20 minimum); below 5 is still rejected.
+ s := public.start_sprint('{"mode":"mixed","target":5,"mcq_count":5,"short_marks":0,"topics":["t1"],"subtopics":["t1-lane2-split-check"],"timed":false}');
+ select config into cfg from public.sessions where id=s;
+ if (cfg->>'target')::int<>5 or (cfg->>'actual_mcq_count')::int<>5 or (cfg->>'actual_short_marks')::int<>0 then raise exception 'Five-mark mixed failed'; end if;
+ s := public.start_sprint('{"mode":"mixed","target":5,"topics":["t1"],"subtopics":["t1-lane2-split-check"],"timed":false}');
+ select config into cfg from public.sessions where id=s;
+ if (cfg->>'mcq_count')::int<>3 or (cfg->>'short_marks')::int<>2 then raise exception 'Default five-mark split should be 3/2'; end if;
+ begin
+  perform public.start_sprint('{"mode":"mixed","target":4,"topics":["t1"],"subtopics":["t1-lane2-split-check"]}');
+  raise exception 'Four-mark mixed accepted';
+ exception when others then if sqlerrm not like 'size is out of range%' then raise; end if; end;
  -- Other modes omit unused bucket fields so Same setup again stays valid.
  s := public.start_sprint('{"mode":"mcq","target":5,"topics":["t1"],"subtopics":["t1-lane2-split-check"],"timed":false}');
  select config into cfg from public.sessions where id=s;

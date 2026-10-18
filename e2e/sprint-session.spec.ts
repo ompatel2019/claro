@@ -35,7 +35,7 @@ test.describe("Sprint session", () => {
   test("check as you go locks the answer and shows the key", async ({
     page,
   }) => {
-    await setUp(page, ["After each question (check as you go)"]);
+    await setUp(page, ["Check as I go"]);
     await expect(
       page.getByText(
         /^Question 1 · Multiple choice · 1 mark · (\d{4} HSC Q\d+|Practice)/,
@@ -120,7 +120,7 @@ test.describe("Sprint session", () => {
       page,
     }) => {
       await page.setViewportSize({ width, height: 850 });
-      await setUp(page, ["After each question (check as you go)"]);
+      await setUp(page, ["Check as I go"]);
       const actions = page.getByRole("group", { name: "Answer actions" });
       const flag = actions.getByRole("button", { name: "Flag for review" });
       await expect(

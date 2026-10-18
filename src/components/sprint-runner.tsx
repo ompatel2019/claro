@@ -23,7 +23,7 @@ import {
   DialogDescription,
   DialogTitle,
 } from "./ui/dialog";
-import { Logo } from "./logo";
+import { MarkingScreen } from "./marking-screen";
 import { RichText } from "./rich-text";
 import { McqExplanationView } from "./mcq-explanation";
 import type { McqExplanation } from "@/lib/mcq-explanation";
@@ -72,6 +72,7 @@ export function SprintRunner({
   const [readAll, setReadAll] = useState(false);
   const [filter, setFilter] = useState<"all" | "unanswered" | "flagged">("all");
   const [finishing, setFinishing] = useState(false);
+  const [finishFailed, setFinishFailed] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const dirty = useRef(new Map<string, Partial<Attempt>>());
   const limit = timeLimit(session.config);
@@ -304,30 +305,47 @@ export function SprintRunner({
     setConfirm(false);
     setFinishing(true);
     setError("");
-    await ensureSession(db);
-    await flush();
-    await persistTime();
-    await background.finish();
-    async function post() {
-      const response = await fetch(`/api/sessions/${session.id}/finish`, {
-        method: "POST",
-        credentials: "same-origin",
-        headers: { "Content-Type": "application/json" },
-      });
-      const result = await response.json().catch(() => ({}));
-      return { response, result };
-    }
-    let { response, result } = await post();
-    if (response.status === 401) {
+    setFinishFailed(false);
+    try {
       await ensureSession(db);
-      ({ response, result } = await post());
+      await flush();
+      await persistTime();
+      await background.finish();
+      async function post() {
+        const response = await fetch(`/api/sessions/${session.id}/finish`, {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "Content-Type": "application/json" },
+        });
+        const result = await response.json().catch(() => ({}));
+        return { response, result };
+      }
+      let { response, result } = await post();
+      if (response.status === 401) {
+        await ensureSession(db);
+        ({ response, result } = await post());
+      }
+      if (!response.ok)
+        throw new Error(
+          result.error ?? "Could not finish your session. Please try again.",
+        );
+      // Hard navigation so no cached "unfinished" redirect can bounce us back.
+      window.location.assign(`/student/sprint/${session.id}/results`);
+    } catch (error) {
+      try {
+        const { data } = await db
+          .from("sessions")
+          .select("finished_at")
+          .eq("id", session.id)
+          .maybeSingle();
+        if (data?.finished_at) {
+          window.location.assign(`/student/sprint/${session.id}/results`);
+          return;
+        }
+      } catch {}
+      setFinishFailed(true);
+      throw error;
     }
-    if (!response.ok)
-      throw new Error(
-        result.error ?? "Could not finish your session. Please try again.",
-      );
-    // Hard navigation so no cached "unfinished" redirect can bounce us back.
-    window.location.assign(`/student/sprint/${session.id}/results`);
   }
   const a = attempts[index];
   const editable =
@@ -453,19 +471,7 @@ export function SprintRunner({
         </Button>
       </main>
     );
-  if (finishing)
-    return (
-      <main className="mx-auto max-w-xl p-4 sm:p-6">
-        <div className="bg-card space-y-3 rounded-xl border p-5" role="status">
-          <Logo />
-          <h1>Marking your answers</h1>
-          <p>
-            We’re checking your answers and preparing your feedback. This can
-            take a little while.
-          </p>
-        </div>
-      </main>
-    );
+  if (finishing) return <MarkingScreen />;
   const go = (i: number) => void act(() => change(i));
   const qLabel = (i: number) => `Q${i + 1}`;
   const sprintBooklet = (
@@ -566,6 +572,14 @@ export function SprintRunner({
           className="border-destructive bg-destructive-soft text-destructive flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"
         >
           <p>{error}</p>
+          {finishFailed && (
+            <a
+              href={`/student/sprint/${session.id}/results`}
+              className="underline"
+            >
+              View results
+            </a>
+          )}
           {error.includes("sign-in expired") && (
             <a
               className="button-link"

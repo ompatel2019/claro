@@ -1,13 +1,11 @@
 # Claro portal
 
-Migration `0049_answer_version.sql` is written, **NOT applied to production**, and
-awaiting Om/master sign-off. It adds atomic answer versions, guarded auto reviews
-and transactional sprint answer saves/finalization. Deploy the migration before
-the new server code: sprint saves, marking and Finish require its columns/RPCs
-and fail if code is deployed first. Old callers remain compatible after migration.
-Validation used mocked engine/route tests and a disposable local PostgreSQL 17
-cluster with stub tables (migration rerun, rollback-only SQL assertions and
-concurrent lock probes). No remote database access or paid calls were used.
+Migration `0049_answer_version.sql` (atomic answer versions, guarded auto reviews,
+transactional sprint answer saves/finalization) **is applied to production** and has
+been live since 16 Oct. Migration `0050_mixed_min_5.sql` (lowers the Mixed sprint
+minimum in `start_sprint` from 20 to 5 marks, S3) is **NOT yet applied to
+production**: pending Om's approval, and it must be applied before or with the
+Iteration 2 merge, otherwise starting a Mixed sprint under 20 marks fails.
 
 Student portal for Claro: NSW HSC Economics practice with instant AI marking.
 Next.js 16 (App Router, `src/proxy.ts`), Supabase (auth, Postgres with RLS, storage), OpenAI.
@@ -195,3 +193,23 @@ Own-question suggestions: set `ENABLE_OWN_QUESTION_MARKING=true` and `ENABLE_OWN
 Autofill uses the existing cheapest priced model, `openai/gpt-6-luna`, through OpenRouter (`MODELS.ownQuestionAutofill`). It validates topics and complete band coverage, retrying invalid output once. A separate allowance checks for 10 logged model calls per student per Sydney day, including retries and submit fallbacks; it does not use the 20 marking checks. It follows the existing usage-count rate-limit pattern (concurrent requests can race the count). Calls use the shared spend cap and log tokens and USD to `ai_usage` as `own-question-autofill`; no migration is required. Tests mock all model calls. Run the credential-free browser regressions with `q-run npx playwright test --config=e2e/own-question.config.ts` (read-only local auth/data double).
 
 The checks-left card and desktop feedback button now sit in page flow. The student bottom-position audit found no other content bars to remove; admin review controls and dialog/sheet overlays retain their positioning.
+
+## Iteration 2 — Lane A: S3
+
+Mixed sprints accept a five-mark minimum. Size inputs keep the entered value and show an inline range hint; invalid totals block Start instead of silently snapping on blur. Presets and saved settings use the same limits.
+
+## Iteration 2 — Lane A: S2
+
+The unfinished-sprint banner shows the actual Finish server error, catches network/non-JSON failures, prevents duplicate submissions, and offers View results on failure. A read-only session check recovers straight to results when the server finished despite a lost response. Reset remains a local setup reset. Synthetic browser tests never call real marking.
+
+## Iteration 2 — Lane A: S6
+
+Runner Finish failures check the session’s finished state before showing an error, recovering to results after a lost response. Unfinished failures keep answers editable, show the real error and a View results recovery link. The setup banner links to results when every attempt is marked. All-marked attempts alone do not trigger an automatic finish. Engine timing is unchanged.
+
+## Iteration 2 — Lane A: S4, S5 and S12
+
+Feedback is presented as Check as I go and Exam mode cards with dot-point descriptions. Stored values remain `each` and `end`, with no timer or migration change. The runner, banner Finish and Mark my answer submission share one simple full-page Claro marking screen. It uses polite status announcements and respects reduced motion, with no invented progress percentages. Mark my answer keeps its form mounted and draft intact during submission; its background marking/navigation flow is unchanged.
+
+### Lane A integration dependency — S3
+
+The setup accepts five Mixed marks, but the existing `start_sprint` RPC in migration 0046 still enforces a 20-mark Mixed minimum. Lane A does not change SQL or add a migration. Starting a five-mark Mixed sprint requires the database owner to resolve this separately; the synthetic tests exercise UI/config behaviour only.

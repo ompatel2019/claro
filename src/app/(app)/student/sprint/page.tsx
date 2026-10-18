@@ -30,7 +30,7 @@ export default async function SprintPage({
     db.from("topics").select("id,parent_id,name,sort").order("sort"),
     db
       .from("sessions")
-      .select("*,attempts(choice_index,answer_text,transcript)")
+      .select("*,attempts(choice_index,answer_text,transcript,status)")
       .eq("user_id", profile.id)
       .eq("kind", "sprint")
       .is("finished_at", null)
@@ -44,7 +44,13 @@ export default async function SprintPage({
     ["type", "topics", "sub", "history", "verb", "size"].map((k) => [k, p[k]]),
   );
   const unfinished = open.data as
-    (Session & { attempts: Parameters<typeof answered>[0][] }) | null;
+    | (Session & {
+        attempts: (Parameters<typeof answered>[0] & { status: string })[];
+      })
+    | null;
+  const allMarked =
+    !!unfinished?.attempts.length &&
+    unfinished.attempts.every((a) => a.status === "marked");
   const limit = unfinished && timeLimit(unfinished.config);
   return (
     <div className="space-y-4">
@@ -67,12 +73,12 @@ export default async function SprintPage({
                 {` · ${continueTime(unfinished, limit, new Date())}`}
               </p>
             </div>
-            <div className="flex shrink-0 gap-2">
+            <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:max-w-xs">
               <Link
                 className={buttonVariants({ size: "sm" })}
-                href={`/student/sprint/${unfinished.id}`}
+                href={`/student/sprint/${unfinished.id}${allMarked ? "/results" : ""}`}
               >
-                Continue
+                {allMarked ? "View results" : "Continue"}
               </Link>
               <FinishSprint id={unfinished.id} />
             </div>

@@ -251,3 +251,63 @@ it("an empty requested bucket disables start even when the other type has questi
   );
   expect(start()).toBeDisabled();
 });
+
+it("keeps a five-mark Mixed total on blur and explains the minimum inline", () => {
+  render(<SprintSetup topics={[]} params={{ type: "mixed" }} />);
+  next();
+  next();
+  const marks = screen.getByRole("textbox", { name: "Marks" });
+  fireEvent.change(marks, { target: { value: "5" } });
+  fireEvent.blur(marks);
+  expect(marks).toHaveValue("5");
+  expect(marks).toHaveAccessibleDescription(/Minimum 5 marks/);
+  expect(
+    screen.getByRole("spinbutton", { name: "Multiple choice questions" }),
+  ).toHaveValue(3);
+  fireEvent.change(marks, { target: { value: "1" } });
+  expect(screen.getByText(/Enter 5–100 marks/)).toBeVisible();
+  fireEvent.blur(marks);
+  expect(marks).toHaveValue("1");
+  expect(start()).toBeDisabled();
+});
+
+it("stores the existing feedback values through the renamed mode cards", async () => {
+  render(<SprintSetup topics={[]} params={{}} />);
+  next();
+  next();
+  next();
+  const exam = screen.getByRole("radio", { name: "Exam mode" });
+  const check = screen.getByRole("radio", {
+    name: "Check as I go",
+  });
+  expect(exam).toHaveAttribute("aria-checked", "true");
+  expect(screen.getByText("Check each answer when you’re ready.").tagName).toBe(
+    "LI",
+  );
+  fireEvent.click(check);
+  expect(check).toHaveAttribute("aria-checked", "true");
+  expect(
+    JSON.parse(
+      (document.querySelector('input[name="config"]') as HTMLInputElement)
+        .value,
+    ).feedback,
+  ).toBe("each");
+  fireEvent.click(screen.getByRole("button", { name: "Back" }));
+  next();
+  expect(screen.getByRole("radio", { name: "Check as I go" })).toHaveAttribute(
+    "aria-checked",
+    "true",
+  );
+  fireEvent.click(screen.getByRole("radio", { name: "Exam mode" }));
+  expect(
+    JSON.parse(
+      (document.querySelector('input[name="config"]') as HTMLInputElement)
+        .value,
+    ).feedback,
+  ).toBe("end");
+  await waitFor(() =>
+    expect(JSON.parse(localStorage.getItem("claro.sprint.v1")!).feedback).toBe(
+      "end",
+    ),
+  );
+});
