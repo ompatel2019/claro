@@ -189,6 +189,17 @@ test.describe("Local results feedback", () => {
       );
     });
   });
+  test("results of a session still being marked show progress, not the question page", async ({
+    page,
+  }) => {
+    await page.goto(`/student/sprint/${sessionId(6)}/results`);
+    await expect(page).toHaveURL(/\/results$/);
+    await expect(page.getByText("Marking in progress")).toBeVisible();
+    await expect(
+      page.getByText("1 of 2 marked", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("progressbar")).toBeVisible();
+  });
   for (const width of [390, 1280]) {
     test(`next steps, question links and honest guidelines at ${width}px`, async ({
       page,

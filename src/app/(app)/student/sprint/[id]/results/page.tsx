@@ -10,6 +10,7 @@ import {
   resultsState,
   delta,
   kpis,
+  markingInFlight,
   nextActions,
   pct,
   sprintHref,
@@ -47,8 +48,27 @@ export default async function Results({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const { session: s, profile } = await loadSprint(id);
-  if (!s.finished_at) redirect(`/student/sprint/${id}`);
+  const { session: s, profile, attempts } = await loadSprint(id);
+  if (!s.finished_at) {
+    if (!markingInFlight(attempts, s.config.feedback))
+      redirect(`/student/sprint/${id}`);
+    const counted = attempts.filter((a) => a.status !== "skipped");
+    return (
+      <div className="space-y-4">
+        <PageHeader
+          eyebrow="Marking in progress"
+          title={`${modeLabel(s.config.mode)} sprint`}
+          description="We’re marking your answers. This page fills in when marking is done."
+        />
+        <MarkingProgress
+          done={counted.filter((a) => a.status === "marked").length}
+          total={counted.length}
+          marking={counted.filter((a) => a.status === "marking").length}
+          attention={0}
+        />
+      </div>
+    );
+  }
   const db = await createClient();
   const [topicRes, review, past] = await Promise.all([
     db.from("topics").select("id,parent_id,name,sort"),

@@ -83,12 +83,16 @@ createServer(async (request, response) => {
     url.searchParams.get("id")?.replace("eq.", "") ??
     url.searchParams.get("session_id")?.replace("eq.", "") ??
     (body ? JSON.parse(body).p_session : "");
+  // 0006: finished_at not yet set while Finish marks one answer (claim in flight).
+  const finishing = id?.endsWith("0006");
   const single = id?.endsWith("0002") || id?.endsWith("0003");
   const selected = single
     ? [id.endsWith("0002") ? rows[2] : rows[1]]
-    : id?.endsWith("0005")
-      ? [rows[0], rows[1], { ...rows[2], status: "marking", mark: null }]
-      : rows;
+    : finishing
+      ? [rows[0], { ...rows[2], status: "marking", mark: null }]
+      : id?.endsWith("0005")
+        ? [rows[0], rows[1], { ...rows[2], status: "marking", mark: null }]
+        : rows;
   let data = [];
   if (url.pathname === "/auth/v1/user") data = user;
   else if (url.pathname === "/rest/v1/profiles")
@@ -120,7 +124,7 @@ createServer(async (request, response) => {
         subtopics: ["inflation"],
       },
       started_at: "2026-10-18T02:34:00Z",
-      finished_at: "2026-10-18T02:40:00Z",
+      finished_at: finishing ? null : "2026-10-18T02:40:00Z",
       elapsed_s: 360,
       score: 9,
       max_score: 11,
@@ -138,6 +142,10 @@ createServer(async (request, response) => {
     url.pathname === "/rest/v1/attempts" &&
     url.searchParams.has("session_id")
   )
-    data = selected.map((r) => ({ ...r, question: r }));
+    data = selected.map((r) => ({
+      ...r,
+      claimed_at: r.status === "marking" ? new Date().toISOString() : null,
+      question: r,
+    }));
   response.end(request.method === "HEAD" ? undefined : JSON.stringify(data));
 }).listen(54328, "127.0.0.1");

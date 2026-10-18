@@ -7,6 +7,7 @@ import {
   visibleResults,
   firstBelow,
   kpis,
+  markingInFlight,
   markTone,
   nextActions,
   sprintHref,
@@ -201,4 +202,25 @@ it("excludes unscored and low-confidence own checks from totals and below-full-m
   ];
   expect(kpis(rows).score).toEqual({ mark: 3, max: 4 });
   expect(firstBelow(rows)).toBe(3);
+});
+
+describe("markingInFlight", () => {
+  const now = Date.parse("2026-10-19T00:10:00Z");
+  const at = (status: string, claimed_at: string | null) => ({
+    status,
+    claimed_at,
+  });
+  it("is true for a fresh claim, false for a stale or absent one", () => {
+    expect(
+      markingInFlight([at("marking", "2026-10-19T00:08:00Z")], "each", now),
+    ).toBe(true);
+    expect(
+      markingInFlight([at("marking", "2026-10-19T00:01:00Z")], "each", now),
+    ).toBe(false);
+    expect(markingInFlight([at("answered", null)], "end", now)).toBe(false);
+  });
+  it("treats marked answers as Finish under way only in exam mode", () => {
+    expect(markingInFlight([at("marked", null)], "end", now)).toBe(true);
+    expect(markingInFlight([at("marked", null)], "each", now)).toBe(false);
+  });
 });
