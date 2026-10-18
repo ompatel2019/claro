@@ -360,7 +360,7 @@ test.describe("Iteration 2 setup without services", () => {
       await expect(page.locator('input[name="config"]')).toHaveValue(
         /"feedback":"each"/,
       );
-      await page.getByRole("radio", { name: "Exam mode", exact: true }).focus();
+      await page.getByRole("radio", { name: /^Exam mode/ }).focus();
       await page.keyboard.press("Space");
       await expect(page.locator('input[name="config"]')).toHaveValue(
         /"feedback":"end"/,

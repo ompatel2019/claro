@@ -276,9 +276,9 @@ it("stores the existing feedback values through the renamed mode cards", async (
   next();
   next();
   next();
-  const exam = screen.getByRole("radio", { name: "Exam mode" });
+  const exam = screen.getByRole("radio", { name: /^Exam mode/ });
   const check = screen.getByRole("radio", {
-    name: "Check as I go",
+    name: /^Check as I go/,
   });
   expect(exam).toHaveAttribute("aria-checked", "true");
   expect(screen.getByText("Check each answer when you’re ready.").tagName).toBe(
@@ -294,11 +294,11 @@ it("stores the existing feedback values through the renamed mode cards", async (
   ).toBe("each");
   fireEvent.click(screen.getByRole("button", { name: "Back" }));
   next();
-  expect(screen.getByRole("radio", { name: "Check as I go" })).toHaveAttribute(
+  expect(screen.getByRole("radio", { name: /^Check as I go/ })).toHaveAttribute(
     "aria-checked",
     "true",
   );
-  fireEvent.click(screen.getByRole("radio", { name: "Exam mode" }));
+  fireEvent.click(screen.getByRole("radio", { name: /^Exam mode/ }));
   expect(
     JSON.parse(
       (document.querySelector('input[name="config"]') as HTMLInputElement)
