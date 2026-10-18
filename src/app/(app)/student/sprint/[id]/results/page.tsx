@@ -27,16 +27,13 @@ import { buttonVariants } from "@/components/ui/button";
 
 const when = (d: string) =>
   new Date(d)
-    .toLocaleString("en-AU", {
+    .toLocaleDateString("en-AU", {
       timeZone: "Australia/Sydney",
       weekday: "short",
       day: "numeric",
       month: "short",
-      hour: "numeric",
-      minute: "2-digit",
     })
-    .replace(/^(\w{3}),/, "$1")
-    .replace(/\s?([ap])m$/i, " $1m");
+    .replace(/^(\w{3}),/, "$1");
 const avg = (xs: (number | null)[]) => {
   const v = xs.filter((x): x is number => x != null);
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
