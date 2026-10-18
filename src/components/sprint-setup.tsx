@@ -782,15 +782,57 @@ export function SprintSetup({
             </Section>
 
             <Section title="Feedback">
-              <Choice
-                label="Feedback"
+              <RadioGroup
+                aria-label="Feedback"
                 value={c.feedback}
-                onChange={(feedback) => set({ feedback })}
-                options={[
-                  ["end", "At the end (exam style)"],
-                  ["each", "After each question (check as you go)"],
-                ]}
-              />
+                onValueChange={(feedback) =>
+                  set({ feedback: feedback as SetupConfig["feedback"] })
+                }
+                className="grid gap-3 sm:grid-cols-2"
+              >
+                {(
+                  [
+                    [
+                      "each",
+                      "Check as I go",
+                      [
+                        "Check each answer when you’re ready.",
+                        "See feedback before moving on.",
+                      ],
+                    ],
+                    [
+                      "end",
+                      "Exam mode",
+                      [
+                        "Work through questions without feedback.",
+                        "See marks and explanations when you finish.",
+                      ],
+                    ],
+                  ] as const
+                ).map(([value, title, points]) => (
+                  <label
+                    key={value}
+                    className={cn(
+                      "flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm",
+                      c.feedback === value && "border-primary bg-accent",
+                    )}
+                  >
+                    <RadioGroupItem
+                      value={value}
+                      aria-label={title}
+                      className="mt-1"
+                    />
+                    <div className="space-y-2">
+                      <span className="font-medium">{title}</span>
+                      <ul className="text-muted-foreground list-disc space-y-1 pl-4">
+                        {points.map((point) => (
+                          <li key={point}>{point}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </label>
+                ))}
+              </RadioGroup>
             </Section>
           </div>
           <div className="flex items-center justify-between gap-3 border-t pt-4">
