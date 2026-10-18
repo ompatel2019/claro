@@ -158,3 +158,7 @@ The result header's date uses Australia/Sydney without a clock time; duration st
 The local `e2e/sprint-results.config.ts` suite uses synthetic read-only responses,
 not accounts or marking. It covers question-anchor selection, action destinations,
 summary order, date formatting, rubric gaps, full-mark outlines and mobile overflow.
+
+## Iteration 2 — Lane C: entry points and history
+
+Home's Topic Sprint tile opens `/student/sprint`; Activity opens `/student/activity`. The one Home resume card links to the latest saved session through the shared canonical session helper. The S keyboard shortcut and first-visit welcome flow remain. Weak-topic practice belongs to Progress, linked beside the Home streak. Activity removes elapsed time from its compact rows and places the score next to each title; filtering and date/score sorting remain available. This lane does not change sprint setup, marking, results or prompts.

@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   in: vi.fn(),
   progress: vi.fn(),
 }));
+vi.mock("@/components/welcome-dialog", () => ({ WelcomeDialog: () => null }));
+vi.mock("@/components/shortcut", () => ({ Shortcut: () => null }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
@@ -77,67 +79,87 @@ it("does not treat a failed session lookup as a first visit", async () => {
 });
 
 afterEach(cleanup);
-it.each([
-  [2, 2, 20, "Answer 1 more question", false],
-  [3, 1, 20, "in another session", false],
-  [3, 2, 20, null, true],
-  [3, 2, 60, "No weak topics", false],
-  [
-    0,
-    0,
-    null,
-    "Weak spots unlock after 3 marked answers across 2 sessions",
-    false,
-  ],
-])(
-  "home gates %s answers across %s sessions with score %s",
-  async (answered, sessions, pct, copy, unlocked) => {
-    mocks.requireProfile.mockResolvedValue({
-      id: "synthetic-student",
-      role: "student",
-      year_level: 12,
-    });
-    mocks.progress.mockResolvedValue({
-      topics: [
-        {
-          id: "synthetic-topic",
-          parent_id: "synthetic-parent",
-          name: "Synthetic topic",
-          answered,
-          sessions,
-          pct,
-        },
-      ],
-    });
-    const page = await Home();
-    // Resolve only the WeakTopics boundary; unrelated Home cards have independent reads.
-    const side = page.props.children.at(-1).props.children[1].props.children;
-    const boundary = side.at(-1);
-    render(await resolve(boundary));
-    expect(mocks.progress).toHaveBeenCalledWith(
-      "all",
-      expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-    );
-    if (copy) expect(screen.getByText(new RegExp(copy))).toBeInTheDocument();
-    const link = screen.queryByRole("link", { name: "Practise" });
-    if (unlocked)
-      expect(link).toHaveAttribute(
-        "href",
-        "/student/sprint?topics=synthetic-parent&sub=synthetic-topic&history=prefer_new",
-      );
-    else expect(link).toBeNull();
-  },
-);
-it("shows a retry when home history fails", async () => {
+it("renders four launch links, due count, streak and only the latest resume", async () => {
   mocks.requireProfile.mockResolvedValue({
     id: "synthetic-student",
     role: "student",
     year_level: 12,
   });
-  mocks.progress.mockRejectedValue(new Error("Unavailable"));
-  const page = await Home();
-  const side = page.props.children.at(-1).props.children[1].props.children;
-  render(await resolve(side.at(-1)));
-  expect(screen.getByRole("alert")).toHaveTextContent("weak topics");
-  expect(screen.queryByRole("link", { name: "Practise" })).toBeNull();
+  const query: Record<string, ReturnType<typeof vi.fn>> = {};
+  for (const method of ["select", "eq", "in", "is", "order", "lte"])
+    query[method] = vi.fn(() => query);
+  query.limit = vi.fn().mockResolvedValue({
+    data: [
+      {
+        id: "resume",
+        kind: "single",
+        config: {},
+        started_at: "2026-10-19T00:00:00Z",
+        elapsed_s: 0,
+        attempts: [],
+        flashcard_reviews: [],
+      },
+    ],
+    error: null,
+  });
+  query.then = vi.fn((done) =>
+    Promise.resolve(done({ data: [], count: 7, error: null })),
+  );
+  mocks.createClient.mockResolvedValue({
+    from: () => query,
+    rpc: () => ({
+      single: async () => ({
+        data: { current_streak: 3, longest_streak: 8 },
+        error: null,
+      }),
+    }),
+  });
+  render(await resolve(await Home()));
+  for (const [name, href] of [
+    ["Topic Sprint", "/student/sprint"],
+    ["Flashcards", "/student/flashcards"],
+    ["Mark my answer", "/student/mark"],
+    ["Activity", "/student/activity"],
+  ]) {
+    expect(
+      screen.getByRole("link", { name: new RegExp(`^${name}`) }),
+    ).toHaveAttribute("href", href);
+  }
+  expect(screen.getByText("7 due")).toBeVisible();
+  expect(screen.getByText("3 days")).toBeVisible();
+  expect(screen.getByText("Longest 8 days")).toBeVisible();
+  expect(screen.getByRole("link", { name: /^Continue$/ })).toHaveAttribute(
+    "href",
+    "/student/activity/resume",
+  );
+  expect(query.limit).toHaveBeenCalledWith(1);
+  expect(mocks.progress).not.toHaveBeenCalled();
+  expect(screen.queryByText("Score trend")).toBeNull();
+  expect(
+    screen.getByRole("link", { name: "View progress and weak topics" }),
+  ).toHaveAttribute("href", "/student/progress");
+});
+it("keeps launch tiles usable when due, streak and resume reads fail", async () => {
+  mocks.requireProfile.mockResolvedValue({
+    id: "synthetic-student",
+    role: "student",
+    year_level: 12,
+  });
+  const query: Record<string, ReturnType<typeof vi.fn>> = {};
+  for (const method of ["select", "eq", "in", "is", "order", "lte"])
+    query[method] = vi.fn(() => query);
+  query.limit = vi.fn().mockResolvedValue({ data: null, error: {} });
+  query.then = vi.fn((done) =>
+    Promise.resolve(done({ count: null, error: {} })),
+  );
+  mocks.createClient.mockResolvedValue({
+    from: () => query,
+    rpc: () => ({ single: async () => ({ data: null, error: {} }) }),
+  });
+  render(await resolve(await Home()));
+  expect(
+    screen.getByRole("link", { name: /Flashcards Choose a deck/ }),
+  ).toHaveAttribute("href", "/student/flashcards");
+  expect(screen.getAllByRole("alert")).toHaveLength(2);
+  expect(screen.queryByText("0 days")).toBeNull();
 });

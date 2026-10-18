@@ -1,131 +1,33 @@
-import { loadProgress } from "@/lib/progress-data";
-import { isWeakTopic, weakTopicUnlock } from "@/lib/weak-topics";
 import { pageMetadata } from "@/lib/page-metadata";
 import { WelcomeDialog } from "@/components/welcome-dialog";
 import { needsWelcome } from "@/lib/welcome";
 import { sessionTitle, sessionHref } from "@/lib/session-summary";
-import { cache, Suspense } from "react";
+import { Suspense } from "react";
 import Link from "next/link";
-import { Cards, Sprint, Target } from "@/components/icons";
+import { Cards, Sprint, Pen, History, Flame, Target } from "@/components/icons";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import { sydneyToday } from "@/lib/flashcards";
-import { addDays, type ActivityDay } from "@/lib/activity";
 import {
-  averages,
   continueTime,
   greeting,
   longDate,
-  weekCounts,
-  type Marked,
+  schoolWeek,
+  dailyQuote,
 } from "@/lib/home";
 import {
   answered,
   plural,
-  scoreTone,
   timeLimit,
   type Session,
   type Topic,
 } from "@/lib/practice";
-import { ActivityHeatmap } from "@/components/activity-heatmap";
-import { EmptyState } from "@/components/empty-state";
-import { FlashcardStart } from "@/components/flashcard-start";
 import { PageHeader } from "@/components/page-header";
-import { ScoreTrend } from "@/components/score-trend";
-import { SessionList } from "@/components/session-list";
 import { Shortcut } from "@/components/shortcut";
-import { QuickStarts } from "@/components/sprint-setup";
-import { Delta, StatCard } from "@/components/stat-card";
 import { TryAgain } from "@/components/try-again";
-import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 
-// Shared per-request reads: each card is its own Suspense boundary but fetches once.
-const load = {
-  activity: cache(async () => {
-    const db = await createClient();
-    const [days, streaks] = await Promise.all([
-      db.rpc("activity_days", { p_from: addDays(sydneyToday(), -371) }),
-      db.rpc("activity_streaks").single(),
-    ]);
-    if (days.error || streaks.error) throw new Error("activity");
-    const s = streaks.data as {
-      current_streak: number;
-      longest_streak: number;
-    };
-    return { days: days.data as ActivityDay[], ...s };
-  }),
-  due: cache(async (userId: string) => {
-    const db = await createClient();
-    const today = sydneyToday();
-    const count = (from: string | null, to: string) => {
-      let q = db
-        .from("flashcard_progress")
-        .select("flashcard_id,flashcards!inner(id)", {
-          count: "exact",
-          head: true,
-        })
-        .eq("flashcards.status", "live")
-        .eq("user_id", userId)
-        .lte("due_on", to);
-      if (from) q = q.gt("due_on", from);
-      return q;
-    };
-    const [due, tomorrow] = await Promise.all([
-      count(null, today),
-      count(today, addDays(today, 1)),
-    ]);
-    if (due.error || tomorrow.error) throw new Error("due");
-    return { today: due.count ?? 0, tomorrow: tomorrow.count ?? 0 };
-  }),
-  marked: cache(async (userId: string): Promise<Marked[]> => {
-    const db = await createClient();
-    const { data, error } = await db
-      .from("attempts")
-      .select(
-        "mark,max_marks,marked_at,question:questions(type),session:sessions!inner(kind)",
-      )
-      .eq("user_id", userId)
-      .eq("status", "marked")
-      .in("session.kind", ["sprint", "single"])
-      .not("marked_at", "is", null)
-      .order("marked_at");
-    if (error) throw new Error("marked");
-    return (
-      data as unknown as {
-        mark: number;
-        max_marks: number;
-        marked_at: string;
-        question: { type: Marked["type"] } | null;
-      }[]
-    ).flatMap((a) =>
-      a.question && Number(a.max_marks) > 0
-        ? [
-            {
-              day: sydneyToday(new Date(a.marked_at)),
-              type: a.question.type,
-              mark: Number(a.mark),
-              max: Number(a.max_marks),
-            },
-          ]
-        : [],
-    );
-  }),
-  topics: cache(async () => {
-    const db = await createClient();
-    const { data, error } = await db
-      .from("topics")
-      .select("id,parent_id,name,sort")
-      .order("sort");
-    if (error) throw new Error("topics");
-    return data as Topic[];
-  }),
-};
-
-const Skeleton = ({ className }: { className: string }) => (
-  <Card aria-hidden className={`bg-muted animate-pulse ${className}`} />
-);
 const Section = ({
   title,
   children,
@@ -133,154 +35,66 @@ const Section = ({
   title: string;
   children: React.ReactNode;
 }) => (
-  <Card>
-    <CardHeader>
-      <CardTitle>
-        <h2>{title}</h2>
-      </CardTitle>
-    </CardHeader>
-    <CardContent>{children}</CardContent>
+  <Card className="gap-2 p-3 sm:p-4">
+    <h2 className="text-sm">{title}</h2>
+    {children}
   </Card>
 );
-const pct = (n: number | null) => (n == null ? null : Math.round(n));
-
-async function Kpis({ userId }: { userId: string }) {
-  const data = await Promise.all([
-    load.activity(),
-    load.due(userId),
-    load.marked(userId),
-  ]).catch(() => null);
-  if (!data)
-    return (
-      <Card className="p-5">
-        <TryAgain what="your stats" />
-      </Card>
-    );
-  const today = sydneyToday();
-  const [activity, due, marked] = data;
-  const week = weekCounts(activity.days, today);
-  const { avg30, prev30 } = averages(marked, today);
-  return (
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-      <StatCard
-        label="Questions this week"
-        value={week.thisWeek}
-        caption={
-          <Delta d={week.thisWeek - week.lastWeek}>
-            vs {week.lastWeek} last week
-          </Delta>
-        }
-      />
-      <StatCard
-        label="Average mark"
-        value={avg30 == null ? "No marks yet" : `${pct(avg30)}%`}
-        caption={
-          avg30 == null ? (
-            "Last 30 days"
-          ) : prev30 == null ? (
-            "Last 30 days"
-          ) : (
-            <Delta d={pct(avg30)! - pct(prev30)!}>vs previous 30 days</Delta>
-          )
-        }
-      />
-      <StatCard
-        label="Streak"
-        value={plural(activity.current_streak, "day")}
-        caption={`Longest ${activity.longest_streak}`}
-      />
-      <Link
-        href="/student/flashcards"
-        className="focus-visible:ring-ring/50 rounded-lg outline-none focus-visible:ring-3"
-      >
-        <StatCard
-          label="Flashcards due"
-          value={due.today}
-          caption={`${due.tomorrow} more tomorrow`}
-        />
-      </Link>
-    </div>
-  );
-}
-
-async function Heatmap() {
-  const a = await load.activity().catch(() => null);
-  return (
-    <ActivityHeatmap
-      days={a?.days ?? []}
-      today={sydneyToday()}
-      current={a?.current_streak ?? 0}
-      longest={a?.longest_streak ?? 0}
-      error={!a}
-    />
-  );
-}
-
-async function Trend({ userId }: { userId: string }) {
-  const marked = await load.marked(userId).catch(() => null);
-  if (!marked)
-    return (
-      <Section title="Score trend">
-        <TryAgain what="your score trend" />
-      </Section>
-    );
-  if (!marked.length)
-    return (
-      <EmptyState
-        icon={Target}
-        title="Score trend"
-        description="Finish a sprint to see your trend."
-        action={
-          <Link href="/student/sprint" className={buttonVariants()}>
-            Start sprint
-          </Link>
-        }
-      />
-    );
-  return (
-    <Section title="Score trend">
-      <ScoreTrend rows={marked} today={sydneyToday()} />
-    </Section>
-  );
-}
-
-async function Recent({ userId }: { userId: string }) {
+const KIND_ICON = { sprint: Sprint, flashcards: Cards, single: Pen };
+const load = {
+  topics: async () => {
+    const db = await createClient();
+    const { data, error } = await db
+      .from("topics")
+      .select("id,parent_id,name,sort")
+      .order("sort");
+    if (error) throw new Error("topics");
+    return data as Topic[];
+  },
+};
+async function DueCount({ userId }: { userId: string }) {
   const db = await createClient();
-  const [sessions, topics] = await Promise.all([
-    db
-      .from("sessions")
-      .select("*,attempts(status,check_status)")
-      .in("kind", ["sprint", "flashcards", "single"])
-      .eq("user_id", userId)
-      .not("finished_at", "is", null)
-      .order("finished_at", { ascending: false })
-      .limit(5),
-    load.topics().catch(() => null),
-  ]);
+  const { count, error } = await db
+    .from("flashcard_progress")
+    .select("flashcard_id,flashcards!inner(id)", { count: "exact", head: true })
+    .eq("flashcards.status", "live")
+    .eq("user_id", userId)
+    .lte("due_on", sydneyToday());
+  return <span>{error ? "Choose a deck" : `${count ?? 0} due`}</span>;
+}
+async function Streak() {
+  const db = await createClient();
+  const { data, error } = await db.rpc("activity_streaks").single();
+  const streak = data as {
+    current_streak: number;
+    longest_streak: number;
+  } | null;
   return (
-    <section className="space-y-3">
-      <div className="flex items-center justify-between gap-3">
-        <h2>Recent activity</h2>
-        <Link
-          href="/student/activity"
-          className="text-ink text-sm font-semibold"
-        >
-          See all
-        </Link>
-      </div>
-      {sessions.error || !topics ? (
-        <Card className="p-5">
-          <TryAgain what="your recent activity" />
-        </Card>
+    <Card className="flex-row items-center gap-3 p-3 sm:p-4">
+      <Flame className="text-brand size-6 shrink-0" />
+      {error || !streak ? (
+        <TryAgain what="your streak" />
       ) : (
-        <SessionList sessions={sessions.data as Session[]} topics={topics} />
+        <div className="flex flex-1 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p>
+            <strong>{plural(streak.current_streak, "day")}</strong> streak
+          </p>
+          <p className="text-muted-foreground text-xs">
+            Longest {plural(streak.longest_streak, "day")}
+          </p>
+        </div>
       )}
-    </section>
+      <Link
+        href="/student/progress"
+        aria-label="View progress and weak topics"
+        className="text-sm font-semibold underline underline-offset-4"
+      >
+        <Target className="size-5 sm:hidden" />
+        <span className="hidden sm:inline">Progress</span>
+      </Link>
+    </Card>
   );
 }
-
-const KIND_ICON = { sprint: Sprint, flashcards: Cards };
-
 async function Continue({ userId }: { userId: string }) {
   const db = await createClient();
   const { data, error } = await db
@@ -292,7 +106,7 @@ async function Continue({ userId }: { userId: string }) {
     .eq("user_id", userId)
     .is("finished_at", null)
     .order("started_at", { ascending: false })
-    .limit(3);
+    .limit(1);
   if (error)
     return (
       <Section title="Continue where you left off">
@@ -319,13 +133,15 @@ async function Continue({ userId }: { userId: string }) {
           const time = continueTime(s, limit, new Date());
           const Icon = KIND_ICON[s.kind as keyof typeof KIND_ICON] ?? Sprint;
           return (
-            <li key={s.id} className="flex items-center gap-3 py-3">
+            <li key={s.id} className="flex items-center gap-3">
               <Icon
                 aria-hidden
                 className="text-muted-foreground size-5 shrink-0"
               />
               <div className="min-w-0 flex-1">
-                <p className="font-semibold">{sessionTitle(s, topics)}</p>
+                <p className="truncate font-semibold">
+                  {sessionTitle(s, topics)}
+                </p>
                 <p className="text-muted-foreground text-[13px]">
                   {done}/{total} {cards ? "cards" : "answered"}
                   {` · ${time}`}
@@ -347,69 +163,6 @@ async function Continue({ userId }: { userId: string }) {
   );
 }
 
-async function WeakTopics() {
-  const progress = await loadProgress("all", sydneyToday()).catch(() => null);
-  if (!progress)
-    return (
-      <Section title="Weak topics">
-        <TryAgain what="your weak topics" />
-      </Section>
-    );
-  const topics = progress.topics.filter((t) => t.parent_id);
-  const weak = topics
-    .filter(isWeakTopic)
-    .sort((a, b) => a.pct! - b.pct! || a.id.localeCompare(b.id))
-    .slice(0, 3);
-  const locked = topics.filter((t) => t.answered > 0 && weakTopicUnlock(t));
-  return (
-    <Section title="Weak topics">
-      {!!(weak.length || locked.length) && (
-        <ul className="divide-y divide-dashed">
-          {weak.map((t) => (
-            <li key={t.id} className="flex items-center gap-3 py-3">
-              <span className="min-w-0 flex-1">{t.name}</span>
-              <Badge variant={scoreTone(t.pct!)}>{Math.round(t.pct!)}%</Badge>
-              <Link
-                href={`/student/sprint?topics=${t.parent_id}&sub=${t.id}&history=prefer_new`}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                Practise
-              </Link>
-            </li>
-          ))}
-          {locked.map((t) => (
-            <li key={t.id} className="text-muted-foreground py-3 text-sm">
-              {weakTopicUnlock(t)}
-            </li>
-          ))}
-        </ul>
-      )}
-      {!weak.length && !locked.length && (
-        <p className="text-muted-foreground text-sm">
-          {topics.some((t) => t.answered > 0)
-            ? "No weak topics at the moment. Keep practising to build your history."
-            : "Weak spots unlock after 3 marked answers across 2 sessions in a topic."}
-        </p>
-      )}
-    </Section>
-  );
-}
-
-async function DueButton({ userId }: { userId: string }) {
-  const due = await load.due(userId).catch(() => null);
-  return due?.today ? (
-    <FlashcardStart
-      due
-      label={`Flashcards · ${due.today} due`}
-      variant="outline"
-    />
-  ) : due ? (
-    <p className="text-muted-foreground text-sm">0 due</p>
-  ) : (
-    <TryAgain what="your due flashcards" />
-  );
-}
-
 export const metadata = pageMetadata("Home");
 
 export default async function Home() {
@@ -428,86 +181,76 @@ export default async function Home() {
     sessionCount = count;
   }
   const showWelcome = needsWelcome(profile, sessionCount);
+  const today = sydneyToday();
+  const tiles = [
+    {
+      title: "Topic Sprint",
+      href: "/student/sprint",
+      icon: Sprint,
+      copy: "Practise a topic",
+    },
+    {
+      title: "Flashcards",
+      href: "/student/flashcards",
+      icon: Cards,
+      copy: (
+        <Suspense fallback="Choose a deck">
+          <DueCount userId={id} />
+        </Suspense>
+      ),
+    },
+    {
+      title: "Mark my answer",
+      href: "/student/mark",
+      icon: Pen,
+      copy: "Get feedback on your writing",
+    },
+    {
+      title: "Activity",
+      href: "/student/activity",
+      icon: History,
+      copy: "Open your sessions and results",
+    },
+  ];
   return (
-    <div className="space-y-4">
+    <div className="space-y-3" data-testid="student-home">
       {showWelcome && <WelcomeDialog profile={profile} />}
       {!showWelcome && <Shortcut k="s" href="/student/sprint" />}
       <PageHeader
         eyebrow={longDate()}
         title={`${greeting()}${first ? `, ${first}` : ""}`}
       />
-      <section aria-label="Quick start" className="grid gap-4 sm:grid-cols-2">
-        <Section title="Topic Sprint">
-          <div className="grid gap-2">
-            <Link
-              href="/student/sprint"
-              className={buttonVariants({
-                variant: "outline",
-                className: "justify-start",
-              })}
-            >
-              <Sprint aria-hidden className="size-5" />
-              Start sprint
-            </Link>
-            <QuickStarts />
-          </div>
-        </Section>
-        <Section title="Flashcards">
-          <div className="space-y-2">
-            <Link
-              href="/student/flashcards"
-              className={buttonVariants({
-                variant: "outline",
-                className: "w-full justify-start",
-              })}
-            >
-              <Cards aria-hidden className="size-5" />
-              Choose a deck
-            </Link>
-            <Suspense
-              fallback={
-                <p className="text-muted-foreground text-sm">
-                  Loading due count…
-                </p>
-              }
-            >
-              <DueButton userId={id} />
-            </Suspense>
-          </div>
-        </Section>
-      </section>
-      <Suspense
-        fallback={
-          <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-            {[0, 1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-28" />
-            ))}
-          </div>
-        }
+      <section
+        aria-label="Your study week"
+        className="bg-brand/10 border-brand/20 rounded-xl border px-4 py-3"
       >
-        <Kpis userId={id} />
-      </Suspense>
-      <Suspense fallback={<Skeleton className="h-52" />}>
-        <Heatmap />
-      </Suspense>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
-        <div className="min-w-0 space-y-4">
-          <Suspense fallback={<Skeleton className="h-72" />}>
-            <Trend userId={id} />
-          </Suspense>
-          <Suspense fallback={<Skeleton className="h-64" />}>
-            <Recent userId={id} />
-          </Suspense>
+        <p className="text-brand text-xs font-semibold">NSW school calendar</p>
+        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+          <h2>{schoolWeek(today)}</h2>
+          <p className="text-muted-foreground text-sm">{dailyQuote(today)}</p>
         </div>
-        <div className="min-w-0 space-y-4">
-          <Suspense fallback={<Skeleton className="h-48" />}>
-            <Continue userId={id} />
-          </Suspense>
-          <Suspense fallback={<Skeleton className="h-48" />}>
-            <WeakTopics />
-          </Suspense>
-        </div>
-      </div>
+      </section>
+      <section aria-label="Quick start" className="grid grid-cols-2 gap-3">
+        {tiles.map(({ title, href, icon: Icon, copy }) => (
+          <Link
+            key={href}
+            href={href}
+            className="bg-card hover:border-brand focus-visible:ring-ring flex min-h-24 min-w-0 flex-col justify-between gap-2 rounded-xl border p-3 outline-none focus-visible:ring-2"
+          >
+            <Icon className="text-brand size-6" />
+            <div>
+              <h2 className="text-sm sm:text-base">{title}</h2>
+              <p className="text-muted-foreground text-xs">{copy}</p>
+            </div>
+          </Link>
+        ))}
+      </section>
+      <Suspense fallback={<Card aria-hidden className="h-14 animate-pulse" />}>
+        <Streak />
+      </Suspense>
+      <Suspense fallback={<Card aria-hidden className="h-20 animate-pulse" />}>
+        <Continue userId={id} />
+      </Suspense>
     </div>
   );
 }

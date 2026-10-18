@@ -136,9 +136,9 @@ test.describe("First sign-in welcome", () => {
       await expect(dialog).toHaveCount(0, { timeout: 5000 });
     }).toPass({ timeout: 60000 });
     await expect(
-      page.getByRole("heading", { name: "Quick start", exact: true }),
+      page.getByRole("region", { name: "Quick start", exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("No marks yet", { exact: true })).toBeVisible();
+    await expect(page.getByText("0 due", { exact: true })).toBeVisible();
     const { data, error } = await db
       .from("profiles")
       .select("full_name,year_level,school")
@@ -152,13 +152,13 @@ test.describe("First sign-in welcome", () => {
     });
     await page.reload();
     await expect(
-      page.getByRole("heading", { name: "Quick start", exact: true }),
+      page.getByRole("region", { name: "Quick start", exact: true }),
     ).toBeVisible();
     await expect(dialog).toHaveCount(0);
     await page.context().clearCookies();
     await login(page);
     await expect(
-      page.getByRole("heading", { name: "Quick start", exact: true }),
+      page.getByRole("region", { name: "Quick start", exact: true }),
     ).toBeVisible();
     await expect(dialog).toHaveCount(0);
 
@@ -177,13 +177,13 @@ test.describe("First sign-in welcome", () => {
     if (profileError) throw profileError;
     await page.reload();
     await expect(
-      page.getByRole("heading", { name: "Quick start", exact: true }),
+      page.getByRole("region", { name: "Quick start", exact: true }),
     ).toBeVisible();
     await expect(dialog).toHaveCount(0);
     await page.context().clearCookies();
     await login(page);
     await expect(
-      page.getByRole("heading", { name: "Quick start", exact: true }),
+      page.getByRole("region", { name: "Quick start", exact: true }),
     ).toBeVisible();
     await expect(dialog).toHaveCount(0);
   });

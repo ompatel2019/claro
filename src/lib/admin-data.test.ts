@@ -239,3 +239,18 @@ it("propagates dashboard failures through spend", async () => {
     "Dashboard unavailable",
   );
 });
+
+it("limits the dashboard payload to the three newest RPC sessions", async () => {
+  const latest = Array.from({ length: 10 }, (_, i) => ({
+    id: `session-${i}`,
+    user_id: "student",
+    name: "Student",
+    kind: "single",
+    mode: null,
+    score: i,
+    max: 10,
+    finished_at: `2026-10-${19 - i}T00:00:00Z`,
+  }));
+  mocks.throwOnError.mockResolvedValue({ data: { ...empty, latest } });
+  expect((await loadDashboard()).latest).toEqual(latest.slice(0, 3));
+});

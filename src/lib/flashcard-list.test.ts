@@ -42,3 +42,34 @@ it("uses topic relationships, searches rendered names and treats query punctuati
   expect(flashcardPage(rows, topics, { q: "%,()" }).rows).toEqual([]);
   expect(flashcardPage(rows, topics, { status: "draft" }).rows).toEqual([]);
 });
+
+it("narrows a topic to its subtopic and ignores stale or unrelated subtopic values", () => {
+  const tree = [
+    ...topics,
+    { id: "sibling", parent_id: "parent", name: "Growth", sort: 3 },
+    { id: "other", parent_id: null, name: "Other", sort: 4 },
+  ];
+  const cards = [
+    rows[0],
+    { ...rows[0], id: "growth", topic_id: "sibling" },
+    { ...rows[0], id: "other-card", topic_id: "other" },
+  ];
+  expect(flashcardPage(cards, tree, { topic: "parent" }).rows).toHaveLength(2);
+  expect(
+    flashcardPage(cards, tree, { topic: "parent", sub: "sibling" }).rows.map(
+      (r) => r.id,
+    ),
+  ).toEqual(["growth"]);
+  for (const sub of ["other", "missing", "parent"])
+    expect(
+      flashcardPage(cards, tree, { topic: "parent", sub }).rows,
+    ).toHaveLength(2);
+  expect(flashcardPage(cards, tree, { sub: "sibling" }).rows).toHaveLength(3);
+  expect(
+    flashcardPage(cards, tree, {
+      topic: "parent",
+      sub: "sibling",
+      q: "Inflation",
+    }).rows,
+  ).toEqual([]);
+});

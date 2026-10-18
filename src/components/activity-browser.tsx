@@ -26,13 +26,7 @@ import {
   sessionHref,
   isStudentSession,
 } from "@/lib/session-summary";
-import {
-  plural,
-  dateLabel,
-  timer,
-  scoreTone,
-  type Topic,
-} from "@/lib/practice";
+import { dateLabel, scoreTone, type Topic } from "@/lib/practice";
 
 const subscribeOnline = (change: () => void) => {
   window.addEventListener("online", change);
@@ -73,102 +67,54 @@ export function ActivityBrowser({
     router.push(activityHref(f, { page: 1, ...changes }));
   const columns: Column<ActivityRow>[] = [
     {
-      id: "kind",
-      header: "Kind",
-      className: "hidden lg:table-cell",
-      cell: (r) => {
-        const Icon = icons[r.kind as keyof typeof icons] ?? Sprint;
-        return (
-          <span className="inline-flex items-center gap-2">
-            <Icon aria-hidden className="size-4" />
-            {r.kind === "sprint"
-              ? "Sprint"
-              : kindLabels[r.kind as keyof typeof kindLabels]}
-          </span>
-        );
-      },
-    },
-    {
       id: "title",
       header: "Title",
-      className: "w-full max-w-0 !whitespace-normal",
+      className: "w-full max-w-0 py-2 !whitespace-normal",
       cell: (r) => {
         const href = sessionHref(r);
         const Icon = icons[r.kind as keyof typeof icons] ?? Sprint;
         return (
-          <>
-            {href ? (
-              <Link
-                prefetch={false}
-                href={href}
-                className="block font-semibold break-words hover:underline focus-visible:outline-2"
-              >
-                {r.title}
-              </Link>
-            ) : (
-              <span className="block font-semibold break-words">{r.title}</span>
-            )}
-            <div className="text-muted-foreground mt-1 space-y-1 text-xs">
-              <p className="flex items-center gap-2 lg:hidden">
-                <Icon aria-hidden className="size-4" />
-                {kindLabels[r.kind as keyof typeof kindLabels]}
-              </p>
-              <p className="sm:hidden">{dateLabel(r.started_at, true)}</p>
-              <p className="md:hidden">
-                {plural(r.items, r.kind === "flashcards" ? "card" : "question")}
-              </p>
-              <p className="xl:hidden">{timer(r.elapsed_s)}</p>
-              <div className="sm:hidden">
-                <StatusPill pill={r.status} />
-                {r.provisional && r.status === "Marking" && (
-                  <StatusPill pill="Provisional" />
-                )}
-              </div>
+          <div className="space-y-1">
+            <div className="flex min-w-0 items-center gap-2">
+              <Icon
+                aria-hidden
+                className="text-muted-foreground size-4 shrink-0"
+              />
+              {href ? (
+                <Link
+                  prefetch={false}
+                  href={href}
+                  className="min-w-0 truncate font-semibold hover:underline focus-visible:outline-2"
+                  title={r.title}
+                >
+                  {r.title}
+                </Link>
+              ) : (
+                <span className="truncate font-semibold">{r.title}</span>
+              )}
+              {r.pct != null && r.status !== "Marking" && !r.study ? (
+                <Badge variant={scoreTone(r.pct)}>
+                  {sessionScore(r.pct, r.status)}
+                </Badge>
+              ) : (
+                <span
+                  className="text-muted-foreground text-xs"
+                  aria-label={r.study ? "Study session, no score" : undefined}
+                >
+                  {sessionScore(r.pct, r.status, r.study)}
+                </span>
+              )}
+              {r.status !== "Finished" && <StatusPill pill={r.status} />}
+              {r.provisional && r.status === "Marking" && (
+                <StatusPill pill="Provisional" />
+              )}
             </div>
-            {href && (
-              <Link
-                prefetch={false}
-                className="mt-2 inline-block text-xs font-semibold underline xl:hidden"
-                href={href}
-              >
-                {r.finished_at ? "View" : "Continue"}
-                <span className="sr-only"> {r.title}</span>
-              </Link>
-            )}
-          </>
+            <span className="text-muted-foreground block pl-6 text-xs sm:hidden">
+              {dateLabel(r.started_at, true)}
+            </span>
+          </div>
         );
       },
-    },
-    {
-      id: "score",
-      header: "Score",
-      sort: true,
-      cell: (r) =>
-        r.pct != null && r.status !== "Marking" && !r.study ? (
-          <Badge variant={scoreTone(r.pct)}>
-            {sessionScore(r.pct, r.status)}
-          </Badge>
-        ) : (
-          <span
-            className="text-muted-foreground text-xs"
-            aria-label={r.study ? "Study session, no score" : undefined}
-          >
-            {sessionScore(r.pct, r.status, r.study)}
-          </span>
-        ),
-    },
-    {
-      id: "items",
-      header: "Items",
-      className: "hidden md:table-cell",
-      cell: (r) =>
-        plural(r.items, r.kind === "flashcards" ? "card" : "question"),
-    },
-    {
-      id: "time",
-      header: "Time",
-      className: "hidden xl:table-cell",
-      cell: (r) => <span className="tabular-nums">{timer(r.elapsed_s)}</span>,
     },
     {
       id: "date",
@@ -176,35 +122,6 @@ export function ActivityBrowser({
       sort: true,
       className: "hidden sm:table-cell",
       cell: (r) => dateLabel(r.started_at, true),
-    },
-    {
-      id: "status",
-      header: "Status",
-      className: "hidden sm:table-cell",
-      cell: (r) => (
-        <div className="flex flex-col items-start gap-1">
-          <StatusPill pill={r.status} />
-          {r.provisional && r.status === "Marking" && (
-            <StatusPill pill="Provisional" />
-          )}
-        </div>
-      ),
-    },
-    {
-      id: "action",
-      header: "Action",
-      className: "hidden xl:table-cell",
-      cell: (r) =>
-        sessionHref(r) ? (
-          <Link
-            prefetch={false}
-            href={sessionHref(r)!}
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-          >
-            {r.finished_at ? "View" : "Continue"}
-            <span className="sr-only"> {r.title}</span>
-          </Link>
-        ) : null,
     },
   ];
   const values = {
@@ -405,7 +322,6 @@ export function ActivityBrowser({
             rows={data.rows}
             columns={columns}
             label="Your activity"
-            student
             onRow={(r) => {
               const href = sessionHref(r);
               if (href) router.push(href);
