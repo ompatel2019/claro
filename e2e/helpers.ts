@@ -151,7 +151,7 @@ export async function start(
   await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
   if (checkEach) {
     const each = page.getByRole("radio", {
-      name: "After each question (check as you go)",
+      name: "Check as I go",
     });
     for (let step = 0; step < 4 && !(await each.isVisible()); step++)
       await page.getByRole("button", { name: "Next", exact: true }).click();
