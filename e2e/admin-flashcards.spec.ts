@@ -41,6 +41,29 @@ test.describe("Admin flashcards", () => {
         .throwOnError();
   });
 
+  test("Topic filters contain parents and Subtopic depends on the chosen topic", async ({
+    page,
+  }) => {
+    await signInAdmin(page);
+    await page.goto("/admin/content/flashcards");
+    await choose(page, "Topic", "Economic Issues");
+    await expect(page).toHaveURL(/topic=t3/);
+    await choose(page, "Subtopic", "Inflation");
+    await expect(page).toHaveURL(/sub=t3-inflation/);
+    const rows = page
+      .getByRole("table", { name: "Flashcards", exact: true })
+      .locator("tbody tr");
+    for (const row of await rows.all())
+      await expect(row).toContainText("Inflation");
+    await choose(page, "Topic", "The Global Economy");
+    await expect(page).toHaveURL(/topic=t1/);
+    expect(new URL(page.url()).searchParams.has("sub")).toBe(false);
+    await page.getByRole("combobox", { name: "Subtopic", exact: true }).click();
+    await expect(
+      page.getByRole("option", { name: "Inflation", exact: true }),
+    ).toHaveCount(0);
+  });
+
   test("adds, edits, sorts, moves, retires, undoes and fits mobile widths", async ({
     page,
   }) => {

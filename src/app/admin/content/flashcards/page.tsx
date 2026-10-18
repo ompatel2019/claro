@@ -29,7 +29,9 @@ export default async function FlashcardsPage({
     loadTopics(),
     loadFlashcardList(f),
   ]);
-  const filtered = ["q", "kind", "topic", "origin"].some((k) => f[k]);
+  const subtopics = topics.filter((t) => t.parent_id === f.topic);
+  if (!subtopics.some((t) => t.id === f.sub)) delete f.sub;
+  const filtered = ["q", "kind", "topic", "sub", "origin"].some((k) => f[k]);
   const parents = topics.filter((t) => !t.parent_id);
   return (
     <div className="space-y-4">
@@ -90,12 +92,14 @@ export default async function FlashcardsPage({
             name: "topic",
             label: "Topic",
             all: "Any",
-            options: parents.flatMap((p) => [
-              { value: p.id, label: p.name },
-              ...topics
-                .filter((t) => t.parent_id === p.id)
-                .map((t) => ({ value: t.id, label: `· ${t.name}` })),
-            ]),
+            clearOnChange: ["sub"],
+            options: parents.map((p) => ({ value: p.id, label: p.name })),
+          },
+          {
+            name: "sub",
+            label: "Subtopic",
+            all: f.topic ? "Any subtopic" : "Choose a topic first",
+            options: subtopics.map((t) => ({ value: t.id, label: t.name })),
           },
           {
             name: "origin",
