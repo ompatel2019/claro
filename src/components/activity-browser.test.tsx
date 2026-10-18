@@ -59,7 +59,7 @@ it("links rows to canonical reports and preserves filters in pagination", () => 
     "/student/activity?kind=sprint&page=2",
   );
   expect(screen.getByText("75%")).toBeVisible();
-  fireEvent.click(screen.getAllByText("8 questions")[0]);
+  fireEvent.click(screen.getByText("75%"));
   expect(push).toHaveBeenCalledWith("/student/sprint/s/results");
 });
 it("uses distinct first-use and filtered empty actions", () => {
@@ -110,7 +110,7 @@ it("keeps pending scores hidden and provisional marks labelled", () => {
     rows: [{ ...row, status: "Marking", provisional: true, pct: 90 }],
   });
   expect(screen.queryByText("90%")).not.toBeInTheDocument();
-  expect(screen.getAllByText("Provisional")).toHaveLength(2);
+  expect(screen.getAllByText("Provisional")).toHaveLength(1);
   cleanup();
   show({
     ...data,
@@ -141,11 +141,11 @@ it("sorts on the server, resets paging and clears every external filter", () => 
     "href",
     "/student/activity",
   );
-  fireEvent.click(screen.getByRole("button", { name: "Score" }));
+  fireEvent.click(screen.getByRole("button", { name: "Date" }));
   expect(push).toHaveBeenCalledWith(
-    "/student/activity?kind=sprint&sort=lowest&date=2026-10-08",
+    "/student/activity?kind=sprint&sort=oldest&date=2026-10-08",
   );
-  expect(screen.getAllByRole("row")[1]).toHaveClass("h-14");
+  expect(screen.getAllByRole("row")[1]).not.toHaveClass("h-14");
 });
 
 it("toggles the default date order to oldest and back to newest", () => {
@@ -171,4 +171,15 @@ it("ignores a legacy paper session alongside supported activity", () => {
     "href",
     "/student/sprint/s/results",
   );
+});
+
+it("puts the score beside the title, uses dates and omits finished status and duration", () => {
+  show();
+  const link = screen.getByRole("link", { name: row.title });
+  expect(link.parentElement).toHaveTextContent("75%");
+  for (const name of ["Kind", "Items", "Time", "Status", "Action", "Score"])
+    expect(screen.queryByRole("columnheader", { name })).toBeNull();
+  expect(screen.queryByText("1:05")).toBeNull();
+  expect(screen.getByRole("table")).not.toHaveTextContent("Finished");
+  expect(screen.getAllByText("Fri 9 Oct").length).toBeGreaterThan(0);
 });
