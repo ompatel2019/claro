@@ -1,5 +1,11 @@
 # Engine changelog
 
+## 19 Oct 2026: Airo 5.1 (prompt tweak; unit-tested only)
+
+Written summaries cite question numbers, use a plain human voice and give concrete next actions tied to a question or topic. MC answers are not supplied and the summary makes no MC performance claims. Analysis comments and answer outlines request judgement or conclusions only when the question asks for them; outline bullets name concrete additions answering the question as asked. The check-mode shared prefix and `next_mark` generation are unchanged. S13 leniency changes are deferred.
+
+Unit-tested only: no paid model calls, paid eval or benchmark runs, and no accuracy or feedback-quality improvement claims.
+
 Migration `0049_answer_version.sql` is written, **NOT applied to production**, and
 awaiting Om/master sign-off. It adds atomic answer versions, guarded auto reviews
 and transactional sprint answer saves/finalization. Deploy the migration before

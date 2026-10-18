@@ -14,7 +14,7 @@ import {
   transcribeMessages,
 } from "./prompts";
 import type { MarkableQuestion } from "./grade";
-import priorMessages from "./prompts-baseline.json";
+import baselineMessages from "./prompts-baseline.json";
 
 const q: MarkableQuestion = {
   id: "q1",
@@ -32,10 +32,10 @@ const q: MarkableQuestion = {
 };
 
 it.each([false, true])(
-  "keeps unrestricted prompts byte-identical to the prior behaviour (check=%s)",
+  "matches the literal Airo 5.1 full baseline and derived check variant (check=%s)",
   (check) => {
-    // Literal pre-change output, without snapshots or hashes.
-    const expected = priorMessages.map((message) => ({ ...message }));
+    // Literal full-prompt baseline; check mode uses the unchanged shared prefix.
+    const expected = baselineMessages.map((message) => ({ ...message }));
     if (check)
       expected[0].content =
         expected[0].content.split("Return the full JSON")[0] +
@@ -201,7 +201,7 @@ it("requests concise tagged comments and actionable next marks", () => {
     "Verb (meeting the directive verb)",
     "Knowledge (accuracy of economic concepts)",
     "Evidence (statistics, examples, data)",
-    "Analysis (cause-and-effect links, judgement)",
+    "Analysis (cause-and-effect links, judgement only when asked)",
     "Terminology (precise economic terms)",
     "Structure (organisation, focus, length)",
     "SHORTEST phrase",
@@ -215,6 +215,30 @@ it("requests concise tagged comments and actionable next marks", () => {
   ])
     expect(system).toContain(instruction);
   expect(system).not.toContain("numbered line references");
+});
+
+it("guards judgement advice and makes outline bullets concrete in full feedback only", () => {
+  const system = gradeMessages(q, "Answer")[0].content as string;
+  const tail = system.split("Return the full JSON")[1];
+  expect(tail).toContain("In Analysis comments and better_answer_outline");
+  expect(tail).toContain(
+    "assess, evaluate, to what extent, justify or discuss",
+  );
+  expect(tail).toContain(
+    "Never request a judgement or conclusion for how, explain, describe, outline, identify or analyse unless the question explicitly asks for one",
+  );
+  expect(tail).toContain(
+    "Each outline bullet names a concrete addition or change that answers the question as asked",
+  );
+  expect(tail).toContain(
+    "for a how question, specify the mechanism steps to explain",
+  );
+  expect(tail).toContain(
+    "next_mark only on fixes = the specific change that earns the next mark (null on strengths)",
+  );
+  expect(gradeMessages(q, "Answer", true)[0].content).not.toContain(
+    "In Analysis comments and better_answer_outline",
+  );
 });
 
 it("keeps injection text inside answer delimiters without changing the system prompt", () => {
@@ -259,6 +283,7 @@ it("uses different stat and term rules", () => {
 it("truncates summary stems and answers and requests specific Australian English advice", () => {
   const messages = summaryMessages([
     {
+      question: 3,
       source: "HSC",
       stem: "x".repeat(300),
       mark: 3,
@@ -269,6 +294,7 @@ it("truncates summary stems and answers and requests specific Australian English
       improvements: ["Second effect"],
     },
   ]);
+  expect(JSON.parse(messages[1].content as string)[0].question).toBe(3);
   expect(JSON.parse(messages[1].content as string)[0].stem).toHaveLength(240);
   expect(JSON.parse(messages[1].content as string)[0].answer).toBe(
     "a".repeat(SUMMARY_ANSWER_MAX_CHARS),
@@ -288,7 +314,7 @@ it("requests transferable writing feedback using the five relevant criteria", ()
   ])
     expect(system).toContain(criterion);
   expect(system).toContain(
-    "Keep content-specific corrections in per-question feedback",
+    'cite specific questions using the supplied question number, for example "Q3"',
   );
   expect(system).toContain(
     "use only criteria relevant to the question's directive verb and length",
@@ -297,7 +323,17 @@ it("requests transferable writing feedback using the five relevant criteria", ()
     "do not demand statistics unless the question or criteria require them",
   );
   expect(system).toContain("This rubric gives advice, never changes marks");
-  expect(system).toContain("practical exercises for those writing fixes");
+  expect(system).toContain(
+    "one concrete, doable action tied to a named question or topic",
+  );
+  expect(system).toContain("Do not invent links or buttons");
+  expect(system).toContain("Only written short-answer items are supplied");
+  expect(system).toContain("multiple-choice (MC) answers are not supplied");
+  expect(system).toContain("make no claims about MC performance");
+  expect(system).toContain(
+    'Avoid stock openers such as "In this answer, your..."',
+  );
+  expect(system).toContain("Never invent a question number if it is absent");
 });
 
 it("limits habit claims to observed evidence and handles sparse or conflicting writing", () => {
@@ -306,7 +342,9 @@ it("limits habit claims to observed evidence and handles sparse or conflicting w
   expect(system).toContain(
     "never infer a habit from a mark, a topic or an MCQ choice",
   );
-  expect(system).toContain('With one written answer, say "In this answer"');
+  expect(system).toContain(
+    "With one written answer, limit advice to that question, cite its number",
+  );
   expect(system).toContain("With conflicting evidence, describe the variation");
   expect(system).toContain("not enough writing to assess habits");
   expect(system).toContain("use fewer or none when evidence is limited");
@@ -315,6 +353,7 @@ it("limits habit claims to observed evidence and handles sparse or conflicting w
 
 it("preserves capped writing and feedback as evidence without promoting instructions", () => {
   const item = {
+    question: 3,
     source: "HSC",
     stem: "Explain inflation",
     mark: 3,

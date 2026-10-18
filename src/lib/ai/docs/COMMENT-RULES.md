@@ -12,19 +12,20 @@ The prompt in `src/lib/marking/prompts.ts` requires:
 - `COMMENT_VOICE_EXAMPLES` in `prompts.ts` holds five editable, original, anonymised A1-style examples. They guide voice only, never marking requirements or answer content.
 - `next_mark`: the specific change that earns the next mark, on fixes only; null on strengths.
 - At least one strength and one fix unless full marks, then strengths only. Phrase advice as what earns the next mark, rather than what the student “should have” done.
-- `earned` and `missing_points`, plus **3–6** `better_answer_outline` bullets.
+- `earned` and `missing_points`, plus **3–6** `better_answer_outline` bullets. Each bullet names a concrete addition or change answering the question as asked; a “how” question needs mechanism steps, rather than sample-answer content.
+- In Analysis comments and `better_answer_outline`, request judgement or a conclusion only for assess, evaluate, to what extent, justify or discuss. Never request either for how, explain, describe, outline, identify or analyse unless explicitly asked. These rules apply to full feedback; check-mode instructions are unchanged.
 - `why_not_higher` and advice for reaching the next band in `next_band`; an empty `next_band` at full marks.
 
 ## Tags
 
-| Tag         | Prompt meaning                        |
-| ----------- | ------------------------------------- |
-| Verb        | Meeting the directive verb.           |
-| Knowledge   | Accuracy of economic concepts.        |
-| Evidence    | Statistics, examples and data.        |
-| Analysis    | Cause-and-effect links and judgement. |
-| Terminology | Precise economic terms.               |
-| Structure   | Organisation, focus and length.       |
+| Tag         | Prompt meaning                                     |
+| ----------- | -------------------------------------------------- |
+| Verb        | Meeting the directive verb.                        |
+| Knowledge   | Accuracy of economic concepts.                     |
+| Evidence    | Statistics, examples and data.                     |
+| Analysis    | Cause-and-effect links; judgement only when asked. |
+| Terminology | Precise economic terms.                            |
+| Structure   | Organisation, focus and length.                    |
 
 See [VERB-GUIDE](/admin/marking/engine?tab=docs&doc=VERB-GUIDE) for directive meanings.
 
