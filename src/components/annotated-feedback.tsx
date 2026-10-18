@@ -15,6 +15,7 @@ import {
   type NumberedComment,
   type ReviewRow,
 } from "@/lib/feedback";
+import { criteriaCoverMarks } from "@/lib/marking/own-criteria";
 import { highlightSegments } from "@/lib/practice";
 import { cn } from "@/lib/utils";
 import { RetryAnswer } from "./retry-answer";
@@ -942,37 +943,44 @@ export function AnnotatedFeedback({
         <div className="space-y-2">
           {showReferences && !!row.criteria?.length && (
             <FeedbackDetails name="guidelines" title="Marking guidelines">
-              <table className="w-full text-left">
-                <thead className="text-muted-foreground text-xs uppercase">
-                  <tr>
-                    <th className="py-2 pr-3 font-medium">Marks</th>
-                    <th className="py-2 font-medium">Descriptor</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {row.criteria.map((c) => (
-                    <tr
-                      key={c.descriptor}
-                      className={cn(
-                        "border-t border-dashed",
-                        c === band?.row && "bg-accent",
-                      )}
-                    >
-                      <td className="py-2 pr-3 align-top tabular-nums">
-                        {c.min === c.max ? c.min : `${c.min}–${c.max}`}
-                      </td>
-                      <td className="py-2">
-                        {c.descriptor}
-                        {c === band?.row && (
-                          <Badge variant="outline" className="ml-2">
-                            Your band
-                          </Badge>
-                        )}
-                      </td>
+              {completeCriteria ? (
+                <table className="w-full text-left">
+                  <thead className="text-muted-foreground text-xs uppercase">
+                    <tr>
+                      <th className="py-2 pr-3 font-medium">Marks</th>
+                      <th className="py-2 font-medium">Descriptor</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {row.criteria.map((c) => (
+                      <tr
+                        key={c.descriptor}
+                        className={cn(
+                          "border-t border-dashed",
+                          c === band?.row && "bg-accent",
+                        )}
+                      >
+                        <td className="py-2 pr-3 align-top tabular-nums">
+                          {c.min === c.max ? c.min : `${c.min}–${c.max}`}
+                        </td>
+                        <td className="py-2">
+                          {c.descriptor}
+                          {c === band?.row && (
+                            <Badge variant="outline" className="ml-2">
+                              Your band
+                            </Badge>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p>
+                  The marking guidelines are incomplete, so the band table is
+                  unavailable.
+                </p>
+              )}
             </FeedbackDetails>
           )}
           {showReferences && row.sample_answer && (
@@ -983,7 +991,7 @@ export function AnnotatedFeedback({
               </p>
             </FeedbackDetails>
           )}
-          {outline.length > 0 && (
+          {Number(row.mark) < max && outline.length > 0 && (
             <FeedbackDetails name="outline" title="How to reach full marks">
               <ul className="list-disc space-y-1 pl-5">
                 {outline.map((t, i) => (

@@ -35,6 +35,7 @@ const bank = Array.from({ length: 1101 }, (_, i) => ({
   type: "short",
   topic_id: "t3-inflation",
   marks: 4,
+  criteria: [{ min: 1, max: 4 }],
   verb: "Explain",
   status: "live",
   origin: "claro",
@@ -385,4 +386,28 @@ it("loads Questions without reading removed content tables", async () => {
   expect(
     mocks.reads.every((table) => ["questions", "topics"].includes(table)),
   ).toBe(true);
+});
+
+it("finds missing and gapped criteria before pagination, excluding MC and complete ranges", async () => {
+  const original = bank.slice(0, 4).map((r) => ({ ...r }));
+  try {
+    bank[0].criteria = [];
+    bank[1].criteria = [
+      { min: 1, max: 1 },
+      { min: 3, max: 4 },
+    ];
+    bank[2].criteria = [];
+    bank[2].type = "mcq";
+    bank[3].criteria = [
+      { min: 3, max: 4 },
+      { min: 1, max: 2 },
+    ];
+    const list = await loadQuestionList({ missing: "criteria", page: "99" });
+    expect(list.pager).toMatchObject({ total: 2, pages: 1, page: 1 });
+    expect(list.rows.map((r) => r.id).sort()).toEqual(["q-0000", "q-0001"]);
+  } finally {
+    original.forEach((r, i) => {
+      bank[i] = r;
+    });
+  }
 });
