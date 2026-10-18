@@ -49,7 +49,7 @@ async function Dashboard() {
           {[
             "Sessions per day",
             "AI spend per day",
-            "Latest finished sessions",
+            "Recent sessions",
             "Needs attention",
           ].map((title) => (
             <Card key={title}>
@@ -144,6 +144,38 @@ async function Dashboard() {
           }
         />
       </div>
+      <Card className="border-brand/30">
+        <CardHeader>
+          <CardTitle role="heading" aria-level={2}>
+            Needs attention
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {rows.length ? (
+            <ul className="divide-y divide-dashed">
+              {rows.map(([n, text, href]) => (
+                <li key={href + text}>
+                  <Link
+                    href={href}
+                    className="hover:bg-surface -mx-2 flex items-center gap-3 rounded-lg px-3 py-4 text-sm"
+                  >
+                    <Badge variant="warning">
+                      <Alert className="size-3" />
+                      {n}
+                    </Badge>
+                    <span>{text}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-muted-foreground flex items-center gap-2 text-sm">
+              <CheckCircle className="size-4 shrink-0" />
+              All clear. Nothing needs attention right now.
+            </p>
+          )}
+        </CardContent>
+      </Card>
       <div className="grid gap-4 xl:grid-cols-2">
         <DailyChart
           title="Sessions per day"
@@ -158,9 +190,17 @@ async function Dashboard() {
           kind="bars"
         />
       </div>
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-4 xl:grid-cols-2">
         <section className="min-w-0 space-y-3">
-          <h2>Latest finished sessions</h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2>Recent sessions</h2>
+            <Link
+              href="/admin/students"
+              className="text-sm font-semibold underline underline-offset-4"
+            >
+              Student activity
+            </Link>
+          </div>
           {d.students === 0 ? (
             <EmptyState
               icon={Users}
@@ -193,43 +233,10 @@ async function Dashboard() {
                     ? scoreTone((100 * s.score) / s.max)
                     : null,
                 when: ago(s.finished_at),
-                finished_at: s.finished_at,
               }))}
             />
           )}
         </section>
-        <Card className="h-fit">
-          <CardHeader>
-            <CardTitle role="heading" aria-level={2}>
-              Needs attention
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {rows.length ? (
-              <ul className="divide-y divide-dashed">
-                {rows.map(([n, text, href]) => (
-                  <li key={href + text}>
-                    <Link
-                      href={href}
-                      className="hover:bg-surface -mx-2 flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm"
-                    >
-                      <Badge variant="warning">
-                        <Alert className="size-3" />
-                        {n}
-                      </Badge>
-                      <span>{text}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-muted-foreground flex items-center gap-2 text-sm">
-                <CheckCircle className="size-4 shrink-0" />
-                All clear. Nothing needs attention right now.
-              </p>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </>
   );
@@ -256,7 +263,7 @@ export default function AdminHome() {
               <Skeleton className="h-72" />
               <Skeleton className="h-72" />
             </div>
-            <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_380px]">
+            <div className="grid gap-4 xl:grid-cols-2">
               <Skeleton className="h-64" />
               <Skeleton className="h-64" />
             </div>

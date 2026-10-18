@@ -176,3 +176,34 @@ it("does not swallow an authorisation redirect", async () => {
   await expect(dashboard()).rejects.toThrow("redirect:/student");
   expect(mocks.loadDashboard).not.toHaveBeenCalled();
 });
+
+it("promotes attention above charts and caps the recent mini-list at three", async () => {
+  mocks.loadDashboard.mockResolvedValue({
+    ...data,
+    latest: Array.from({ length: 10 }, (_, i) => ({
+      id: `s${i}`,
+      user_id: "student",
+      name: `Student ${i}`,
+      kind: "single",
+      mode: null,
+      score: 2,
+      max: 2,
+      finished_at: "2026-10-19T00:00:00Z",
+    })),
+  });
+  render(await dashboard());
+  const attention = screen.getByRole("heading", { name: "Needs attention" });
+  const chart = screen.getByRole("img", {
+    name: "Sessions per day, last 30 days",
+  });
+  expect(
+    attention.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  const list = screen.getByRole("list", { name: "Recent sessions" });
+  expect(within(list).getAllByRole("listitem")).toHaveLength(3);
+  expect(within(list).getAllByRole("link")[0]).toHaveAttribute(
+    "href",
+    "/admin/students/student?tab=sessions&session=s0",
+  );
+  expect(screen.queryByRole("table")).toBeNull();
+});

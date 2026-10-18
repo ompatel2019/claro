@@ -350,7 +350,11 @@ export const loadDashboard = cache(async () => {
   const db = await createClient();
   const { data } = await db.rpc("admin_dashboard").throwOnError();
   const dashboard = dashboardSchema.parse(data);
-  return { ...dashboard, spend: { ...dashboard.spend, cap: SPEND_CAP_USD } };
+  return {
+    ...dashboard,
+    latest: dashboard.latest.slice(0, 3),
+    spend: { ...dashboard.spend, cap: SPEND_CAP_USD },
+  };
 });
 
 export async function loadAdminBadges() {
