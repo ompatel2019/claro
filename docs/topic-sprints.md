@@ -123,3 +123,23 @@ all database and model access. No remote database or paid calls were used.
 The five-minute claim lease cannot prevent provider work continuing after a
 worker times out. Autofill's daily allowance and the shared spend cap still use
 logged usage rather than atomic reservations.
+
+## Iteration 2 — Lane A: S3
+
+Mixed sprints accept a five-mark minimum. Size inputs keep the entered value and show an inline range hint; invalid totals block Start instead of silently snapping on blur. Presets and saved settings use the same limits.
+
+## Iteration 2 — Lane A: S2
+
+The unfinished-sprint banner shows the actual Finish server error, catches network/non-JSON failures, prevents duplicate submissions, and offers View results on failure. A read-only session check recovers straight to results when the server finished despite a lost response. Reset remains a local setup reset. Synthetic browser tests never call real marking.
+
+## Iteration 2 — Lane A: S6
+
+Runner Finish failures check the session’s finished state before showing an error, recovering to results after a lost response. Unfinished failures keep answers editable, show the real error and a View results recovery link. The setup banner links to results when every attempt is marked. All-marked attempts alone do not trigger an automatic finish. Engine timing is unchanged.
+
+## Iteration 2 — Lane A: S4, S5 and S12
+
+Feedback is presented as Check as I go and Exam mode cards with dot-point descriptions. Stored values remain `each` and `end`, with no timer or migration change. The runner, banner Finish and Mark my answer submission share one simple full-page Claro marking screen. It uses polite status announcements and respects reduced motion, with no invented progress percentages. Mark my answer keeps its form mounted and draft intact during submission; its background marking/navigation flow is unchanged.
+
+### Lane A integration dependency — S3
+
+The setup accepts five Mixed marks. Migration `0046` enforced a 20-mark Mixed minimum in the `start_sprint` RPC; migration `0050_mixed_min_5.sql` lowers it to 5 (only that bound changes). **0050 is not yet applied to production** (pending Om's approval); until it is, starting a Mixed sprint below 20 marks fails in the RPC even though the setup allows it.
