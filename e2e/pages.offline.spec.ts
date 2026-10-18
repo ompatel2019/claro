@@ -21,12 +21,13 @@ test.beforeAll(async () => {
         import Flashcards from './src/app/admin/content/flashcards/page';
         import {ActivityBrowser} from './src/components/activity-browser';
         import {resolve} from './src/test/resolve-server-components';
+        import {FeedbackWidget} from './src/components/feedback-widget';
         const f=Object.fromEntries(new URLSearchParams(location.search));
         const activity={rows:[{id:'s',kind:'sprint',title:'Mixed sprint · Inflation',status:'Finished',provisional:false,study:false,pct:75,items:8,answered:8,elapsed_s:125,started_at:'2026-10-19T00:00:00Z',finished_at:'2026-10-19T00:02:00Z'}],page:1,total:1,all_total:1,kinds:{sprint:1},kind_total:1,stats:{sessions:1,questions:8,average:75,best:75}};
         const path=location.pathname;
         const page=path.includes('flashcards') ? await Flashcards({searchParams:Promise.resolve(f)}) : path.includes('admin') ? Admin() : path.includes('activity') ? <ActivityBrowser data={activity} filters={{kind:'',status:'',topic:'',range:'',q:'',sort:'newest',date:'',from:'',to:'',page:1}} topics={[]} today="2026-10-19"/> : await Home();
         const resolved=await resolve(page);
-        createRoot(document.getElementById('root')).render(<><header className="h-16 border-b px-4 py-5">Claro</header><main className="mx-auto max-w-[1280px] px-4 py-6 md:px-6"><div className="pb-0 lg:pb-24">{resolved}</div></main></>);`,
+        createRoot(document.getElementById('root')).render(<FeedbackWidget userId="student"><header className="h-16 border-b px-4 py-5">Claro</header><main className="mx-auto max-w-[1280px] px-4 py-6 md:px-6"><div className="pb-0 lg:pb-12">{resolved}</div></main></FeedbackWidget>);`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -43,7 +44,7 @@ test.beforeAll(async () => {
           builder.onResolve(
             {
               filter:
-                /^(server-only|next\/(link|navigation|form)|@\/lib\/(auth|admin-data|admin-flashcards|admin-content)|@\/utils\/supabase\/server|@\/components\/(welcome-dialog|shortcut|flashcard-import|flashcards-table))$/,
+                /^(server-only|next\/(link|navigation|form)|@\/lib\/(auth|admin-data|admin-flashcards|admin-content)|@\/utils\/supabase\/(server|client)|@\/components\/(welcome-dialog|shortcut|flashcard-import|flashcards-table))$/,
             },
             ({ path }) => ({ path, namespace: "synthetic" }),
           );
@@ -84,9 +85,11 @@ test.beforeAll(async () => {
                                     ? `export const WelcomeDialog=()=>null;`
                                     : path === "@/lib/admin-data"
                                       ? `export const loadDashboard=async()=>({students:1,active:{now:2,prev:1},sessionsWeek:3,openReviews:{count:1,oldestDays:2},spend:{all:81,month:10,cap:100},sessionsTotal:3,spendTotal:2,sessionsPerDay:[],spendPerDay:[],attention:{failed:0,newFeedback:2,contentReports:1,importReview:0,agreement:90},latest:Array.from({length:10},(_,i)=>({id:'s'+i,user_id:'u',name:'Student '+i,kind:'single',mode:null,score:2,max:2,finished_at:'2026-10-19T00:00:00Z'}))});`
-                                      : path === "@/utils/supabase/server"
-                                        ? `const query={select(){return this},eq(){return this},in(){return this},is(){return this},order(){return this},lte(){return this},limit:async()=>({data:[{id:'resume',kind:'single',config:{},elapsed_s:0,started_at:'2026-10-19T00:00:00Z',attempts:[],flashcard_reviews:[]}],error:null}),then(done){return Promise.resolve(done({data:${JSON.stringify(topics)},count:7,error:null}))}};export const createClient=async()=>({from:()=>query,rpc:()=>({single:async()=>({data:{current_streak:3,longest_streak:8},error:null})})});`
-                                        : "";
+                                      : path === "@/utils/supabase/client"
+                                        ? `export const createClient=()=>({});`
+                                        : path === "@/utils/supabase/server"
+                                          ? `const query={select(){return this},eq(){return this},in(){return this},is(){return this},order(){return this},lte(){return this},limit:async()=>({data:[{id:'resume',kind:'single',config:{},elapsed_s:0,started_at:'2026-10-19T00:00:00Z',attempts:[],flashcard_reviews:[]}],error:null}),then(done){return Promise.resolve(done({data:${JSON.stringify(topics)},count:7,error:null}))}};export const createClient=async()=>({from:()=>query,rpc:()=>({single:async()=>({data:{current_streak:3,longest_streak:8},error:null})})});`
+                                          : "";
               return { contents, loader: "tsx", resolveDir: process.cwd() };
             },
           );
@@ -139,6 +142,25 @@ async function capture(
     .evaluateAll((nodes) => nodes.forEach((node) => node.remove()));
 }
 
+test("S1: desktop feedback is fixed and adds no document scroll", async ({
+  page,
+}) => {
+  for (const [width, height] of [
+    [1366, 768],
+    [1280, 720],
+  ]) {
+    await page.setViewportSize({ width, height });
+    await page.goto("http://claro.test/student");
+    const feedback = page.getByRole("button", { name: "Feedback" });
+    await expect(feedback).toBeVisible();
+    expect(await feedback.evaluate((el) => getComputedStyle(el).position)).toBe(
+      "fixed",
+    );
+    expect(
+      await page.evaluate(() => document.documentElement.scrollHeight),
+    ).toBe(height);
+  }
+});
 for (const width of [360, 390, 1366]) {
   test(`S1: four tiles, streak and resume fit at ${width}px`, async ({
     page,
