@@ -34,7 +34,7 @@ export default async function Layout({
         defaultOpen={jar.get("sidebar_state")?.value !== "false"}
       >
         <FlashcardPersistDrain />
-        <div className="pb-0 lg:pb-24">{children}</div>
+        <div className="pb-0 lg:pb-12">{children}</div>
         <Toaster position="bottom-center" />
       </AppShell>
     </FeedbackWidget>

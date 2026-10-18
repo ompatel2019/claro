@@ -193,7 +193,7 @@ Own-question suggestions: set `ENABLE_OWN_QUESTION_MARKING=true` and `ENABLE_OWN
 
 Autofill uses the existing cheapest priced model, `openai/gpt-6-luna`, through OpenRouter (`MODELS.ownQuestionAutofill`). It validates topics and complete band coverage, retrying invalid output once. A separate allowance checks for 10 logged model calls per student per Sydney day, including retries and submit fallbacks; it does not use the 20 marking checks. It follows the existing usage-count rate-limit pattern (concurrent requests can race the count). Calls use the shared spend cap and log tokens and USD to `ai_usage` as `own-question-autofill`; no migration is required. Tests mock all model calls. Run the credential-free browser regressions with `q-run npx playwright test --config=e2e/own-question.config.ts` (read-only local auth/data double).
 
-The checks-left card and desktop feedback button now sit in page flow. The student bottom-position audit found no other content bars to remove; admin review controls and dialog/sheet overlays retain their positioning.
+The checks-left card now sits in page flow. The desktop (lg+) feedback button is `position: fixed` bottom-right so it adds no document height: student home no longer scrolls at 1366×768 or 1280×720 (`e2e/pages.offline.spec.ts`). Desktop content keeps `lg:pb-12` clearance. Phones use the header icon. The student bottom-position audit found no other content bars to remove; admin review controls and dialog/sheet overlays retain their positioning.
 
 ## Iteration 2 — Lane A: S3
 

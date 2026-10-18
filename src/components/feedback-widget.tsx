@@ -179,7 +179,7 @@ export function FeedbackWidget({
           type="button"
           onClick={() => show()}
           aria-label="Feedback"
-          className="group bg-ink text-surface mx-auto my-6 hidden h-12 min-w-12 items-center justify-center gap-2 rounded-full px-3.5 shadow-lg lg:flex print:hidden"
+          className="group bg-ink text-surface fixed right-6 bottom-6 z-40 hidden h-12 min-w-12 items-center justify-center gap-2 rounded-full px-3.5 shadow-lg lg:flex print:hidden"
         >
           <Message aria-hidden className="size-5" />
           <span className="hidden text-sm font-medium group-hover:inline group-focus-visible:inline">
