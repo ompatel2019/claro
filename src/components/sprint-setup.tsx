@@ -1,6 +1,7 @@
 "use client";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { Fragment, useActionState, useEffect, useRef, useState } from "react";
 import {
+  Check,
   ChevronDown,
   Minus,
   Plus,
@@ -195,7 +196,9 @@ export function SprintSetup({
     setLimitHit(false);
     set({
       topics: toggle(c.topics, id),
-      subtopics: c.subtopics.filter((s) => !s.startsWith(`${id}-`)),
+      subtopics: c.subtopics.filter(
+        (sub) => topics.find((topic) => topic.id === sub)?.parent_id !== id,
+      ),
     });
   }
 
@@ -386,7 +389,12 @@ export function SprintSetup({
                             on && "bg-primary text-primary-foreground",
                           )}
                         >
-                          {on && <Minus className="size-3" />}
+                          {on &&
+                            (chosen === 0 || chosen === subs.length ? (
+                              <Check className="size-3" />
+                            ) : (
+                              <Minus className="size-3" />
+                            ))}
                         </span>
                         <span className="min-w-0 flex-1 truncate font-semibold">
                           {t.name}
@@ -619,37 +627,43 @@ export function SprintSetup({
               >
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   {(["year_from", "year_to"] as const).map((k, i) => (
-                    <Select
-                      key={k}
-                      disabled={!years}
-                      value={String(c[k] ?? years?.[i] ?? "")}
-                      onValueChange={(v) => {
-                        const y = {
-                          year_from: c.year_from ?? years?.[0],
-                          year_to: c.year_to ?? years?.[1],
-                          [k]: Number(v),
-                        };
-                        // From ≤ To: swap rather than reject.
-                        const [from, to] = [y.year_from, y.year_to]
-                          .filter((v): v is number => v != null)
-                          .sort((a, b) => a - b);
-                        set({ year_from: from, year_to: to });
-                      }}
-                    >
-                      <SelectTrigger
-                        aria-label={i ? "To year" : "From year"}
-                        className="w-28"
+                    <Fragment key={k}>
+                      {i === 1 && (
+                        <span className="text-muted-foreground text-[13px]">
+                          to
+                        </span>
+                      )}
+                      <Select
+                        disabled={!years}
+                        value={String(c[k] ?? years?.[i] ?? "")}
+                        onValueChange={(v) => {
+                          const y = {
+                            year_from: c.year_from ?? years?.[0],
+                            year_to: c.year_to ?? years?.[1],
+                            [k]: Number(v),
+                          };
+                          // From ≤ To: swap rather than reject.
+                          const [from, to] = [y.year_from, y.year_to]
+                            .filter((v): v is number => v != null)
+                            .sort((a, b) => a - b);
+                          set({ year_from: from, year_to: to });
+                        }}
                       >
-                        <SelectValue placeholder="All years" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {yearList.map((y) => (
-                          <SelectItem key={y} value={String(y)}>
-                            {y}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        <SelectTrigger
+                          aria-label={i ? "To year" : "From year"}
+                          className="w-28"
+                        >
+                          <SelectValue placeholder="All years" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {yearList.map((y) => (
+                            <SelectItem key={y} value={String(y)}>
+                              {y}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Fragment>
                   ))}
 
                   {(c.history === "prefer_new" || c.history === "any") && (
@@ -1049,17 +1063,32 @@ export function SprintSetup({
           </div>
           <div className="bg-muted min-w-0 space-y-2 rounded-xl p-3.5 text-[13px]">
             <p className="sr-only">{summary(c, names, years)}</p>
-            <p
-              className="text-muted-foreground tabular-nums"
+            <div
+              className="flex items-baseline justify-between gap-3"
               aria-live="polite"
             >
-              {poolError
-                ? "Couldn't count matching questions."
-                : `${n(matching)} questions match · ${n(matchingNew)} new`}
-            </p>
+              {poolError ? (
+                <p className="text-muted-foreground">
+                  {"Couldn't count matching questions."}
+                </p>
+              ) : (
+                <>
+                  <p>
+                    <span className="font-semibold tabular-nums">
+                      {n(matching)}
+                    </span>{" "}
+                    questions match
+                  </p>
+                  <p className="text-muted-foreground tabular-nums">
+                    {n(matchingNew)} new to you
+                  </p>
+                </>
+              )}
+            </div>
             <Meter
               value={matching ? ((matchingNew ?? 0) / matching) * 100 : 0}
               label="New matching questions"
+              className="h-1.5"
             />
           </div>
           <Button

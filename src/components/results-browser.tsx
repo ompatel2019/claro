@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { McGridRow } from "@/lib/results";
-import { Check, Close } from "./icons";
+import { Check, Close, PortalIcon } from "./icons";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { cn } from "@/lib/utils";
 import { isTyping } from "./session-shell";
@@ -175,7 +175,7 @@ export function ResultsBrowser({
             {[
               ["Correct", "bg-success-soft"],
               ["Part marks", "bg-warning-soft"],
-              ["Incorrect", "bg-destructive-soft"],
+              ["Incorrect", "bg-brand-soft"],
               ["Not answered", "border border-dashed"],
             ].map(([label, tone]) => (
               <li key={label} className="flex items-center gap-1.5">
@@ -190,11 +190,11 @@ export function ResultsBrowser({
             type="button"
             onClick={() => setTable(false)}
             className={cn(
-              "rounded-full px-3 py-1 text-[13px]",
+              "flex items-center gap-1.5 rounded-full px-3 py-1 text-[13px]",
               !table && "bg-card shadow-xs",
             )}
           >
-            Review
+            <PortalIcon name="layout-grid" className="size-3.5" /> Review
           </button>
           <Toggle
             aria-label="Table view"
@@ -203,7 +203,7 @@ export function ResultsBrowser({
             pressed={table}
             onPressedChange={setTable}
           >
-            Table
+            <PortalIcon name="table-2" className="size-3.5" /> Table
           </Toggle>
         </div>
       </div>
@@ -264,10 +264,13 @@ export function ResultsBrowser({
                         onClick={() => setIndex(i)}
                         className={cn(
                           "grid size-12 content-center rounded-xl border border-transparent text-sm font-medium tabular-nums",
-                          it.tone.replace(
-                            /border-(success|warning|destructive)/g,
-                            "border-transparent",
-                          ),
+                          it.tone
+                            .replace(
+                              /border-(success|warning|destructive)/g,
+                              "border-transparent",
+                            )
+                            .replace(/bg-destructive-soft/g, "bg-brand-soft")
+                            .replace(/text-destructive/g, "text-brand-text"),
                           !it.mark && "border-border border-dashed",
                           i === index && "ring-primary ring-2 ring-offset-2",
                         )}

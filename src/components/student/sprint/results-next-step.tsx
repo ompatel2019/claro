@@ -41,12 +41,13 @@ export function ResultsNextStep({
     <div className="grid gap-3">
       {!!missed.length && (
         <div className="bg-brand-soft/60 border-brand/30 flex items-center gap-4 rounded-xl border p-4">
-          <span className="text-brand bg-card grid size-10 shrink-0 place-items-center rounded-full">
+          <span className="text-brand bg-card grid size-10 shrink-0 place-items-center rounded-xl">
             <PortalIcon name="rotate-ccw" className="size-5" />
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold">
-              Retry the {missed.length} multiple choice questions you missed
+              Retry the {missed.length} multiple choice question
+              {missed.length === 1 ? "" : "s"} you missed
             </p>
             <p className="text-muted-foreground text-[13px]">
               About {Math.ceil(missed.length * 1.25)} minutes · explanations
