@@ -86,7 +86,11 @@ export function ActivityFilterControls({
               ))}
             </select>
           ))}
-        <Button type="submit" variant="outline">
+        <Button
+          type="submit"
+          variant="outline"
+          className="sr-only focus:not-sr-only"
+        >
           Apply
         </Button>
         {activeCount > 0 && (

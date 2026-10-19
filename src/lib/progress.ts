@@ -2,6 +2,8 @@ import { isWeakTopic } from "./weak-topics";
 import { addDays } from "./activity";
 import type { Topic } from "./practice";
 
+export const PRACTICE_TARGET = 80;
+
 export const PROGRESS_RANGES = [
   { value: "30", label: "30 days" },
   { value: "90", label: "90 days" },
@@ -146,4 +148,39 @@ export function masterySegments(m: Mastery) {
     count,
     width: total ? (count / total) * 100 : 0,
   }));
+}
+
+export function weeklyScores(
+  history: HistoryScore[],
+  from: string | null = null,
+  to: string | null = null,
+) {
+  const weeks = new Map<string, number[]>();
+  for (const s of history) {
+    if (
+      !s.finished_at ||
+      s.pct == null ||
+      !Number.isFinite(s.pct) ||
+      !Number.isFinite(Date.parse(s.finished_at))
+    )
+      continue;
+    const day = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Australia/Sydney",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).format(new Date(s.finished_at));
+    if ((from && day < from) || (to && day > to)) continue;
+    const monday = addDays(
+      day,
+      -((new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7),
+    );
+    weeks.set(monday, [...(weeks.get(monday) ?? []), s.pct]);
+  }
+  return [...weeks]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([day, values]) => ({
+      day,
+      value: values.reduce((a, b) => a + b, 0) / values.length,
+    }));
 }

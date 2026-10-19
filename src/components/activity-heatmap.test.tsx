@@ -206,10 +206,8 @@ it("keeps legacy home copy unless the template presentation is requested", () =>
   );
   expect(screen.getByRole("heading", { name: "Study days" })).toBeVisible();
   expect(screen.getByText("Consistency is the cheat code.")).toBeVisible();
-  expect(screen.getByRole("link", { name: "Study" })).toHaveAttribute(
-    "href",
-    "/student/sprint",
-  );
+  expect(screen.getByText("Today is lit")).toBeVisible();
+  expect(screen.queryByRole("link", { name: "Study" })).toBeNull();
   expect(screen.getByRole("link", { name: /^Thu 8 Oct 2026/ })).toHaveAttribute(
     "aria-current",
     "date",

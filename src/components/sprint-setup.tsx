@@ -1,6 +1,7 @@
 "use client";
-import { useActionState, useEffect, useRef, useState } from "react";
+import { Fragment, useActionState, useEffect, useRef, useState } from "react";
 import {
+  Check,
   ChevronDown,
   Minus,
   Plus,
@@ -79,7 +80,9 @@ function Section({
     >
       <div>
         <h2 className="text-sm font-semibold">{title}</h2>
-        {hint && <p className="text-muted-foreground text-xs">{hint}</p>}
+        {hint && (
+          <p className="text-muted-foreground mt-0.5 text-[13px]">{hint}</p>
+        )}
       </div>
       {children}
     </section>
@@ -132,6 +135,7 @@ export function SprintSetup({
   const [pool, setPool] = useState<Pool | null>(null);
   const [poolError, setPoolError] = useState(false);
   const [limitHit, setLimitHit] = useState(false);
+  const [customSize, setCustomSize] = useState(false);
   const [state, action, pending] = useActionState(startSprint, {});
   const form = useRef<HTMLFormElement>(null);
   const ready = useRef(false);
@@ -192,7 +196,9 @@ export function SprintSetup({
     setLimitHit(false);
     set({
       topics: toggle(c.topics, id),
-      subtopics: c.subtopics.filter((s) => !s.startsWith(`${id}-`)),
+      subtopics: c.subtopics.filter(
+        (sub) => topics.find((topic) => topic.id === sub)?.parent_id !== id,
+      ),
     });
   }
 
@@ -301,7 +307,7 @@ export function SprintSetup({
                       if (c.mode !== id) setC(withMode(c, id as Mode));
                     }}
                     className={cn(
-                      "relative min-h-32 rounded-xl border p-4 text-left transition-colors",
+                      "relative flex flex-col items-start justify-start gap-1 rounded-lg border p-4 text-left transition-colors",
                       c.mode === id
                         ? "border-brand bg-brand-soft/60 ring-brand/10 ring-[3px]"
                         : "hover:bg-muted",
@@ -326,12 +332,12 @@ export function SprintSetup({
                             ? "pen-line"
                             : "layers"
                       }
-                      className="text-muted-foreground mb-4 size-5"
+                      className="text-muted-foreground mb-2 size-5"
                     />
                     <span className="block text-sm font-semibold">
                       {m.label}
                     </span>
-                    <span className="text-muted-foreground mt-2 block text-xs">
+                    <span className="text-muted-foreground block text-[13px]">
                       {id === "mcq"
                         ? "Choose from four options."
                         : id === "short"
@@ -346,9 +352,9 @@ export function SprintSetup({
           <div>
             <Section
               title="Topics"
-              hint="Pick whole topics or single dot points. Up to 2 topics; none selected practises the whole course."
+              hint="Pick whole topics or single dot points."
             >
-              <div className="flex justify-end">
+              <div className="-mt-12 mb-4 flex justify-end">
                 <Button
                   type="button"
                   variant="ghost"
@@ -383,14 +389,18 @@ export function SprintSetup({
                             on && "bg-primary text-primary-foreground",
                           )}
                         >
-                          {on && <Minus className="size-3" />}
+                          {on &&
+                            (chosen === 0 || chosen === subs.length ? (
+                              <Check className="size-3" />
+                            ) : (
+                              <Minus className="size-3" />
+                            ))}
                         </span>
                         <span className="min-w-0 flex-1 truncate font-semibold">
                           {t.name}
                         </span>
                         <span className="text-muted-foreground shrink-0 text-xs">
-                          {n(pool?.topics[t.id] ?? (pool ? 0 : undefined))}{" "}
-                          questions
+                          {on ? chosen || subs.length : 0} of {subs.length}
                         </span>
                       </button>
                       {subs.length > 0 && (
@@ -399,24 +409,13 @@ export function SprintSetup({
                           role="group"
                           aria-label={`${t.name} subtopics`}
                         >
-                          <Chip
-                            on={on && chosen === 0}
-                            onClick={() => {
-                              if (!on) toggleTopic(t.id);
-                              else
-                                set({
-                                  subtopics: c.subtopics.filter(
-                                    (x) => !x.startsWith(`${t.id}-`),
-                                  ),
-                                });
-                            }}
-                          >
-                            All
-                          </Chip>
                           {subs.map((sub) => (
                             <Chip
                               key={sub.id}
-                              on={on && c.subtopics.includes(sub.id)}
+                              on={
+                                on &&
+                                (chosen === 0 || c.subtopics.includes(sub.id))
+                              }
                               disabled={
                                 !!pool && (pool.subtopics[sub.id] ?? 0) === 0
                               }
@@ -427,12 +426,30 @@ export function SprintSetup({
                                 }
                                 setLimitHit(false);
                                 set({
-                                  topics: on ? c.topics : [...c.topics, t.id],
-                                  subtopics: toggle(c.subtopics, sub.id),
+                                  topics:
+                                    on &&
+                                    chosen === 1 &&
+                                    c.subtopics.includes(sub.id)
+                                      ? c.topics.filter((id) => id !== t.id)
+                                      : on
+                                        ? c.topics
+                                        : [...c.topics, t.id],
+                                  subtopics:
+                                    on && chosen === 0
+                                      ? [
+                                          ...c.subtopics,
+                                          ...subs
+                                            .filter((s) => s.id !== sub.id)
+                                            .map((s) => s.id),
+                                        ]
+                                      : toggle(c.subtopics, sub.id),
                                 });
                               }}
                             >
-                              {sub.name} · {n(pool?.subtopics[sub.id])}
+                              {sub.name}{" "}
+                              <span className="opacity-65">
+                                {n(pool?.subtopics[sub.id])}
+                              </span>
                             </Chip>
                           ))}
                         </div>
@@ -449,169 +466,206 @@ export function SprintSetup({
             </Section>
           </div>
           <div>
-            <Section title="Size">
-              {c.mode === "short" && (
-                <ToggleGroup
-                  aria-label="Size by"
-                  variant="outline"
-                  size="sm"
-                  value={[c.size_by]}
-                  onValueChange={(v) =>
-                    v[0] && setC(withSizeBy(c, v[0] as SetupConfig["size_by"]))
-                  }
-                >
-                  <ToggleGroupItem value="marks">Marks</ToggleGroupItem>
-                  <ToggleGroupItem value="questions">Questions</ToggleGroupItem>
-                </ToggleGroup>
-              )}
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  aria-label="Decrease"
-                  onClick={() => setC(withTarget(c, c.target - s.step))}
-                >
-                  <Minus />
-                </Button>
-                <Input
-                  aria-label={byMarks ? "Marks" : "Questions"}
-                  inputMode="numeric"
-                  className="w-16 text-center tabular-nums"
-                  value={c.target}
-                  onChange={(e) =>
-                    /^\d*$/.test(e.target.value) &&
-                    setC({
-                      ...c,
-                      target: Number(e.target.value) || 0,
-                      mcq_count: Math.ceil(Number(e.target.value) / 2),
-                      short_marks: Math.floor(Number(e.target.value) / 2),
-                    })
-                  }
-                  aria-describedby="sprint-size-hint"
-                  aria-invalid={invalidSize}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="icon"
-                  aria-label="Increase"
-                  onClick={() => setC(withTarget(c, c.target + s.step))}
-                >
-                  <Plus />
-                </Button>
-                <span className="text-muted-foreground text-sm">
-                  {unit} ({s.min}–{s.max})
-                </span>
-                <div className="flex gap-1">
-                  {s.presets.map((p) => (
+            <Section
+              title="Size"
+              hint={
+                c.mode === "mixed"
+                  ? `${c.mcq_count} multiple choice, then ${c.short_marks} marks of short answers.`
+                  : `${c.target} ${unit}.`
+              }
+            >
+              <div className="flex flex-wrap gap-2">
+                {(c.mode === "mcq" ? [10, 20, 30, 40] : [10, 25, 40, 60]).map(
+                  (p) => (
                     <Chip
                       key={p}
-                      on={c.target === p}
-                      onClick={() => setC(withTarget(c, p))}
+                      on={!customSize && c.target === p}
+                      onClick={() => {
+                        setC(withTarget(c, p));
+                        setCustomSize(false);
+                      }}
                     >
-                      {p}
+                      {p} {unit}
                     </Chip>
-                  ))}
-                </div>
+                  ),
+                )}
+                <Chip
+                  on={customSize}
+                  onClick={() => setCustomSize(!customSize)}
+                >
+                  Custom
+                </Chip>
               </div>
-              <p
-                id="sprint-size-hint"
-                className="text-muted-foreground text-xs"
-                aria-live="polite"
-              >
-                {invalidSize
-                  ? `Enter ${s.min}–${s.max} ${unit} to continue.`
-                  : `Minimum ${s.min} ${unit}; maximum ${s.max}.`}
-              </p>
-              {c.mode === "mixed" && (
-                <div className="space-y-2">
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    {(
-                      [
-                        ["mcq_count", "Multiple choice questions"],
-                        ["short_marks", "Short answer marks"],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <label
-                        key={key}
-                        className="grid gap-1.5 text-sm font-medium"
+              <div hidden={!customSize} className="space-y-3">
+                {c.mode === "short" && (
+                  <ToggleGroup
+                    aria-label="Size by"
+                    variant="outline"
+                    size="sm"
+                    value={[c.size_by]}
+                    onValueChange={(v) =>
+                      v[0] &&
+                      setC(withSizeBy(c, v[0] as SetupConfig["size_by"]))
+                    }
+                  >
+                    <ToggleGroupItem value="marks">Marks</ToggleGroupItem>
+                    <ToggleGroupItem value="questions">
+                      Questions
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                )}
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="Decrease"
+                    onClick={() => setC(withTarget(c, c.target - s.step))}
+                  >
+                    <Minus />
+                  </Button>
+                  <Input
+                    aria-label={byMarks ? "Marks" : "Questions"}
+                    inputMode="numeric"
+                    className="w-16 text-center tabular-nums"
+                    value={c.target}
+                    onChange={(e) =>
+                      /^\d*$/.test(e.target.value) &&
+                      setC({
+                        ...c,
+                        target: Number(e.target.value) || 0,
+                        mcq_count: Math.ceil(Number(e.target.value) / 2),
+                        short_marks: Math.floor(Number(e.target.value) / 2),
+                      })
+                    }
+                    aria-describedby="sprint-size-hint"
+                    aria-invalid={invalidSize}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    aria-label="Increase"
+                    onClick={() => setC(withTarget(c, c.target + s.step))}
+                  >
+                    <Plus />
+                  </Button>
+                  <span className="text-muted-foreground text-sm">
+                    {unit} ({s.min}–{s.max})
+                  </span>
+                  <div className="flex gap-1">
+                    {s.presets.map((p) => (
+                      <Chip
+                        key={p}
+                        on={c.target === p}
+                        onClick={() => setC(withTarget(c, p))}
                       >
-                        {label}
-                        <Input
-                          type="number"
-                          min={0}
-                          max={c.target}
-                          step={1}
-                          value={c[key]}
-                          onChange={(e) =>
-                            setC(withMixedCount(c, key, Number(e.target.value)))
-                          }
-                        />
-                      </label>
+                        {p}
+                      </Chip>
                     ))}
                   </div>
-                  <p
-                    className="text-muted-foreground text-sm"
-                    aria-live="polite"
-                  >
-                    {c.mcq_count} multis + {c.short_marks} marks of shorts ={" "}
-                    {c.target} marks
-                  </p>
-                  <p className="text-muted-foreground text-xs">
-                    Shorts use whole questions and aim within 2 marks of the
-                    target.
-                  </p>
                 </div>
-              )}
+                <p
+                  id="sprint-size-hint"
+                  className="text-muted-foreground text-xs"
+                  aria-live="polite"
+                >
+                  {invalidSize
+                    ? `Enter ${s.min}–${s.max} ${unit} to continue.`
+                    : `Minimum ${s.min} ${unit}; maximum ${s.max}.`}
+                </p>
+                {c.mode === "mixed" && (
+                  <div className="space-y-2">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      {(
+                        [
+                          ["mcq_count", "Multiple choice questions"],
+                          ["short_marks", "Short answer marks"],
+                        ] as const
+                      ).map(([key, label]) => (
+                        <label
+                          key={key}
+                          className="grid gap-1.5 text-sm font-medium"
+                        >
+                          {label}
+                          <Input
+                            type="number"
+                            min={0}
+                            max={c.target}
+                            step={1}
+                            value={c[key]}
+                            onChange={(e) =>
+                              setC(
+                                withMixedCount(c, key, Number(e.target.value)),
+                              )
+                            }
+                          />
+                        </label>
+                      ))}
+                    </div>
+                    <p
+                      className="text-muted-foreground text-sm"
+                      aria-live="polite"
+                    >
+                      {c.mcq_count} multis + {c.short_marks} marks of shorts ={" "}
+                      {c.target} marks
+                    </p>
+                    <p className="text-muted-foreground text-xs">
+                      Shorts use whole questions and aim within 2 marks of the
+                      target.
+                    </p>
+                  </div>
+                )}
+              </div>
             </Section>
           </div>
           <div className="divide-y">
-            {years && (
+            {
               <Section
                 title="Paper years"
                 hint="Keep the full range, or narrow it to recent papers."
               >
                 <div className="flex flex-wrap items-center gap-2 text-sm">
                   {(["year_from", "year_to"] as const).map((k, i) => (
-                    <Select
-                      key={k}
-                      value={String(c[k] ?? years[i])}
-                      onValueChange={(v) => {
-                        const y = {
-                          year_from: c.year_from ?? years[0],
-                          year_to: c.year_to ?? years[1],
-                          [k]: Number(v),
-                        };
-                        // From ≤ To: swap rather than reject.
-                        const [from, to] = [y.year_from, y.year_to].sort();
-                        set({ year_from: from, year_to: to });
-                      }}
-                    >
-                      <SelectTrigger
-                        aria-label={i ? "To year" : "From year"}
-                        className="w-24"
+                    <Fragment key={k}>
+                      {i === 1 && (
+                        <span className="text-muted-foreground text-[13px]">
+                          to
+                        </span>
+                      )}
+                      <Select
+                        disabled={!years}
+                        value={String(c[k] ?? years?.[i] ?? "")}
+                        onValueChange={(v) => {
+                          const y = {
+                            year_from: c.year_from ?? years?.[0],
+                            year_to: c.year_to ?? years?.[1],
+                            [k]: Number(v),
+                          };
+                          // From ≤ To: swap rather than reject.
+                          const [from, to] = [y.year_from, y.year_to]
+                            .filter((v): v is number => v != null)
+                            .sort((a, b) => a - b);
+                          set({ year_from: from, year_to: to });
+                        }}
                       >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {yearList.map((y) => (
-                          <SelectItem key={y} value={String(y)}>
-                            {y}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        <SelectTrigger
+                          aria-label={i ? "To year" : "From year"}
+                          className="w-28"
+                        >
+                          <SelectValue placeholder="All years" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {yearList.map((y) => (
+                            <SelectItem key={y} value={String(y)}>
+                              {y}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </Fragment>
                   ))}
-                  <button
-                    type="button"
-                    className="underline"
-                    onClick={() =>
-                      set({ year_from: years[1] - 4, year_to: years[1] })
-                    }
-                  >
-                    Last 5 years
-                  </button>
+
                   {(c.history === "prefer_new" || c.history === "any") && (
                     <label className="ml-auto flex items-center gap-2 text-[13px]">
                       <Switch
@@ -625,8 +679,164 @@ export function SprintSetup({
                   )}
                 </div>
               </Section>
-            )}
-            <Collapsible className="px-5 py-5 sm:px-6">
+            }
+
+            <div className="px-5 py-5 sm:px-6">
+              <h2 className="mb-4 text-sm font-semibold">Timer and feedback</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div role="region" aria-label="Timer">
+                  <label className="flex items-start gap-3 rounded-xl border p-3.5 text-[13px]">
+                    <Switch
+                      checked={c.timed}
+                      onCheckedChange={(timed) =>
+                        set({
+                          timed,
+                          ...(!timed
+                            ? {
+                                short_min_per_mark: clampPace(
+                                  c.short_min_per_mark,
+                                ),
+                                mcq_min_per_q: clampPace(c.mcq_min_per_q),
+                              }
+                            : {}),
+                        })
+                      }
+                    />
+                    <span>
+                      Timed at exam pace
+                      <span className="text-muted-foreground mt-0.5 block">
+                        {c.timed
+                          ? `${minutes} minutes for this sprint`
+                          : "No clock. Take your time."}
+                      </span>
+                    </span>
+                  </label>
+                  {customSize && c.timed && (
+                    <details>
+                      <summary className="text-muted-foreground cursor-pointer text-xs">
+                        Adjust exam pace
+                      </summary>
+                      <div className="mt-3 space-y-3">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {(
+                            [
+                              [
+                                "short_min_per_mark",
+                                "Shorts: minutes per mark",
+                              ],
+                              ["mcq_min_per_q", "Multis: minutes per question"],
+                            ] as const
+                          ).map(([key, label]) => (
+                            <label
+                              key={key}
+                              className="grid gap-1.5 text-sm font-medium"
+                            >
+                              {label}
+                              <Input
+                                type="number"
+                                min={0.25}
+                                max={10}
+                                step={0.25}
+                                value={c[key] || ""}
+                                aria-invalid={!validPace(c[key])}
+                                onChange={(e) =>
+                                  set({ [key]: Number(e.target.value) })
+                                }
+                                onBlur={() => set({ [key]: clampPace(c[key]) })}
+                              />
+                            </label>
+                          ))}
+                        </div>
+                        {(!validPace(c.short_min_per_mark) ||
+                          !validPace(c.mcq_min_per_q)) && (
+                          <p role="alert" className="text-destructive text-sm">
+                            Use a pace between 0.25 and 10 minutes.
+                          </p>
+                        )}
+                        <p className="text-muted-foreground text-xs">
+                          ≈ {minutes} min
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          A sound and banner let you know when time is up. Keep
+                          working in overtime until you choose to finish.
+                        </p>
+                      </div>
+                    </details>
+                  )}
+                </div>
+                <div
+                  role="region"
+                  aria-label="Feedback"
+                  className="grid content-start gap-2 rounded-xl border p-3.5"
+                >
+                  <h3 className="text-sm font-medium">Show feedback</h3>
+                  <RadioGroup
+                    aria-label="Feedback"
+                    value={c.feedback}
+                    onValueChange={(feedback) =>
+                      set({ feedback: feedback as SetupConfig["feedback"] })
+                    }
+                    className="bg-muted flex gap-0.5 rounded-full p-0.5"
+                  >
+                    {(
+                      [
+                        [
+                          "each",
+                          "Check as I go",
+                          [
+                            "Check each answer when you’re ready.",
+                            "See feedback before moving on.",
+                          ],
+                        ],
+                        [
+                          "end",
+                          "Exam mode",
+                          [
+                            "Work through questions without feedback.",
+                            "See marks and explanations when you finish.",
+                          ],
+                        ],
+                      ] as const
+                    )
+                      .slice()
+                      .reverse()
+                      .map(([value, title, points]) => (
+                        <label
+                          key={value}
+                          className={cn(
+                            "has-[:focus-visible]:ring-ring relative flex cursor-pointer items-center justify-center gap-2 rounded-full px-3 py-1.5 text-xs whitespace-nowrap has-[:focus-visible]:ring-2",
+                            c.feedback === value && "bg-card shadow-xs",
+                          )}
+                        >
+                          <RadioGroupItem
+                            value={value}
+                            aria-label={title}
+                            className="sr-only"
+                          />
+                          <div className="space-y-2">
+                            <span className="font-medium">
+                              {value === "end"
+                                ? "At the end"
+                                : "After each question"}
+                            </span>
+                            <ul className="sr-only">
+                              {points.map((point) => (
+                                <li key={point}>{point}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </label>
+                      ))}
+                  </RadioGroup>
+                </div>
+              </div>
+            </div>
+            <Collapsible
+              className={cn(
+                "px-5 py-5 sm:px-6",
+                !customSize && filtersOn(c) === 0 && "hidden",
+              )}
+            >
               <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-semibold">
                 <span>
                   Advanced
@@ -752,149 +962,6 @@ export function SprintSetup({
                 </Section>
               </CollapsibleContent>
             </Collapsible>
-
-            <div className="px-5 py-5 sm:px-6">
-              <h2 className="mb-4 text-sm font-semibold">Timer and feedback</h2>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Section title="Timer" compact>
-                  <label className="flex items-start gap-3 rounded-xl border p-3.5 text-[13px]">
-                    <Switch
-                      checked={c.timed}
-                      onCheckedChange={(timed) =>
-                        set({
-                          timed,
-                          ...(!timed
-                            ? {
-                                short_min_per_mark: clampPace(
-                                  c.short_min_per_mark,
-                                ),
-                                mcq_min_per_q: clampPace(c.mcq_min_per_q),
-                              }
-                            : {}),
-                        })
-                      }
-                    />
-                    <span>
-                      Timed at exam pace
-                      <span className="text-muted-foreground mt-0.5 block">
-                        {c.timed
-                          ? `${minutes} minutes for this sprint`
-                          : "No clock. Take your time."}
-                      </span>
-                    </span>
-                  </label>
-                  {c.timed && (
-                    <details>
-                      <summary className="text-muted-foreground cursor-pointer text-xs">
-                        Adjust exam pace
-                      </summary>
-                      <div className="mt-3 space-y-3">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          {(
-                            [
-                              [
-                                "short_min_per_mark",
-                                "Shorts: minutes per mark",
-                              ],
-                              ["mcq_min_per_q", "Multis: minutes per question"],
-                            ] as const
-                          ).map(([key, label]) => (
-                            <label
-                              key={key}
-                              className="grid gap-1.5 text-sm font-medium"
-                            >
-                              {label}
-                              <Input
-                                type="number"
-                                min={0.25}
-                                max={10}
-                                step={0.25}
-                                value={c[key] || ""}
-                                aria-invalid={!validPace(c[key])}
-                                onChange={(e) =>
-                                  set({ [key]: Number(e.target.value) })
-                                }
-                                onBlur={() => set({ [key]: clampPace(c[key]) })}
-                              />
-                            </label>
-                          ))}
-                        </div>
-                        {(!validPace(c.short_min_per_mark) ||
-                          !validPace(c.mcq_min_per_q)) && (
-                          <p role="alert" className="text-destructive text-sm">
-                            Use a pace between 0.25 and 10 minutes.
-                          </p>
-                        )}
-                        <p className="text-muted-foreground text-xs">
-                          ≈ {minutes} min
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          A sound and banner let you know when time is up. Keep
-                          working in overtime until you choose to finish.
-                        </p>
-                      </div>
-                    </details>
-                  )}
-                </Section>
-                <Section title="Feedback" compact>
-                  <RadioGroup
-                    aria-label="Feedback"
-                    value={c.feedback}
-                    onValueChange={(feedback) =>
-                      set({ feedback: feedback as SetupConfig["feedback"] })
-                    }
-                    className="bg-muted flex flex-wrap gap-1 rounded-full p-0.5"
-                  >
-                    {(
-                      [
-                        [
-                          "each",
-                          "Check as I go",
-                          [
-                            "Check each answer when you’re ready.",
-                            "See feedback before moving on.",
-                          ],
-                        ],
-                        [
-                          "end",
-                          "Exam mode",
-                          [
-                            "Work through questions without feedback.",
-                            "See marks and explanations when you finish.",
-                          ],
-                        ],
-                      ] as const
-                    ).map(([value, title, points]) => (
-                      <label
-                        key={value}
-                        className={cn(
-                          "has-[:focus-visible]:ring-ring relative flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full px-2 py-1.5 text-xs has-[:focus-visible]:ring-2",
-                          c.feedback === value && "bg-card shadow-xs",
-                        )}
-                      >
-                        <RadioGroupItem
-                          value={value}
-                          aria-label={title}
-                          className="sr-only"
-                        />
-                        <div className="space-y-2">
-                          <span className="font-medium">
-                            {value === "end"
-                              ? "At the end"
-                              : "After each question"}
-                          </span>
-                          <ul className="sr-only">
-                            {points.map((point) => (
-                              <li key={point}>{point}</li>
-                            ))}
-                          </ul>
-                        </div>
-                      </label>
-                    ))}
-                  </RadioGroup>
-                </Section>
-              </div>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -957,7 +1024,7 @@ export function SprintSetup({
               [
                 "Paper years",
                 years
-                  ? `${c.year_from ?? years[0]}–${c.year_to ?? years[1]}`
+                  ? `${c.year_from ?? years?.[0]}–${c.year_to ?? years?.[1]}`
                   : "All years",
               ],
               [
@@ -971,44 +1038,61 @@ export function SprintSetup({
               </div>
             ))}
           </dl>
-          <div className="flex flex-wrap gap-1.5">
-            {c.topics.map((id) => {
-              const subs = c.subtopics.filter((sub) =>
-                sub.startsWith(`${id}-`),
-              );
-              return (
-                <div key={id} className="space-y-1">
-                  <Badge variant="secondary">{names[id]}</Badge>
-                  {subs.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 pl-2">
-                      {subs.map((sub) => (
-                        <Badge variant="secondary" key={sub}>
-                          {names[sub]}
-                        </Badge>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+          <div className="grid gap-2">
+            <p className="text-muted-foreground text-xs">
+              {c.subtopics.length
+                ? `${c.subtopics.length} dot point${c.subtopics.length === 1 ? "" : "s"}`
+                : c.topics.length
+                  ? `${c.topics.length} topics`
+                  : "Whole course"}
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {c.topics
+                .flatMap((id) => {
+                  const subs = c.subtopics.filter(
+                    (sub) => topics.find((t) => t.id === sub)?.parent_id === id,
+                  );
+                  return subs.length ? subs : [id];
+                })
+                .map((id) => (
+                  <Badge key={id} variant="secondary">
+                    {names[id]}
+                  </Badge>
+                ))}
+            </div>
           </div>
           <div className="bg-muted min-w-0 space-y-2 rounded-xl p-3.5 text-[13px]">
             <p className="sr-only">{summary(c, names, years)}</p>
-            <p
-              className="text-muted-foreground tabular-nums"
+            <div
+              className="flex items-baseline justify-between gap-3"
               aria-live="polite"
             >
-              {poolError
-                ? "Couldn't count matching questions."
-                : `${n(matching)} questions match · ${n(matchingNew)} new`}
-            </p>
+              {poolError ? (
+                <p className="text-muted-foreground">
+                  {"Couldn't count matching questions."}
+                </p>
+              ) : (
+                <>
+                  <p>
+                    <span className="font-semibold tabular-nums">
+                      {n(matching)}
+                    </span>{" "}
+                    questions match
+                  </p>
+                  <p className="text-muted-foreground tabular-nums">
+                    {n(matchingNew)} new to you
+                  </p>
+                </>
+              )}
+            </div>
             <Meter
               value={matching ? ((matchingNew ?? 0) / matching) * 100 : 0}
               label="New matching questions"
+              className="h-1.5"
             />
           </div>
           <Button
-            className="order-last w-full"
+            className="text-muted-foreground order-last -mt-4 h-8 w-full text-xs"
             type="button"
             variant="ghost"
             onClick={() => {
@@ -1018,7 +1102,7 @@ export function SprintSetup({
             Reset
           </Button>
           <Button
-            className="w-full"
+            className="h-11 w-full"
             type="submit"
             disabled={
               invalidSize ||
@@ -1029,6 +1113,7 @@ export function SprintSetup({
                   !validPace(c.mcq_min_per_q)))
             }
           >
+            <PortalIcon name="zap" className="size-4" />
             {pending
               ? "Building…"
               : shortfall
@@ -1105,7 +1190,7 @@ function Chip({
       pressed={on}
       disabled={disabled}
       onClick={onClick}
-      className="h-auto min-h-8 max-w-full text-left text-xs whitespace-normal"
+      className="h-auto min-h-8 max-w-full gap-1.5 text-left text-[13px] whitespace-normal"
     >
       {children}
     </FoundationChip>
@@ -1123,15 +1208,61 @@ const QUICK = [
 ];
 
 /** §3.1 Quick start: one click straight into a sprint (used on Home). */
-export function QuickStarts() {
+export function QuickStarts({
+  weak,
+  previous,
+  previousRaw,
+}: {
+  weak?: { id: string; name: string; parent_id: string | null };
+  previous?: SetupConfig;
+  previousRaw?: Record<string, unknown>;
+} = {}) {
   const [state, action, pending] = useActionState(startSprint, {});
   return (
     <form action={action} className="contents">
-      {QUICK.map((q) => (
+      {[
+        ...(weak
+          ? [
+              {
+                label: "Mixed · 12 marks · 15 min",
+                title: `Weak spot: ${weak.name}`,
+                icon: "target" as const,
+                config: {
+                  ...withTarget(withMode(DEFAULTS, "mixed"), 12),
+                  topics: [weak.parent_id ?? weak.id],
+                  subtopics: weak.parent_id ? [weak.id] : [],
+                },
+              },
+            ]
+          : []),
+        ...(previous
+          ? [
+              {
+                label: `${modes[previous.mode].label}${typeof previousRaw?.target === "number" ? ` · ${previousRaw.target} ${previous.size_by}` : ""} · ${previous.topics.length} topic${previous.topics.length === 1 ? "" : "s"}`,
+                title: "Same as last time",
+                icon: "rotate-ccw" as const,
+                config: previous,
+              },
+            ]
+          : []),
+        ...QUICK.slice(0, weak || previous ? 1 : 2).map((q) => ({
+          ...q,
+          title:
+            q.config.mode === "mcq"
+              ? "Section I drill"
+              : "Short answer practice",
+          icon:
+            q.config.mode === "mcq" ? ("list" as const) : ("pen-line" as const),
+        })),
+      ].map((q) => (
         <Button
           key={q.label}
           name="config"
-          value={JSON.stringify(q.config)}
+          value={JSON.stringify(
+            q.title === "Same as last time"
+              ? (previousRaw ?? q.config)
+              : q.config,
+          )}
           type="submit"
           variant="outline"
           className="bg-card h-auto justify-start gap-3 rounded-xl p-3.5 text-left shadow-xs"
@@ -1139,19 +1270,14 @@ export function QuickStarts() {
           disabled={pending}
         >
           <span className="bg-muted text-muted-foreground grid size-9 shrink-0 place-items-center rounded-lg">
-            <PortalIcon
-              name={q.config.mode === "mcq" ? "list" : "pen-line"}
-              className="size-4"
-            />
+            <PortalIcon name={q.icon} className="size-4" />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block text-sm font-semibold">
-              {q.config.mode === "mcq"
-                ? "Section I drill"
-                : "Short answer practice"}
-            </span>
+            <span className="block text-sm font-semibold">{q.title}</span>
             <span className="text-muted-foreground mt-0.5 block text-xs">
-              {q.label}
+              {q.config.mode === "mcq"
+                ? `${q.config.target} multiple choice · ${estimateMinutes(q.config)} min`
+                : q.label}
             </span>
           </span>
           <PortalIcon
@@ -1181,6 +1307,7 @@ export function SameSetup({ config }: { config: object }) {
         type="submit"
         disabled={pending}
       >
+        <PortalIcon name="rotate-ccw" className="size-4" />
         {pending ? "Building…" : "Same setup again"}
       </Button>
       {state.error && (

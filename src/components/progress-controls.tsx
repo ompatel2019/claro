@@ -35,7 +35,10 @@ export function ProgressControls({
     return (
       <div aria-busy={pending}>
         <Select
-          items={PROGRESS_RANGES}
+          items={PROGRESS_RANGES.map((r) => ({
+            ...r,
+            label: ["30", "90"].includes(r.value) ? `Last ${r.label}` : r.label,
+          }))}
           disabled={pending}
           value={range}
           onValueChange={(v) => v && update("range", v)}
@@ -46,7 +49,7 @@ export function ProgressControls({
           <SelectContent>
             {PROGRESS_RANGES.map((r) => (
               <SelectItem key={r.value} value={r.value}>
-                {r.label}
+                {["30", "90"].includes(r.value) ? `Last ${r.label}` : r.label}
               </SelectItem>
             ))}
           </SelectContent>

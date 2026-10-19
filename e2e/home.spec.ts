@@ -21,17 +21,17 @@ test.describe("Student home", () => {
     ).toBeVisible();
     const quick = page.getByRole("region", { name: "Quick start" });
     for (const [name, href] of [
-      ["Topic Sprint", "/student/sprint"],
-      ["Flashcards", "/student/flashcards"],
-      ["Mark my answer", "/student/mark"],
-      ["Activity", "/student/activity"],
+      ["Marks earned", "/student/progress"],
+      ["Questions answered", "/student/sprint"],
+      ["Study time", "/student/activity"],
+      ["Cards due", "/student/flashcards"],
     ]) {
       await expect(
         quick.getByRole("link", { name: new RegExp(`^${name}`) }),
       ).toHaveAttribute("href", href);
     }
     await expect(
-      page.getByRole("heading", { name: "Your study days" }),
+      page.getByRole("heading", { name: "Study days" }),
     ).toBeVisible();
     await expect(page.getByText("Day streak")).toBeVisible();
     await expect(

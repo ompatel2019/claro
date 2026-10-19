@@ -10,6 +10,7 @@ import {
   type McGridRow,
   type NextAction,
 } from "@/lib/results";
+import { PortalIcon } from "./icons";
 import { QuestionView } from "./question-view";
 import { Badge } from "./claro/controls";
 import { PenTick, PenCaret } from "./claro/markup-answer";
@@ -83,15 +84,36 @@ export function ResultsAnswers({
           <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
             <Badge variant="outline">Question {r.position}</Badge>
             <Badge variant="secondary">{TYPE_LABEL[r.type]}</Badge>
-            <span>{r.source}</span>
-            {r.topic_id && ` · ${name(r.topic_id)}`}
+            <span className="text-xs">
+              {name(r.topic_id)} · {r.marks} {r.marks === 1 ? "mark" : "marks"}
+            </span>
+            {r.type !== "mcq" && scored(r) && (
+              <Badge
+                variant={
+                  Number(r.mark) >= Number(r.max_marks ?? r.marks)
+                    ? "success"
+                    : Number(r.mark) > 0
+                      ? "warning"
+                      : "brand"
+                }
+                className="ml-auto"
+              >
+                {r.mark} of {r.max_marks ?? r.marks} marks
+              </Badge>
+            )}
             {r.type === "mcq" && scored(r) && (
               <span className="text-ink font-semibold tabular-nums">
                 {markLabel(r)}
               </span>
             )}
           </p>
-          <QuestionView question={r} />
+          <div
+            className={
+              readOnly ? undefined : "[&>div>div:first-child]:text-[17px]"
+            }
+          >
+            <QuestionView question={r} showMetadata={readOnly} />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {r.type === "mcq" ? (
@@ -143,9 +165,12 @@ export function ResultsAnswers({
                 : r.status === "marked" && r.mark == null
                   ? "No mark available"
                   : null,
-            tone: scored(r)
-              ? markTone(r.mark ?? 0, r.max_marks ?? r.marks)
-              : "",
+            tone:
+              state === "not_answered"
+                ? "bg-card border-muted-foreground/45 border-dashed text-muted-foreground"
+                : scored(r)
+                  ? markTone(r.mark ?? 0, r.max_marks ?? r.marks)
+                  : "",
             pill: r.type === "mcq" ? null : statePill(state, r.review),
           };
         })}
@@ -165,11 +190,13 @@ export function OverallFeedback({
   pending,
   actions,
   rows = [],
+  nextStep,
 }: {
   summary: OverallSummary | null;
   pending: boolean;
   actions?: NextAction[];
   rows?: ReviewRow[];
+  nextStep?: React.ReactNode;
 }) {
   const actionLinks = actions && actions.length > 0 && (
     <div className="flex flex-wrap gap-2">
@@ -197,6 +224,7 @@ export function OverallFeedback({
                   Review Q{q.position} · {TYPE_LABEL[q.type]}
                 </a>
               ))}
+              {!nextStep && references(false)}
             </div>
           )}
         </div>
@@ -244,21 +272,25 @@ export function OverallFeedback({
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <section
-            className="bg-brand-soft/60 border-brand/30 space-y-3 rounded-xl border p-4"
-            aria-label="Next steps"
-          >
-            <h3 className="text-sm font-semibold">Next steps</h3>
-            {!!summary?.next_steps?.length && (
-              <ul className="space-y-2 text-[13px]">
-                {summary.next_steps.map((text, i) => (
-                  <li key={i}>{text}</li>
-                ))}
-              </ul>
-            )}
-            {actionLinks}
-          </section>
-          {references(true)}
+          {nextStep ?? (
+            <>
+              <section
+                className="bg-brand-soft/60 border-brand/30 space-y-3 rounded-xl border p-4"
+                aria-label="Next steps"
+              >
+                <h3 className="text-sm font-semibold">Next steps</h3>
+                {!!summary?.next_steps?.length && (
+                  <ul className="space-y-2 text-[13px]">
+                    {summary.next_steps.map((text, i) => (
+                      <li key={i}>{text}</li>
+                    ))}
+                  </ul>
+                )}
+                {actionLinks}
+              </section>
+              {references(true)}
+            </>
+          )}
         </CardContent>
       </Card>
       <Card>
@@ -284,10 +316,14 @@ export function OverallFeedback({
                   <h3
                     className={
                       lost
-                        ? "text-warning-text text-xs font-semibold"
-                        : "text-success text-xs font-semibold"
+                        ? "text-warning-text flex items-center gap-1.5 text-xs font-semibold"
+                        : "text-success flex items-center gap-1.5 text-xs font-semibold"
                     }
                   >
+                    <PortalIcon
+                      name={lost ? "circle-alert" : "circle-check"}
+                      className="size-3.5"
+                    />
                     {label}
                   </h3>
                   <ul className="space-y-2 text-[13px]">
@@ -304,7 +340,7 @@ export function OverallFeedback({
                   </ul>
                 </section>
               ))}
-              {references(false)}
+              {!nextStep && references(false)}
             </div>
           ) : (
             <div className="space-y-3">

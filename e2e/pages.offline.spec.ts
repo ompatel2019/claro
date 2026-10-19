@@ -20,12 +20,13 @@ test.beforeAll(async () => {
         import Admin from './src/app/admin/page';
         import Flashcards from './src/app/admin/content/flashcards/page';
         import {ActivityBrowser} from './src/components/activity-browser';
+        import Progress from './src/app/(app)/student/progress/page';
         import {resolve} from './src/test/resolve-server-components';
         import {FeedbackWidget} from './src/components/feedback-widget';
         const f=Object.fromEntries(new URLSearchParams(location.search));
         const activity={rows:[{id:'s',kind:'sprint',title:'Mixed sprint · Inflation',status:'Finished',provisional:false,study:false,pct:75,items:8,answered:8,elapsed_s:125,started_at:'2026-10-19T00:00:00Z',finished_at:'2026-10-19T00:02:00Z'}],page:1,total:1,all_total:1,kinds:{sprint:1},kind_total:1,stats:{sessions:1,questions:8,average:75,best:75}};
         const path=location.pathname;
-        const page=path.includes('flashcards') ? await Flashcards({searchParams:Promise.resolve(f)}) : path.includes('admin') ? Admin() : path.includes('activity') ? <ActivityBrowser data={activity} filters={{kind:'',status:'',topic:'',range:'',q:'',sort:'newest',date:'',from:'',to:'',page:1}} topics={[]} today="2026-10-19"/> : await Home();
+        const page=path.includes('progress') ? await Progress({searchParams:Promise.resolve(f)}) : path.includes('flashcards') ? await Flashcards({searchParams:Promise.resolve(f)}) : path.includes('admin') ? Admin() : path.includes('activity') ? <ActivityBrowser data={activity} filters={{kind:'',status:'',topic:'',range:'',q:'',sort:'newest',date:'',from:'',to:'',page:1}} topics={[]} today="2026-10-19"/> : await Home();
         const resolved=await resolve(page);
         createRoot(document.getElementById('root')).render(<FeedbackWidget userId="student"><header className="h-16 border-b px-4 py-5">Claro</header><main className="mx-auto max-w-[1280px] px-4 py-6 md:px-6"><div className="pb-0 lg:pb-12">{resolved}</div></main></FeedbackWidget>);`,
       resolveDir: process.cwd(),
@@ -52,8 +53,13 @@ test.beforeAll(async () => {
             { filter: /.*/, namespace: "synthetic" },
             ({ path }) => {
               const topics = [
-                { id: "t1", name: "Global", parent_id: null, sort: 1 },
-                { id: "t3", name: "Issues", parent_id: null, sort: 2 },
+                {
+                  id: "t1",
+                  name: "The Global Economy",
+                  parent_id: null,
+                  sort: 1,
+                },
+                { id: "t3", name: "Economic Issues", parent_id: null, sort: 2 },
                 {
                   id: "inflation",
                   name: "Inflation",
@@ -61,6 +67,18 @@ test.beforeAll(async () => {
                   sort: 3,
                 },
                 { id: "trade", name: "Trade", parent_id: "t1", sort: 4 },
+                {
+                  id: "t2",
+                  name: "Australia’s Place in the Global Economy",
+                  parent_id: null,
+                  sort: 2,
+                },
+                {
+                  id: "t4",
+                  name: "Economic Policies and Management",
+                  parent_id: null,
+                  sort: 4,
+                },
               ];
               const contents =
                 path === "next/link"
@@ -180,21 +198,18 @@ for (const [width, height] of [
       ["Study time", "/student/activity"],
       ["Cards due", "/student/flashcards"],
     ])
-      await expect(quick.getByRole("link", { name: name })).toHaveAttribute(
-        "href",
-        href,
-      );
+      await expect(
+        quick.getByRole("link", { name: new RegExp(`^${name}`) }),
+      ).toHaveAttribute("href", href);
     await expect(page.getByTestId("activity-heatmap")).toBeVisible();
     await expect(page.locator('[aria-current="date"]')).toHaveAttribute(
       "data-day",
       "2026-10-19",
     );
     await expect(page.getByText("Day streak")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Light up today" }),
-    ).toBeVisible();
+    await expect(page.getByText("Today is lit")).toBeVisible();
     const hub = page.getByRole("region", { name: "Study hub" });
-    await expect(hub.getByRole("listitem")).toHaveCount(2);
+    await expect(hub.getByRole("listitem")).toHaveCount(4);
     await expect(
       hub.getByRole("listitem").first().getByRole("link"),
     ).toHaveAttribute("href", "/student/sprint?topics=t1");
@@ -220,7 +235,7 @@ test("S11: activity row shows result, date, and opens the session", async ({
   await expect(row).toHaveCount(1);
   await expect(row).toContainText("75%");
   await expect(row).not.toContainText("Finished");
-  await expect(row.getByText(/Mon,? 19 Oct/)).toBeVisible();
+  await expect(row.getByText("11:00am")).toBeVisible();
   await capture(
     page,
     table,
@@ -275,7 +290,9 @@ test("A2: Topic selection changes Subtopic choices and clears an old child", asy
   await expect(
     page.getByRole("option", { name: "Inflation", exact: true }),
   ).toHaveCount(0);
-  await page.getByRole("option", { name: "Global", exact: true }).click();
+  await page
+    .getByRole("option", { name: "The Global Economy", exact: true })
+    .click();
   await expect(page).toHaveURL(
     "http://claro.test/admin/content/flashcards?status=live&q=&kind=&topic=t1&origin=",
   );
@@ -293,4 +310,27 @@ test("A2: Topic selection changes Subtopic choices and clears an old child", asy
     "Topic then Subtopic",
     "a2-subtopics.png",
   );
+});
+
+test("Progress: mobile topic table scrolls within the page", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("http://claro.test/student/progress");
+  await expect(
+    page.getByRole("heading", { name: "Marks by topic", exact: true }),
+  ).toBeVisible();
+  const overflow = await page.evaluate(() =>
+    [...document.querySelectorAll("body *")]
+      .filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1)
+      .map((el) => ({
+        tag: el.tagName,
+        cls: el.className,
+        right: el.getBoundingClientRect().right,
+      })),
+  );
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+    JSON.stringify(overflow),
+  ).toBe(390);
 });

@@ -103,7 +103,7 @@ it("flips, recycles missed cards and finishes without any AI request", async () 
   await waitFor(() =>
     expect(screen.getByRole("heading", { name: "Deflation" })).toBeVisible(),
   );
-  expect(screen.getByText("1 card coming back")).toBeVisible();
+  expect(screen.getByText("1 card coming back")).toBeInTheDocument();
   await waitFor(() =>
     expect(screen.getByRole("button", { name: "Flip card" })).toBeEnabled(),
   );
@@ -239,6 +239,9 @@ it("skips to the end then skips the last card without rating it", async () => {
   );
   fireEvent.keyDown(window, { key: "s" });
   await screen.findByRole("heading", { name: "Deflation" });
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Flip card" })).toBeEnabled(),
+  );
   fireEvent.keyDown(window, { key: " " });
   fireEvent.keyDown(window, { key: "3" });
   await screen.findByRole("heading", { name: "Inflation" });
@@ -306,7 +309,7 @@ it("rewrites the returned review on disagreement and advances using that mark", 
     },
     { timeout: 5000 },
   );
-  expect(screen.getByText("1 card coming back")).toBeVisible();
+  expect(screen.getByText("1 card coming back")).toBeInTheDocument();
   expect(rateFlashcard).not.toHaveBeenCalled();
 });
 it("reveals and self-rates without fetching a verdict", async () => {
@@ -319,7 +322,7 @@ it("reveals and self-rates without fetching a verdict", async () => {
       deckName="Deck"
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Reveal answer" }));
+  fireEvent.click(screen.getByRole("button", { name: "Flip card" }));
   expect(screen.getByText(cards[0].back)).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Mostly (2)" }));
   await waitFor(() =>
@@ -437,7 +440,7 @@ it("renders speech interim text, stops after silence and submits spoken mode", a
     answer: cards[0].back,
   });
 });
-it("opens the exit dialog with Escape and saves back to Home", async () => {
+it("opens the exit dialog with Escape and saves back to Flashcards", async () => {
   render(
     <FlashcardRunner
       session={session}
@@ -452,7 +455,7 @@ it("opens the exit dialog with Escape and saves back to Home", async () => {
   fireEvent.click(
     within(dialog).getByRole("button", { name: "Save and exit" }),
   );
-  await waitFor(() => expect(push).toHaveBeenCalledWith("/student"));
+  await waitFor(() => expect(push).toHaveBeenCalledWith("/student/flashcards"));
 });
 
 it("restores an unsaved spoken answer after reopening the session", () => {
@@ -659,7 +662,7 @@ it.each(["s", "3"])("dismisses the welcome message on %s", async (key) => {
       deckName="Deck"
     />,
   );
-  expect(screen.getByText("Welcome back, 2 cards left")).toBeVisible();
+  expect(screen.getByText("Welcome back, 2 cards left")).toBeInTheDocument();
   if (key === "3")
     fireEvent.click(screen.getByRole("button", { name: "Flip card" }));
   fireEvent.keyDown(window, { key });

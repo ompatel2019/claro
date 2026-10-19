@@ -3,7 +3,6 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
 import { ImagePlus, Message, Close } from "@/components/icons";
 import { toast } from "sonner";
-import { createClient } from "@/utils/supabase/client";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -137,6 +136,7 @@ export function FeedbackWidget({
     setBusy(true);
     setError("");
     try {
+      const { createClient } = await import("@/utils/supabase/client");
       const db = createClient();
       const screenshots: string[] = [];
       for (const f of files) {

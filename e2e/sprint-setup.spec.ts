@@ -1,12 +1,16 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
 import {
   cleanupSessions,
   expectNoOverlap,
   expectStackedBelow,
-  goToSprintStep,
   signIn,
-  reviewSprintSetup,
 } from "./helpers";
+
+async function reviewSprintSetup(page: Page) {
+  const custom = page.getByRole("button", { name: "Custom", exact: true });
+  if ((await custom.getAttribute("aria-pressed")) !== "true")
+    await custom.click();
+}
 
 test.describe("Topic Sprint setup", () => {
   test.skip(!process.env.STUDENT_EMAIL, "Needs a student account");
@@ -29,7 +33,7 @@ test.describe("Topic Sprint setup", () => {
       const start = page.getByRole("button", { name: /^Start (sprint|with)/ });
       const bar = page.locator("form").filter({ has: start });
       const card = page.locator('[data-slot="card"]').filter({
-        has: page.getByRole("button", { name: "Back", exact: true }),
+        has: page.getByRole("region", { name: "Question type", exact: true }),
       });
       await expect(bar.getByText(/^\d+ questions match/)).toBeVisible();
       await expect(bar.getByRole("alert")).toContainText(
@@ -37,22 +41,8 @@ test.describe("Topic Sprint setup", () => {
       );
       await expect(bar).toContainText("Economic Issues (Inflation)");
       await expect(bar).toHaveCSS("position", "static");
-      for (let step = 1; step <= 4; step++) {
-        if (step === 4)
-          await page.getByRole("button", { name: "Advanced" }).click();
-        for (const bottom of [false, true]) {
-          await page.evaluate((bottom) => {
-            window.scrollTo(
-              0,
-              bottom ? document.documentElement.scrollHeight : 0,
-            );
-          }, bottom);
-          await expectStackedBelow(card, bar);
-          await expectNoOverlap(card, bar);
-        }
-        if (step < 4)
-          await page.getByRole("button", { name: "Next", exact: true }).click();
-      }
+      if (width < 1280) await expectStackedBelow(card, bar);
+      await expectNoOverlap(card, bar);
       await expect(start).toBeEnabled();
     });
   }
@@ -74,8 +64,8 @@ test.describe("Topic Sprint setup", () => {
         .getByRole("button", { name: "Feedback", exact: true }),
     ).toBeVisible();
 
-    const summary = bar.locator("p").first();
-    await expect(summary).toContainText("Economic Policies and Management");
+    const summary = bar.locator("dl");
+    await expect(bar).toContainText("Economic Policies and Management");
     await expect
       .poll(() =>
         Promise.all([bar.boundingBox(), summary.boundingBox()]).then(
@@ -88,9 +78,8 @@ test.describe("Topic Sprint setup", () => {
       bar.getByRole("button", { name: "Reset", exact: true }),
     );
     await expectStackedBelow(summary, start);
-    await page.getByRole("button", { name: "Next", exact: true }).click();
     const chip = page.getByRole("button", {
-      name: /^National and global context for environmental management ·/,
+      name: /^National and global context for environmental management/,
     });
     await expect(chip).toHaveCount(1);
     await expect
@@ -144,10 +133,8 @@ test.describe("Topic Sprint setup", () => {
     await page
       .getByRole("button", { name: "Short answer", exact: true })
       .click();
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-    await page.getByRole("button", { name: /^Economic Issues/ }).click();
     const subs = page.getByRole("group", { name: "Economic Issues subtopics" });
-    await subs.getByRole("button", { name: /^Inflation · \d+$/ }).click();
+    await subs.getByRole("button", { name: /^Inflation \d+$/ }).click();
     // The year span follows the published content (HSC and A1 practice), so it is not pinned.
     await expect(bar).toContainText(
       /30 marks · 45 min · Economic Issues \(Inflation\) · \d{4}–\d{4} · Prefer new/,
@@ -169,11 +156,18 @@ test.describe("Topic Sprint setup", () => {
     ).toHaveAttribute("aria-pressed", "false");
     await reviewSprintSetup(page);
     await page.getByRole("button", { name: "Advanced" }).click();
-    await page.getByRole("button", { name: "Last 5 years" }).click();
+    const to = Number(
+      await page.getByRole("combobox", { name: "To year" }).textContent(),
+    );
+    await page.getByRole("combobox", { name: "From year" }).click();
+    await page
+      .getByRole("option", { name: String(to - 4), exact: true })
+      .click();
     await expect(page.getByText("1 filter on")).toBeVisible();
+    await page.getByText("Adjust exam pace", { exact: true }).click();
     await page.getByLabel("Shorts: minutes per mark").fill("2.25");
     await expect(page.getByText("≈ 68 min")).toBeVisible();
-    await page.getByRole("switch").last().click();
+    await page.getByRole("switch", { name: /Timed at exam pace/ }).click();
     await expect(bar).toContainText("Untimed");
     // The setup is remembered.
     await page.reload();
@@ -220,8 +214,7 @@ test.describe("Topic Sprint setup", () => {
   }) => {
     await page.goto("/student/sprint?type=mcq&sub=t3-inflation&size=5");
     await expect(page.getByText("Prefilled from a link.")).toBeVisible();
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-    await page.getByRole("button", { name: "Next", exact: true }).click();
+    await reviewSprintSetup(page);
     await expect(page.getByRole("textbox", { name: "Questions" })).toHaveValue(
       "5",
     );
@@ -230,7 +223,7 @@ test.describe("Topic Sprint setup", () => {
     await page.keyboard.press("Control+Enter");
     await expect(page).toHaveURL(/\/student\/sprint\/[^/]+$/);
     ids.push(page.url().split("/").at(-1)!);
-    await expect(page.getByText("Q 1 of 5")).toBeVisible();
+    await expect(page.getByText(/^Question 1 of 5/)).toBeVisible();
     await expect(
       page.getByRole("button", { name: /^Time remaining 4:5\d$/ }),
     ).toBeVisible();
@@ -242,7 +235,7 @@ test.describe("Topic Sprint setup", () => {
       /\/student\/sprint\/[^/]+$/,
     );
     await page.goto(`/student/sprint/${ids.at(-1)}`);
-    await expect(page.getByText("Q 1 of 5")).toBeVisible();
+    await expect(page.getByText(/^Question 1 of 5/)).toBeVisible();
   });
 
   test("no matches offers one-click fixes with counts", async ({ page }) => {
@@ -265,7 +258,6 @@ test.describe("Topic Sprint setup", () => {
   }) => {
     await page.goto("/practice?topics=t3");
     await expect(page).toHaveURL(/\/student\/sprint\?topics=t3$/);
-    await goToSprintStep(page, 2);
     await expect(
       page.getByRole("button", { name: /^Economic Issues/ }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -334,6 +326,7 @@ test.describe("Iteration 2 setup without services", () => {
       );
       await page.goto("/__setup-test");
       // Template setup is a single page (no wizard Next). Mixed comes from params.
+      await page.getByRole("button", { name: "Custom", exact: true }).click();
       const marks = page.getByRole("textbox", { name: "Marks" });
       await expect(marks).toBeVisible();
       await marks.fill("5");

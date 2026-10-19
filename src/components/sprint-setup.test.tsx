@@ -1,7 +1,7 @@
 import {
   cleanup,
   fireEvent,
-  render,
+  render as rtlRender,
   screen,
   waitFor,
   within,
@@ -13,6 +13,13 @@ vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({ rpc: mocks.rpc }),
 }));
 import { SprintSetup } from "./sprint-setup";
+
+function render(ui: React.ReactNode) {
+  const result = rtlRender(ui);
+  fireEvent.click(screen.getByRole("button", { name: "Custom" }));
+  return result;
+}
+
 const topics = [1, 2, 3].map((i) => ({
   id: `t${i}`,
   parent_id: null,
@@ -61,7 +68,8 @@ it("keeps the live summary after the builder with warnings and controls", async 
   );
   expect(form).toContainElement(screen.getByRole("alert"));
   expect(form).toHaveTextContent("30 marks · 45 min");
-  expect(form).toHaveTextContent("4 questions match · 4 new");
+  expect(form).toHaveTextContent("4 questions match");
+  expect(form).toHaveTextContent("4 new to you");
   expect(form).toContainElement(screen.getByRole("button", { name: "Reset" }));
   expect(start()).toBeEnabled();
 });
@@ -286,7 +294,7 @@ it("selects a dot point with its parent, enforces the topic limit and clears bot
   render(<SprintSetup topics={[...topics, ...dotPoints]} params={{}} />);
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Topic 1 dot point · 5" }),
+      screen.getByRole("button", { name: "Topic 1 dot point 5" }),
     ).toBeEnabled(),
   );
   const config = () =>
@@ -296,7 +304,7 @@ it("selects a dot point with its parent, enforces the topic limit and clears bot
     );
   for (const i of [1, 2, 3])
     fireEvent.click(
-      screen.getByRole("button", { name: `Topic ${i} dot point · 5` }),
+      screen.getByRole("button", { name: `Topic ${i} dot point 5` }),
     );
   expect(config().topics).toEqual(["t1", "t2"]);
   expect(config().subtopics).toEqual(["t1-1", "t2-1"]);
@@ -310,11 +318,13 @@ it.each(["mistakes", "new_only", "flagged"])(
   "preserves the advanced %s history without a conflicting switch",
   async (history) => {
     render(<SprintSetup topics={topics} params={{ type: "short", history }} />);
-    await screen.findByText("Last 5 years");
+    await screen.findByRole("combobox", { name: "From year" });
     expect(
       screen.queryByRole("switch", { name: /Prefer questions/ }),
     ).not.toBeInTheDocument();
-    expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config.history).toBe(history);
+    await waitFor(() =>
+      expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config.history).toBe(history),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
     const selected = within(
       screen.getByRole("radiogroup", { name: "Question history" }),
@@ -370,9 +380,40 @@ it("summarises a whole topic alongside the other topic's selected subtopic", () 
     />,
   );
   const summary = start().closest("form")!;
-  expect(within(summary).getByText("Topic 1", { exact: true })).toBeVisible();
+  expect(within(summary).queryByText("Topic 1", { exact: true })).toBeNull();
   expect(
     within(summary).getByText("Dot point A", { exact: true }),
   ).toBeVisible();
   expect(within(summary).getByText("Topic 2", { exact: true })).toBeVisible();
+});
+
+it("clears a unit's UUID dot points when its checkbox is deselected", async () => {
+  const unit = "ec97138a-01a1-4eae-8ced-45959c9d2e5b";
+  const dot = "35d131d5-a6d3-4878-80ed-889551a93b4d";
+  mocks.rpc.mockResolvedValue({
+    data: { ...pool, subtopics: { [dot]: 7 } },
+    error: null,
+  });
+  rtlRender(
+    <SprintSetup
+      topics={[
+        { id: unit, name: "Unit", parent_id: null, sort: 1 },
+        { id: dot, name: "Dot point", parent_id: unit, sort: 1 },
+      ]}
+      params={{}}
+    />,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Dot point 7" }));
+  const group = screen.getByRole("button", { name: /^Unit/ });
+  expect(group).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(group);
+  const config = JSON.parse(
+    (document.querySelector('input[name="config"]') as HTMLInputElement).value,
+  );
+  expect(config.topics).toEqual([]);
+  expect(config.subtopics).toEqual([]);
+  expect(screen.getByRole("button", { name: "Dot point 7" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
 });

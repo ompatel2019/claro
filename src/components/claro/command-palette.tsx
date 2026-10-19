@@ -46,7 +46,7 @@ export function CommandPalette({ routes }: { routes: CommandRoute[] }) {
           setIndex(0);
           setOpen(true);
         }}
-        className="bg-card text-muted-foreground flex h-9 min-w-0 items-center gap-2 rounded-full border px-3 text-[13px] shadow-xs sm:w-[380px]"
+        className="text-muted-foreground sm:bg-card flex size-8 min-w-0 shrink-0 items-center justify-center gap-2 rounded-full text-[13px] sm:ml-2 sm:h-9 sm:w-[380px] sm:justify-start sm:border sm:px-3 sm:shadow-xs"
       >
         <PortalIcon name="search" className="size-4 shrink-0" />
         <span className="hidden flex-1 truncate text-left sm:block">

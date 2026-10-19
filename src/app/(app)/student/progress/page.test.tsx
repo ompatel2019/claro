@@ -9,6 +9,9 @@ const mocks = vi.hoisted(() => ({
   load: vi.fn(),
   refresh: vi.fn(),
 }));
+vi.mock("@/utils/supabase/server", () => ({
+  createClient: async () => ({ rpc: async () => ({ data: [], error: null }) }),
+}));
 vi.mock("@/lib/auth", () => ({
   requireProfile: async () => ({ id: "student" }),
 }));
@@ -57,29 +60,24 @@ it("renders range-scoped breakdowns and per-card empty states while keeping unto
     ),
   );
   expect(mocks.load).toHaveBeenCalledWith("year", "2026-10-09");
-  expect(
-    screen.getByText("Finish a sprint to see marks by topic."),
-  ).toBeInTheDocument();
-  expect(screen.getByText("No scores in this range")).toBeInTheDocument();
+  expect(screen.getAllByText("No activity in this range")).toHaveLength(2);
   expect(screen.getByText("By question type")).toBeInTheDocument();
   expect(screen.getByText("By directive verb")).toBeInTheDocument();
   expect(screen.getByText("Weak spots")).toBeInTheDocument();
-  expect(screen.getByText("Flashcard mastery")).toBeInTheDocument();
   expect(
     screen.getByRole("link", { name: "Start Global economy" }),
   ).toHaveAttribute("href", "/student/sprint?topics=t1");
   expect(screen.queryByTestId("progress-stats")).toBeNull();
   expect(screen.queryByText("Year heatmap")).toBeNull();
   expect(screen.getAllByRole("heading", { level: 2 })[0]).toHaveTextContent(
-    "Score history",
+    "Against your target",
   );
 });
-it("isolates load failures in cards and retries through the router", async () => {
+it("passes load failures to the route error boundary", async () => {
   mocks.load.mockRejectedValue(new Error("unavailable"));
-  render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
-  expect(screen.getAllByRole("alert")).toHaveLength(6);
-  fireEvent.click(screen.getAllByRole("button", { name: "Try again" })[0]);
-  expect(mocks.refresh).toHaveBeenCalledOnce();
+  await expect(Progress({ searchParams: Promise.resolve({}) })).rejects.toThrow(
+    "unavailable",
+  );
 });
 it("provides a route retry and card-shaped loading skeletons", () => {
   const retry = vi.fn();
@@ -123,6 +121,9 @@ it("links each finished session to its correct report and scopes type chips to s
       await Progress({ searchParams: Promise.resolve({ range: "all" }) }),
     ),
   );
+  fireEvent.click(
+    screen.getAllByRole("button", { name: "Show chart data" })[0],
+  );
   expect(
     screen.getAllByRole("link", { name: /Short answer sprint/ })[0],
   ).toHaveAttribute("href", "/student/sprint/sprint/results");
@@ -143,6 +144,9 @@ it("links each finished session to its correct report and scopes type chips to s
         }),
       }),
     ),
+  );
+  fireEvent.click(
+    screen.getAllByRole("button", { name: "Show chart data" })[0],
   );
   expect(
     screen.getAllByRole("link", { name: /Short answer sprint/ })[0],
@@ -170,7 +174,7 @@ it("keeps weak spots locked until both history boundaries", async () => {
   expect(
     screen.getByText(/Answer 1 more question in Synthetic topic/),
   ).toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: /^Practise$/ })).toBeNull();
+  expect(screen.queryByRole("link", { name: /^Retry questions$/ })).toBeNull();
   view.unmount();
   mocks.load.mockResolvedValue({
     ...empty,
@@ -180,16 +184,18 @@ it("keeps weak spots locked until both history boundaries", async () => {
     await resolve(await Progress({ searchParams: Promise.resolve({}) })),
   );
   expect(
-    screen.getByText(/Practise Synthetic topic in another session/),
+    screen.getByText(/Practise in one more session to unlock/),
   ).toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: /^Practise$/ })).toBeNull();
+  expect(screen.queryByRole("link", { name: /^Retry questions$/ })).toBeNull();
   locked.unmount();
   mocks.load.mockResolvedValue({
     ...empty,
     topics: [{ ...topic, answered: 3 }],
   });
   render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
-  expect(screen.getByRole("link", { name: /^Practise$/ })).toHaveAttribute(
+  expect(
+    screen.getByRole("link", { name: /^Retry questions$/ }),
+  ).toHaveAttribute(
     "href",
     "/student/sprint?topics=t1&sub=synthetic&history=mistakes",
   );
@@ -212,11 +218,15 @@ it("derives the practice summary from parent topic marks without counting subtop
     ],
   });
   render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
-  expect(screen.getByRole("img", { name: "7 out of 10" })).toBeInTheDocument();
   expect(
-    screen.getByText("4 marked answers in this range"),
+    screen.getByRole("img", { name: "70% practice average; target 80%" }),
   ).toBeInTheDocument();
-  expect(screen.queryByText("Against your target")).not.toBeInTheDocument();
+  expect(
+    screen.getByText("4 marked answers in the last 90 days"),
+  ).toBeInTheDocument();
+  expect(screen.getByText("Against your target")).toBeInTheDocument();
+  expect(screen.getByText("10 pts")).toBeInTheDocument();
+  expect(screen.queryByText(/^Since /)).toBeNull();
 });
 
 it("rejects missing finish dates before converting them to Sydney dates", async () => {
@@ -234,7 +244,45 @@ it("rejects missing finish dates before converting them to Sydney dates", async 
     history: [session, { ...session, id: "unfinished", finished_at: null }],
   });
   render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
-  expect(screen.getByText("View 1 session")).toBeVisible();
+  fireEvent.click(
+    screen.getAllByRole("button", { name: "Show chart data" })[0],
+  );
+  expect(screen.getAllByRole("link", { name: /75%/ })).toHaveLength(1);
   expect(screen.queryByText(/1970/)).toBeNull();
   expect(screen.queryByRole("link", { name: /unfinished/ })).toBeNull();
+});
+
+it("derives the target gap and change from the first scored week in the selected range", async () => {
+  const session = { kind: "sprint", config: {}, elapsed_s: 60, by_type: {} };
+  mocks.load.mockResolvedValue({
+    ...empty,
+    topics: [
+      { ...empty.topics[0], answered: 4, earned: 9, possible: 10, pct: 90 },
+    ],
+    history: [
+      {
+        ...session,
+        id: "outside",
+        finished_at: "2026-08-01T01:00:00Z",
+        pct: 10,
+      },
+      { ...session, id: "first", finished_at: "2026-09-14T01:00:00Z", pct: 40 },
+      {
+        ...session,
+        id: "second",
+        finished_at: "2026-09-15T01:00:00Z",
+        pct: 60,
+      },
+      { ...session, id: "now", finished_at: "2026-10-08T01:00:00Z", pct: 90 },
+    ],
+  });
+  render(
+    await resolve(
+      await Progress({ searchParams: Promise.resolve({ range: "30" }) }),
+    ),
+  );
+  expect(screen.getByText("On target")).toBeInTheDocument();
+  expect(screen.getByText("Since September")).toBeInTheDocument();
+  expect(screen.getByText("+40 pts")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
 });

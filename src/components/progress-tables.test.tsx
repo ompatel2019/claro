@@ -73,7 +73,7 @@ it("expands a parent, shows untouched topics and sorts children locally", () => 
     screen.getByRole("button", { name: "Economic Issues" }),
   ).toHaveAttribute("aria-expanded", "true");
   const table = screen.getByRole("table", {
-    name: "Economic Issues subtopics",
+    name: "Marks by topic",
   });
   expect(
     within(table).getByRole("link", { name: "Start Unemployment" }),
@@ -82,7 +82,9 @@ it("expands a parent, shows untouched topics and sorts children locally", () => 
     within(table).getByRole("link", { name: "Practise Inflation" }),
   ).toHaveAttribute("href", "/student/sprint?topics=t3&sub=t3-inflation");
   expect(
-    within(table).getByText(/3 answered · 4 \/ 10 marks · Last practised/),
+    within(table).getAllByText(
+      /3 answered · 4 \/ 10 marks · Last practised/,
+    )[1],
   ).toHaveTextContent("Fri 9 Oct");
   expect(
     within(table).getByText(/0 answered · 0 \/ 0 marks · Last practised/),
@@ -92,13 +94,11 @@ it("expands a parent, shows untouched topics and sorts children locally", () => 
   fireEvent.click(within(table).getByRole("button", { name: "Topic" }));
   view.rerender(<TopicProgressTable rows={rows} />);
   expect(navigation.query).toBe("range=90&topicsSort=name%3Adesc");
-  expect(within(table).getAllByRole("row")[1]).toHaveTextContent(
+  expect(within(table).getAllByRole("row")[2]).toHaveTextContent(
     "Unemployment",
   );
   fireEvent.click(screen.getByRole("button", { name: "Economic Issues" }));
-  expect(
-    screen.queryByRole("table", { name: "Economic Issues subtopics" }),
-  ).toBeNull();
+  expect(screen.queryByText("Unemployment")).toBeNull();
 });
 it("gives the weakest eligible verb a working setup link", () => {
   render(

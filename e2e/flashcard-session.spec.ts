@@ -181,12 +181,12 @@ test.describe("Flashcard session and results", () => {
     await page
       .getByRole("button", { name: "Save and exit", exact: true })
       .click();
-    await expect(page).toHaveURL(/\/student$/);
+    await expect(page).toHaveURL(/\/student\/flashcards$/);
     await page.goto(`/flashcards/${id}`);
     await expect(page).toHaveURL(`/student/flashcards/${id}`);
     await expect(
       page.getByText("Welcome back, 1 card left", { exact: true }),
-    ).toBeVisible();
+    ).toBeAttached();
     // The shortcut can land before the resumed runner hydrates; press again until it counts.
     const results = page.getByRole("heading", {
       name: "Your flashcard results",
@@ -276,9 +276,7 @@ test.describe("Flashcard session and results", () => {
       page.getByRole("status").filter({ hasText: /^Mostly$/ }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Next card", exact: true }).click();
-    await page
-      .getByRole("button", { name: "Reveal answer", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Flip card", exact: true }).click();
     await expect(page.getByText(cards[1].back, { exact: true })).toBeVisible();
     reviewed.add(cards[1].id);
     await page

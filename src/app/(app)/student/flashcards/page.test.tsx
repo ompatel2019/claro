@@ -83,11 +83,11 @@ it("renders honest empty counts and the personal-card creation entry point", asy
     screen.queryByRole("button", { name: "Review due cards" }),
   ).not.toBeInTheDocument();
   expect(
-    screen.getByRole("img", { name: "New 0, Learning 0, Known 0" }),
+    screen.getByRole("img", { name: "New 0, Learning 0, Mastered 0" }),
   ).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "My cards (0)" })).toHaveAttribute(
     "href",
-    "/student/flashcards/mine",
+    "#my-cards",
   );
   expect(
     screen.getByRole("button", { name: "Make your first card" }),
@@ -134,13 +134,15 @@ it("derives the due-topic meter, library states and deduplicated unfinished revi
     screen.getByText("2 Claro cards and 1 of your own"),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("img", { name: "New 1, Learning 1, Known 1" }),
+    screen.getByRole("img", { name: "New 1, Learning 1, Mastered 1" }),
   ).toBeInTheDocument();
   expect(
     screen.getByRole("meter", { name: "Global Economy: 1 due" }),
   ).toHaveAttribute("aria-valuenow", "100");
-  expect(screen.getByText("1 due tomorrow")).toBeInTheDocument();
-  expect(screen.queryByText(/about.*minute/i)).not.toBeInTheDocument();
+  expect(
+    screen.getByText("About 1 minute · 1 due tomorrow"),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/About 1 minute/)).toBeInTheDocument();
   const resume = screen.getByText("Unfinished session").parentElement!;
   expect(within(resume).getByText(/1 of 2 reviewed/)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Continue" })).toHaveAttribute(

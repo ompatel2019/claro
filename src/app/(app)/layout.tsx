@@ -1,3 +1,4 @@
+import { examDaysLeft } from "@/lib/hsc-exam";
 import { cookies } from "next/headers";
 import { requireProfile } from "@/lib/auth";
 import { sydneyToday } from "@/lib/flashcards";
@@ -26,9 +27,10 @@ export default async function Layout({
     cookies(),
   ]);
   return (
-    <FeedbackWidget userId={profile.id}>
+    <FeedbackWidget userId={profile.id} floating={false}>
       <AppShell
         kind="student"
+        examDays={examDaysLeft(sydneyToday())}
         name={profile.full_name}
         badges={{ "/student/flashcards": count ?? 0 }}
         defaultOpen={jar.get("sidebar_state")?.value !== "false"}

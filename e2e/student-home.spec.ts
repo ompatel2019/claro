@@ -15,10 +15,10 @@ test.describe("Student Home quick launches", () => {
         await expect(launches).toBeVisible();
         await expect(launches.getByRole("link")).toHaveCount(4);
         for (const [name, href] of [
-          ["Topic Sprint", "/student/sprint"],
-          ["Flashcards", "/student/flashcards"],
-          ["Mark my answer", "/student/mark"],
-          ["Activity", "/student/activity"],
+          ["Marks earned", "/student/progress"],
+          ["Questions answered", "/student/sprint"],
+          ["Study time", "/student/activity"],
+          ["Cards due", "/student/flashcards"],
         ])
           await expect(
             launches.getByRole("link", { name: new RegExp(`^${name}`) }),
@@ -33,7 +33,9 @@ test.describe("Student Home quick launches", () => {
           .toBe(true);
       };
       await checkLaunches();
-      await expect(launches.getByText("0 due", { exact: true })).toBeVisible();
+      await expect(
+        launches.getByRole("link", { name: /^Cards due 0/ }),
+      ).toBeVisible();
       await expect(page.getByText("Continue where you left off")).toHaveCount(
         0,
       );
@@ -60,15 +62,13 @@ test.describe("Student Home quick launches", () => {
       await page.reload();
       await checkLaunches();
       await expect(
-        launches.getByRole("link", { name: /Flashcards 1 due/ }),
+        launches.getByRole("link", { name: /^Cards due 1/ }),
       ).toBeVisible();
       await expect(page.getByText("Continue where you left off")).toHaveCount(
         0,
       );
-      await expect(
-        page.getByRole("button", { name: "Light up today" }),
-      ).toBeVisible();
-      await launches.getByRole("link", { name: /Flashcards/ }).click();
+      await expect(page.getByText("Today is lit")).toBeVisible();
+      await launches.getByRole("link", { name: /^Cards due/ }).click();
       await expect(page).toHaveURL(/\/student\/flashcards$/);
     });
   }

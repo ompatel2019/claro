@@ -116,9 +116,11 @@ vi.mock("@/lib/auth", () => ({ requireProfile: async () => ({ id: "u" }) }));
 vi.mock("./sprint-setup", () => ({
   SprintSetup: () => null,
   QuickStarts: () => null,
+  SameSetup: () => null,
 }));
 vi.mock("@/utils/supabase/server", () => ({
   createClient: async () => ({
+    rpc: async () => ({ data: { topics: [] }, error: null }),
     from: (table: string) => {
       const chain = {
         select() {
@@ -128,6 +130,9 @@ vi.mock("@/utils/supabase/server", () => ({
           return this;
         },
         is() {
+          return this;
+        },
+        not() {
           return this;
         },
         order() {

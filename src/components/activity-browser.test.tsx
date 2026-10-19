@@ -54,7 +54,7 @@ it("links rows to canonical reports and preserves filters in pagination", () => 
     "href",
     "/student/sprint/s/results",
   );
-  expect(screen.getByRole("link", { name: "Next" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Load more" })).toHaveAttribute(
     "href",
     "/student/activity?kind=sprint&page=2",
   );
@@ -79,7 +79,7 @@ it("uses distinct first-use and filtered empty actions", () => {
 });
 it("kind chips reset paging while retaining other filters", () => {
   show(data, { ...filters, q: "Inflation", page: 2 });
-  fireEvent.click(screen.getByRole("button", { name: "Sprints · 25" }));
+  fireEvent.click(screen.getByRole("button", { name: "Sprints 25" }));
   expect(push).toHaveBeenCalledWith(
     "/student/activity?kind=sprint&q=Inflation",
   );
@@ -193,7 +193,7 @@ it("separates sessions and results, groups newest history and shows duration", (
   ).toHaveAttribute("aria-valuenow", "75");
   expect(screen.getByText("2 min")).toBeInTheDocument();
   expect(screen.getByRole("table")).not.toHaveTextContent("Finished");
-  expect(screen.getAllByText("Fri 9 Oct").length).toBeGreaterThan(0);
+  expect(screen.getAllByText("11:00am").length).toBeGreaterThan(0);
 });
 
 it("does not group score-sorted history into misleading day buckets", () => {
@@ -267,4 +267,65 @@ it("groups sessions by Sydney dates including sessions across midnight UTC", () 
   });
   for (const label of ["Today", "Yesterday", "Earlier this week", "Earlier"])
     expect(screen.getByRole("rowheader", { name: label })).toBeInTheDocument();
+});
+
+it("reveals additional sessions without replacing the visible history", () => {
+  show({
+    ...data,
+    rows: Array.from({ length: 14 }, (_, i) => ({
+      ...row,
+      id: `s${i}`,
+      title: `Mixed sprint · Topic ${i}`,
+    })),
+    total: 14,
+  });
+  expect(screen.getByText("Showing 12 of 14")).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: "Mixed sprint · Topic 13" }),
+  ).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  expect(screen.getByText("Showing 14 of 14")).toBeVisible();
+  expect(
+    screen.getByRole("link", { name: "Mixed sprint · Topic 0" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("link", { name: "Mixed sprint · Topic 13" }),
+  ).toBeVisible();
+});
+
+it("shows actual card ratings and uses the latest rating for each card", () => {
+  render(
+    <ActivityBrowser
+      filters={filters}
+      data={{
+        ...data,
+        rows: [
+          {
+            ...row,
+            kind: "flashcards",
+            title: "Flashcards · Study",
+            study: true,
+            pct: null,
+            items: 2,
+          },
+        ],
+      }}
+      topics={[]}
+      today="2026-10-09"
+      details={{
+        s: {
+          config: {},
+          flashcard_reviews: [
+            { flashcard_id: "a", mark: 1, created_at: "2026-10-09T00:00:00Z" },
+            { flashcard_id: "a", mark: 0, created_at: "2026-10-09T01:00:00Z" },
+            { flashcard_id: "b", mark: 1, created_at: "2026-10-09T00:00:00Z" },
+          ],
+        },
+      }}
+    />,
+  );
+  expect(screen.getByText(/1\/2/)).toHaveTextContent("1/2 knew");
+  expect(
+    screen.getByRole("meter", { name: "Flashcards · Study cards known" }),
+  ).toHaveAttribute("aria-valuenow", "50");
 });

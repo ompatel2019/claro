@@ -41,6 +41,7 @@ it("preserves question numbering and opens a question from the MC grid", () => {
   expect(
     screen.getByRole("button", { name: "Question 26, 2 / 4 marks" }),
   ).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Table view" }));
   expect(
     within(
       screen.getByRole("table", { name: "Multiple choice answers 1" }),

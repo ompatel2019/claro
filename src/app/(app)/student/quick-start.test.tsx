@@ -152,34 +152,31 @@ it("shows streak numbers, a heatmap with today marked and reads a year of activi
   const today = screen.getByRole("link", { name: /^Mon 19 Oct 2026/ });
   expect(today).toHaveAttribute("aria-current", "date");
   expect(today).toHaveAttribute("href", "/student/activity?date=2026-10-19");
-  expect(screen.getByText("Today")).toBeInTheDocument();
+  expect(screen.getByText("Today is lit")).toBeInTheDocument();
 });
 
 it("lights up today with a sprint, or due flashcards in one click", async () => {
   render(await resolve(await Home()));
-  expect(screen.getByRole("link", { name: "Light up today" })).toHaveAttribute(
-    "href",
-    "/student/sprint",
-  );
+  expect(screen.getByText("Today is lit")).toBeVisible();
+  expect(screen.queryByRole("link", { name: "Light up today" })).toBeNull();
   cleanup();
   mocks.due = 7;
   render(await resolve(await Home()));
-  expect(screen.getByRole("button", { name: "Light up today" })).toBeVisible();
+  expect(screen.getByText("Today is lit")).toBeVisible();
   expect(screen.getByRole("link", { name: /^Cards due 7/ })).toBeVisible();
 });
 
 it("lists only top-level topics in the study hub, each opening its sprint", async () => {
   render(await resolve(await Home()));
   const hub = screen.getByRole("region", { name: "Study hub" });
-  const links = within(hub)
-    .getAllByRole("listitem")
-    .map((li) => li.firstChild);
-  expect(links.map((l) => l?.textContent)).toEqual([
-    "1The Global EconomyPractise",
-    "2Economic IssuesPractise",
-  ]);
-  expect(links[0]).toHaveAttribute("href", "/student/sprint?topics=t1");
-  expect(links[1]).toHaveAttribute("href", "/student/sprint?topics=t2");
+  expect(within(hub).getAllByRole("listitem")).toHaveLength(2);
+  expect(within(hub).getByText("The Global Economy")).toBeVisible();
+  expect(within(hub).getByText("Economic Issues")).toBeVisible();
+  expect(
+    within(hub)
+      .getAllByRole("link", { name: "Practise" })
+      .map((l) => l.getAttribute("href")),
+  ).toEqual(["/student/sprint?topics=t1", "/student/sprint?topics=t2"]);
 });
 
 it("keeps launches usable when due, activity and topic reads fail", async () => {
@@ -243,7 +240,7 @@ it("uses real progress totals, per-type marks, topic history and leaf-only lost 
   expect(
     screen.getByRole("heading", { name: "Practice average" }),
   ).toBeVisible();
-  expect(screen.getByText("8 marks")).toBeVisible();
+  expect(screen.getByRole("link", { name: /Trade8 marks/ })).toBeVisible();
   expect(screen.getByText(/10 answered · last practised/)).toBeVisible();
   expect(
     screen.queryByRole("link", { name: /Practise The Global Economy/ }),
@@ -283,6 +280,8 @@ it("links recent and unfinished sessions to their existing runner routes", async
     screen.getByRole("link", { name: /Finish your last sprint/ }),
   ).toHaveAttribute("href", "/student/sprint/resume");
   expect(
-    screen.getByRole("link", { name: /Mixed sprint.*In progress/ }),
+    screen.getByRole("link", {
+      name: /Mixed sprint.*The Global Economy.*In progress/,
+    }),
   ).toHaveAttribute("href", "/student/sprint/resume");
 });
