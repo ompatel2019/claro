@@ -1,7 +1,6 @@
 // @vitest-environment node
 import { expect, it, vi } from "vitest";
-vi.mock("server-only", () => ({}));
-import { pages } from "./flashcard-data";
+import { pages } from "./pages";
 
 it.each([undefined, 1000])(
   "preserves page bounds and a terminal empty read with size %s",

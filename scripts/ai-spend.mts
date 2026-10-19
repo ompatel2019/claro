@@ -2,13 +2,17 @@
 // Run: npx tsx --conditions=react-server --env-file=.env.local scripts/ai-spend.mts
 import { writeFileSync } from "node:fs";
 
+import { pages } from "@/lib/pages";
 import { admin } from "@/utils/supabase/admin";
 
-const { data, error } = await admin()
-  .from("ai_usage")
-  .select("created_at, task, model, input_tokens, output_tokens, usd")
-  .order("id");
-if (error) throw error;
+// Page by id so the Data API row cap cannot silently truncate the export.
+const data = await pages((from, to) =>
+  admin()
+    .from("ai_usage")
+    .select("created_at, task, model, input_tokens, output_tokens, usd")
+    .order("id")
+    .range(from, to),
+);
 let total = 0;
 const lines = [
   "time,task,model,input_tokens,output_tokens,usd,running_total_usd",

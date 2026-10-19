@@ -10,6 +10,8 @@ import type {
   FlashcardProgress,
 } from "./flashcards";
 import type { DeckCard } from "./deck";
+import { pages } from "./pages";
+export { pages };
 export type FlashcardSession = Omit<Session, "config"> & {
   kind: "flashcards";
   config: FlashcardConfig;
@@ -54,23 +56,6 @@ export async function loadFlashcards(id: string) {
     topics: (topics.data ?? []) as Topic[],
     profile,
   };
-}
-
-export async function pages<T>(
-  query: (
-    from: number,
-    to: number,
-  ) => PromiseLike<{ data: T[] | null; error: unknown }>,
-  pageSize = 500,
-) {
-  const rows: T[] = [];
-  for (let from = 0; ; from += pageSize) {
-    const result = await query(from, from + pageSize - 1);
-    if (result.error) throw result.error;
-    const batch = result.data ?? [];
-    rows.push(...batch);
-    if (batch.length < pageSize) return rows;
-  }
 }
 
 /** Load every authorised row, including collections beyond the Data API row limit. */
