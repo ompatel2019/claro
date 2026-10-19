@@ -16,7 +16,9 @@ import {
 
 const OUT =
   process.env.ADMIN_REVAMP_OUT ??
-  (process.env.CI ? "/tmp/admin-revamp-after" : "/workspace/claro/revamp/after-admin");
+  (process.env.CI
+    ? "/tmp/admin-revamp-after"
+    : "/workspace/claro/revamp/after-admin");
 
 let bundle = "";
 let css = "";
@@ -321,6 +323,49 @@ async function shoot(
   await expect(page.getByRole("heading").first()).toBeVisible({
     timeout: 15_000,
   });
+  if (route.path === "/admin") {
+    const sessions = page.locator('[data-slot="card"]').filter({
+      has: page.getByRole("heading", {
+        name: "Sessions per day",
+        exact: true,
+      }),
+    });
+    await expect(sessions.locator('path[fill="none"]')).toHaveAttribute(
+      "d",
+      /C/,
+    );
+    await expect(
+      page.getByRole("heading", { name: "Review queue", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-component="StatCard"] [data-component="Sparkline"]'),
+    ).toHaveCount(1);
+    await expect(page.locator('[data-component="DeltaPill"]')).toHaveCount(1);
+    await sessions.getByRole("combobox").click();
+    await expect(page.getByRole("option")).toHaveCount(7);
+    await page.getByRole("option").first().click();
+    await expect(sessions.getByRole("combobox")).toBeFocused();
+    await sessions.getByRole("combobox").click();
+    await page.getByRole("option").last().click();
+  }
+  if (route.path === "/admin/students" && width === 390) {
+    const students = page.getByRole("list", { name: "Students", exact: true });
+    await expect(students).toBeVisible();
+    await expect(students.getByRole("link").first()).toBeVisible();
+    await expect(page.getByRole("checkbox")).toHaveCount(0);
+    await expect(
+      page.getByRole("table", { name: "Students", exact: true }),
+    ).toHaveCount(0);
+    await page.getByRole("combobox", { name: "Year", exact: true }).click();
+    await expect(
+      page.getByRole("option", { name: "Any", exact: true }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
+  }
+  await page.evaluate(() => {
+    (document.activeElement as HTMLElement)?.blur();
+    window.scrollTo(0, 0);
+  });
   // Let colour transitions (e.g. after toggling .dark) settle before capture.
   await page.waitForTimeout(600);
   if (width === 390) {
@@ -333,7 +378,7 @@ async function shoot(
     path: `${OUT}/${route.file}${suffix}.png`,
     fullPage: true,
   });
-  if (errors.length) console.log("pageerrors", route.file, width, dark, errors);
+  expect(errors, `${route.file} browser errors`).toEqual([]);
 }
 
 for (const route of routes) {

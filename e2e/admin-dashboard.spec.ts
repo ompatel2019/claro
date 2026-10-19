@@ -14,7 +14,7 @@ test.describe("Admin dashboard", () => {
     }) => {
       await page.setViewportSize({ width, height: 844 });
       await signInAdmin(page);
-      for (const title of ["Sessions per day", "AI spend per day"]) {
+      for (const title of ["Sessions per day", "AI spend, last 7 days"]) {
         const card = page.locator('[data-slot="card"]').filter({
           has: page.getByRole("heading", { name: title, exact: true }),
         });
@@ -28,40 +28,34 @@ test.describe("Admin dashboard", () => {
             ),
           )
           .toBe(true);
-        const days = await select
-          .locator("option")
-          .evaluateAll((options) =>
-            options.map((option) => (option as HTMLOptionElement).value),
-          );
-        expect(days).toHaveLength(30);
-        expect(new Set(days).size).toBe(30);
-        expect(days).toEqual([...days].sort());
-        await expect(select).toHaveValue(days[29]);
+        await select.click();
+        const options = page.getByRole("option");
+        await expect(options).toHaveCount(7);
+        const days = await options.allTextContents();
+        expect(new Set(days).size).toBe(7);
+        await page.keyboard.press("Escape");
+        await expect(select).toHaveText(days[6]);
         const marks = card
           .locator("svg > g")
           .filter({ has: page.locator("rect, circle") });
-        await expect(marks).toHaveCount(30);
+        await expect(marks).toHaveCount(7);
         const valueForDay = async (index: number) => {
           const text = await marks.nth(index).locator("title").textContent();
           expect(text).toContain("(Sydney) · ");
           return text!.split(" · ")[1];
         };
-        await expect(card.getByRole("status")).toHaveText(
-          await valueForDay(29),
-        );
-        // The native day selector works with the keyboard, including zero days.
-        await select.focus();
+        await expect(card.getByRole("status")).toHaveText(await valueForDay(6));
+        // The kit day selector works with the keyboard, including zero days.
+        await select.click();
         await page.keyboard.press("Home");
         await page.keyboard.press("Enter");
         await page.keyboard.press("Tab");
-        await expect(select).toHaveValue(days[0]);
+        await expect(select).toHaveText(days[0]);
         await expect(card.getByRole("status")).toHaveText(await valueForDay(0));
         // Touch/mouse users can inspect a day directly on the graph.
-        await marks.nth(14).dispatchEvent("click");
-        await expect(select).toHaveValue(days[14]);
-        await expect(card.getByRole("status")).toHaveText(
-          await valueForDay(14),
-        );
+        await marks.nth(3).dispatchEvent("click");
+        await expect(select).toHaveText(days[3]);
+        await expect(card.getByRole("status")).toHaveText(await valueForDay(3));
       }
       await expect
         .poll(() =>
@@ -83,7 +77,7 @@ test.describe("Admin dashboard", () => {
     ).toBeVisible({ timeout: 60000 });
     for (const label of [
       "Active students, 7 days",
-      "Sessions, 7 days",
+      "Sessions, last 7 days",
       "Open reviews",
       "Spend this month",
     ])
@@ -94,10 +88,10 @@ test.describe("Admin dashboard", () => {
       page.getByRole("progressbar", { name: "All-time spend against cap" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("img", { name: "Sessions per day, last 30 days" }),
+      page.getByRole("img", { name: "Sessions per day, 7 Sydney days" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("img", { name: "AI spend per day, last 30 days" }),
+      page.getByRole("img", { name: "AI spend, last 7 days, 7 Sydney days" }),
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Needs attention" }),
@@ -121,7 +115,7 @@ test.describe("Admin dashboard", () => {
       .getByRole("heading", { name: "Needs attention" })
       .locator('xpath=ancestor::*[@data-slot="card"]');
     const chart = page.getByRole("img", {
-      name: "Sessions per day, last 30 days",
+      name: "Sessions per day, 7 Sydney days",
     });
     expect((await attention.boundingBox())!.y).toBeLessThan(
       (await chart.boundingBox())!.y,
@@ -132,7 +126,7 @@ test.describe("Admin dashboard", () => {
       page.getByRole("table", { name: "Latest finished sessions" }),
     ).toHaveCount(0);
     // Each plotted day is also readable without a mouse.
-    for (const title of ["Sessions per day", "AI spend per day"]) {
+    for (const title of ["Sessions per day", "AI spend, last 7 days"]) {
       await expect(
         page.getByRole("combobox", { name: `${title} day` }),
       ).toHaveValue(/\d{4}-\d{2}-\d{2}/);

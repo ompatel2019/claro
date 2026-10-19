@@ -1,7 +1,7 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { EmptyState, Meter, PageHeader } from "@/components/claro";
-import { StatCard } from "@/components/stat-card";
+import { StatCard } from "@/components/claro/data-display";
 import { DailyChart } from "@/components/daily-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { loadSpend } from "@/lib/admin-data";
@@ -57,18 +57,22 @@ export default async function SpendPage({
           <span> · Those dates aren&apos;t valid, showing this month</span>
         )}
       </p>
-      <div className="grid min-w-0 auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard label="Today" value={usd(spend.today)} caption="Sydney day" />
+      <div className="grid min-w-0 gap-3 sm:auto-rows-fr sm:grid-cols-2 lg:grid-cols-3">
         <StatCard
-          label="This month"
-          value={usd(spend.month)}
-          caption="Sydney calendar month"
+          title="Today"
+          value={usd(spend.today)}
+          description="Sydney day"
         />
         <StatCard
-          label="All time"
+          title="This month"
+          value={usd(spend.month)}
+          description="Sydney calendar month"
+        />
+        <StatCard
+          title="All time"
           value={`${usd(spend.all)} of $${spend.cap.toFixed(0)}`}
-          caption={
-            <div className="mt-2 space-y-2">
+          description={
+            <div className="mt-2 w-full space-y-2">
               <div
                 role="progressbar"
                 aria-label="Spend against cap"
@@ -120,14 +124,14 @@ export default async function SpendPage({
             {spend.byMarkValue.map((bucket) => (
               <StatCard
                 key={bucket.label}
-                label={bucket.label}
+                title={bucket.label}
                 empty={bucket.average === null}
                 value={
                   bucket.average === null
                     ? "No tracked costs"
                     : avgUsd(bucket.average)
                 }
-                caption={`${bucket.answers} marked · ${bucket.trackedAnswers} tracked · ${usd(bucket.usd)} total`}
+                description={`${bucket.answers} marked · ${bucket.trackedAnswers} tracked · ${usd(bucket.usd)} total`}
               />
             ))}
           </div>
@@ -137,7 +141,7 @@ export default async function SpendPage({
         {total > 0 ? (
           <DailyChart
             title="Spend per day"
-            hero={usd(total)}
+            hero={usd(spend.perDay.reduce((sum, point) => sum + point.usd, 0))}
             kind="bars"
             points={spend.perDay.map((p) => ({
               day: p.day,

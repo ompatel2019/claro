@@ -132,6 +132,7 @@ function setup(overrides: Partial<Review> = {}) {
 it("A, C and the arrows set the mark and the band follows", () => {
   const { mark, key, summary, band } = setup();
   expect(mark).toHaveValue(3);
+  fireEvent.click(screen.getByRole("button", { name: "Marking guidelines" }));
   expect(screen.getByText("Reward two causes.")).toBeTruthy();
   key("c");
   expect(mark).toHaveValue(5);

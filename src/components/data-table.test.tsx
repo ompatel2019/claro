@@ -271,7 +271,7 @@ it("student details preserve hidden metrics without triggering row navigation", 
   );
   fireEvent.click(screen.getByText("More details"));
   expect(nav.push).not.toHaveBeenCalled();
-  const details = container.querySelector("details")!;
+  const details = container.querySelector('[data-slot="collapsible"]')!;
   const fields = Object.fromEntries(
     Array.from(details.querySelectorAll("dl > div"), (field) => [
       field.querySelector("dt")!.textContent,

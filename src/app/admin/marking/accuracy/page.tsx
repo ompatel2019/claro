@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { EmptyState, PageHeader } from "@/components/claro";
-import { StatCard } from "@/components/stat-card";
+import { StatCard } from "@/components/claro/data-display";
 import {
   Card,
   CardContent,
@@ -55,36 +55,36 @@ export default async function AccuracyPage({
       </p>
       <div className="grid min-w-0 auto-rows-fr gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
-          label={<AgreementLabel />}
+          title={<AgreementLabel />}
           empty={!data.checked}
           value={percentLabel(agreed, data.checked, "No checked answers yet")}
-          caption={checkedCaption(agreed)}
+          description={checkedCaption(agreed)}
         />
         <StatCard
-          label="Settled by second pass"
+          title="Settled by second pass"
           empty={!data.checked}
           value={percentLabel(
             secondPass,
             data.checked,
             "No checked answers yet",
           )}
-          caption={checkedCaption(secondPass)}
+          description={checkedCaption(secondPass)}
         />
         <StatCard
-          label="Sent to review"
+          title="Sent to review"
           empty={!data.checked}
           value={percentLabel(review, data.checked, "No checked answers yet")}
-          caption={checkedCaption(review)}
+          description={checkedCaption(review)}
         />
         <StatCard
-          label="Override rate"
+          title="Override rate"
           empty={!data.comparable}
           value={percentLabel(
             data.overrides,
             data.comparable,
             "No comparable reviews yet",
           )}
-          caption={
+          description={
             <>
               {data.overrides} of {data.comparable} comparable resolved reviews
               <br />
@@ -96,14 +96,14 @@ export default async function AccuracyPage({
         />
       </div>
       <StatCard
-        label="Admin-verified accuracy"
+        title="Admin-verified accuracy"
         empty={!data.verified}
         value={percentLabel(
           data.verifiedAgreed,
           data.verified,
           "No admin-verified answers yet",
         )}
-        caption={
+        description={
           <>
             {data.verifiedAgreed} of {data.verified} comparable staff-initiated
             written reviews matched the AI mark exactly.

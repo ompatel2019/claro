@@ -1,4 +1,5 @@
 "use client";
+import { monotonePath } from "@/lib/chart-path";
 
 import { useId, useState } from "react";
 import { Button, EmptyState } from "@/components/claro";
@@ -78,13 +79,14 @@ export function WeeklyChart({
   const x = (i: number) =>
     LEFT + (i / Math.max(1, points.length - 1)) * (W - LEFT - RIGHT);
   const y = (value: number) => TOP + (1 - value / maximum) * (BOTTOM - TOP);
-  const line = points
-    .map((p, i) =>
-      p.value == null
-        ? ""
-        : `${i > 0 && points[i - 1].value != null ? "L" : "M"}${x(i)},${y(p.value)}`,
-    )
-    .join(" ");
+  // Missing weeks split the curve and fill; never bridge a week with no answers.
+  const segments: [number, number][][] = [];
+  points.forEach((p, i) => {
+    if (p.value == null) return;
+    if (i === 0 || points[i - 1].value == null) segments.push([]);
+    segments.at(-1)!.push([x(i), y(p.value)]);
+  });
+  const line = segments.map(monotonePath).join(" ");
   const summary = points
     .map(
       (p) =>
@@ -176,12 +178,15 @@ export function WeeklyChart({
                 />
               </g>
             ))}
-            {points.length > 1 && (
-              <path
-                d={`${line} L${x(points.length - 1)},${BOTTOM} L${x(0)},${BOTTOM} Z`}
-                fill={`url(#${gradientId})`}
-              />
-            )}
+            {segments
+              .filter((segment) => segment.length > 1)
+              .map((segment, i) => (
+                <path
+                  key={i}
+                  d={`${monotonePath(segment)} L${segment.at(-1)![0]},${BOTTOM} L${segment[0][0]},${BOTTOM} Z`}
+                  fill={`url(#${gradientId})`}
+                />
+              ))}
             <path
               d={line}
               fill="none"

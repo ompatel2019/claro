@@ -5,7 +5,7 @@ import { DailyChart } from "./daily-chart";
 afterEach(cleanup);
 it.each(["area", "bars"] as const)(
   "keeps all 30 Sydney days readable in the dashboard %s chart",
-  (kind) => {
+  async (kind) => {
     const title = kind === "bars" ? "AI spend per day" : "Sessions per day";
     const points = Array.from({ length: 30 }, (_, i) => ({
       day: `2026-09-${String(i + 1).padStart(2, "0")}`,
@@ -15,12 +15,17 @@ it.each(["area", "bars"] as const)(
       <DailyChart title={title} hero="Total" kind={kind} points={points} />,
     );
     const select = screen.getByRole("combobox", { name: `${title} day` });
-    expect(screen.getAllByRole("option")).toHaveLength(30);
-    expect(select).toHaveValue("2026-09-30");
+    expect(select).toHaveTextContent("30 Sept 2026");
+    fireEvent.click(select);
+    expect(await screen.findAllByRole("option")).toHaveLength(30);
     expect(screen.getByRole("status")).toHaveTextContent(
       kind === "bars" ? "$0.29" : "29",
     );
-    fireEvent.change(select, { target: { value: "2026-09-01" } });
+    const first = screen.getByRole("option", {
+      name: "1 Sept 2026",
+    });
+    fireEvent.pointerDown(first);
+    fireEvent.click(first);
     expect(screen.getByRole("status")).toHaveTextContent(
       kind === "bars" ? "$0.00" : "0",
     );
@@ -29,7 +34,7 @@ it.each(["area", "bars"] as const)(
     );
     expect(marks).toHaveLength(30);
     fireEvent.click(marks[14].parentElement!);
-    expect(select).toHaveValue("2026-09-15");
+    expect(select).toHaveTextContent("15 Sept 2026");
     expect(screen.getByRole("status")).toHaveTextContent(
       kind === "bars" ? "$0.14" : "14",
     );
@@ -68,7 +73,7 @@ it.each(["area", "bars"] as const)(
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   },
 );
-it("stacks model spend with a text legend, Sydney titles and a keyboard day control", () => {
+it("stacks model spend with a text legend, Sydney titles and a keyboard day control", async () => {
   const { container } = render(
     <DailyChart
       title="Spend per day"
@@ -95,10 +100,12 @@ it("stacks model spend with a text legend, Sydney titles and a keyboard day cont
   expect(
     Number(bars[1].getAttribute("y")) + Number(bars[1].getAttribute("height")),
   ).toBeCloseTo(Number(bars[0].getAttribute("y")));
-  fireEvent.change(
-    screen.getByRole("combobox", { name: "Spend per day day" }),
-    { target: { value: "2026-10-01" } },
-  );
+  fireEvent.click(screen.getByRole("combobox", { name: "Spend per day day" }));
+  const first = await screen.findByRole("option", {
+    name: "1 Oct 2026",
+  });
+  fireEvent.pointerDown(first);
+  fireEvent.click(first);
   expect(screen.getByRole("status")).toHaveTextContent(
     "$3.00Alpha: $1.00Beta: $2.00",
   );
@@ -120,6 +127,9 @@ it("keeps dashboard area and unstacked spend charts working", () => {
     />,
   );
   expect(container.querySelectorAll('svg[role="img"] path')).toHaveLength(2);
+  expect(
+    container.querySelector('svg[role="img"] path[fill="none"]'),
+  ).toHaveAttribute("d", expect.stringContaining("C"));
   expect(screen.queryByRole("list")).toBeNull();
   cleanup();
   render(

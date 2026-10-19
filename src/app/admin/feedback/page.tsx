@@ -65,6 +65,7 @@ export default async function FeedbackPage({
         ]}
       />
       <FilterBar
+        customSelect
         values={f}
         hidden={{ status: list.status }}
         primary={[]}

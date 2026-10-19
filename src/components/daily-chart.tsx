@@ -1,6 +1,14 @@
 "use client";
 import { useId, useState } from "react";
-import { Button } from "@/components/claro";
+import {
+  Button,
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/claro";
+import { monotonePath } from "@/lib/chart-path";
 import { PortalIcon } from "@/components/icons";
 import { dateLabel } from "@/lib/practice";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
@@ -49,9 +57,7 @@ export function DailyChart({
   const step = (W - LEFT - RIGHT) / Math.max(1, points.length);
   const x = (i: number) => LEFT + (i + 0.5) * step;
   const y = (v: number) => TOP + (1 - v / max) * (BOTTOM - TOP);
-  const line = points
-    .map((p, i) => `${i ? "L" : "M"}${x(i)},${y(p.value)}`)
-    .join("");
+  const line = monotonePath(points.map((p, i) => [x(i), y(p.value)]));
   const bar = Math.min(24, step * 0.58);
   const ticks = [0, max / 2, max];
   return (
@@ -88,7 +94,7 @@ export function DailyChart({
             aria-label={
               models.length
                 ? `${title}, Sydney dates, stacked by model`
-                : `${title}, last 30 days`
+                : `${title}, ${points.length} Sydney days`
             }
           >
             <defs>
@@ -281,21 +287,26 @@ export function DailyChart({
         )}
         {current && (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
-            <label className="text-muted-foreground flex items-center gap-2">
-              Day
-              <select
-                aria-label={`${title} day`}
-                className="field bg-card h-9 w-auto py-0"
-                value={current.day}
-                onChange={(e) => setSelected(e.target.value)}
-              >
+            <span className="text-muted-foreground">Day</span>
+            <Select
+              items={points.map((p) => ({
+                value: p.day,
+                label: dateLabel(p.day),
+              }))}
+              value={current.day}
+              onValueChange={(day) => setSelected(day)}
+            >
+              <SelectTrigger aria-label={`${title} day`} size="sm">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
                 {points.map((p) => (
-                  <option key={p.day} value={p.day}>
+                  <SelectItem key={p.day} value={p.day}>
                     {dateLabel(p.day)}
-                  </option>
+                  </SelectItem>
                 ))}
-              </select>
-            </label>
+              </SelectContent>
+            </Select>
             <output className="font-medium tabular-nums" aria-live="polite">
               {format(current.value)}
               {models.map((model) => (
