@@ -1,5 +1,8 @@
 ## 19 Oct 2026 — Student Home v2, brand assets, Progress fix
 
+- Tab/app icons now use the exact Claro landing-site icon (white C on a rounded
+  #f54f1b tile, same in light and dark), exported by `scripts/tab-icons.mjs`;
+  sidebar/header lockup/mark SVGs are unchanged.
 - Link-preview image is now a student card (navy, white lockup, "HSC Economics,
   marked in seconds."), replacing the marketing teacher image.
 - Home rebuilt like the A1 layout reference in Claro's own design: greeting/date, bold

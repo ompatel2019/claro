@@ -44,7 +44,10 @@ with "field name must not be null" when history includes a non-live question.
 ## Brand
 
 Real Claro lockup/mark SVGs live in `public/logos/` (white variants in dark theme);
-favicon, `icon.svg` and `apple-icon.png` use the mark. The link preview is the student
+the sidebar/header still use these lockup/mark SVGs. The tab/app icons
+(`src/app/icon.svg`, `src/app/favicon.ico`, `src/app/apple-icon.png`) are the Claro
+landing-site icon (white C on a rounded #f54f1b tile, same in light and dark),
+exported by `scripts/tab-icons.mjs`. The link preview is the student
 card `public/og/claro-student-og.png` (`scripts/og-student-card.mjs`).
 
 Migration 0047 adds distinct session counts to `student_progress`, including
