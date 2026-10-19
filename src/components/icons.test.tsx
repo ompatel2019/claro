@@ -64,3 +64,23 @@ it("uses the same glyph contract for all Home tiles and the streak", () => {
     expect(svg.querySelector("path,rect")).not.toBeNull();
   }
 });
+
+it("covers the entire template glyph vocabulary", () => {
+  const template = readFileSync("design/claro-portal-template.html", "utf8");
+  const names = Object.keys(
+    JSON.parse(template.match(/const ICONS = (\{[^\n]+\});/)![1]),
+  );
+  for (const name of names) {
+    const { container, unmount } = render(
+      <icons.PortalIcon
+        name={name as Parameters<typeof icons.PortalIcon>[0]["name"]}
+      />,
+    );
+    expect(container.querySelector("svg"), name).toHaveAttribute(
+      "data-icon",
+      name,
+    );
+    expect(container.querySelector("path"), name).toHaveAttribute("d");
+    unmount();
+  }
+});

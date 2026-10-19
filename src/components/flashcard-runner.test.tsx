@@ -564,7 +564,7 @@ it("preserves keyboard activation on focused controls and focuses ratings after 
   expect(rating).toHaveFocus();
   for (const name of ["Missed it (1)", "Mostly (2)", "Knew it (3)"])
     expect(screen.getByRole("button", { name })).toHaveClass(
-      "border-border",
+      "border-input",
       "bg-card",
     );
   expect(

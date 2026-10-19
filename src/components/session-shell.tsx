@@ -8,6 +8,7 @@ import {
   PanelLeft,
 } from "@/components/icons";
 import { toast } from "sonner";
+import { FocusBar } from "@/components/claro/layout";
 import { timer } from "@/lib/practice";
 import { cn } from "@/lib/utils";
 import { Calculator } from "./calculator";
@@ -65,7 +66,7 @@ function Timer({ mode, seconds }: { mode: "down" | "up"; seconds: number }) {
             : `Time used ${timer(seconds)}`
       }
       className={cn(
-        "rounded-full px-2.5 py-1 font-mono text-sm tabular-nums",
+        "rounded-full px-2.5 py-1 font-sans text-sm tabular-nums",
         mode === "up" && "text-muted-foreground",
         mode === "down" && seconds <= 300 && "bg-warning-soft text-warning",
         mode === "down" &&
@@ -161,7 +162,7 @@ export function SessionShell(props: SessionProps) {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <header className="bg-background/95 sticky top-0 z-30 flex h-14 items-center gap-1.5 border-b px-2 backdrop-blur sm:gap-3 sm:px-4">
+      <FocusBar className="bg-card/90 sticky top-0 z-30 flex h-14 items-center gap-1.5 border-b px-2 backdrop-blur sm:gap-3 sm:px-4">
         <Button
           variant="ghost"
           size="sm"
@@ -284,7 +285,7 @@ export function SessionShell(props: SessionProps) {
             Finish
           </Button>
         </div>
-      </header>
+      </FocusBar>
       <div className="flex flex-1">
         {!flashcards && rail && (
           <aside className="bg-card sticky top-14 hidden h-[calc(100svh-3.5rem)] w-60 shrink-0 overflow-y-auto border-r p-3 lg:block">
@@ -331,7 +332,7 @@ export function SessionShell(props: SessionProps) {
           <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
             {(flashcards?.shortcuts ?? SHORTCUTS).map(([k, v]) => (
               <div key={k} className="contents">
-                <dt className="font-mono font-semibold">{k}</dt>
+                <dt className="font-sans font-semibold">{k}</dt>
                 <dd>{v}</dd>
               </div>
             ))}

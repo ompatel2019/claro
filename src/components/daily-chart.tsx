@@ -9,11 +9,11 @@ const PAD = 8;
 const LEFT = 88;
 const BOTTOM = H - 24;
 const colours = [
-  "var(--chart-2)",
   "var(--chart-1)",
   "var(--chart-3)",
-  "var(--chart-4)",
-  "var(--success)",
+  "var(--muted-foreground)",
+  "var(--chart-track)",
+  "var(--heat-1)",
 ];
 
 /** K10 ChartCard: title, hero number, an area or stacked bars per Sydney day. */
@@ -72,7 +72,7 @@ export function DailyChart({
                 y={y(g)}
                 textAnchor="end"
                 dominantBaseline="middle"
-                className="fill-muted-foreground text-[22px] sm:text-[18px]"
+                className="fill-chart-axis text-[22px] sm:text-[18px]"
               >
                 {format(g)}
               </text>
@@ -81,7 +81,7 @@ export function DailyChart({
                 x2={W - PAD}
                 y1={y(g)}
                 y2={y(g)}
-                className="stroke-border"
+                className="stroke-chart-grid"
               />
             </g>
           ))}
@@ -90,7 +90,7 @@ export function DailyChart({
               <text
                 x={LEFT}
                 y={H - 4}
-                className="fill-muted-foreground text-[22px] sm:text-[18px]"
+                className="fill-chart-axis text-[22px] sm:text-[18px]"
               >
                 {dateLabel(points[0].day)}
               </text>
@@ -98,7 +98,7 @@ export function DailyChart({
                 x={W - PAD}
                 y={H - 4}
                 textAnchor="end"
-                className="fill-muted-foreground text-[22px] sm:text-[18px]"
+                className="fill-chart-axis text-[22px] sm:text-[18px]"
               >
                 {dateLabel(points.at(-1)!.day)}
               </text>
@@ -108,12 +108,12 @@ export function DailyChart({
             <>
               <path
                 d={`${line}L${x(points.length - 1)},${BOTTOM}L${x(0)},${BOTTOM}Z`}
-                className="fill-primary/15"
+                className="fill-chart-1/10"
               />
               <path
                 d={line}
                 fill="none"
-                className="stroke-primary"
+                className="stroke-chart-1"
                 strokeWidth={2}
               />
             </>
@@ -152,15 +152,21 @@ export function DailyChart({
                     width={bar}
                     height={BOTTOM - y(p.value)}
                     rx={1.5}
-                    className="fill-primary"
+                    className={
+                      i === points.length - 1 ? "fill-chart-2" : "fill-chart-3"
+                    }
                   />
                 )
               ) : (
                 <circle
                   cx={x(i)}
                   cy={y(p.value)}
-                  r={8}
-                  className="hover:fill-primary/30 fill-transparent"
+                  r={p.day === current?.day ? 4 : 8}
+                  className={
+                    p.day === current?.day
+                      ? "fill-chart-2 stroke-card"
+                      : "hover:fill-chart-1/30 fill-transparent"
+                  }
                 />
               )}
             </g>
