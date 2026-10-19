@@ -25,6 +25,15 @@ end
 $$;
 
 -- Views are read-only; TRUNCATE and TRIGGER grants are meaningless for clients.
-revoke truncate, trigger on public.review_queue, public.score_history,
-  public.topic_progress, public.student_mark_reviews, public.marking_examples_for_grader
-  from public, anon, authenticated;
+-- Guarded per view so this stays valid if a later cleanup drops one (E2/E3).
+do $$
+declare v text;
+begin
+  foreach v in array array['review_queue', 'score_history', 'topic_progress',
+    'student_mark_reviews', 'marking_examples_for_grader'] loop
+    if to_regclass('public.' || v) is not null then
+      execute format('revoke truncate, trigger on public.%I from public, anon, authenticated', v);
+    end if;
+  end loop;
+end
+$$;
