@@ -11,6 +11,7 @@ vi.mock("next/form", () => ({
 }));
 vi.mock("@/app/(auth)/actions", () => ({ signOut: vi.fn() }));
 vi.mock("@/utils/supabase/client", () => ({ createClient: vi.fn() }));
+import { FeedbackWidget } from "./feedback-widget";
 import { activeItem, AppShell, nav } from "./app-shell";
 import { DataTable, sortRows, type Column } from "./data-table";
 import { EmptyState } from "./empty-state";
@@ -263,4 +264,47 @@ it("retains checkbox filters and drops stale day inputs before changing range", 
   expect(submitted).toHaveBeenCalledOnce();
   expect(new FormData(select.form!).has("date")).toBe(false);
   expect(new FormData(select.form!).get("flagged")).toBe("1");
+});
+
+it("shows the supplied exam countdown only for students and keeps one Ask Claro button", () => {
+  const { rerender } = render(
+    <AppShell kind="student" name="Test Student" defaultOpen examDays={7}>
+      Content
+    </AppShell>,
+  );
+  expect(screen.getByText("HSC Economics exam")).toBeVisible();
+  expect(screen.getByText("7", { exact: true })).toBeVisible();
+  expect(screen.getAllByRole("button", { name: "Ask Claro" })).toHaveLength(1);
+  rerender(
+    <AppShell kind="student" name="Test Student" defaultOpen examDays={null}>
+      Content
+    </AppShell>,
+  );
+  expect(screen.queryByText("HSC Economics exam")).toBeNull();
+  rerender(
+    <AppShell kind="admin" name="Admin" defaultOpen examDays={7}>
+      Content
+    </AppShell>,
+  );
+  expect(screen.queryByText("HSC Economics exam")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Ask Claro" })).toBeNull();
+});
+
+it("opens the existing feedback dialog from both account menus without a feedback FAB", async () => {
+  render(
+    <FeedbackWidget userId="student" floating={false}>
+      <AppShell kind="student" name="Test Student" defaultOpen>
+        Content
+      </AppShell>
+    </FeedbackWidget>,
+  );
+  expect(screen.queryByRole("button", { name: "Feedback" })).toBeNull();
+  for (const trigger of ["User menu", "Account menu"]) {
+    fireEvent.click(screen.getByRole("button", { name: trigger }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Feedback" }));
+    expect(
+      await screen.findByRole("dialog", { name: "Send feedback" }),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+  }
 });

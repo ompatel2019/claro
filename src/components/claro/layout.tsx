@@ -1,4 +1,5 @@
-import type { ComponentProps, ReactNode } from "react";
+import { Children, type ComponentProps, type ReactNode } from "react";
+import { MobileFocusFeedback } from "./shell-s/focus-feedback";
 import { cn } from "@/lib/utils";
 import { PortalIcon } from "@/components/icons";
 export {
@@ -26,11 +27,15 @@ export function PageHeader({
     >
       <div className="min-w-0">
         {eyebrow && (
-          <p className="text-muted-foreground mb-1.5 text-sm">{eyebrow}</p>
+          <p className="text-muted-foreground mb-1 text-sm font-medium">
+            {eyebrow}
+          </p>
         )}
-        <h1>{title}</h1>
+        <h1 className="text-[26px] leading-tight font-bold tracking-[-0.025em] sm:text-[28px]">
+          {title}
+        </h1>
         {description && (
-          <p className="text-muted-foreground mt-2 max-w-[62ch] text-sm leading-relaxed">
+          <p className="text-muted-foreground mt-1.5 max-w-[68ch] text-[15px]">
             {description}
           </p>
         )}
@@ -46,6 +51,7 @@ export function FocusBar({
   className,
   ...props
 }: ComponentProps<"header">) {
+  const items = Children.toArray(children);
   return (
     <header
       data-component="FocusBar"
@@ -55,7 +61,9 @@ export function FocusBar({
       )}
       {...props}
     >
-      {children}
+      {items.slice(0, -1)}
+      <MobileFocusFeedback />
+      {items.at(-1)}
     </header>
   );
 }
@@ -68,7 +76,7 @@ export function TopBar({
     <header
       data-component="TopBar"
       className={cn(
-        "bg-background/90 sticky top-0 z-30 flex h-14 items-center gap-3 border-b px-4 backdrop-blur-md sm:px-8",
+        "bg-background/90 sticky top-0 z-30 flex h-14 items-center gap-1.5 border-b px-4 backdrop-blur-md sm:px-8",
         className,
       )}
       {...props}
@@ -126,6 +134,10 @@ export function SubjectSwitcher() {
         <span className="font-semibold">Economics</span>
         <span className="text-muted-foreground text-xs">HSC · Year 12</span>
       </span>
+      <PortalIcon
+        name="chevrons-up-down"
+        className="text-muted-foreground mr-0.5 size-4 group-data-[collapsible=icon]:hidden"
+      />
     </div>
   );
 }
@@ -141,7 +153,7 @@ export function ExamCountdown({
   return (
     <div
       data-component="ExamCountdown"
-      className="relative overflow-hidden rounded-xl bg-[#1B1F34] p-4 text-white ring-1 ring-white/5"
+      className="relative overflow-hidden rounded-2xl bg-[#1B1F34] p-4 text-white ring-1 ring-white/5"
     >
       <svg
         className="pointer-events-none absolute inset-y-0 right-0 h-full w-[72px]"
