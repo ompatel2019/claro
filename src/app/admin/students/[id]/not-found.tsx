@@ -9,8 +9,8 @@ export default function NotFound() {
       title="Student not found"
       description="This student or selected item is unavailable."
       action={
-        <Link href="/" className={buttonVariants()}>
-          Back to home
+        <Link href="/admin/students" className={buttonVariants()}>
+          Back to students
         </Link>
       }
     />

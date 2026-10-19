@@ -1,7 +1,7 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { History, Close } from "@/components/icons";
+import { History, Close, PortalIcon } from "@/components/icons";
 import {
   loadSessionReport,
   loadStudentDetail,
@@ -40,7 +40,7 @@ import { EmptyState } from "@/components/empty-state";
 import { LinkTabs } from "@/components/link-tabs";
 import { PageHeader } from "@/components/page-header";
 import { SessionsTable, type SessionItem } from "@/components/sessions-table";
-import { Delta, StatCard } from "@/components/stat-card";
+import { StatCard } from "@/components/claro/data-display";
 import { ServerTable } from "@/components/static-table-server";
 import { StaticTable, type StaticRow } from "@/components/static-table";
 import { StatusPill, STATUS_PILL } from "@/components/status-pill";
@@ -279,8 +279,12 @@ export default async function StudentDetail({
   };
 
   return (
-    <div className="space-y-4">
-      <Link href="/admin/students" className="text-sm underline">
+    <div className="space-y-6">
+      <Link
+        href="/admin/students"
+        className={buttonVariants({ variant: "ghost", size: "sm" })}
+      >
+        <PortalIcon name="arrow-left" className="size-4" />
         Back to students
       </Link>
       <PageHeader
@@ -306,34 +310,35 @@ export default async function StudentDetail({
       />
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatCard
-          label="Questions this week"
+          title="Questions this week"
           value={week.thisWeek}
-          caption={
-            <Delta d={week.thisWeek - week.lastWeek}>
-              vs {week.lastWeek} last week
-            </Delta>
-          }
+          delta={week.thisWeek - week.lastWeek}
+          description={`vs ${week.lastWeek} last week`}
         />
         <StatCard
-          label="Average mark"
+          title="Average mark"
           value={avg30 == null ? "No marks yet" : `${pct(avg30)}%`}
-          caption={
-            avg30 == null || prev30 == null ? (
-              "Last 30 days"
-            ) : (
-              <Delta d={pct(avg30)! - pct(prev30)!}>vs previous 30 days</Delta>
-            )
+          delta={
+            avg30 == null || prev30 == null
+              ? undefined
+              : pct(avg30)! - pct(prev30)!
+          }
+          unit={avg30 == null || prev30 == null ? undefined : "pp"}
+          description={
+            avg30 == null || prev30 == null
+              ? "Last 30 days"
+              : "vs previous 30 days"
           }
         />
         <StatCard
-          label="Streak"
+          title="Streak"
           value={plural(d.activity.current_streak, "day")}
-          caption={`Longest ${d.activity.longest_streak}`}
+          description={`Longest ${plural(d.activity.longest_streak, "day")}`}
         />
         <StatCard
-          label="Flashcards due"
+          title="Flashcards due"
           value={d.due.today}
-          caption={`${d.due.tomorrow} more tomorrow`}
+          description={`${d.due.tomorrow} more tomorrow`}
         />
       </div>
       <ActivityHeatmap
@@ -355,6 +360,7 @@ export default async function StudentDetail({
       <FilterBar
         values={sp}
         hidden={{ tab, date: date ?? undefined }}
+        primary={tab === "sessions" ? "kind" : undefined}
         filters={[
           {
             name: "q",
@@ -691,11 +697,11 @@ function UsageTab({
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
         <StatCard
-          label="Calls in the last hour"
+          title="Calls in the last hour"
           value={`${lastHour} of ${AI_RATE_LIMIT_PER_HOUR}`}
-          caption="Rate limit per student"
+          description="Rate limit per student"
         />
-        <StatCard label="Spend, last 30 days" value={`$${spend.toFixed(2)}`} />
+        <StatCard title="Spend, last 30 days" value={`$${spend.toFixed(2)}`} />
       </div>
       <ServerTable
         params={params}
