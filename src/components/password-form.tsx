@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { ProfileSignInDialog } from "./profile-form";
 import { changePassword, type FormState } from "@/app/(app)/actions";
 import { Button } from "./ui/button";
-import { Card } from "./ui/card";
+import { Card } from "./claro/data-display";
+import { SectionHeading } from "./student/account/section-heading";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 export function PasswordForm() {
@@ -29,8 +30,11 @@ export function PasswordForm() {
   return (
     <>
       <ProfileSignInDialog open={expired} onOpenChange={setExpired} />
-      <Card className="min-w-0 p-5">
-        <h2 className="text-base font-semibold">Password</h2>
+      <Card className="min-w-0 flex-1 p-5">
+        <SectionHeading
+          title="Password"
+          description="Choose a strong password to keep your account secure."
+        />
         <form
           action={action}
           className="grid gap-4"
@@ -76,7 +80,10 @@ export function PasswordForm() {
                 </Button>
               </div>
               {state.fieldErrors?.[name] && (
-                <p id={`${name}-error`} className="text-destructive">
+                <p
+                  id={`${name}-error`}
+                  className="text-destructive text-[13px]"
+                >
                   {state.fieldErrors[name]?.[0]}
                 </p>
               )}
@@ -86,7 +93,7 @@ export function PasswordForm() {
             <p
               id="password-form-error"
               role="alert"
-              className="text-destructive"
+              className="bg-destructive-soft text-destructive border-destructive/20 rounded-lg border px-3 py-2 text-[13px]"
             >
               {state.error}
             </p>

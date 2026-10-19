@@ -53,7 +53,10 @@ export function PageStatus({
   return (
     <>
       {offline && (
-        <p role="status" className="bg-muted mb-4 rounded-lg px-4 py-2 text-sm">
+        <p
+          role="status"
+          className="bg-warning-soft text-warning-text border-warning/20 mb-4 rounded-lg border px-4 py-3 text-[13px]"
+        >
           {"You're offline. We'll save when you're back."}
         </p>
       )}

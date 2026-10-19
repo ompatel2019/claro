@@ -3,11 +3,17 @@ import { useActionState, useState, useEffect, useRef } from "react";
 import { createClient } from "@/utils/supabase/client";
 import { ensureSession } from "@/lib/auth-client";
 import { AuthForm } from "@/app/(auth)/auth-form";
-import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog";
 import { toast } from "sonner";
 import { saveProfile, type FormState } from "@/app/(app)/actions";
 import { Button } from "./ui/button";
-import { Card } from "./ui/card";
+import { Card } from "./claro/data-display";
+import { SectionHeading } from "./student/account/section-heading";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
 import {
@@ -28,9 +34,9 @@ export function ProfileSignInDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogTitle>Sign in again</DialogTitle>
-        <p>
+        <DialogDescription>
           Your session expired. Your unsaved details are kept on this device.
-        </p>
+        </DialogDescription>
         <AuthForm mode="sign-in" next="/student/profile" />
       </DialogContent>
     </Dialog>
@@ -145,13 +151,19 @@ export function ProfileForm({
   return (
     <>
       {offline && (
-        <p role="status" className="rounded-lg border px-3 py-2 text-sm">
+        <p
+          role="status"
+          className="bg-warning-soft text-warning-text border-warning/20 rounded-lg border px-3 py-2 text-[13px]"
+        >
           {"You're offline. We'll save when you're back."}
         </p>
       )}
       <ProfileSignInDialog open={expired} onOpenChange={setExpired} />
-      <Card className="min-w-0 p-5">
-        <h2 className="text-base font-semibold">Details</h2>
+      <Card className="min-w-0 flex-1 p-5">
+        <SectionHeading
+          title="Details"
+          description="Keep your name, year and school up to date."
+        />
         <form
           ref={formRef}
           action={action}
@@ -178,7 +190,7 @@ export function ProfileForm({
               disabled={pending}
             />
             {state.fieldErrors?.full_name && (
-              <p id="full_name-error" className="text-destructive">
+              <p id="full_name-error" className="text-destructive text-[13px]">
                 {state.fieldErrors.full_name[0]}
               </p>
             )}
@@ -209,7 +221,7 @@ export function ProfileForm({
               </SelectContent>
             </Select>
             {state.fieldErrors?.year_level && (
-              <p id="year_level-error" className="text-destructive">
+              <p id="year_level-error" className="text-destructive text-[13px]">
                 {state.fieldErrors.year_level[0]}
               </p>
             )}
@@ -231,7 +243,7 @@ export function ProfileForm({
               disabled={pending}
             />
             {state.fieldErrors?.school && (
-              <p id="school-error" className="text-destructive">
+              <p id="school-error" className="text-destructive text-[13px]">
                 {state.fieldErrors.school[0]}
               </p>
             )}
@@ -247,7 +259,11 @@ export function ProfileForm({
             />
           </div>
           {state.error && (
-            <p id="details-error" role="alert" className="text-destructive">
+            <p
+              id="details-error"
+              role="alert"
+              className="bg-destructive-soft text-destructive border-destructive/20 rounded-lg border px-3 py-2 text-[13px]"
+            >
               {state.error}
             </p>
           )}

@@ -13,9 +13,13 @@ import {
 } from "./profile-history";
 import { dateLabel } from "@/lib/practice";
 
-const nav = vi.hoisted(() => ({ push: vi.fn(), search: vi.fn() }));
+const nav = vi.hoisted(() => ({
+  push: vi.fn(),
+  search: vi.fn(),
+  refresh: vi.fn(),
+}));
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: nav.push }),
+  useRouter: () => ({ push: nav.push, refresh: nav.refresh }),
   usePathname: () => "/student/profile",
   useSearchParams: () => nav.search() ?? new URLSearchParams(),
 }));
@@ -164,3 +168,39 @@ it.each(["feedback", "reviews"] as const)(
     );
   },
 );
+
+it.each(["feedback", "reviews"] as const)(
+  "shows the %s empty state without a nested card or empty table",
+  (kind) => {
+    const { container } = render(
+      <ProfileHistory kind={kind} rows={[]} pager={{ ...pager, total: 0 }} />,
+    );
+    expect(
+      screen.getByText(
+        kind === "feedback" ? "Nothing sent yet." : "No marks questioned yet.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("table")).not.toBeInTheDocument();
+    expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
+    expect(container.querySelectorAll('[data-slot="card"]')).toHaveLength(1);
+  },
+);
+
+it("shows a load failure before an empty state and retries by refreshing", () => {
+  render(
+    <ProfileHistory
+      kind="reviews"
+      rows={[]}
+      pager={{ ...pager, total: 0 }}
+      error
+    />,
+  );
+  expect(screen.getByRole("alert")).toHaveTextContent(
+    "Couldn't load this. Try again",
+  );
+  expect(
+    screen.queryByText("No marks questioned yet."),
+  ).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+  expect(nav.refresh).toHaveBeenCalledOnce();
+});
