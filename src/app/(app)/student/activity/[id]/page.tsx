@@ -14,7 +14,7 @@ import {
   type Topic,
 } from "@/lib/practice";
 import { studentMarking, type ReviewRow, markingState } from "@/lib/feedback";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/claro/layout";
 import { ResultsAnswers } from "@/components/results-report";
 import { RetryAnswer } from "@/components/retry-answer";
 import { MarkingProgress } from "@/components/marking-progress";
@@ -77,7 +77,7 @@ export default async function Page({
       if (question) bank.push(question as (typeof bank)[number]);
     }
     return (
-      <div className="mx-auto max-w-3xl space-y-5">
+      <div className="mx-auto max-w-3xl min-w-0 space-y-5">
         <PageHeader
           title="Continue your check"
           description="Your question is saved. Finish your answer when you're ready."
@@ -142,7 +142,7 @@ export default async function Page({
   );
   const pending = rows.some((r) => markingState(r) === "marking");
   return (
-    <div className="space-y-4">
+    <div className="min-w-0 space-y-5">
       <PageHeader
         title="Mark my answer"
         description={`${dateLabel(s.started_at, true)} · One question, one clear next step.`}

@@ -3,11 +3,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
-import { DataTable, type Column } from "./data-table";
-import { FilterBar } from "./filter-bar";
+import { SessionTable } from "./student/activity/session-table";
+import { ActivityFilterControls } from "./student/activity/filter-controls";
 import { EmptyState } from "./empty-state";
-import { StatusPill } from "./status-pill";
-import { Sprint, Cards, Pen, History, SearchOff, Close } from "./icons";
+import { History, SearchOff, Close } from "./icons";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent } from "./ui/popover";
@@ -18,15 +17,13 @@ import {
   activityHref,
   type ActivityFilters,
   type ActivityData,
-  type ActivityRow,
 } from "@/lib/activity-filters";
 import {
   kindLabels,
-  sessionScore,
   sessionHref,
   isStudentSession,
 } from "@/lib/session-summary";
-import { dateLabel, scoreTone, type Topic } from "@/lib/practice";
+import { dateLabel, type Topic } from "@/lib/practice";
 
 const subscribeOnline = (change: () => void) => {
   window.addEventListener("online", change);
@@ -38,7 +35,6 @@ const subscribeOnline = (change: () => void) => {
 };
 const onlineSnapshot = () => navigator.onLine;
 const serverOnline = () => true;
-const icons = { sprint: Sprint, flashcards: Cards, single: Pen };
 export function ActivityBrowser({
   filters: f,
   data: suppliedData,
@@ -65,65 +61,6 @@ export function ActivityBrowser({
   const [endpoint, setEndpoint] = useState("from");
   const go = (changes: Record<string, string | number | undefined>) =>
     router.push(activityHref(f, { page: 1, ...changes }));
-  const columns: Column<ActivityRow>[] = [
-    {
-      id: "title",
-      header: "Title",
-      className: "w-full max-w-0 py-2 !whitespace-normal",
-      cell: (r) => {
-        const href = sessionHref(r);
-        const Icon = icons[r.kind as keyof typeof icons] ?? Sprint;
-        return (
-          <div className="space-y-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <Icon
-                aria-hidden
-                className="text-muted-foreground size-4 shrink-0"
-              />
-              {href ? (
-                <Link
-                  prefetch={false}
-                  href={href}
-                  className="min-w-0 truncate font-semibold hover:underline focus-visible:outline-2"
-                  title={r.title}
-                >
-                  {r.title}
-                </Link>
-              ) : (
-                <span className="truncate font-semibold">{r.title}</span>
-              )}
-              {r.pct != null && r.status !== "Marking" && !r.study ? (
-                <Badge variant={scoreTone(r.pct)}>
-                  {sessionScore(r.pct, r.status)}
-                </Badge>
-              ) : (
-                <span
-                  className="text-muted-foreground text-xs"
-                  aria-label={r.study ? "Study session, no score" : undefined}
-                >
-                  {sessionScore(r.pct, r.status, r.study)}
-                </span>
-              )}
-              {r.status !== "Finished" && <StatusPill pill={r.status} />}
-              {r.provisional && r.status === "Marking" && (
-                <StatusPill pill="Provisional" />
-              )}
-            </div>
-            <span className="text-muted-foreground block pl-6 text-xs sm:hidden">
-              {dateLabel(r.started_at, true)}
-            </span>
-          </div>
-        );
-      },
-    },
-    {
-      id: "date",
-      header: "Date",
-      sort: true,
-      className: "hidden sm:table-cell",
-      cell: (r) => dateLabel(r.started_at, true),
-    },
-  ];
   const values = {
     status: f.status,
     topic: f.topic,
@@ -140,29 +77,14 @@ export function ActivityBrowser({
         : {}),
   };
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="bg-card shadow-card min-w-0 overflow-hidden rounded-xl border">
       {!online && (
         <p role="status" className="bg-muted rounded-lg px-3 py-2 text-sm">
           You&apos;re offline. We&apos;ll save when you&apos;re back.
         </p>
       )}
-      <Card className="gap-4 p-5">
-        <ToggleGroup
-          aria-label="Session kind"
-          value={[f.kind || "all"]}
-          onValueChange={(v) => go({ kind: v[0] === "all" ? "" : v[0] || "" })}
-          variant="outline"
-          size="lg"
-          className="max-w-full flex-wrap"
-        >
-          <ToggleGroupItem value="all">All · {data.kind_total}</ToggleGroupItem>
-          {Object.entries(kindLabels).map(([kind, label]) => (
-            <ToggleGroupItem key={kind} value={kind}>
-              {label} · {data.kinds[kind] || 0}
-            </ToggleGroupItem>
-          ))}
-        </ToggleGroup>
-        <FilterBar
+      <Card className="gap-0 rounded-none border-0 border-b py-0 shadow-none">
+        <ActivityFilterControls
           activeCount={
             [
               f.kind,
@@ -232,9 +154,29 @@ export function ActivityBrowser({
               ],
             },
           ]}
-        />
+        >
+          <ToggleGroup
+            aria-label="Session kind"
+            value={[f.kind || "all"]}
+            onValueChange={(v) =>
+              go({ kind: v[0] === "all" ? "" : v[0] || "" })
+            }
+            variant="outline"
+            size="lg"
+            className="max-w-full justify-start overflow-x-auto"
+          >
+            <ToggleGroupItem value="all">
+              All · {data.kind_total}
+            </ToggleGroupItem>
+            {Object.entries(kindLabels).map(([kind, label]) => (
+              <ToggleGroupItem key={kind} value={kind}>
+                {label} · {data.kinds[kind] || 0}
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
+        </ActivityFilterControls>
         {f.date && (
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2 px-4 py-3">
             <Badge variant="secondary">{dateLabel(f.date, true)}</Badge>
             <Button
               variant="ghost"
@@ -318,37 +260,21 @@ export function ActivityBrowser({
         />
       ) : (
         <>
-          <DataTable
+          <SessionTable
             rows={data.rows}
-            columns={columns}
-            label="Your activity"
-            onRow={(r) => {
+            today={today}
+            sort={f.sort}
+            onOpen={(r) => {
               const href = sessionHref(r);
               if (href) router.push(href);
             }}
-            sorting={{
-              id: ["highest", "lowest"].includes(f.sort) ? "score" : "date",
-              dir: ["oldest", "lowest"].includes(f.sort) ? "asc" : "desc",
-            }}
-            onSortChange={(s) =>
-              go({
-                sort: !s
-                  ? f.sort === "newest"
-                    ? "oldest"
-                    : "newest"
-                  : s.id === "score"
-                    ? s.dir === "asc"
-                      ? "lowest"
-                      : "highest"
-                    : s.dir === "asc"
-                      ? "oldest"
-                      : "newest",
-              })
+            onDateSort={() =>
+              go({ sort: f.sort === "oldest" ? "newest" : "oldest" })
             }
           />
           <nav
             aria-label="Activity pagination"
-            className="flex flex-wrap items-center justify-between gap-3 text-sm"
+            className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-[13px]"
           >
             <p className="text-muted-foreground" aria-live="polite">
               {(data.page - 1) * 20 + 1}–{Math.min(data.page * 20, data.total)}{" "}
