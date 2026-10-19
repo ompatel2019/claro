@@ -71,7 +71,7 @@ it("renders range-scoped breakdowns and per-card empty states while keeping unto
   expect(screen.queryByTestId("progress-stats")).toBeNull();
   expect(screen.queryByText("Year heatmap")).toBeNull();
   expect(screen.getAllByRole("heading", { level: 2 })[0]).toHaveTextContent(
-    "Marks by topic",
+    "Score history",
   );
 });
 it("isolates load failures in cards and retries through the router", async () => {
@@ -193,4 +193,28 @@ it("keeps weak spots locked until both history boundaries", async () => {
     "href",
     "/student/sprint?topics=t1&sub=synthetic&history=mistakes",
   );
+});
+
+it("derives the practice summary from parent topic marks without counting subtopics twice", async () => {
+  mocks.load.mockResolvedValue({
+    ...empty,
+    topics: [
+      { ...empty.topics[0], answered: 4, earned: 7, possible: 10, pct: 70 },
+      {
+        ...empty.topics[0],
+        id: "child",
+        parent_id: "t1",
+        answered: 4,
+        earned: 7,
+        possible: 10,
+        pct: 70,
+      },
+    ],
+  });
+  render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
+  expect(screen.getByRole("img", { name: "7 out of 10" })).toBeInTheDocument();
+  expect(
+    screen.getByText("4 marked answers in this range"),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("Against your target")).not.toBeInTheDocument();
 });
