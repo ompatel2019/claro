@@ -140,6 +140,90 @@ begin
     raise exception 'Direct single session accepted';
   exception when insufficient_privilege then null; end;
   insert into public.sessions(kind,config) values ('flashcards','{}') returning id into s;
+  begin
+    insert into public.attempts(session_id,question_id,position) values (s,'d1-essay',1);
+    raise exception 'Flashcard attempt accepted';
+  exception when insufficient_privilege then null; end;
+  insert into public.sessions(kind,config) values ('sprint','{"mode":"extended"}') returning id into s;
+  begin
+    insert into public.attempts(session_id,question_id,position) values (s,'d1-essay',1);
+    raise exception 'Unsupported extended mode accepted';
+  exception when insufficient_privilege then null; end;
+end $$;
+reset role;
+-- A dedicated large pool exercises the real builder ceilings, smaller targets,
+-- bulk inserts, repeated positions and forged actual_questions values.
+insert into public.topics(id,parent_id,name,sort) values ('t1-d1-bound','t1','Synthetic D1 bound',99);
+insert into public.questions(id,type,topic_id,marks,stem,criteria,source,year,origin,status)
+select 'd1-bound-'||i,'short','t1-d1-bound',1,'Synthetic bound written '||i,
+  '[]','Synthetic Q'||i,2026,'claro','live' from generate_series(1,110) i;
+insert into public.questions(id,type,topic_id,marks,stem,options,correct_index,source,year,origin,status)
+select 'd1-bound-mc-'||i,'mcq','t1-d1-bound',1,'Synthetic bound MC '||i,
+  array['A','B','C','D'],0,'Synthetic Q'||i,2026,'claro','live' from generate_series(1,41) i;
+set local role authenticated;
+do $$
+declare s uuid; cfg jsonb; qid text; a uuid; n int;
+begin
+  for cfg in select value from jsonb_array_elements('[
+    {"mode":"mcq","target":40},
+    {"mode":"short","size_by":"questions","target":2},
+    {"mode":"short","size_by":"questions","target":15},
+    {"mode":"short","size_by":"marks","target":60}
+  ]'::jsonb) loop
+    s := public.start_sprint(cfg || '{"topics":["t1"],"subtopics":["t1-d1-bound"]}'::jsonb);
+    select count(*) into n from public.attempts where session_id=s;
+    if n<>(cfg->>'target')::int then raise exception 'Maximum allocation changed: % / %',cfg,n; end if;
+    select q.id into strict qid from public.questions q where q.topic_id='t1-d1-bound'
+      and q.type=case when cfg->>'mode'='mcq' then 'mcq' else 'short' end
+      and not exists (select 1 from public.attempts a where a.session_id=s and a.question_id=q.id) limit 1;
+    begin
+      insert into public.attempts(session_id,question_id,position) values (s,qid,1);
+      raise exception 'Attempt beyond allocation accepted for %',cfg;
+    exception when insufficient_privilege then null; end;
+  end loop;
+  -- The mixed tolerance permits at most target+2 attempts, even with a forged
+  -- oversized target/actual count. Start itself still allocates its exact 100.
+  s := public.start_sprint('{"mode":"mixed","target":100,"mcq_count":0,"short_marks":100,
+    "topics":["t1"],"subtopics":["t1-d1-bound"]}');
+  select count(*) into n from public.attempts where session_id=s;
+  if n<>100 then raise exception 'Largest mixed allocation changed'; end if;
+  for qid in select q.id from public.questions q where q.topic_id='t1-d1-bound' and q.type='short'
+    and not exists (select 1 from public.attempts a where a.session_id=s and a.question_id=q.id) limit 2 loop
+    insert into public.attempts(session_id,question_id,position) values (s,qid,1);
+  end loop;
+  select q.id into strict qid from public.questions q where q.topic_id='t1-d1-bound' and q.type='short'
+    and not exists (select 1 from public.attempts a where a.session_id=s and a.question_id=q.id) limit 1;
+  begin
+    insert into public.attempts(session_id,question_id,position) values (s,qid,1);
+    raise exception '103rd attempt accepted';
+  exception when insufficient_privilege then null; end;
+  insert into public.sessions(kind,config) values ('sprint',
+    '{"mode":"short","size_by":"questions","target":2,"actual_questions":999999}') returning id into s;
+  begin
+    insert into public.attempts(session_id,question_id,position)
+    select s,'d1-bound-'||i,1 from generate_series(1,3) i;
+    raise exception 'Bulk insert exceeded smaller allocation';
+  exception when insufficient_privilege then null; end;
+  if exists(select 1 from public.attempts where session_id=s) then raise exception 'Rejected batch was not atomic'; end if;
+  insert into public.sessions(kind,config) values ('sprint',
+    '{"mode":"mixed","target":2147483647,"actual_questions":2147483647}') returning id into s;
+  insert into public.attempts(session_id,question_id,position)
+    select s,'d1-bound-'||i,1 from generate_series(1,102) i;
+  begin
+    insert into public.attempts(session_id,question_id,position) values (s,'d1-bound-103',1);
+    raise exception 'Forged target bypassed absolute ceiling';
+  exception when insufficient_privilege then null; end;
+  insert into public.sessions(kind,config) values ('sprint',
+    '{"mode":"short","size_by":"questions","target":2}') returning id into s;
+  insert into public.attempts(session_id,question_id,position) values (s,'d1-bound-1',1) returning id into a;
+  update public.attempts set transcript=repeat('x',1000000),answer_text=null where id=a;
+  begin
+    update public.attempts set transcript=repeat('x',1000001) where id=a;
+    raise exception 'Oversized transcript accepted';
+  exception when check_violation then
+    if sqlerrm not like '%attempts_transcript_length%' then raise; end if;
+  end;
+  update public.attempts set transcript=null where id=a;
 end $$;
 reset role;
 -- A question may retire while a legitimate sprint is in progress. Preserve saves
@@ -175,5 +259,15 @@ begin
   insert into public.sessions(user_id,kind,config) values (auth.uid(),'single','{}') returning id into s;
   insert into public.attempts(user_id,session_id,question_id,position,answer_text)
   values (auth.uid(),s,null,1,'Synthetic own answer'),(auth.uid(),s,'d1-retired',2,'Synthetic bank answer');
+  -- Transcript INSERT is service-only; CHECKs cover that path as well as client PATCHes.
+  insert into public.attempts(user_id,session_id,question_id,position,transcript)
+  values (auth.uid(),s,null,3,repeat('x',1000000));
+  begin
+    insert into public.attempts(user_id,session_id,question_id,position,transcript)
+    values (auth.uid(),s,null,4,repeat('x',1000001));
+    raise exception 'Oversized service transcript insert accepted';
+  exception when check_violation then
+    if sqlerrm not like '%attempts_transcript_length%' then raise; end if;
+  end;
 end $$;
 rollback;

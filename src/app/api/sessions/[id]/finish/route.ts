@@ -6,6 +6,10 @@ import {
   rateLimitedResponse,
 } from "@/lib/ai/rate-limit";
 import { sydneyDayStart } from "@/lib/single-check";
+import {
+  dailyAiSprintCount,
+  sessionNeedsAi,
+} from "@/lib/marking/finish-limits";
 
 // Even 200 minimum-size written sprints exceed a normal day's study.
 const DAILY_WRITTEN_SPRINT_LIMIT = 200;
@@ -36,8 +40,12 @@ export async function POST(
       { status: 409 },
     );
   try {
-    // Flashcards finish without AI; completed sessions return their saved result.
-    if (session.kind === "sprint" && !session.finished_at) {
+    // Inspect actual attempts: even mixed sessions can finish without paid work.
+    if (
+      session.kind === "sprint" &&
+      !session.finished_at &&
+      (await sessionNeedsAi(id, user.id))
+    ) {
       const { data: profile, error: roleError } = await supabase
         .from("profiles")
         .select("role")
@@ -50,19 +58,8 @@ export async function POST(
       });
       if (!limited.ok) return rateLimitedResponse(limited);
       if (profile?.role !== "admin") {
-        const { count, error } = await supabase
-          .from("sessions")
-          .select("id,attempts!inner(questions!inner(type))", {
-            count: "exact",
-            head: true,
-          })
-          .eq("user_id", user.id)
-          .eq("kind", "sprint")
-          .neq("attempts.questions.type", "mcq")
-          .not("finished_at", "is", null)
-          .gte("finished_at", sydneyDayStart());
-        if (error) throw error;
-        if ((count ?? 0) >= DAILY_WRITTEN_SPRINT_LIMIT)
+        const count = await dailyAiSprintCount(user.id, sydneyDayStart());
+        if (count >= DAILY_WRITTEN_SPRINT_LIMIT)
           return rateLimitedResponse({
             ok: false,
             error: "You've reached today's sprint limit. Try again tomorrow.",

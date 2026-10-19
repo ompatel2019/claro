@@ -6,15 +6,12 @@ const mocks = vi.hoisted(() => ({
   role: "student",
   count: 0,
   countError: null as Error | null,
+  needsAi: vi.fn(),
+  dailyCount: vi.fn(),
   signedIn: true,
   missing: false,
   finish: vi.fn(),
   rate: vi.fn(),
-  select: vi.fn(),
-  eq: vi.fn(),
-  neq: vi.fn(),
-  not: vi.fn(),
-  gte: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/ai/rate-limit", async (importOriginal) => ({
@@ -29,25 +26,11 @@ vi.mock("@/utils/supabase/server", () => ({
       }),
     },
     from: (table: string) => ({
-      select(...args: unknown[]) {
-        mocks.select(...args);
+      select() {
         return this;
       },
-      eq(...args: unknown[]) {
-        mocks.eq(...args);
+      eq() {
         return this;
-      },
-      neq(...args: unknown[]) {
-        mocks.neq(...args);
-        return this;
-      },
-      not(...args: unknown[]) {
-        mocks.not(...args);
-        return this;
-      },
-      gte(...args: unknown[]) {
-        mocks.gte(...args);
-        return Promise.resolve({ count: mocks.count, error: mocks.countError });
       },
       maybeSingle: async () => ({
         data:
@@ -59,6 +42,10 @@ vi.mock("@/utils/supabase/server", () => ({
       }),
     }),
   }),
+}));
+vi.mock("@/lib/marking/finish-limits", () => ({
+  sessionNeedsAi: mocks.needsAi,
+  dailyAiSprintCount: mocks.dailyCount,
 }));
 vi.mock("@/lib/marking/engine", () => ({ finishSession: mocks.finish }));
 import { POST } from "./route";
@@ -73,6 +60,11 @@ beforeEach(() => {
   mocks.role = "student";
   mocks.count = 0;
   mocks.countError = null;
+  mocks.needsAi.mockResolvedValue(true);
+  mocks.dailyCount.mockImplementation(async () => {
+    if (mocks.countError) throw mocks.countError;
+    return mocks.count;
+  });
   mocks.signedIn = true;
   mocks.missing = false;
   mocks.rate.mockResolvedValue({ ok: true });
@@ -123,7 +115,7 @@ it("checks the student AI allowance before marking", async () => {
     role: "student",
   });
   expect(mocks.finish).not.toHaveBeenCalled();
-  expect(mocks.gte).not.toHaveBeenCalled();
+  expect(mocks.dailyCount).not.toHaveBeenCalled();
 });
 it("allows the final daily sprint and counts finished written sessions since Sydney midnight", async () => {
   vi.useFakeTimers();
@@ -131,16 +123,8 @@ it("allows the final daily sprint and counts finished written sessions since Syd
   try {
     mocks.count = 199;
     expect((await finish()).status).toBe(200);
-    expect(mocks.select).toHaveBeenCalledWith(
-      "id,attempts!inner(questions!inner(type))",
-      { count: "exact", head: true },
-    );
-    expect(mocks.eq).toHaveBeenCalledWith("user_id", "u");
-    expect(mocks.eq).toHaveBeenCalledWith("kind", "sprint");
-    expect(mocks.neq).toHaveBeenCalledWith("attempts.questions.type", "mcq");
-    expect(mocks.not).toHaveBeenCalledWith("finished_at", "is", null);
-    expect(mocks.gte).toHaveBeenCalledWith(
-      "finished_at",
+    expect(mocks.dailyCount).toHaveBeenCalledExactlyOnceWith(
+      "u",
       "2026-10-19T13:00:00.000Z",
     );
   } finally {
@@ -165,7 +149,7 @@ it("exempts admins from the daily cap and passes their trusted role to the AI li
   mocks.count = 200;
   expect((await finish()).status).toBe(200);
   expect(mocks.rate).toHaveBeenCalledWith({ userId: "u", role: "admin" });
-  expect(mocks.gte).not.toHaveBeenCalled();
+  expect(mocks.dailyCount).not.toHaveBeenCalled();
 });
 it.each(["sprint", "flashcards"])(
   "returns saved %s results without rate limiting",
@@ -175,14 +159,14 @@ it.each(["sprint", "flashcards"])(
     mocks.count = 200;
     expect((await finish()).status).toBe(200);
     expect(mocks.rate).not.toHaveBeenCalled();
-    expect(mocks.gte).not.toHaveBeenCalled();
+    expect(mocks.dailyCount).not.toHaveBeenCalled();
   },
 );
 it("finishes self-rated flashcards without an AI allowance", async () => {
   mocks.kind = "flashcards";
   expect((await finish()).status).toBe(200);
   expect(mocks.rate).not.toHaveBeenCalled();
-  expect(mocks.gte).not.toHaveBeenCalled();
+  expect(mocks.dailyCount).not.toHaveBeenCalled();
 });
 it("does not mark when the daily count fails", async () => {
   mocks.countError = new Error("Count unavailable");
@@ -203,4 +187,28 @@ it("requires an owned session before checking limits", async () => {
   mocks.missing = true;
   expect((await finish()).status).toBe(404);
   expect(mocks.rate).not.toHaveBeenCalled();
+});
+
+it.each(["MCQ-only", "mixed containing only MCQs", "blank written"])(
+  "finishes %s with exhausted AI and daily allowances",
+  async () => {
+    mocks.needsAi.mockResolvedValue(false);
+    mocks.count = 200;
+    mocks.rate.mockResolvedValue({ ok: false, retryAfterSec: 60 });
+    expect((await finish()).status).toBe(200);
+    expect(mocks.needsAi).toHaveBeenCalledExactlyOnceWith("s", "u");
+    expect(mocks.rate).not.toHaveBeenCalled();
+    expect(mocks.dailyCount).not.toHaveBeenCalled();
+    expect(mocks.finish).toHaveBeenCalledExactlyOnceWith("s");
+  },
+);
+it("does not mark when the actual-attempt lookup fails", async () => {
+  mocks.needsAi.mockRejectedValueOnce(new Error("Attempts unavailable"));
+  const log = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    expect((await finish()).status).toBe(500);
+    expect(mocks.finish).not.toHaveBeenCalled();
+  } finally {
+    log.mockRestore();
+  }
 });
