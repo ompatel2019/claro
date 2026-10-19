@@ -351,6 +351,7 @@ it("returns only the score and summary for an owned session", async () => {
     {
       id: "id",
       kind: "sprint",
+      finished_at: "2026-10-08",
       session_id: sessionId,
       session: { finished_at: "2026-10-08" },
       question: { type: "mcq" },
