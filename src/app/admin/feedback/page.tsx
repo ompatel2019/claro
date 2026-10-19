@@ -67,7 +67,7 @@ export default async function FeedbackPage({
       <FilterBar
         values={f}
         hidden={{ status: list.status }}
-        primary="kind"
+        primary={[]}
         filters={[
           {
             name: "kind",

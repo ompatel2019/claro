@@ -413,7 +413,7 @@ function KindChips({
       <ToggleGroup
         aria-label={filter.label}
         value={[value || "all"]}
-        className="max-w-full flex-wrap"
+        className="w-full max-w-full flex-wrap justify-start"
         onValueChange={(next) => {
           if (!next.length || !input.current) return;
           input.current.value = next[0] === "all" ? "" : String(next[0]);

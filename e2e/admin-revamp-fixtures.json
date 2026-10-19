@@ -1,0 +1,229 @@
+{
+  "accuracy": {
+    "window": {
+      "from": "2026-09-20",
+      "today": "2026-10-19",
+      "since": "2026-09-19T14:00:00.000Z",
+      "until": "2026-10-19T03:00:00.000Z"
+    },
+    "written": 20,
+    "checked": 15,
+    "mix": [
+      { "status": "agreed", "count": 10 },
+      { "status": "second_pass", "count": 3 },
+      { "status": "in_review", "count": 1 },
+      { "status": "reviewed", "count": 1 }
+    ],
+    "sentToReview": 2,
+    "verified": 4,
+    "verifiedAgreed": 3,
+    "excludedDisputes": 0,
+    "resolved": 5,
+    "overrides": 1,
+    "meanDelta": 0.4,
+    "comparable": 5,
+    "weeks": [
+      {
+        "day": "2026-09-14",
+        "written": 0,
+        "checked": 0,
+        "agreed": 0,
+        "disputes": 0
+      },
+      {
+        "day": "2026-09-21",
+        "written": 0,
+        "checked": 0,
+        "agreed": 0,
+        "disputes": 0
+      },
+      {
+        "day": "2026-09-28",
+        "written": 0,
+        "checked": 0,
+        "agreed": 0,
+        "disputes": 0
+      },
+      {
+        "day": "2026-10-05",
+        "written": 0,
+        "checked": 0,
+        "agreed": 0,
+        "disputes": 0
+      },
+      {
+        "day": "2026-10-12",
+        "written": 0,
+        "checked": 0,
+        "agreed": 0,
+        "disputes": 0
+      },
+      {
+        "day": "2026-10-19",
+        "written": 8,
+        "checked": 6,
+        "agreed": 4,
+        "disputes": 1
+      }
+    ],
+    "byType": [
+      {
+        "id": "1",
+        "label": "1",
+        "checked": 5,
+        "agreed": 4,
+        "review": 0,
+        "deltas": []
+      },
+      {
+        "id": "2–3",
+        "label": "2–3",
+        "checked": 0,
+        "agreed": 0,
+        "review": 0,
+        "deltas": []
+      },
+      {
+        "id": "4–5",
+        "label": "4–5",
+        "checked": 10,
+        "agreed": 6,
+        "review": 2,
+        "deltas": [0, 1]
+      },
+      {
+        "id": "6–8",
+        "label": "6–8",
+        "checked": 0,
+        "agreed": 0,
+        "review": 0,
+        "deltas": []
+      },
+      {
+        "id": "Extended",
+        "label": "Extended",
+        "checked": 0,
+        "agreed": 0,
+        "review": 0,
+        "deltas": []
+      }
+    ],
+    "byTopic": [
+      {
+        "id": "t3",
+        "label": "Issues in the Australian Economy",
+        "checked": 15,
+        "agreed": 10,
+        "review": 2,
+        "deltas": [0]
+      }
+    ],
+    "questions": []
+  },
+  "spend": {
+    "window": {
+      "from": "2026-10-01",
+      "to": "2026-10-19",
+      "since": "2026-09-30T14:00:00.000Z",
+      "until": "2026-10-19T03:00:00.000Z"
+    },
+    "today": 0,
+    "month": 14.25,
+    "all": 81.5,
+    "markedWritten": 0,
+    "byMarkValue": [
+      {
+        "label": "1–2 marks",
+        "answers": 0,
+        "trackedAnswers": 0,
+        "usd": 0,
+        "average": null
+      },
+      {
+        "label": "3 marks",
+        "answers": 0,
+        "trackedAnswers": 0,
+        "usd": 0,
+        "average": null
+      },
+      {
+        "label": "4 marks",
+        "answers": 0,
+        "trackedAnswers": 0,
+        "usd": 0,
+        "average": null
+      },
+      {
+        "label": "5–6 marks",
+        "answers": 0,
+        "trackedAnswers": 0,
+        "usd": 0,
+        "average": null
+      },
+      {
+        "label": "7–8 marks",
+        "answers": 0,
+        "trackedAnswers": 0,
+        "usd": 0,
+        "average": null
+      },
+      {
+        "label": "9+ marks",
+        "answers": 0,
+        "trackedAnswers": 0,
+        "usd": 0,
+        "average": null
+      }
+    ],
+    "unattributedWrittenUsd": 0,
+    "perDay": [
+      { "day": "2026-10-01", "models": {}, "usd": 0 },
+      { "day": "2026-10-02", "models": {}, "usd": 0 },
+      { "day": "2026-10-03", "models": {}, "usd": 0 },
+      { "day": "2026-10-04", "models": {}, "usd": 0 },
+      { "day": "2026-10-05", "models": {}, "usd": 0 },
+      { "day": "2026-10-06", "models": {}, "usd": 0 },
+      { "day": "2026-10-07", "models": {}, "usd": 0 },
+      { "day": "2026-10-08", "models": {}, "usd": 0 },
+      { "day": "2026-10-09", "models": {}, "usd": 0 },
+      { "day": "2026-10-10", "models": {}, "usd": 0 },
+      { "day": "2026-10-11", "models": {}, "usd": 0 },
+      { "day": "2026-10-12", "models": {}, "usd": 0 },
+      { "day": "2026-10-13", "models": {}, "usd": 0 },
+      { "day": "2026-10-14", "models": {}, "usd": 0 },
+      { "day": "2026-10-15", "models": {}, "usd": 0 },
+      { "day": "2026-10-16", "models": {}, "usd": 0 },
+      { "day": "2026-10-17", "models": {}, "usd": 0 },
+      { "day": "2026-10-18", "models": {}, "usd": 0 },
+      { "day": "2026-10-19", "models": {}, "usd": 0 }
+    ],
+    "byModel": [],
+    "byTask": [
+      {
+        "name": "Marking",
+        "tasks": [],
+        "calls": 0,
+        "usd": 0,
+        "avgPerCall": null
+      },
+      {
+        "name": "Admin and evals",
+        "tasks": [],
+        "calls": 0,
+        "usd": 0,
+        "avgPerCall": null
+      }
+    ],
+    "topStudents": [],
+    "over150": [],
+    "cap": 100,
+    "markers": [80, 90, 100],
+    "limits": {
+      "perMinute": 20,
+      "perHour": 200,
+      "markMyAnswerPerDay": 20,
+      "openDisputesPerAnswer": 1,
+      "openDisputesPerStudent": 3
+    }
+  }
+}
