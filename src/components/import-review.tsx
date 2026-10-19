@@ -3,9 +3,9 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useRef, useState, useSyncExternalStore, useTransition } from "react";
 import { toast } from "sonner";
+import { questionUndoCallback } from "./admin-question-undo";
 import {
   bulkQuestions,
-  undoQuestionChanges,
   type QuestionUndo,
   mergeDraft,
 } from "@/app/admin/content/questions/actions";
@@ -86,15 +86,9 @@ export function ImportReview({
           action: undo.length
             ? {
                 label: "Undo",
-                onClick: () =>
-                  start(async () => {
-                    try {
-                      await undoQuestionChanges(undo);
-                      router.refresh();
-                    } catch {
-                      toast.error("Couldn't undo. Reload and try again.");
-                    }
-                  }),
+                onClick: questionUndoCallback(undo, start, () =>
+                  router.refresh(),
+                ),
               }
             : undefined,
         });
