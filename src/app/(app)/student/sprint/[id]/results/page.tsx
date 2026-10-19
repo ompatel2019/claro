@@ -65,6 +65,8 @@ export default async function Results({
           total={counted.length}
           marking={counted.filter((a) => a.status === "marking").length}
           attention={0}
+          inProgress
+          sessionId={id}
         />
       </div>
     );

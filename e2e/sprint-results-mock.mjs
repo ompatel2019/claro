@@ -64,8 +64,28 @@ const rows = [
   row(2, 3, "short", [criteria[0]]),
   row(3, 5, "short"),
 ];
+// 0007/0008: time-driven marking. marking (0-3 s) -> all marked, finished_at unset
+// -> finished (0007 after 8 s on its own; 0008 only once /__finish/<id> is hit, like
+// the server finishing a session whose marking tab was closed).
+const live = new Map();
+const phaseOf = (id) => {
+  const s = live.get(id);
+  if (!s) return null;
+  const age = Date.now() - s.t;
+  if (age < 3000) return "marking";
+  if (id.endsWith("0007") && age >= 8000) return "finished";
+  if (id.endsWith("0008") && s.finished) return "finished";
+  return "marked";
+};
 createServer(async (request, response) => {
   const url = new URL(request.url, "http://localhost");
+  const control = url.pathname.match(/^\/__(reset|finish)\/(.+)$/);
+  if (control) {
+    if (control[1] === "reset") live.set(control[2], { t: Date.now() });
+    else if (live.has(control[2])) live.get(control[2]).finished = true;
+    response.end("{}");
+    return;
+  }
   response.setHeader("Content-Type", "application/json");
   response.setHeader("Content-Range", "*/0");
   if (
@@ -84,15 +104,22 @@ createServer(async (request, response) => {
     url.searchParams.get("session_id")?.replace("eq.", "") ??
     (body ? JSON.parse(body).p_session : "");
   // 0006: finished_at not yet set while Finish marks one answer (claim in flight).
-  const finishing = id?.endsWith("0006");
+  const timed = id?.endsWith("0007") || id?.endsWith("0008");
+  if (timed && !live.has(id)) live.set(id, { t: Date.now() });
+  const phase = timed ? phaseOf(id) : null;
+  const finishing = id?.endsWith("0006") || (timed && phase !== "finished");
   const single = id?.endsWith("0002") || id?.endsWith("0003");
   const selected = single
     ? [id.endsWith("0002") ? rows[2] : rows[1]]
-    : finishing
-      ? [rows[0], { ...rows[2], status: "marking", mark: null }]
-      : id?.endsWith("0005")
+    : timed
+      ? phase === "marking"
         ? [rows[0], rows[1], { ...rows[2], status: "marking", mark: null }]
-        : rows;
+        : rows
+      : finishing
+        ? [rows[0], { ...rows[2], status: "marking", mark: null }]
+        : id?.endsWith("0005")
+          ? [rows[0], rows[1], { ...rows[2], status: "marking", mark: null }]
+          : rows;
   let data = [];
   if (url.pathname === "/auth/v1/user") data = user;
   else if (url.pathname === "/rest/v1/profiles")
