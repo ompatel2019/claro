@@ -22,10 +22,25 @@ export const metadata: Metadata = {
     title: "Claro",
     description,
     images: [
-      { url: "/og/claro-og.png", width: 1200, height: 630, alt: "Claro" },
+      {
+        url: "/og/claro-student-og.png",
+        width: 1200,
+        height: 630,
+        alt: "Claro: HSC Economics, marked in seconds.",
+      },
     ],
   },
-  twitter: { card: "summary_large_image", images: ["/og/claro-og.png"] },
+  twitter: {
+    card: "summary_large_image",
+    images: [
+      {
+        url: "/og/claro-student-og.png",
+        width: 1200,
+        height: 630,
+        alt: "Claro: HSC Economics, marked in seconds.",
+      },
+    ],
+  },
 };
 
 export default function RootLayout({
