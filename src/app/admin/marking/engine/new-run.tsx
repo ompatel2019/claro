@@ -19,6 +19,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Meter } from "@/components/claro/data-display";
 import { PRICES, type Model } from "@/lib/ai/prices";
 import { budgetReason, ITEM_COUNT } from "./run-config";
 import {
@@ -136,12 +137,25 @@ export function NewRun({ data }: { data: Data }) {
             </DialogDescription>
           </DialogHeader>
           {run ? (
-            <div role="status" aria-live="polite">
-              {run.done} / {ITEM_COUNT} · {run.status}
+            <div
+              role="status"
+              aria-live="polite"
+              className="bg-muted/60 space-y-3 rounded-xl p-4"
+            >
+              <p className="font-medium">
+                {run.done} / {ITEM_COUNT} · {run.status}
+              </p>
+              <Meter
+                value={(run.done / ITEM_COUNT) * 100}
+                tone="brand"
+                label="Evaluation progress"
+              />
             </div>
           ) : (
             <>
-              <label htmlFor="eval-set">Test set</label>
+              <label htmlFor="eval-set" className="text-sm font-medium">
+                Test set
+              </label>
               <Select value="a1" disabled>
                 <SelectTrigger id="eval-set" className="w-full">
                   <SelectValue>A1 20-answer set</SelectValue>
@@ -150,7 +164,9 @@ export function NewRun({ data }: { data: Data }) {
                   <SelectItem value="a1">A1 20-answer set</SelectItem>
                 </SelectContent>
               </Select>
-              <label htmlFor="eval-model">Model</label>
+              <label htmlFor="eval-model" className="text-sm font-medium">
+                Model
+              </label>
               <Select
                 items={modelItems}
                 value={model}
@@ -170,13 +186,17 @@ export function NewRun({ data }: { data: Data }) {
                 </SelectContent>
               </Select>
               <fieldset className="space-y-2">
-                <legend>Thinking</legend>
+                <legend className="text-sm font-medium">Thinking</legend>
                 <RadioGroup
                   value={effort}
+                  className="grid-cols-3"
                   onValueChange={(value) => setEffort(value as typeof effort)}
                 >
                   {(["low", "medium", "high"] as const).map((v) => (
-                    <label key={v} className="flex items-center gap-2">
+                    <label
+                      key={v}
+                      className="hover:bg-accent flex cursor-pointer items-center gap-2 rounded-xl border p-3 text-sm"
+                    >
                       <RadioGroupItem value={v} />
                       {v[0].toUpperCase() + v.slice(1)}
                     </label>
@@ -184,24 +204,34 @@ export function NewRun({ data }: { data: Data }) {
                 </RadioGroup>
               </fieldset>
               <fieldset className="space-y-2">
-                <legend>Passes</legend>
+                <legend className="text-sm font-medium">Passes</legend>
                 <RadioGroup
                   value={blind ? "blind" : "single"}
                   onValueChange={(v) => setBlind(v === "blind")}
                 >
-                  <label className="flex items-center gap-2">
+                  <label className="hover:bg-accent flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm">
                     <RadioGroupItem value="single" />
-                    Single
+                    <span>
+                      <span className="block font-medium">Single</span>
+                      <span className="text-muted-foreground block text-xs">
+                        Grade once without a check pass.
+                      </span>
+                    </span>
                   </label>
-                  <label className="flex items-center gap-2">
+                  <label className="hover:bg-accent flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm">
                     <RadioGroupItem value="blind" />
-                    With blind check (as production)
+                    <span>
+                      <span className="block font-medium">Blind check</span>
+                      <span className="text-muted-foreground block text-xs">
+                        Match the production marking flow.
+                      </span>
+                    </span>
                   </label>
                 </RadioGroup>
               </fieldset>
               {estimate && (
-                <div className="space-y-1">
-                  <p>
+                <div className="bg-muted/60 space-y-1 rounded-xl p-4">
+                  <p className="font-medium">
                     Estimated cost: ${estimate.total.toFixed(4)} ({ITEM_COUNT} ×
                     ${estimate.average.toFixed(4)} per answer).
                   </p>
@@ -211,13 +241,27 @@ export function NewRun({ data }: { data: Data }) {
                 </div>
               )}
               {data && (
-                <p>
-                  Spent: ${freshData.spent.toFixed(4)}. Remaining budget: $
-                  {freshData.remaining.toFixed(4)} before the $80 eval limit;
-                  $100 overall cap.
+                <div className="space-y-2">
+                  <p className="text-sm">
+                    Spent: ${freshData.spent.toFixed(4)}. Remaining budget: $
+                    {freshData.remaining.toFixed(4)} before the $80 eval limit;
+                    $100 overall cap.
+                  </p>
+                  <Meter
+                    value={(freshData.spent / 80) * 100}
+                    tone="brand"
+                    label="Evaluation budget used"
+                  />
+                </div>
+              )}
+              {reason && (
+                <p
+                  role="status"
+                  className="bg-warning-soft text-warning-text rounded-xl p-3 text-sm"
+                >
+                  {reason}
                 </p>
               )}
-              {reason && <p role="status">{reason}</p>}
             </>
           )}
           <DialogFooter className="bg-background sticky -bottom-5 z-10 -mx-5 -mb-5">

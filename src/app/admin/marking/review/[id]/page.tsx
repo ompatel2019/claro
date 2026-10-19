@@ -3,6 +3,7 @@ import { Pen } from "@/components/icons";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
+import { buttonVariants } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
 import type { ReviewRow } from "@/lib/feedback";
 import { dateLabel } from "@/lib/practice";
@@ -73,7 +74,7 @@ export default async function ReviewPage({
   };
   const query = await searchParams;
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="min-w-0 space-y-6">
       <PageHeader
         eyebrow="Marking review"
         title={
@@ -85,7 +86,14 @@ export default async function ReviewPage({
           </Link>
         }
         description={`${session?.kind ?? "Session"} · ${session ? dateLabel(session.started_at) : ""} · ${row.source} · ${ageLabel(review.created_at)}`}
-        actions={<Link href="/admin/marking/review">Back to queue</Link>}
+        actions={
+          <Link
+            href="/admin/marking/review"
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Back to queue
+          </Link>
+        }
       />
       <Badge variant="outline">{reasons[review.reason]}</Badge>
       <ReviewNotice
@@ -93,7 +101,10 @@ export default async function ReviewPage({
         message={typeof query.notice === "string" ? query.notice : undefined}
       />
       {review.status === "resolved" && (
-        <p role="status" className="rounded-lg border p-3 text-sm">
+        <p
+          role="status"
+          className="bg-success-soft text-success-text rounded-xl p-4 text-sm"
+        >
           Resolved by {resolver} ·{" "}
           {review.resolved_at
             ? `${dateLabel(review.resolved_at)} at ${new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Sydney", hour: "numeric", minute: "2-digit" }).format(new Date(review.resolved_at))}`

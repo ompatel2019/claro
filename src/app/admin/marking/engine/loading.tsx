@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 export default function Loading() {
   return (
     <div
@@ -6,20 +7,11 @@ export default function Loading() {
       aria-label="Loading marking engine"
       className="min-w-0 space-y-4"
     >
-      <div
-        aria-hidden="true"
-        className="bg-muted h-20 w-full animate-pulse rounded-lg"
-      />
-      <div
-        aria-hidden="true"
-        className="bg-muted h-9 w-48 animate-pulse rounded-lg"
-      />
+      <Skeleton aria-hidden="true" className="h-20 w-full" />
+      <Skeleton aria-hidden="true" className="h-9 w-48" />
       <Card>
         <CardContent>
-          <div
-            aria-hidden="true"
-            className="bg-muted h-96 w-full animate-pulse rounded-lg"
-          />
+          <Skeleton aria-hidden="true" className="h-96 w-full" />
         </CardContent>
       </Card>
     </div>

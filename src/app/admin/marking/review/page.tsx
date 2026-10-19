@@ -3,7 +3,8 @@ import { Pen } from "@/components/icons";
 import { PageHeader } from "@/components/page-header";
 import { FilterBar } from "@/components/filter-bar";
 import { EmptyState } from "@/components/empty-state";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { LinkTabs } from "@/components/link-tabs";
+import { Button } from "@/components/ui/button";
 import { requireAdmin } from "@/lib/auth";
 import { addSpotChecks } from "./actions";
 import { loadQueue } from "./data";
@@ -41,7 +42,7 @@ export default async function ReviewQueue({
         Date.parse(r.created) < now - (age === "3d" ? 72 : 24) * 3_600_000),
   );
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="min-w-0 space-y-6">
       <PageHeader
         title="Marking review"
         description="Check disagreements, student disputes and spot checks. Oldest first."
@@ -51,7 +52,7 @@ export default async function ReviewQueue({
           </form>
         }
       />
-      <p className="text-muted-foreground text-sm">
+      <p className="bg-muted/60 text-muted-foreground rounded-xl p-4 text-sm leading-relaxed">
         Students select <strong>Question this mark</strong> beside written
         feedback on their{" "}
         <Link className="underline" href="/student/activity">
@@ -61,23 +62,19 @@ export default async function ReviewQueue({
         disputes with unchanged or lowered marks.
       </p>
       <ReviewNotice message={value("notice")} />
-      <nav aria-label="Review queues" className="flex flex-wrap gap-2">
-        {tabs.map((t, i) => (
-          <Link
-            key={t}
-            href={`?tab=${t}`}
-            aria-current={tab === t ? "page" : undefined}
-            className={buttonVariants({
-              variant: tab === t ? "default" : "outline",
-              size: "sm",
-            })}
-          >
-            {labels[i]} ({counts[i]})
-          </Link>
-        ))}
-      </nav>
+      <LinkTabs
+        label="Review queues"
+        active={tab}
+        tabs={tabs.map((value, i) => ({
+          value,
+          label: labels[i],
+          count: counts[i],
+          href: `?tab=${value}`,
+        }))}
+      />
       <FilterBar
         hidden={{ tab }}
+        primary="reason"
         filters={[
           ...(tab === "failed"
             ? []
