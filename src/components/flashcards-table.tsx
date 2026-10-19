@@ -31,11 +31,14 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
 import { Input } from "./ui/input";
 import { FormSelect } from "./ui/form-select";
 import { Textarea } from "./ui/textarea";
+import { FormField } from "./form-field";
 
 const KIND = { term: "Term", stat: "Stat" } as const;
 const ORIGIN = { a1: "A1", claro: "Claro" } as const;
@@ -165,12 +168,14 @@ function CardDialog({
   return (
     <Dialog open={!!card} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-        <DialogTitle>{form.id ? "Edit card" : "Add card"}</DialogTitle>
-        <DialogDescription>
-          Shared Claro card. Drafts are hidden from students until published.
-        </DialogDescription>
+        <DialogHeader>
+          <DialogTitle>{form.id ? "Edit card" : "Add card"}</DialogTitle>
+          <DialogDescription>
+            Shared Claro card. Drafts are hidden from students until published.
+          </DialogDescription>
+        </DialogHeader>
         <form
-          className="grid gap-3"
+          className="grid gap-4"
           onSubmit={(e) => {
             e.preventDefault();
             if (form.status === "retired" && card?.status !== "retired")
@@ -179,10 +184,8 @@ function CardDialog({
           }}
         >
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="grid gap-1 text-sm font-medium">
-              Kind
+            <FormField label="Kind">
               <FormSelect
-                aria-label="Kind"
                 value={form.kind}
                 onValueChange={(value) =>
                   set("kind", value as CardInput["kind"])
@@ -192,11 +195,9 @@ function CardDialog({
                   { value: "stat", label: "Stat" },
                 ]}
               />
-            </label>
-            <label className="grid gap-1 text-sm font-medium">
-              Status
+            </FormField>
+            <FormField label="Status">
               <FormSelect
-                aria-label="Status"
                 value={form.status}
                 onValueChange={(value) =>
                   set("status", value as CardInput["status"])
@@ -207,12 +208,10 @@ function CardDialog({
                   { value: "retired", label: "Retired" },
                 ]}
               />
-            </label>
+            </FormField>
           </div>
-          <label className="grid gap-1 text-sm font-medium">
-            Topic
+          <FormField label="Topic">
             <FormSelect
-              aria-label="Topic"
               required
               value={form.topic_id}
               onValueChange={(value) => set("topic_id", value)}
@@ -221,47 +220,43 @@ function CardDialog({
                 ...subtopicOptions(topics),
               ]}
             />
-          </label>
-          <label className="grid gap-1 text-sm font-medium">
-            Front
+          </FormField>
+          <FormField
+            label="Front"
+            hint={`${form.front.length}/${FRONT_MAX} characters`}
+          >
             <Input
-              aria-label="Front"
               required
               maxLength={FRONT_MAX}
               value={form.front}
               onChange={(e) => set("front", e.target.value)}
             />
-            <span className="text-muted-foreground text-right text-xs tabular-nums">
-              {form.front.length}/{FRONT_MAX}
-            </span>
-          </label>
-          <label className="grid gap-1 text-sm font-medium">
-            Back
+          </FormField>
+          <FormField
+            label="Back"
+            hint={`${form.back.length}/${BACK_MAX} characters`}
+          >
             <Textarea
-              aria-label="Back"
               required
               rows={4}
               maxLength={BACK_MAX}
               value={form.back}
               onChange={(e) => set("back", e.target.value)}
             />
-            <span className="text-muted-foreground text-right text-xs tabular-nums">
-              {form.back.length}/{BACK_MAX}
-            </span>
-          </label>
+          </FormField>
           {error && (
             <p role="alert" className="text-destructive text-sm">
               {error}
             </p>
           )}
-          <div className="flex justify-end gap-2">
+          <DialogFooter>
             <Button type="button" variant="outline" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" disabled={pending}>
               {pending ? "Saving…" : error ? "Try again" : "Save"}
             </Button>
-          </div>
+          </DialogFooter>
         </form>
         <RetireConfirmation
           open={confirmRetire}
@@ -473,10 +468,13 @@ export function FlashcardsTable({
         )}
       />
       {failure && (
-        <Card className="p-5">
-          <p role="alert">{failure.message}</p>
+        <Card className="border-destructive/20 bg-destructive-soft p-5">
+          <p role="alert" className="text-destructive">
+            {failure.message}
+          </p>
           <Button
             variant="outline"
+            className="w-fit"
             disabled={pending}
             onClick={() => run(failure.ids, failure.action, failure.clear)}
           >
@@ -502,15 +500,15 @@ export function FlashcardsTable({
       )}
       <Dialog open={!!move} onOpenChange={(o) => !o && setMove(null)}>
         <DialogContent>
-          <DialogTitle>Move to topic</DialogTitle>
-          <DialogDescription>
-            Applies to {move?.ids.length} selected card
-            {move?.ids.length === 1 ? "" : "s"}.
-          </DialogDescription>
-          <label className="grid gap-1 text-sm font-medium">
-            Subtopic
+          <DialogHeader>
+            <DialogTitle>Move to topic</DialogTitle>
+            <DialogDescription>
+              Applies to {move?.ids.length} selected card
+              {move?.ids.length === 1 ? "" : "s"}.
+            </DialogDescription>
+          </DialogHeader>
+          <FormField label="Subtopic">
             <FormSelect
-              aria-label="Subtopic"
               value={topic}
               onValueChange={(value) => setTopic(value)}
               options={[
@@ -518,8 +516,8 @@ export function FlashcardsTable({
                 ...subtopicOptions(topics),
               ]}
             />
-          </label>
-          <div className="flex justify-end gap-2">
+          </FormField>
+          <DialogFooter>
             <Button variant="outline" onClick={() => setMove(null)}>
               Cancel
             </Button>
@@ -532,7 +530,7 @@ export function FlashcardsTable({
             >
               Move
             </Button>
-          </div>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

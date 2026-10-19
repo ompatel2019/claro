@@ -9,8 +9,11 @@ export default function NotFound() {
       title="Feedback not found"
       description="This message is unavailable."
       action={
-        <Link href="/" className={buttonVariants()}>
-          Back to home
+        <Link
+          href="/admin/feedback"
+          className={buttonVariants({ variant: "outline" })}
+        >
+          Back to feedback
         </Link>
       }
     />

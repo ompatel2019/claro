@@ -62,7 +62,14 @@ export function StudentMenu({
               ? "They will be able to sign in again."
               : "They won’t be able to sign in. No data is deleted."}
           </AlertDialogDescription>
-          {error && <p role="alert">{error}</p>}
+          {error && (
+            <p
+              role="alert"
+              className="bg-destructive-soft text-destructive rounded-lg px-3 py-2 text-sm"
+            >
+              {error}
+            </p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>Cancel</AlertDialogCancel>
             <Button
@@ -130,7 +137,10 @@ export function SpotCheck({ attemptId }: { attemptId: string }) {
         {pending ? "Opening…" : "Open in review"}
       </Button>
       {error && (
-        <p role="alert" className="text-sm">
+        <p
+          role="alert"
+          className="bg-destructive-soft text-destructive rounded-lg px-3 py-2 text-sm"
+        >
           {error}
         </p>
       )}

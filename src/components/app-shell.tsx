@@ -310,7 +310,7 @@ export function AppShell({
           {children}
         </div>
       </SidebarInset>
-      <AskClaro />
+      {kind === "student" && <AskClaro />}
     </SidebarProvider>
   );
 }

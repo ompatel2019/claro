@@ -19,6 +19,7 @@ it("renders headings, paragraphs, lists, code, tables and inline formatting", ()
   ).toBeInTheDocument();
   expect(container.querySelector("strong")).toHaveTextContent("bold");
   expect(container.querySelector("em")).toHaveTextContent("italic");
+  expect(container.querySelector("em")).toHaveClass("italic");
   expect(screen.getAllByRole("list")).toHaveLength(2);
   expect(screen.getAllByRole("listitem")).toHaveLength(4);
   expect(screen.getByRole("table")).toHaveTextContent("Grade");

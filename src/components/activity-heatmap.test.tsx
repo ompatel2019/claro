@@ -47,7 +47,10 @@ it("shows streaks, shaded days and a tooltip, and links each day", () => {
     name: "Wed 7 Oct 2026 · 14 questions · 20 flashcards (31 or more)",
   });
   expect(busy.getAttribute("href")).toBe("/student/activity?date=2026-10-07");
-  expect(busy.style.background).toBe("var(--heatmap-4)");
+  expect(busy.style.background).toBe("var(--heat-4)");
+  expect(
+    document.querySelector('[data-component="StudyHeatmap"]'),
+  ).toBeInTheDocument();
   expect(screen.getAllByRole("link")).toHaveLength(52 * 7 + 4);
   fireEvent.mouseEnter(busy);
   expect(screen.getByRole("tooltip").textContent).toBe(

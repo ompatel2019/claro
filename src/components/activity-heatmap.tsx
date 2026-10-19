@@ -8,15 +8,21 @@ import {
   monthLabels,
   shade,
   SHADE_LABELS,
-  SHADES,
   type ActivityDay,
 } from "@/lib/activity";
 import { Flame } from "@/components/icons";
 import { plural } from "@/lib/practice";
 import { cn } from "@/lib/utils";
-import { Card, CardContent } from "./ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 
 const CELL = 14; // 11 px cell + 3 px gap
+const HEAT = Array.from({ length: 5 }, (_, level) => `var(--heat-${level})`);
 
 /** §2.3 K11: a GitHub-style year of active Sydney days, with streaks above. */
 export function ActivityHeatmap({
@@ -119,7 +125,15 @@ export function ActivityHeatmap({
       ? "Answer a question or review a flashcard to start your streak."
       : null;
   return (
-    <Card className={cn(home && "h-full")}>
+    <Card data-component="StudyDays" className={cn(home && "h-full")}>
+      {!home && (
+        <CardHeader>
+          <CardTitle>Study days</CardTitle>
+          <CardDescription>
+            Daily questions and flashcards over the last year
+          </CardDescription>
+        </CardHeader>
+      )}
       <CardContent className={cn("space-y-3", home && "flex h-full flex-col")}>
         {home ? (
           <div className="space-y-3">
@@ -192,7 +206,10 @@ export function ActivityHeatmap({
             data-testid="activity-heatmap"
             className="min-w-0 pb-1"
           >
-            <div className="relative w-max pt-5 pl-8 text-[11px]">
+            <div
+              data-component="StudyHeatmap"
+              className="relative w-max pt-5 pl-8 text-[11px]"
+            >
               {labels.map((m) => (
                 <span
                   key={m.col}
@@ -204,14 +221,19 @@ export function ActivityHeatmap({
                   {m.label}
                 </span>
               ))}
-              {["Mon", "Wed", "Fri"].map((d, i) => (
+              {[
+                ["Mon", 0],
+                ["Wed", 2],
+                ["Fri", 4],
+                ["Sun", 6],
+              ].map(([day, row]) => (
                 <span
-                  key={d}
+                  key={day}
                   aria-hidden
                   className="text-muted-foreground absolute left-0 leading-[11px]"
-                  style={{ top: 20 + i * 2 * CELL }}
+                  style={{ top: 20 + Number(row) * CELL }}
                 >
-                  {d}
+                  {day}
                 </span>
               ))}
               <div
@@ -242,8 +264,8 @@ export function ActivityHeatmap({
                       onBlur={() => setTip(null)}
                       onMouseEnter={() => setTip(day)}
                       aria-current={home && day === today ? "date" : undefined}
-                      className="focus-visible:outline-ink aria-[current=date]:ring-ink aria-[current=date]:ring-offset-card size-[11px] rounded-[3px] focus-visible:outline-2 aria-[current=date]:ring-1 aria-[current=date]:ring-offset-1"
-                      style={{ background: SHADES[shade(count)] }}
+                      className="focus-visible:outline-primary aria-[current=date]:ring-foreground aria-[current=date]:ring-offset-card size-[11px] rounded-[3px] focus-visible:outline-2 aria-[current=date]:ring-1 aria-[current=date]:ring-offset-1"
+                      style={{ background: HEAT[shade(count)] }}
                     />
                   );
                 })}
@@ -251,7 +273,7 @@ export function ActivityHeatmap({
               {tip && col >= 0 && (
                 <div
                   role="tooltip"
-                  className="bg-ink text-surface pointer-events-none absolute left-0 z-10 w-max max-w-full -translate-y-full rounded-md px-2 py-1 text-xs whitespace-normal"
+                  className="bg-primary text-primary-foreground pointer-events-none absolute left-0 z-10 w-max max-w-full -translate-y-full rounded-md px-2 py-1 text-xs whitespace-normal"
                   style={{
                     top: 20 + row * CELL - 4,
                   }}
@@ -293,17 +315,17 @@ export function ActivityHeatmap({
           {!home && <span>{caption}</span>}
           <span className="flex items-center gap-1" aria-hidden>
             Less
-            {SHADES.map((c) => (
+            {HEAT.map((color) => (
               <span
-                key={c}
-                className="size-[11px] rounded-[3px]"
-                style={{ background: c }}
+                key={color}
+                className="size-2.5 rounded-[2px]"
+                style={{ background: color }}
               />
             ))}
             More
             {home && (
               <span className="ml-3 flex items-center gap-1">
-                <span className="ring-ink ring-offset-card size-[11px] rounded-[3px] ring-1 ring-offset-1" />
+                <span className="ring-foreground ring-offset-card size-2.5 rounded-[2px] ring-1 ring-offset-1" />
                 Today
               </span>
             )}

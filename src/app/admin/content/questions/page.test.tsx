@@ -1,4 +1,5 @@
-import { beforeEach, expect, it, vi } from "vitest";
+import { cleanup, render } from "@testing-library/react";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   requireAdmin: vi.fn(),
@@ -6,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   loadTopics: vi.fn(),
   loadImportReview: vi.fn(),
   loadQuestionList: vi.fn(),
+  filterBar: vi.fn(),
 }));
 vi.mock("@/lib/auth", () => ({ requireAdmin: mocks.requireAdmin }));
 vi.mock("@/lib/admin-questions", () => ({
@@ -14,7 +16,7 @@ vi.mock("@/lib/admin-questions", () => ({
   loadImportReview: mocks.loadImportReview,
   loadQuestionList: mocks.loadQuestionList,
 }));
-vi.mock("@/components/filter-bar", () => ({ FilterBar: () => null }));
+vi.mock("@/components/filter-bar", () => ({ FilterBar: mocks.filterBar }));
 vi.mock("@/components/import-review", () => ({ ImportReview: () => null }));
 vi.mock("@/components/questions-table", () => ({ QuestionsTable: () => null }));
 import QuestionsPage from "./page";
@@ -36,12 +38,15 @@ beforeEach(() => {
   mocks.loadTopics.mockResolvedValue([]);
   mocks.loadImportReview.mockResolvedValue(review);
   mocks.loadQuestionList.mockResolvedValue(list);
+  mocks.filterBar.mockReturnValue(null);
 });
+afterEach(cleanup);
 
 it("loads the list and counts with normalised topic filters", async () => {
-  await QuestionsPage({ searchParams: Promise.resolve({}) });
+  render(await QuestionsPage({ searchParams: Promise.resolve({}) }));
   expect(mocks.loadQuestionList).toHaveBeenCalledWith({ topic: undefined });
   expect(mocks.loadQuestionCounts).toHaveBeenCalledOnce();
+  expect(mocks.filterBar.mock.calls.at(-1)![0].primary).toBe("type");
 });
 
 it("filters imports by the selected subtopic and drops unrelated subtopics", async () => {

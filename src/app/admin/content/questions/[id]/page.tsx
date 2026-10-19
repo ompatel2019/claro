@@ -3,8 +3,10 @@ import { requireAdmin } from "@/lib/auth";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadQuestion, loadTopics } from "@/lib/admin-questions";
-import { PageHeader } from "@/components/page-header";
+import { PortalIcon } from "@/components/icons";
+import { PageHeader } from "@/components/claro/layout";
 import { QuestionEditor } from "@/components/question-editor";
+import { buttonVariants } from "@/components/ui/button";
 
 export const metadata = pageMetadata("Question editor");
 
@@ -20,11 +22,22 @@ export default async function QuestionPage({
   const [loaded, topics] = await Promise.all([loadQuestion(id), loadTopics()]);
   if (!loaded) notFound();
   return (
-    <div className="space-y-4">
-      <Link href="/admin/content/questions" className="text-sm underline">
+    <div>
+      <Link
+        href="/admin/content/questions"
+        className={buttonVariants({
+          variant: "link",
+          className: "mb-4 gap-1.5 text-sm",
+        })}
+      >
+        <PortalIcon name="arrow-left" className="size-4" />
         Back to questions
       </Link>
-      <PageHeader eyebrow={loaded.question.source} title={loaded.question.id} />
+      <PageHeader
+        eyebrow={loaded.question.source}
+        title={loaded.question.id}
+        description="Edit question content, marking guidance and publishing status."
+      />
       <QuestionEditor
         key={loaded.question.updated_at}
         loaded={loaded}

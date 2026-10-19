@@ -34,7 +34,12 @@ function inline(text: string): ReactNode[] {
           <Fragment key={key}>{link[1]}</Fragment>
         ),
       );
-    } else output.push(<em key={key}>{inline(token.slice(1, -1))}</em>);
+    } else
+      output.push(
+        <em key={key} className="italic">
+          {inline(token.slice(1, -1))}
+        </em>,
+      );
     start = match.index! + token.length;
   }
   output.push(text.slice(start));

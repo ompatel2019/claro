@@ -10,6 +10,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
+import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { loadEvalRuns } from "../accuracy/eval";
 import { mergeRuns } from "./summary";
@@ -51,12 +52,17 @@ export default async function EnginePage({
     content = data ? (
       <CompareView data={data} />
     ) : (
-      <div className="space-y-3">
-        <p role="alert">Choose two different known runs to compare.</p>
-        <Link href="/admin/marking/engine?tab=runs" className="underline">
-          Back to runs
-        </Link>
-      </div>
+      <Card>
+        <CardContent className="space-y-3">
+          <p role="alert">Choose two different known runs to compare.</p>
+          <Link
+            href="/admin/marking/engine?tab=runs"
+            className={buttonVariants({ variant: "outline" })}
+          >
+            Back to runs
+          </Link>
+        </CardContent>
+      </Card>
     );
   } else if (tab === "runs") {
     const [dialog, runs, web] = await Promise.all([
@@ -91,12 +97,12 @@ export default async function EnginePage({
         description="Marking engine documentation will appear here when available."
       />
     ) : (
-      <div className="grid min-w-0 gap-4 md:grid-cols-[13rem_minmax(0,1fr)]">
+      <div className="grid min-w-0 gap-4 md:grid-cols-[14rem_minmax(0,1fr)]">
         <Card className="min-w-0 self-start">
           <CardContent>
             <nav
               aria-label="Engine documents"
-              className="flex min-w-0 gap-2 overflow-x-auto md:flex-col"
+              className="flex min-w-0 gap-1 overflow-x-auto md:flex-col"
             >
               {docs.map((doc) => (
                 <Link
@@ -104,10 +110,10 @@ export default async function EnginePage({
                   href={`/admin/marking/engine?tab=docs&doc=${encodeURIComponent(doc.id)}`}
                   aria-current={doc.id === selected.id ? "page" : undefined}
                   className={cn(
-                    "shrink-0 rounded-md px-3 py-2 text-sm",
+                    "shrink-0 rounded-lg border-l-2 border-transparent px-3 py-2.5 text-sm transition-colors",
                     doc.id === selected.id
-                      ? "bg-muted font-medium"
-                      : "hover:bg-muted",
+                      ? "border-brand bg-brand-soft text-brand-text font-semibold"
+                      : "text-muted-foreground hover:bg-accent hover:text-foreground",
                   )}
                 >
                   {doc.id}
@@ -138,7 +144,7 @@ export default async function EnginePage({
     );
   }
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="min-w-0 space-y-6">
       <PageHeader
         title="Marking engine"
         description="Engine documentation and evaluation results."

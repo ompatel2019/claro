@@ -288,7 +288,7 @@ test("A2: Topic selection changes Subtopic choices and clears an old child", asy
   ).toHaveCount(0);
   await capture(
     page,
-    page.locator("form"),
+    page.locator('form[data-slot="filter-bar-desktop"]'),
     "A2",
     "Topic then Subtopic",
     "a2-subtopics.png",

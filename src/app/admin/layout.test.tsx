@@ -6,11 +6,14 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   select: vi.fn(),
   eq: vi.fn(),
+  cookieGet: vi.fn(),
 }));
 vi.mock("@/lib/auth", () => ({ requireAdmin: mocks.requireAdmin }));
 vi.mock("@/utils/supabase/admin", () => ({ admin: mocks.admin }));
 vi.mock("@/lib/admin-data", () => ({ loadAdminBadges: async () => ({}) }));
-vi.mock("next/headers", () => ({ cookies: async () => ({ get: vi.fn() }) }));
+vi.mock("next/headers", () => ({
+  cookies: async () => ({ get: mocks.cookieGet }),
+}));
 vi.mock("next/navigation", () => ({
   redirect: (path: string) => {
     throw new Error(`redirect:${path}`);
@@ -53,4 +56,18 @@ it("redirects non-admins before accessing the service-role client", async () => 
     "redirect:/student",
   );
   expect(mocks.admin).not.toHaveBeenCalled();
+});
+
+it("passes the admin identity and persisted sidebar state to the shared shell", async () => {
+  mocks.eq.mockResolvedValue({ count: 0, error: null });
+  mocks.cookieGet.mockReturnValue({ value: "false" });
+
+  const shell = await AdminLayout({ children: "Content" });
+
+  expect(mocks.cookieGet).toHaveBeenCalledWith("sidebar_state");
+  expect(shell.props).toMatchObject({
+    kind: "admin",
+    name: "Admin",
+    defaultOpen: false,
+  });
 });

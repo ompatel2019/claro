@@ -30,11 +30,13 @@ const columns: Column<SessionItem>[] = [
     sort: true,
     cell: (s) => (
       <span className="inline-flex items-center gap-2">
-        {s.kind === "flashcards" ? (
-          <Cards aria-hidden className="text-muted-foreground size-4" />
-        ) : (
-          <Sprint aria-hidden className="text-muted-foreground size-4" />
-        )}
+        <span className="bg-muted text-muted-foreground grid size-8 shrink-0 place-items-center rounded-lg">
+          {s.kind === "flashcards" ? (
+            <Cards aria-hidden className="size-4" />
+          ) : (
+            <Sprint aria-hidden className="size-4" />
+          )}
+        </span>
         {sessionKind(s.kind)}
       </span>
     ),
@@ -55,8 +57,18 @@ const columns: Column<SessionItem>[] = [
         </Badge>
       ),
   },
-  { id: "items", header: "Items", sort: true, cell: (s) => s.items },
-  { id: "time", header: "Time", sort: true, cell: (s) => timer(s.elapsed_s) },
+  {
+    id: "items",
+    header: "Items",
+    sort: true,
+    cell: (s) => <span className="tabular-nums">{s.items}</span>,
+  },
+  {
+    id: "time",
+    header: "Time",
+    sort: true,
+    cell: (s) => <span className="tabular-nums">{timer(s.elapsed_s)}</span>,
+  },
   {
     id: "date",
     header: "Date",

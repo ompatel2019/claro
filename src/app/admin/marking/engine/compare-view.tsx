@@ -2,6 +2,8 @@
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { AnnotatedFeedback } from "@/components/annotated-feedback";
+import { buttonVariants } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import type { ReviewRow } from "@/lib/feedback";
 import { compareDetails } from "./compare-actions";
 import type { CompareData, CompareDetails, CompareRow } from "./compare";
@@ -136,7 +138,7 @@ export function CompareView({ data }: { data: CompareData }) {
     const detail = details[row.key];
     return (
       <div
-        className="bg-muted/40 min-w-0 space-y-4 rounded-md p-4 text-sm wrap-anywhere whitespace-normal"
+        className="bg-muted/60 min-w-0 space-y-4 rounded-xl p-4 text-sm wrap-anywhere whitespace-normal"
         aria-label={`Details for ${row.section} ${row.id}`}
       >
         {!detail ? (
@@ -194,20 +196,37 @@ export function CompareView({ data }: { data: CompareData }) {
     );
   };
   return (
-    <div className="min-w-0 space-y-4" data-testid="compare-region">
-      <Link className="text-sm underline" href="/admin/marking/engine?tab=runs">
+    <div className="min-w-0 space-y-6" data-testid="compare-region">
+      <Link
+        className={buttonVariants({ variant: "outline", size: "sm" })}
+        href="/admin/marking/engine?tab=runs"
+      >
         Back to runs
       </Link>
       <h2 className="text-lg font-semibold">Compare runs</h2>
-      <div className="grid min-w-0 gap-2 text-sm wrap-anywhere md:grid-cols-2">
-        <p>
-          Run A: {data.labelA} ({data.idA}) · Exact {percent(data.a.exact)} ·
-          Agreement {percent(data.a.agreement)} ({data.a.n} scored)
-        </p>
-        <p>
-          Run B: {data.labelB} ({data.idB}) · Exact {percent(data.b.exact)} ·
-          Agreement {percent(data.b.agreement)} ({data.b.n} scored)
-        </p>
+      <div className="grid min-w-0 gap-3 text-sm wrap-anywhere md:grid-cols-2">
+        {[
+          { run: "A", label: data.labelA, id: data.idA, metrics: data.a },
+          { run: "B", label: data.labelB, id: data.idB, metrics: data.b },
+        ].map(({ run, label, id, metrics }) => (
+          <Card key={run} size="sm">
+            <CardContent className="space-y-2">
+              <p className="text-muted-foreground text-xs font-semibold tracking-[0.04em] uppercase">
+                Run {run}
+              </p>
+              <p className="font-semibold">
+                {label}{" "}
+                <span className="text-muted-foreground font-normal">
+                  ({id})
+                </span>
+              </p>
+              <p className="tabular-nums">
+                Exact {percent(metrics.exact)} · Agreement{" "}
+                {percent(metrics.agreement)} · {metrics.n} scored
+              </p>
+            </CardContent>
+          </Card>
+        ))}
       </div>
       <p className="text-sm">
         {data.rows.length} items compared · {data.differing} differing ·{" "}
@@ -224,6 +243,7 @@ export function CompareView({ data }: { data: CompareData }) {
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"
+          className="accent-primary size-4"
           checked={onlyDiffering}
           onChange={(event) => setOnlyDiffering(event.target.checked)}
         />
@@ -234,7 +254,7 @@ export function CompareView({ data }: { data: CompareData }) {
         {rows.map((row) => (
           <li
             key={row.key}
-            className="min-w-0 space-y-3 rounded-lg border p-4 text-sm"
+            className="bg-card shadow-card min-w-0 space-y-3 rounded-xl border p-4 text-sm"
           >
             {question(row)}
             <dl className="grid grid-cols-2 gap-3">
@@ -263,50 +283,59 @@ export function CompareView({ data }: { data: CompareData }) {
           </li>
         ))}
       </ul>
-      <table
-        className="hidden w-full table-fixed text-sm md:table"
-        aria-label="Compared items"
-      >
-        <colgroup>
-          <col style={{ width: "40%" }} />
-          {[20, 16, 16, 8].map((width, index) => (
-            <col key={index} style={{ width: `${width}%` }} />
-          ))}
-        </colgroup>
-        <thead>
-          <tr>
-            {["Question", "Karan’s mark", "Run A (Δ)", "Run B (Δ)", "✓/✗"].map(
-              (title) => (
-                <th key={title} className="p-2 text-left whitespace-normal">
+      <Card className="hidden gap-0 py-0 md:flex">
+        <table
+          className="w-full table-fixed text-sm"
+          aria-label="Compared items"
+        >
+          <colgroup>
+            <col style={{ width: "40%" }} />
+            {[20, 16, 16, 8].map((width, index) => (
+              <col key={index} style={{ width: `${width}%` }} />
+            ))}
+          </colgroup>
+          <thead className="bg-surface text-muted-foreground text-xs tracking-[0.04em] uppercase">
+            <tr>
+              {[
+                "Question",
+                "Karan’s mark",
+                "Run A (Δ)",
+                "Run B (Δ)",
+                "✓/✗",
+              ].map((title) => (
+                <th
+                  key={title}
+                  className="h-10 p-3 text-left font-medium whitespace-normal"
+                >
                   {title}
                 </th>
-              ),
-            )}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => (
-            <Fragment key={row.key}>
-              <tr className="border-t [&>td]:p-2 [&>td]:align-top [&>td]:wrap-anywhere">
-                <td>{question(row)}</td>
-                <td>{expected(row)}</td>
-                <td>
-                  <Mark result={row.a} />
-                </td>
-                <td>
-                  <Mark result={row.b} />
-                </td>
-                <td>{agreement(row)}</td>
-              </tr>
-              {expanded.has(row.key) && (
-                <tr>
-                  <td colSpan={5}>{detailPanel(row)}</td>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <Fragment key={row.key}>
+                <tr className="hover:bg-surface border-t border-dashed [&>td]:p-3 [&>td]:align-top [&>td]:wrap-anywhere">
+                  <td>{question(row)}</td>
+                  <td>{expected(row)}</td>
+                  <td>
+                    <Mark result={row.a} />
+                  </td>
+                  <td>
+                    <Mark result={row.b} />
+                  </td>
+                  <td>{agreement(row)}</td>
                 </tr>
-              )}
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
+                {expanded.has(row.key) && (
+                  <tr>
+                    <td colSpan={5}>{detailPanel(row)}</td>
+                  </tr>
+                )}
+              </Fragment>
+            ))}
+          </tbody>
+        </table>
+      </Card>
     </div>
   );
 }

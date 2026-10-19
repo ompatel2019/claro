@@ -168,6 +168,7 @@ export function RunsTable({ rows }: { rows: RunSummary[] }) {
     <label className="flex items-center gap-2 text-xs">
       <input
         type="checkbox"
+        className="accent-primary size-4"
         aria-label={`Select ${row.label} (${row.id})`}
         checked={selected.includes(row.id)}
         disabled={selected.length === 2 && !selected.includes(row.id)}
@@ -210,7 +211,7 @@ export function RunsTable({ rows }: { rows: RunSummary[] }) {
           time is summed per answer across 6 concurrent workers.
           Grade/check/reconcile thinking is shown when efforts differ.
         </CardDescription>
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="bg-muted/60 flex flex-wrap items-center gap-3 rounded-xl p-3">
           <span className="text-sm">Select two runs ({selected.length}/2)</span>
           <Button
             disabled={selected.length !== 2}

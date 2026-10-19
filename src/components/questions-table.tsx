@@ -29,8 +29,11 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
+  DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+import { FormField } from "./form-field";
 
 const BASE = "/admin/content/questions";
 type Failure = { id: string; problem: string };
@@ -252,15 +255,17 @@ export function QuestionsTable({
         <DialogContent>
           {dialog && (dialog.kind === "topic" || dialog.kind === "verb") && (
             <>
-              <DialogTitle>
-                {dialog.kind === "topic"
-                  ? "Move to topic"
-                  : "Set directive verb"}
-              </DialogTitle>
-              <DialogDescription>
-                Applies to {dialog.ids.length} selected question
-                {dialog.ids.length === 1 ? "" : "s"}.
-              </DialogDescription>
+              <DialogHeader>
+                <DialogTitle>
+                  {dialog.kind === "topic"
+                    ? "Move to topic"
+                    : "Set directive verb"}
+                </DialogTitle>
+                <DialogDescription>
+                  Applies to {dialog.ids.length} selected question
+                  {dialog.ids.length === 1 ? "" : "s"}.
+                </DialogDescription>
+              </DialogHeader>
               {dialog.kind === "topic" ? (
                 <TopicSelect
                   topics={topics}
@@ -274,10 +279,8 @@ export function QuestionsTable({
                   disabled={pending}
                 />
               ) : (
-                <label className="grid gap-1 text-sm font-medium">
-                  Verb
+                <FormField label="Verb">
                   <FormSelect
-                    aria-label="Verb"
                     value={choice}
                     onValueChange={setChoice}
                     options={[
@@ -285,9 +288,9 @@ export function QuestionsTable({
                       ...VERBS.map((value) => ({ value, label: value })),
                     ]}
                   />
-                </label>
+                </FormField>
               )}
-              <div className="flex justify-end gap-2">
+              <DialogFooter>
                 <Button variant="outline" onClick={() => setDialog(null)}>
                   Cancel
                 </Button>
@@ -305,7 +308,7 @@ export function QuestionsTable({
                 >
                   {dialog.kind === "topic" ? "Move" : "Set verb"}
                 </Button>
-              </div>
+              </DialogFooter>
             </>
           )}
         </DialogContent>
@@ -317,13 +320,15 @@ export function QuestionsTable({
         <DialogContent className="sm:max-w-lg">
           {dialog?.kind === "failures" && (
             <>
-              <DialogTitle>
-                {dialog.done} {dialog.verb}, {dialog.failures.length} skipped
-              </DialogTitle>
-              <DialogDescription>Fix these and try again.</DialogDescription>
-              <ul className="max-h-80 space-y-2 overflow-y-auto text-sm">
+              <DialogHeader>
+                <DialogTitle>
+                  {dialog.done} {dialog.verb}, {dialog.failures.length} skipped
+                </DialogTitle>
+                <DialogDescription>Fix these and try again.</DialogDescription>
+              </DialogHeader>
+              <ul className="grid max-h-80 gap-2 overflow-y-auto text-sm">
                 {dialog.failures.map((f) => (
-                  <li key={f.id}>
+                  <li key={f.id} className="bg-muted rounded-xl border p-3">
                     <Link
                       prefetch={false}
                       className="font-medium underline"

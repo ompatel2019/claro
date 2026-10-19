@@ -2,9 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { sortRows, type Sorting } from "@/lib/admin";
-import { DataTable } from "@/components/data-table";
-import { EmptyState } from "@/components/empty-state";
-import { Wallet } from "@/components/icons";
+import { DataTable, EmptyState } from "@/components/claro";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -25,7 +23,6 @@ export function ModelTable({ rows }: { rows: Spend["byModel"] }) {
   if (!rows.length)
     return (
       <EmptyState
-        icon={Wallet}
         title="No model spend yet"
         description="Model calls and token usage in this range will appear here."
       />
@@ -104,7 +101,6 @@ export function TaskTable({ groups }: { groups: Spend["byTask"] }) {
   if (!rows.length)
     return (
       <EmptyState
-        icon={Wallet}
         title="No task spend yet"
         description="Marking, admin and eval calls in this range will appear here."
       />
@@ -210,7 +206,6 @@ export function StudentTable({ rows }: { rows: Spend["topStudents"] }) {
   if (!rows.length)
     return (
       <EmptyState
-        icon={Wallet}
         title="No student spend in the last 30 days"
         description="The ten students with the highest spend will appear here."
       />

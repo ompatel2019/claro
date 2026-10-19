@@ -1,5 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Skeleton } from "@/components/claro";
 export default function Loading() {
   return (
     <div

@@ -1,24 +1,26 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Alert, CheckCircle, History, Users } from "@/components/icons";
+import { Alert, CheckCircle } from "@/components/icons";
 import { requireAdmin } from "@/lib/auth";
 import { loadDashboard } from "@/lib/admin-data";
 import { ago } from "@/lib/admin";
 import { modeLabel, percentage, plural, scoreTone } from "@/lib/practice";
 import { DailyChart } from "@/components/daily-chart";
-import { EmptyState } from "@/components/empty-state";
 import { LatestSessions } from "@/components/latest-sessions";
-import { PageHeader } from "@/components/page-header";
-import { Delta, StatCard } from "@/components/stat-card";
+import {
+  DeltaPill,
+  EmptyState,
+  Meter,
+  PageHeader,
+  Skeleton,
+} from "@/components/claro";
+import { StatCard } from "@/components/stat-card";
 import { TryAgain } from "@/components/try-again";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const usd = (n: number) => `$${n.toFixed(2)}`;
-const Skeleton = ({ className }: { className: string }) => (
-  <Card aria-hidden className={`bg-muted animate-pulse ${className}`} />
-);
 
 async function Dashboard() {
   await requireAdmin();
@@ -108,9 +110,10 @@ async function Dashboard() {
           label="Active students, 7 days"
           value={d.active.now}
           caption={
-            <Delta d={d.active.now - d.active.prev}>
-              vs {d.active.prev} previous 7
-            </Delta>
+            <span className="inline-flex items-center gap-1.5">
+              <DeltaPill delta={d.active.now - d.active.prev} />
+              <span>vs {d.active.prev} previous 7</span>
+            </span>
           }
         />
         <StatCard label="Sessions, 7 days" value={d.sessionsWeek} />
@@ -134,12 +137,15 @@ async function Dashboard() {
               aria-valuemax={100}
               aria-valuenow={Math.min(100, pct)}
               aria-valuetext={`${usd(d.spend.all)} of $${d.spend.cap} (${pct}%)`}
-              className="bg-chart-5 mt-1 block h-1.5 overflow-hidden rounded-full"
+              className="mt-2 block"
             >
-              <span
-                className="bg-brand block h-full"
-                style={{ width: `${Math.min(100, pct)}%` }}
-              />
+              <span aria-hidden="true">
+                <Meter
+                  value={pct}
+                  tone="brand"
+                  label="All-time spend against cap"
+                />
+              </span>
             </span>
           }
         />
@@ -191,52 +197,54 @@ async function Dashboard() {
         />
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
-        <section className="min-w-0 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2>Recent sessions</h2>
+        <Card className="min-w-0">
+          <CardHeader className="grid-cols-[1fr_auto]">
+            <CardTitle role="heading" aria-level={2}>
+              Recent sessions
+            </CardTitle>
             <Link
               href="/admin/students"
               className="text-sm font-semibold underline underline-offset-4"
             >
               Student activity
             </Link>
-          </div>
-          {d.students === 0 ? (
-            <EmptyState
-              icon={Users}
-              title="No students yet"
-              description="Sessions appear here once students sign up and finish a sprint."
-            />
-          ) : !d.latest.length ? (
-            <EmptyState
-              icon={History}
-              title="No finished sessions yet"
-              description="Finished sessions will appear here."
-            />
-          ) : (
-            <LatestSessions
-              rows={d.latest.map((s) => ({
-                id: s.id,
-                user_id: s.user_id,
-                name: s.name,
-                kind:
-                  s.kind === "flashcards"
-                    ? "Flashcards"
-                    : s.kind === "single"
-                      ? "Mark my answer"
-                      : s.kind === "sprint"
-                        ? `${modeLabel(s.mode ?? undefined)} sprint`
-                        : "Removed session",
-                score: percentage(s.score, s.max),
-                tone:
-                  s.max && s.score != null
-                    ? scoreTone((100 * s.score) / s.max)
-                    : null,
-                when: ago(s.finished_at),
-              }))}
-            />
-          )}
-        </section>
+          </CardHeader>
+          <CardContent>
+            {d.students === 0 ? (
+              <EmptyState
+                title="No students yet"
+                description="Sessions appear here once students sign up and finish a sprint."
+              />
+            ) : !d.latest.length ? (
+              <EmptyState
+                title="No finished sessions yet"
+                description="Finished sessions will appear here."
+              />
+            ) : (
+              <LatestSessions
+                rows={d.latest.map((s) => ({
+                  id: s.id,
+                  user_id: s.user_id,
+                  name: s.name,
+                  kind:
+                    s.kind === "flashcards"
+                      ? "Flashcards"
+                      : s.kind === "single"
+                        ? "Mark my answer"
+                        : s.kind === "sprint"
+                          ? `${modeLabel(s.mode ?? undefined)} sprint`
+                          : "Removed session",
+                  score: percentage(s.score, s.max),
+                  tone:
+                    s.max && s.score != null
+                      ? scoreTone((100 * s.score) / s.max)
+                      : null,
+                  when: ago(s.finished_at),
+                }))}
+              />
+            )}
+          </CardContent>
+        </Card>
       </div>
     </>
   );
@@ -256,16 +264,16 @@ export default function AdminHome() {
           <>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {[0, 1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-28" />
+                <Skeleton key={i} className="h-28 rounded-xl" />
               ))}
             </div>
             <div className="grid gap-4 xl:grid-cols-2">
-              <Skeleton className="h-72" />
-              <Skeleton className="h-72" />
+              <Skeleton className="h-72 rounded-xl" />
+              <Skeleton className="h-72 rounded-xl" />
             </div>
             <div className="grid gap-4 xl:grid-cols-2">
-              <Skeleton className="h-64" />
-              <Skeleton className="h-64" />
+              <Skeleton className="h-64 rounded-xl" />
+              <Skeleton className="h-64 rounded-xl" />
             </div>
           </>
         }

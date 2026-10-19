@@ -36,7 +36,7 @@ export default async function StudentsPage({
     Object.entries(f).filter((e): e is [string, string] => !!e[1]),
   ).toString();
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <PageHeader
         title="Students"
         description={plural(shown.length, "student")}
@@ -73,6 +73,7 @@ export default async function StudentsPage({
           <FilterBar
             values={f}
             hidden={{ sort: pager.sort.id, dir: pager.sort.dir }}
+            primary="year"
             filters={[
               {
                 name: "q",

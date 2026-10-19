@@ -9,7 +9,10 @@ export function ReviewNotice({ message }: { message?: string }) {
     if (resolved) toast.success(message, { id: "review-resolved" });
   }, [message, resolved]);
   return message && !resolved ? (
-    <p role="status" className="rounded-lg border p-3 text-sm">
+    <p
+      role="status"
+      className="bg-warning-soft text-warning-text rounded-xl p-4 text-sm"
+    >
       {message}
     </p>
   ) : null;

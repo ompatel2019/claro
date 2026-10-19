@@ -14,7 +14,7 @@ export function ageLabel(created: string) {
     ? "<1 h"
     : hours < 24
       ? `${hours} h`
-      : `${Math.floor(hours / 24)} days`;
+      : `${Math.floor(hours / 24)} ${Math.floor(hours / 24) === 1 ? "day" : "days"}`;
 }
 
 export function commentChanged(
