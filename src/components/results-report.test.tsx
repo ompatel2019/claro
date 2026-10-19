@@ -230,7 +230,9 @@ it("puts next steps first and links factual question chips without attributing A
   );
   expect(screen.getAllByRole("heading").map((h) => h.textContent)).toEqual([
     "Overall feedback",
+    "Your next step",
     "Next steps",
+    "Strengths and fixes",
     "Strengths",
     "Top fixes",
   ]);

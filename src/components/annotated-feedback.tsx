@@ -1,7 +1,8 @@
 "use client";
 import Link from "next/link";
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowUpRight, Alert, CheckCircle } from "@/components/icons";
+import { Alert } from "@/components/icons";
+import { PenTick, PenCaret } from "./claro/markup-answer";
 import {
   bandOf,
   layoutCards,
@@ -32,7 +33,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 const reduced = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const WIDE = 1100;
+const WIDE = 900;
 
 /** Display only: keep UTF-16 offsets, including both characters of a lone CRLF. */
 export function displayAnswer(text: string) {
@@ -183,23 +184,21 @@ function CommentCard({
 } & React.ComponentProps<"div">) {
   const { n, ...comment } = c;
   const strength = c.kind === "strength";
-  const Icon = strength ? CheckCircle : ArrowUpRight;
+  const Icon = strength ? PenTick : PenCaret;
   return (
     <div
       data-card={c.id}
       tabIndex={-1}
       className={cn(
         "rounded-xl border p-3 text-sm transition-shadow outline-none",
-        strength
-          ? "border-success/25 bg-success-soft"
-          : "border-destructive/25 bg-destructive-soft",
+        "bg-card",
         active && "ring-ink/40 ring-2",
         className,
       )}
       {...props}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="bg-ink text-surface flex size-5 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums">
+        <span className="bg-brand-soft text-brand flex size-6 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums">
           {n}
         </span>
         <span
@@ -573,7 +572,7 @@ export function AnnotatedFeedback({
       ref={doc}
       onPointerUp={edit && !edit.disabled ? captureSelection : undefined}
       onKeyUp={edit && !edit.disabled ? captureSelection : undefined}
-      className="relative max-w-[70ch] text-base leading-[26px] whitespace-pre-wrap"
+      className="booklet relative min-h-28 text-[15px] leading-8 whitespace-pre-wrap"
     >
       {highlightSegments(displayedText, anchored).map((seg) => {
         const covering = seg.comments
@@ -608,10 +607,8 @@ export function AnnotatedFeedback({
               onMouseEnter={() => setHover(owner.id)}
               onMouseLeave={() => setHover(null)}
               className={cn(
-                "text-ink cursor-pointer rounded-[2px] border-b-2 outline-offset-1",
-                owner.kind === "strength"
-                  ? "bg-success-soft border-success"
-                  : "bg-accent border-primary",
+                "mk text-ink cursor-pointer bg-transparent outline-offset-1",
+                owner.kind === "strength" ? "mk-credit" : "mk-improve",
                 covering.some((c) => c.id === hover) &&
                   "outline-ink/40 outline-2",
                 covering.some((c) => c.id === flash) && "outline-ink outline-2",
@@ -623,7 +620,7 @@ export function AnnotatedFeedback({
               <sup
                 key={c.id}
                 aria-hidden
-                className="bg-ink text-surface mx-0.5 rounded-full px-1 text-[10px] font-semibold"
+                className="text-brand mx-0.5 text-[10px] font-semibold"
               >
                 {c.n}
               </sup>
@@ -863,7 +860,7 @@ export function AnnotatedFeedback({
         <div
           className={cn(
             "grid gap-6",
-            wide && "grid-cols-[minmax(0,1fr)_320px]",
+            wide && "grid-cols-[minmax(0,1fr)_300px]",
           )}
         >
           <div className="space-y-2">

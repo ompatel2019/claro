@@ -113,7 +113,10 @@ for (const failure of ["http", "network"])
   });
 
 vi.mock("@/lib/auth", () => ({ requireProfile: async () => ({ id: "u" }) }));
-vi.mock("./sprint-setup", () => ({ SprintSetup: () => null }));
+vi.mock("./sprint-setup", () => ({
+  SprintSetup: () => null,
+  QuickStarts: () => null,
+}));
 vi.mock("@/utils/supabase/server", () => ({
   createClient: async () => ({
     from: (table: string) => {

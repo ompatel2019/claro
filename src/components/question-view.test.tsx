@@ -17,8 +17,8 @@ it("preserves student question rendering, including literal image markdown", () 
   );
   expect(screen.getByText("1 mark · HSC Q1")).toHaveClass("text-xs");
   expect(screen.getByText("Explain inflation.").parentElement).toHaveClass(
-    "font-medium",
-    "leading-6",
+    "font-semibold",
+    "leading-snug",
   );
   expect(
     screen.getByText("![Chart](https://example.com/chart.png)"),

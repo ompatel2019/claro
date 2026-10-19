@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Flag, Spinner } from "@/components/icons";
+import { PortalIcon, Flag, Spinner } from "@/components/icons";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
 import { ensureSession, withAuthRetry } from "@/lib/auth-client";
@@ -475,7 +475,7 @@ export function SprintRunner({
   const go = (i: number) => void act(() => change(i));
   const qLabel = (i: number) => `Q${i + 1}`;
   const sprintBooklet = (
-    <div className="space-y-3">
+    <div className="flex min-h-[calc(100svh-9rem)] flex-col gap-5">
       <BookletFilter filter={filter} onFilter={setFilter} />
       <nav aria-label="Question booklet" className="space-y-3">
         {(["mcq", "short", "extended"] as const).map((type) => {
@@ -491,10 +491,10 @@ export function SprintRunner({
             );
           return items.length ? (
             <div key={type}>
-              <h3 className="text-muted-foreground mb-1.5 text-xs font-semibold tracking-[0.04em] uppercase">
+              <h3 className="text-muted-foreground mb-1.5 text-xs font-medium">
                 {TYPE_LABEL[type]}
               </h3>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="grid grid-cols-5 gap-2">
                 {items.map(({ row, i }) => (
                   <button
                     key={row.id}
@@ -508,7 +508,7 @@ export function SprintRunner({
                       answered(row)
                         ? "bg-ink border-ink text-surface"
                         : "bg-card",
-                      index === i && "ring-primary ring-2 ring-offset-2",
+                      index === i && "ring-brand ring-2 ring-offset-2",
                       row.status === "marked" &&
                         markTone(row.mark, row.max_marks),
                     )}
@@ -517,7 +517,7 @@ export function SprintRunner({
                     {row.flagged && (
                       <Flag
                         aria-hidden
-                        className="text-primary fill-primary absolute -top-1 -right-1 size-3.5"
+                        className="text-brand fill-brand absolute -top-1 -right-1 size-3.5"
                       />
                     )}
                   </button>
@@ -528,7 +528,12 @@ export function SprintRunner({
         })}
       </nav>
       <BookletLegend />
-      <Button variant="outline" size="sm" onClick={() => setReadAll(true)}>
+      <Button
+        variant="outline"
+        size="sm"
+        className="mt-auto w-full"
+        onClick={() => setReadAll(true)}
+      >
         Read all questions
       </Button>
     </div>
@@ -590,18 +595,15 @@ export function SprintRunner({
           )}
         </div>
       )}
-      <article className="bg-card space-y-4 rounded-xl border p-5 sm:p-6">
+      <article className="bg-card shadow-card space-y-6 overflow-hidden rounded-xl border p-6 sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-muted-foreground text-[13px] font-medium">
-            {[
-              `Question ${index + 1}`,
-              TYPE_LABEL[a.question.type],
-              plural(a.question.marks, "mark"),
-              a.question.source,
-              topicNames[a.question.topic_id],
-            ]
-              .filter(Boolean)
-              .join(" · ")}
+          <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+            <Badge variant="outline">Question {index + 1}</Badge>
+            <Badge variant="secondary">{TYPE_LABEL[a.question.type]}</Badge>
+            <Badge variant="secondary">
+              {plural(a.question.marks, "mark")}
+            </Badge>
+            <span>{topicNames[a.question.topic_id]}</span>
             {seen.includes(a.question_id) && (
               <Badge variant="outline" className="ml-2 align-middle">
                 Seen before
@@ -611,13 +613,13 @@ export function SprintRunner({
         </div>
         <QuestionView question={a.question} />
         {a.question.type === "mcq" ? (
-          <fieldset className="space-y-2">
-            <legend className="mb-2 font-semibold">Choose your answer</legend>
+          <fieldset className="space-y-2.5">
+            <legend className="sr-only">Choose your answer</legend>
             {a.question.options?.map((option, i) => (
               <label
                 key={i}
                 className={cn(
-                  "flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors",
+                  "has-[:focus-visible]:ring-ring flex cursor-pointer items-center gap-3.5 rounded-xl border px-4 py-3.5 text-[15px] leading-snug transition-colors has-[:focus-visible]:ring-2",
                   a.choice_index === i
                     ? "border-primary bg-accent"
                     : "hover:bg-muted",
@@ -641,7 +643,7 @@ export function SprintRunner({
                 <span
                   aria-hidden
                   className={cn(
-                    "flex size-6 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
+                    "text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-lg border text-xs font-semibold",
                     a.choice_index === i &&
                       "bg-primary border-primary text-primary-foreground",
                   )}
@@ -691,7 +693,7 @@ export function SprintRunner({
         <div
           role="group"
           aria-label="Answer actions"
-          className="flex flex-wrap items-center gap-3"
+          className="-mx-6 -mb-6 flex flex-wrap items-center gap-3 border-t px-6 py-5 sm:-mx-7 sm:-mb-7 sm:px-7"
         >
           {checkMode && a.status !== "marked" && (
             <CheckResult
@@ -710,31 +712,35 @@ export function SprintRunner({
             disabled={busy || !editable}
             onClick={flag}
           >
-            <Flag className={cn(a.flagged && "fill-primary text-primary")} />
+            <Flag className={cn(a.flagged && "fill-brand text-brand")} />
             Flag for review
           </Button>
+          <p className="text-muted-foreground ml-auto hidden text-xs sm:block">
+            {a.question.type === "mcq" && "A – D to answer · "}← → to move · F
+            to flag
+          </p>
         </div>
       </article>
-      <div className="flex flex-wrap justify-between gap-3">
+      <div className="flex items-center justify-between gap-3 pt-1">
         <Button
           variant="outline"
+          aria-label="Previous question"
           disabled={busy || index === 0}
           onClick={() => go(index - 1)}
         >
-          Previous question
+          <PortalIcon name="arrow-left" aria-hidden />
+          <span className="sm:hidden">Previous</span>
+          <span className="hidden sm:inline">Previous question</span>
         </Button>
+        <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums md:hidden">
+          {index + 1} / {attempts.length}
+        </span>
         {index < attempts.length - 1 ? (
           <Tooltip disabled={!needsCheck}>
             <TooltipTrigger
-              render={
-                <Button
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => go(index + 1)}
-                />
-              }
+              render={<Button disabled={busy} onClick={() => go(index + 1)} />}
             >
-              Next question
+              Next question <PortalIcon name="arrow-right" aria-hidden />
             </TooltipTrigger>
             <TooltipContent role="tooltip">
               You’ve selected an answer, check it first?

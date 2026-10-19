@@ -1,6 +1,12 @@
 "use client";
 import { useActionState, useEffect, useRef, useState } from "react";
-import { ChevronDown, Minus, Plus, SearchOff } from "@/components/icons";
+import {
+  ChevronDown,
+  Minus,
+  Plus,
+  SearchOff,
+  PortalIcon,
+} from "@/components/icons";
 import { startSprint } from "@/app/(app)/actions";
 import { createClient } from "@/utils/supabase/client";
 import { modes, type Mode, type Topic } from "@/lib/practice";
@@ -26,6 +32,8 @@ import {
 } from "@/lib/sprint";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "./empty-state";
+import { Badge, Chip as FoundationChip } from "./claro/controls";
+import { Meter } from "./claro/data-display";
 import { Button } from "./ui/button";
 import { Card, CardContent } from "./ui/card";
 import {
@@ -57,13 +65,18 @@ function Section({
   title,
   children,
   hint,
+  compact = false,
 }: {
   title: string;
   hint?: string;
+  compact?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-3" aria-label={title}>
+    <section
+      className={cn("space-y-3.5", !compact && "px-5 py-5 sm:px-6")}
+      aria-label={title}
+    >
       <div>
         <h2 className="text-sm font-semibold">{title}</h2>
         {hint && <p className="text-muted-foreground text-xs">{hint}</p>}
@@ -106,7 +119,7 @@ function Choice<T extends string>({
   );
 }
 
-/** §3.2 Topic Sprint setup: every control updates the live pool; the bar is the confirmation. */
+/** Every control updates the live pool and the summary beside the builder. */
 export function SprintSetup({
   topics,
   params,
@@ -114,7 +127,6 @@ export function SprintSetup({
   topics: Topic[];
   params: Record<string, string | undefined>;
 }) {
-  const [step, setStep] = useState(0);
   const [c, setC] = useState<SetupConfig>(DEFAULTS);
   const [prefilled, setPrefilled] = useState<SetupConfig | null>(null);
   const [pool, setPool] = useState<Pool | null>(null);
@@ -161,12 +173,12 @@ export function SprintSetup({
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
-        if (step === 3) form.current?.requestSubmit();
+        form.current?.requestSubmit();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [step]);
+  }, []);
 
   const set = (patch: Partial<SetupConfig>) =>
     setC((o) => ({ ...o, ...patch }));
@@ -251,9 +263,12 @@ export function SprintSetup({
     : [];
 
   return (
-    <div className="mx-auto max-w-[720px] space-y-4 pb-8">
+    <div className="grid items-start gap-5 pb-8 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       {prefilled && (
-        <p className="text-muted-foreground text-sm" role="status">
+        <p
+          className="text-muted-foreground text-sm xl:col-span-2"
+          role="status"
+        >
           Prefilled from a link.{" "}
           <button
             type="button"
@@ -267,34 +282,9 @@ export function SprintSetup({
           </button>
         </p>
       )}
-      <ol
-        aria-label="Sprint setup progress"
-        className="grid grid-cols-4 gap-2 text-xs"
-      >
-        {["Question type", "Topics", "Size", "Timer & feedback"].map(
-          (label, i) => (
-            <li
-              key={label}
-              aria-current={step === i ? "step" : undefined}
-              className={cn(
-                "border-t-2 pt-2",
-                i <= step
-                  ? "border-primary text-foreground"
-                  : "text-muted-foreground",
-              )}
-            >
-              <span className="block font-semibold">{i + 1}</span>
-              {label}
-            </li>
-          ),
-        )}
-      </ol>
-      <p role="status" className="text-muted-foreground text-sm">
-        Step {step + 1} of 4
-      </p>
-      <Card>
-        <CardContent className="space-y-7">
-          <div hidden={step !== 0}>
+      <Card className="gap-0 py-0">
+        <CardContent className="divide-y px-0">
+          <div>
             <Section title="Question type">
               <div
                 role="group"
@@ -311,13 +301,36 @@ export function SprintSetup({
                       if (c.mode !== id) setC(withMode(c, id as Mode));
                     }}
                     className={cn(
-                      "min-h-28 rounded-xl border p-4 text-left transition-colors",
+                      "relative min-h-32 rounded-xl border p-4 text-left transition-colors",
                       c.mode === id
-                        ? "border-primary bg-accent"
+                        ? "border-brand bg-brand-soft/60 ring-brand/10 ring-[3px]"
                         : "hover:bg-muted",
                     )}
                   >
-                    <span className="block font-semibold">{m.label}</span>
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "absolute top-4 right-4 grid size-4 place-items-center rounded-full border",
+                        c.mode === id && "border-brand",
+                      )}
+                    >
+                      {c.mode === id && (
+                        <span className="bg-brand size-2 rounded-full" />
+                      )}
+                    </span>
+                    <PortalIcon
+                      name={
+                        id === "mcq"
+                          ? "list"
+                          : id === "short"
+                            ? "pen-line"
+                            : "layers"
+                      }
+                      className="text-muted-foreground mb-4 size-5"
+                    />
+                    <span className="block text-sm font-semibold">
+                      {m.label}
+                    </span>
                     <span className="text-muted-foreground mt-2 block text-xs">
                       {id === "mcq"
                         ? "Choose from four options."
@@ -330,34 +343,101 @@ export function SprintSetup({
               </div>
             </Section>
           </div>
-          <div
-            hidden={step !== 1}
-            className={step === 1 ? "space-y-7" : undefined}
-          >
+          <div>
             <Section
               title="Topics"
-              hint="Up to 2. None selected practises the whole course."
+              hint="Pick whole topics or single dot points. Up to 2 topics; none selected practises the whole course."
             >
-              <div className="grid gap-2 sm:grid-cols-2">
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    set({ topics: [], subtopics: [] });
+                    setLimitHit(false);
+                  }}
+                >
+                  Clear
+                </Button>
+              </div>
+              <div className="grid gap-3">
                 {parents.map((t) => {
                   const on = c.topics.includes(t.id);
+                  const subs = topics.filter((sub) => sub.parent_id === t.id);
+                  const chosen = subs.filter((sub) =>
+                    c.subtopics.includes(sub.id),
+                  ).length;
                   return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => toggleTopic(t.id)}
-                      className={cn(
-                        "rounded-xl border p-3 text-left text-sm transition-colors",
-                        on ? "border-primary bg-accent" : "hover:bg-muted",
+                    <div key={t.id} className="rounded-xl border p-3.5">
+                      <button
+                        type="button"
+                        aria-pressed={on}
+                        onClick={() => toggleTopic(t.id)}
+                        className="flex w-full items-center gap-3 text-left text-sm"
+                      >
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "grid size-4 shrink-0 place-items-center rounded border",
+                            on && "bg-primary text-primary-foreground",
+                          )}
+                        >
+                          {on && <Minus className="size-3" />}
+                        </span>
+                        <span className="min-w-0 flex-1 truncate font-semibold">
+                          {t.name}
+                        </span>
+                        <span className="text-muted-foreground shrink-0 text-xs">
+                          {n(pool?.topics[t.id] ?? (pool ? 0 : undefined))}{" "}
+                          questions
+                        </span>
+                      </button>
+                      {subs.length > 0 && (
+                        <div
+                          className="mt-3 flex flex-wrap gap-2 sm:pl-7"
+                          role="group"
+                          aria-label={`${t.name} subtopics`}
+                        >
+                          <Chip
+                            on={on && chosen === 0}
+                            onClick={() => {
+                              if (!on) toggleTopic(t.id);
+                              else
+                                set({
+                                  subtopics: c.subtopics.filter(
+                                    (x) => !x.startsWith(`${t.id}-`),
+                                  ),
+                                });
+                            }}
+                          >
+                            All
+                          </Chip>
+                          {subs.map((sub) => (
+                            <Chip
+                              key={sub.id}
+                              on={on && c.subtopics.includes(sub.id)}
+                              disabled={
+                                !!pool && (pool.subtopics[sub.id] ?? 0) === 0
+                              }
+                              onClick={() => {
+                                if (!on && c.topics.length >= 2) {
+                                  setLimitHit(true);
+                                  return;
+                                }
+                                setLimitHit(false);
+                                set({
+                                  topics: on ? c.topics : [...c.topics, t.id],
+                                  subtopics: toggle(c.subtopics, sub.id),
+                                });
+                              }}
+                            >
+                              {sub.name} · {n(pool?.subtopics[sub.id])}
+                            </Chip>
+                          ))}
+                        </div>
                       )}
-                    >
-                      <span className="block font-medium">{t.name}</span>
-                      <span className="text-muted-foreground text-xs tabular-nums">
-                        {n(pool?.topics[t.id] ?? (pool ? 0 : undefined))}{" "}
-                        questions
-                      </span>
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -367,62 +447,8 @@ export function SprintSetup({
                 </p>
               )}
             </Section>
-
-            {c.topics.length > 0 && (
-              <Section
-                title="Subtopics"
-                hint="None selected covers the whole topic."
-              >
-                {c.topics.map((p) => {
-                  const subs = topics.filter((t) => t.parent_id === p);
-                  const chosen = c.subtopics.filter((x) =>
-                    x.startsWith(`${p}-`),
-                  );
-                  return (
-                    <div key={p} className="space-y-1.5">
-                      <p className="text-muted-foreground text-xs">
-                        {names[p]}
-                      </p>
-                      <div
-                        className="flex flex-wrap gap-1.5"
-                        role="group"
-                        aria-label={`${names[p]} subtopics`}
-                      >
-                        <Chip
-                          on={chosen.length === 0}
-                          onClick={() =>
-                            set({
-                              subtopics: c.subtopics.filter(
-                                (x) => !x.startsWith(`${p}-`),
-                              ),
-                            })
-                          }
-                        >
-                          All
-                        </Chip>
-                        {subs.map((t) => {
-                          const count = pool?.subtopics[t.id] ?? 0;
-                          return (
-                            <Chip
-                              key={t.id}
-                              on={c.subtopics.includes(t.id)}
-                              disabled={!!pool && count === 0}
-                              onClick={() =>
-                                set({ subtopics: toggle(c.subtopics, t.id) })
-                              }
-                            >
-                              {t.name} · {pool ? count : "–"}
-                            </Chip>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </Section>
-            )}
           </div>
-          <div hidden={step !== 2}>
+          <div>
             <Section title="Size">
               {c.mode === "short" && (
                 <ToggleGroup
@@ -540,11 +566,65 @@ export function SprintSetup({
               )}
             </Section>
           </div>
-          <div
-            hidden={step !== 3}
-            className={step === 3 ? "space-y-7" : undefined}
-          >
-            <Collapsible>
+          <div className="divide-y">
+            {years && (
+              <Section
+                title="Paper years"
+                hint="Keep the full range, or narrow it to recent papers."
+              >
+                <div className="flex flex-wrap items-center gap-2 text-sm">
+                  {(["year_from", "year_to"] as const).map((k, i) => (
+                    <Select
+                      key={k}
+                      value={String(c[k] ?? years[i])}
+                      onValueChange={(v) => {
+                        const y = {
+                          year_from: c.year_from ?? years[0],
+                          year_to: c.year_to ?? years[1],
+                          [k]: Number(v),
+                        };
+                        // From ≤ To: swap rather than reject.
+                        const [from, to] = [y.year_from, y.year_to].sort();
+                        set({ year_from: from, year_to: to });
+                      }}
+                    >
+                      <SelectTrigger
+                        aria-label={i ? "To year" : "From year"}
+                        className="w-24"
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {yearList.map((y) => (
+                          <SelectItem key={y} value={String(y)}>
+                            {y}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ))}
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() =>
+                      set({ year_from: years[1] - 4, year_to: years[1] })
+                    }
+                  >
+                    Last 5 years
+                  </button>
+                  <label className="ml-auto flex items-center gap-2 text-[13px]">
+                    <Switch
+                      checked={c.history === "prefer_new"}
+                      onCheckedChange={(prefer) =>
+                        set({ history: prefer ? "prefer_new" : "any" })
+                      }
+                    />
+                    Prefer questions I haven’t seen
+                  </label>
+                </div>
+              </Section>
+            )}
+            <Collapsible className="px-5 py-5 sm:px-6">
               <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-semibold">
                 <span>
                   Advanced
@@ -604,51 +684,6 @@ export function SprintSetup({
                     </div>
                   </Section>
                 )}
-                {years && (
-                  <Section title="Years">
-                    <div className="flex flex-wrap items-center gap-2 text-sm">
-                      {(["year_from", "year_to"] as const).map((k, i) => (
-                        <Select
-                          key={k}
-                          value={String(c[k] ?? years[i])}
-                          onValueChange={(v) => {
-                            const y = {
-                              year_from: c.year_from ?? years[0],
-                              year_to: c.year_to ?? years[1],
-                              [k]: Number(v),
-                            };
-                            // From ≤ To: swap rather than reject.
-                            const [from, to] = [y.year_from, y.year_to].sort();
-                            set({ year_from: from, year_to: to });
-                          }}
-                        >
-                          <SelectTrigger
-                            aria-label={i ? "To year" : "From year"}
-                            className="w-24"
-                          >
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {yearList.map((y) => (
-                              <SelectItem key={y} value={String(y)}>
-                                {y}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      ))}
-                      <button
-                        type="button"
-                        className="underline"
-                        onClick={() =>
-                          set({ year_from: years[1] - 4, year_to: years[1] })
-                        }
-                      >
-                        Last 5 years
-                      </button>
-                    </div>
-                  </Section>
-                )}
                 {pool?.trial && (
                   <Section title="Source">
                     <div
@@ -702,7 +737,6 @@ export function SprintSetup({
                       <>
                         {HISTORY_LABELS[h]}
                         <span className="text-muted-foreground tabular-nums">
-                          {" "}
                           · {n(pool?.[k])}
                         </span>
                       </>,
@@ -717,143 +751,148 @@ export function SprintSetup({
               </CollapsibleContent>
             </Collapsible>
 
-            <Section title="Timer">
-              <label className="flex items-center gap-2 text-sm">
-                <Switch
-                  checked={c.timed}
-                  onCheckedChange={(timed) =>
-                    set({
-                      timed,
-                      ...(!timed
-                        ? {
-                            short_min_per_mark: clampPace(c.short_min_per_mark),
-                            mcq_min_per_q: clampPace(c.mcq_min_per_q),
-                          }
-                        : {}),
-                    })
-                  }
-                />
-                Timed
-              </label>
-              {c.timed && (
-                <>
-                  <div className="grid gap-3 sm:grid-cols-2">
+            <div className="px-5 py-5 sm:px-6">
+              <h2 className="mb-4 text-sm font-semibold">Timer and feedback</h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Section title="Timer" compact>
+                  <label className="flex items-start gap-3 rounded-xl border p-3.5 text-[13px]">
+                    <Switch
+                      checked={c.timed}
+                      onCheckedChange={(timed) =>
+                        set({
+                          timed,
+                          ...(!timed
+                            ? {
+                                short_min_per_mark: clampPace(
+                                  c.short_min_per_mark,
+                                ),
+                                mcq_min_per_q: clampPace(c.mcq_min_per_q),
+                              }
+                            : {}),
+                        })
+                      }
+                    />
+                    <span>
+                      Timed at exam pace
+                      <span className="text-muted-foreground mt-0.5 block">
+                        {c.timed
+                          ? `${minutes} minutes for this sprint`
+                          : "No clock. Take your time."}
+                      </span>
+                    </span>
+                  </label>
+                  {c.timed && (
+                    <details>
+                      <summary className="text-muted-foreground cursor-pointer text-xs">
+                        Adjust exam pace
+                      </summary>
+                      <div className="mt-3 space-y-3">
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          {(
+                            [
+                              [
+                                "short_min_per_mark",
+                                "Shorts: minutes per mark",
+                              ],
+                              ["mcq_min_per_q", "Multis: minutes per question"],
+                            ] as const
+                          ).map(([key, label]) => (
+                            <label
+                              key={key}
+                              className="grid gap-1.5 text-sm font-medium"
+                            >
+                              {label}
+                              <Input
+                                type="number"
+                                min={0.25}
+                                max={10}
+                                step={0.25}
+                                value={c[key] || ""}
+                                aria-invalid={!validPace(c[key])}
+                                onChange={(e) =>
+                                  set({ [key]: Number(e.target.value) })
+                                }
+                                onBlur={() => set({ [key]: clampPace(c[key]) })}
+                              />
+                            </label>
+                          ))}
+                        </div>
+                        {(!validPace(c.short_min_per_mark) ||
+                          !validPace(c.mcq_min_per_q)) && (
+                          <p role="alert" className="text-destructive text-sm">
+                            Use a pace between 0.25 and 10 minutes.
+                          </p>
+                        )}
+                        <p className="text-muted-foreground text-xs">
+                          ≈ {minutes} min
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          A sound and banner let you know when time is up. Keep
+                          working in overtime until you choose to finish.
+                        </p>
+                      </div>
+                    </details>
+                  )}
+                </Section>
+                <Section title="Feedback" compact>
+                  <RadioGroup
+                    aria-label="Feedback"
+                    value={c.feedback}
+                    onValueChange={(feedback) =>
+                      set({ feedback: feedback as SetupConfig["feedback"] })
+                    }
+                    className="bg-muted flex flex-wrap gap-1 rounded-full p-0.5"
+                  >
                     {(
                       [
-                        ["short_min_per_mark", "Shorts: minutes per mark"],
-                        ["mcq_min_per_q", "Multis: minutes per question"],
+                        [
+                          "each",
+                          "Check as I go",
+                          [
+                            "Check each answer when you’re ready.",
+                            "See feedback before moving on.",
+                          ],
+                        ],
+                        [
+                          "end",
+                          "Exam mode",
+                          [
+                            "Work through questions without feedback.",
+                            "See marks and explanations when you finish.",
+                          ],
+                        ],
                       ] as const
-                    ).map(([key, label]) => (
+                    ).map(([value, title, points]) => (
                       <label
-                        key={key}
-                        className="grid gap-1.5 text-sm font-medium"
+                        key={value}
+                        className={cn(
+                          "relative flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full px-2 py-1.5 text-xs",
+                          c.feedback === value && "bg-card shadow-xs",
+                        )}
                       >
-                        {label}
-                        <Input
-                          type="number"
-                          min={0.25}
-                          max={10}
-                          step={0.25}
-                          value={c[key] || ""}
-                          aria-invalid={!validPace(c[key])}
-                          onChange={(e) =>
-                            set({ [key]: Number(e.target.value) })
-                          }
-                          onBlur={() => set({ [key]: clampPace(c[key]) })}
+                        <RadioGroupItem
+                          value={value}
+                          aria-label={title}
+                          className="sr-only"
                         />
+                        <div className="space-y-2">
+                          <span className="font-medium">
+                            {value === "end"
+                              ? "At the end"
+                              : "After each question"}
+                          </span>
+                          <ul className="sr-only">
+                            {points.map((point) => (
+                              <li key={point}>{point}</li>
+                            ))}
+                          </ul>
+                        </div>
                       </label>
                     ))}
-                  </div>
-                  {(!validPace(c.short_min_per_mark) ||
-                    !validPace(c.mcq_min_per_q)) && (
-                    <p role="alert" className="text-destructive text-sm">
-                      Use a pace between 0.25 and 10 minutes.
-                    </p>
-                  )}
-                  <p className="text-muted-foreground text-xs">
-                    ≈ {minutes} min
-                  </p>
-                  <p className="text-muted-foreground text-xs">
-                    A sound and banner let you know when time is up. Keep
-                    working in overtime until you choose to finish.
-                  </p>
-                </>
-              )}
-            </Section>
-
-            <Section title="Feedback">
-              <RadioGroup
-                aria-label="Feedback"
-                value={c.feedback}
-                onValueChange={(feedback) =>
-                  set({ feedback: feedback as SetupConfig["feedback"] })
-                }
-                className="grid gap-3 sm:grid-cols-2"
-              >
-                {(
-                  [
-                    [
-                      "each",
-                      "Check as I go",
-                      [
-                        "Check each answer when you’re ready.",
-                        "See feedback before moving on.",
-                      ],
-                    ],
-                    [
-                      "end",
-                      "Exam mode",
-                      [
-                        "Work through questions without feedback.",
-                        "See marks and explanations when you finish.",
-                      ],
-                    ],
-                  ] as const
-                ).map(([value, title, points]) => (
-                  <label
-                    key={value}
-                    className={cn(
-                      "flex cursor-pointer items-start gap-3 rounded-xl border p-4 text-sm",
-                      c.feedback === value && "border-primary bg-accent",
-                    )}
-                  >
-                    <RadioGroupItem
-                      value={value}
-                      aria-label={title}
-                      className="mt-1"
-                    />
-                    <div className="space-y-2">
-                      <span className="font-medium">{title}</span>
-                      <ul className="text-muted-foreground list-disc space-y-1 pl-4">
-                        {points.map((point) => (
-                          <li key={point}>{point}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  </label>
-                ))}
-              </RadioGroup>
-            </Section>
-          </div>
-          <div className="flex items-center justify-between gap-3 border-t pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={step === 0}
-              onClick={() => setStep(step - 1)}
-            >
-              Back
-            </Button>
-            {step < 3 && (
-              <Button type="button" onClick={() => setStep(step + 1)}>
-                Next
-              </Button>
-            )}
-            {step === 3 && (
-              <p className="text-muted-foreground text-xs">
-                Ready? Start your sprint below.
-              </p>
-            )}
+                  </RadioGroup>
+                </Section>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -864,7 +903,6 @@ export function SprintSetup({
         onSubmit={(e) => {
           if (
             invalidSize ||
-            step !== 3 ||
             matching === 0 ||
             pending ||
             (c.timed &&
@@ -872,14 +910,74 @@ export function SprintSetup({
           )
             e.preventDefault();
         }}
-        className="bg-background rounded-2xl border"
+        className="bg-card shadow-card rounded-xl border p-5 xl:sticky xl:top-20"
       >
         <input type="hidden" name="config" value={JSON.stringify(c)} />
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-          <div className="w-full min-w-0 text-sm sm:w-auto sm:flex-1">
-            <p className="font-medium text-pretty">
-              {summary(c, names, years)}
+        <div className="grid gap-5">
+          <div>
+            <h2 className="text-sm font-semibold">Your sprint</h2>
+            <p className="text-muted-foreground mt-1 text-[13px]">
+              Updates as you build it
             </p>
+          </div>
+          <div className="flex items-end gap-8">
+            <div>
+              <p className="text-4xl leading-none font-bold tracking-tight">
+                {c.target}
+              </p>
+              <p className="text-muted-foreground mt-2 text-xs">{unit}</p>
+            </div>
+            <div>
+              <p className="text-4xl leading-none font-bold tracking-tight">
+                {c.timed ? minutes : "—"}
+              </p>
+              <p className="text-muted-foreground mt-2 text-xs">
+                {c.timed ? "minutes" : "untimed"}
+              </p>
+            </div>
+          </div>
+          <dl className="grid gap-2.5 text-[13px]">
+            {[
+              [
+                "Multiple choice",
+                c.mode === "short"
+                  ? "—"
+                  : `${c.mode === "mixed" ? c.mcq_count : c.target} questions`,
+              ],
+              [
+                "Short answer",
+                c.mode === "mcq"
+                  ? "—"
+                  : c.mode === "mixed"
+                    ? `${c.short_marks} marks`
+                    : `${c.target} ${unit}`,
+              ],
+              [
+                "Paper years",
+                years
+                  ? `${c.year_from ?? years[0]}–${c.year_to ?? years[1]}`
+                  : "All years",
+              ],
+              [
+                "Feedback",
+                c.feedback === "end" ? "At the end" : "After each question",
+              ],
+            ].map(([label, value]) => (
+              <div key={label} className="flex justify-between gap-4">
+                <dt className="text-muted-foreground">{label}</dt>
+                <dd className="text-right font-medium">{value}</dd>
+              </div>
+            ))}
+          </dl>
+          <div className="flex flex-wrap gap-1.5">
+            {(c.subtopics.length ? c.subtopics : c.topics).map((id) => (
+              <Badge variant="secondary" key={id}>
+                {names[id]}
+              </Badge>
+            ))}
+          </div>
+          <div className="bg-muted min-w-0 space-y-2 rounded-xl p-3.5 text-[13px]">
+            <p className="sr-only">{summary(c, names, years)}</p>
             <p
               className="text-muted-foreground tabular-nums"
               aria-live="polite"
@@ -888,22 +986,26 @@ export function SprintSetup({
                 ? "Couldn't count matching questions."
                 : `${n(matching)} questions match · ${n(matchingNew)} new`}
             </p>
+            <Meter
+              value={matching ? ((matchingNew ?? 0) / matching) * 100 : 0}
+              label="New matching questions"
+            />
           </div>
           <Button
+            className="order-last w-full"
             type="button"
             variant="ghost"
             onClick={() => {
               setC(DEFAULTS);
-              setStep(0);
             }}
           >
             Reset
           </Button>
           <Button
+            className="w-full"
             type="submit"
             disabled={
               invalidSize ||
-              step !== 3 ||
               pending ||
               matching === 0 ||
               (c.timed &&
@@ -983,18 +1085,14 @@ function Chip({
   children: React.ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      aria-pressed={on}
+    <FoundationChip
+      pressed={on}
       disabled={disabled}
       onClick={onClick}
-      className={cn(
-        "rounded-full border px-3 py-1 text-left text-xs font-medium transition-colors disabled:opacity-40",
-        on ? "border-primary bg-accent" : "hover:bg-muted",
-      )}
+      className="h-auto min-h-8 max-w-full text-left text-xs whitespace-normal"
     >
       {children}
-    </button>
+    </FoundationChip>
   );
 }
 
@@ -1020,10 +1118,30 @@ export function QuickStarts() {
           value={JSON.stringify(q.config)}
           type="submit"
           variant="outline"
-          className="justify-start"
+          className="bg-card h-auto justify-start gap-3 rounded-xl p-3.5 text-left shadow-xs"
+          aria-label={q.label}
           disabled={pending}
         >
-          {q.label}
+          <span className="bg-muted text-muted-foreground grid size-9 shrink-0 place-items-center rounded-lg">
+            <PortalIcon
+              name={q.config.mode === "mcq" ? "list" : "pen-line"}
+              className="size-4"
+            />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">
+              {q.config.mode === "mcq"
+                ? "Section I drill"
+                : "Short answer practice"}
+            </span>
+            <span className="text-muted-foreground mt-0.5 block text-xs">
+              {q.label}
+            </span>
+          </span>
+          <PortalIcon
+            name="arrow-right"
+            className="text-muted-foreground size-4 shrink-0"
+          />
         </Button>
       ))}
       {state.error && (

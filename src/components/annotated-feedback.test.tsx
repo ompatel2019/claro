@@ -442,12 +442,14 @@ it("keeps original line breaks in quotes selected for editing", async () => {
   );
 });
 
-it("uses green and destructive soft cards with matching pills in the narrow list and popover", () => {
+it("uses neutral examiner note cards with semantic pills in the narrow list and popover", () => {
   const { container } = render(<AnnotatedFeedback row={row} />);
   const strength = container.querySelector('[data-card="0"]')!;
   const fix = container.querySelector('[data-card="1"]')!;
-  expect(strength).toHaveClass("bg-success-soft", "border-success/25");
-  expect(fix).toHaveClass("bg-destructive-soft", "border-destructive/25");
+  expect(strength).toHaveClass("bg-card", "border");
+  expect(strength.querySelector(".pen")).toBeTruthy();
+  expect(fix).toHaveClass("bg-card", "border");
+  expect(fix.querySelector(".pen")).toBeTruthy();
   expect(screen.getByText("Strength")).toHaveClass(
     "text-success",
     "rounded-full",
@@ -458,7 +460,7 @@ it("uses green and destructive soft cards with matching pills in the narrow list
   );
   fireEvent.click(screen.getByRole("button", { name: /^Fix 1/ }));
   expect(screen.getByRole("dialog").querySelector("[data-card]")).toHaveClass(
-    "bg-destructive-soft",
+    "bg-card",
   );
 });
 

@@ -1,4 +1,10 @@
-import { cleanup, render, screen, fireEvent } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  fireEvent,
+  within,
+} from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { ResultsBrowser } from "./results-browser";
 const push = vi.fn();
@@ -35,7 +41,11 @@ it("preserves question numbering and opens a question from the MC grid", () => {
   expect(
     screen.getByRole("button", { name: "Question 26, 2 / 4 marks" }),
   ).toBeVisible();
-  expect(screen.getByText("Incorrect")).toBeVisible();
+  expect(
+    within(
+      screen.getByRole("table", { name: "Multiple choice answers 1" }),
+    ).getByText("Incorrect"),
+  ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Review question 1" }));
   expect(screen.getByText("Answer to Q1")).toBeVisible();
   expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
