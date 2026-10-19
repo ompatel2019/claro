@@ -168,3 +168,55 @@ it("includes each stat's value in its accessible link name", async () => {
     expect(screen.getByRole("link", { name })).toBeVisible();
   }
 });
+
+import { HomeTopics, HomeLostMarks, HomeAverage } from "./sections";
+it("shows sorted parent units, focuses the weakest, and ranks named dot points separately", async () => {
+  const units = [
+    { ...topic, id: "strong", name: "Strong unit", sort: 2, pct: 70 },
+    { ...topic, id: "weak", name: "Weak unit", sort: 1, pct: 20 },
+    {
+      ...topic,
+      id: "leaf",
+      name: "Named dot point",
+      parent_id: "strong",
+      sort: 0,
+      earned: 1,
+      possible: 9,
+      pct: 10,
+    },
+  ];
+  const d = Promise.resolve(progress(units));
+  render(await HomeTopics({ progress: d }));
+  const rows = screen.getAllByRole("listitem");
+  expect(rows).toHaveLength(2);
+  expect(rows[0]).toHaveTextContent("Weak unit");
+  expect(rows[0]).toHaveTextContent("Focus");
+  expect(rows[0].querySelector('[role="meter"]')).toHaveAttribute(
+    "aria-valuenow",
+    "20",
+  );
+  expect(screen.queryByText("Named dot point")).toBeNull();
+  cleanup();
+  render(await HomeLostMarks({ progress: d }));
+  expect(
+    screen.getByRole("link", { name: /Named dot point8 marks/ }),
+  ).toHaveAttribute("href", "/student/sprint?topics=strong&sub=leaf");
+  expect(screen.queryByText("Strong unit")).toBeNull();
+});
+it("shows unstarted question types with working Try one links", async () => {
+  render(
+    await HomeAverage({
+      progress: Promise.resolve(progress()),
+      today: "2026-10-20",
+    }),
+  );
+  expect(screen.getAllByText("Not started")).toHaveLength(3);
+  expect(
+    screen
+      .getAllByRole("link", { name: "Try one" })
+      .every((a) => a.getAttribute("href") === "/student/mark"),
+  ).toBe(true);
+  expect(
+    screen.getByRole("img", { name: /Weekly practice average/ }),
+  ).toBeVisible();
+});

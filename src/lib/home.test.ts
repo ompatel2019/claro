@@ -77,3 +77,60 @@ it("rotates the same short quote deterministically for a Sydney day", () => {
   expect(dailyQuote("2026-10-20")).not.toBe(dailyQuote("2026-10-19"));
   expect(dailyQuote("2026-10-26")).toBe(dailyQuote("2026-10-19"));
 });
+
+import { homeUnits, homeWeeks, homeComparison, homeMinutes } from "./home";
+import type { HistoryScore, TopicProgress } from "./progress";
+const historyRow = (
+  finished_at: string,
+  pct: number | null,
+  elapsed_s = 60,
+  kind = "sprint",
+): HistoryScore => ({
+  id: finished_at,
+  kind,
+  config: {},
+  finished_at,
+  pct,
+  elapsed_s,
+  by_type: {},
+});
+it("uses Sydney Mondays, excludes card recall, and averages only observed marked scores", () => {
+  expect(
+    homeWeeks([
+      historyRow("2026-10-18T14:00:00Z", 60),
+      historyRow("2026-10-20T00:00:00Z", 80),
+      historyRow("2026-10-20T01:00:00Z", 100, 60, "flashcards"),
+      historyRow("invalid", 100),
+      historyRow("2026-10-12T00:00:00Z", null),
+    ]),
+  ).toEqual([{ day: "2026-10-19", pct: 70 }]);
+});
+it("compares exact seven-day Sydney periods and omits missing prior comparisons", () => {
+  const rows = [
+    historyRow("2026-10-12T13:00:00Z", 50, 120),
+    historyRow("2026-10-19T13:00:00Z", 70, 300),
+    historyRow("2026-10-20T14:00:00Z", 100, 1000),
+  ];
+  expect(homeComparison(rows, "2026-10-20")).toEqual({ minutes: 3, score: 20 });
+  expect(homeComparison(rows.slice(1), "2026-10-20")).toEqual({
+    minutes: undefined,
+    score: undefined,
+  });
+});
+it("orders parent units without counting their dot points and uses documented estimates", () => {
+  const topics = [
+    { id: "second", parent_id: null, sort: 2 },
+    { id: "leaf", parent_id: "second", sort: 0 },
+    { id: "first", parent_id: null, sort: 1 },
+  ] as TopicProgress[];
+  expect(homeUnits(topics).map((t) => t.id)).toEqual(["first", "second"]);
+  expect(homeMinutes(43, "cards")).toBe(15);
+  expect(homeMinutes(3, "questions")).toBe(6);
+});
+
+import { homeSprintMinutes } from "./home";
+it("uses saved sprint sizing or timer and hides unknown estimates", () => {
+  expect(homeSprintMinutes({ actual_questions: 8 }, 0)).toBe(16);
+  expect(homeSprintMinutes({ time_limit_s: 600 }, 180)).toBe(7);
+  expect(homeSprintMinutes({}, 30)).toBeNull();
+});
