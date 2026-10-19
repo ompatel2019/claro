@@ -7,7 +7,7 @@ export default function Loading() {
       role="status"
       aria-busy="true"
       aria-label="Loading Mark my answer"
-      className="space-y-4"
+      className="min-w-0 space-y-5"
     >
       <Skeleton className="bg-muted h-16 animate-pulse rounded-lg" />
       <Skeleton className="bg-muted h-14 animate-pulse rounded-lg" />

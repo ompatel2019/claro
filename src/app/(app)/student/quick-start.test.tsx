@@ -85,13 +85,11 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-it("orders hero, launch tiles, study days and study hub with no resume card", async () => {
+it("shows the compact term indicator, launch cards, study days and study hub", async () => {
   render(await resolve(await Home()));
   const hero = screen.getByRole("region", { name: "Your study week" });
-  expect(within(hero).getByRole("heading", { name: "Week 2" })).toBeVisible();
-  expect(within(hero).getByText("Term 4")).toBeVisible();
-  const dots = within(hero).getByRole("list", { name: "Week 2 of 10" });
-  expect(within(dots).getAllByRole("listitem")).toHaveLength(10);
+  expect(within(hero).getByText("Term 4 · Week 2")).toBeVisible();
+  expect(within(hero).getByTitle("Term 4, week 2 of 10")).toBeVisible();
   const launches = screen.getByRole("region", { name: "Quick start" });
   expect(
     within(launches)
@@ -155,8 +153,8 @@ it("lists only top-level topics in the study hub, each opening its sprint", asyn
     .getAllByRole("listitem")
     .map((li) => li.firstChild);
   expect(links.map((l) => l?.textContent)).toEqual([
-    "1The Global Economy",
-    "2Economic Issues",
+    "1The Global EconomyPractise",
+    "2Economic IssuesPractise",
   ]);
   expect(links[0]).toHaveAttribute("href", "/student/sprint?topics=t1");
   expect(links[1]).toHaveAttribute("href", "/student/sprint?topics=t2");
@@ -171,7 +169,7 @@ it("keeps launches usable when due, activity and topic reads fail", async () => 
     screen.getByRole("link", { name: /^Flashcards Choose a deck/ }),
   ).toHaveAttribute("href", "/student/flashcards");
   expect(screen.getAllByRole("alert").map((a) => a.textContent)).toEqual([
-    "Couldn't load your study days.Try again",
     "Couldn't load your topics.Try again",
+    "Couldn't load your study days.Try again",
   ]);
 });

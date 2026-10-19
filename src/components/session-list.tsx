@@ -6,12 +6,12 @@ import {
   isStudentSession,
 } from "@/lib/session-summary";
 import Link from "next/link";
-import { Cards, History, Pen, Sprint } from "@/components/icons";
-import { dateLabel, scoreTone, type Session, type Topic } from "@/lib/practice";
+import { History } from "@/components/icons";
+import { dateLabel, type Session, type Topic } from "@/lib/practice";
 import { StatusPill } from "./status-pill";
 import { EmptyState } from "./empty-state";
-import { Badge } from "./ui/badge";
 import { Card } from "./ui/card";
+import { SessionIcon } from "./student/activity/session-icon";
 export function SessionList({
   sessions: suppliedSessions,
   topics,
@@ -30,43 +30,24 @@ export function SessionList({
     );
   return (
     <Card className="gap-0 py-0">
-      <ul className="divide-y divide-dashed">
+      <ul className="divide-border/70 divide-y">
         {sessions.map((s) => {
           const href = sessionHref(s);
           const content = (
             <>
               <div className="flex min-w-0 items-center gap-3">
-                {s.kind === "flashcards" ? (
-                  <Cards
-                    aria-hidden
-                    className="text-muted-foreground size-5 shrink-0"
-                  />
-                ) : s.kind === "single" ? (
-                  <Pen
-                    aria-hidden
-                    className="text-muted-foreground size-5 shrink-0"
-                  />
-                ) : (
-                  <Sprint
-                    aria-hidden
-                    className="text-muted-foreground size-5 shrink-0"
-                  />
-                )}
+                <SessionIcon kind={s.kind ?? "sprint"} />
                 <div className="min-w-0">
-                  <p className="font-semibold">{sessionTitle(s, topics)}</p>
-                  <p className="text-muted-foreground text-[13px]">
+                  <p className="truncate text-[13px] font-medium">
+                    {sessionTitle(s, topics)}
+                  </p>
+                  <p className="text-muted-foreground text-xs">
                     {dateLabel(s.started_at)}
                   </p>
                 </div>
               </div>
               {s.finished_at ? (
-                <Badge
-                  variant={
-                    s.max_score && sessionStatus(s, s.attempts) !== "Marking"
-                      ? scoreTone((Number(s.score ?? 0) / s.max_score) * 100)
-                      : "secondary"
-                  }
-                >
+                <span className="shrink-0 text-[13px] font-semibold tabular-nums">
                   {sessionScore(
                     s.score != null && s.max_score
                       ? (100 * s.score) / s.max_score
@@ -75,14 +56,14 @@ export function SessionList({
                     s.kind === "flashcards" &&
                       String(s.config.mode) === "study",
                   )}
-                </Badge>
+                </span>
               ) : (
                 <StatusPill pill="In progress" />
               )}
             </>
           );
           const className =
-            "hover:bg-surface flex min-h-14 flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-3";
+            "hover:bg-surface flex min-h-14 items-center justify-between gap-3 px-5 py-3";
           return (
             <li key={s.id}>
               {href ? (
