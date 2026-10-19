@@ -47,7 +47,7 @@ export function WelcomeDialog({
     >
       <DialogContent
         showCloseButton={false}
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-2xl border shadow-none"
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto rounded-xl border"
       >
         <DialogTitle>Welcome</DialogTitle>
         <DialogDescription>Choose your year to get started.</DialogDescription>
@@ -105,7 +105,10 @@ export function WelcomeDialog({
               </FormField>
             </fieldset>
             {state.error && !state.fieldErrors && (
-              <p role="alert" className="text-destructive text-sm break-words">
+              <p
+                role="alert"
+                className="bg-destructive-soft text-destructive border-destructive/20 rounded-lg border px-3 py-2 text-sm break-words"
+              >
                 {state.error}
                 {!state.sessionExpired && " Try again."}
               </p>

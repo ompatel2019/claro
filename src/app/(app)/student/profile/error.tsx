@@ -8,8 +8,11 @@ export default function Error({
   unstable_retry: () => void;
 }) {
   return (
-    <Card className="items-start p-5">
-      <p role="alert" className="flex items-center gap-2 text-sm">
+    <Card className="w-full max-w-[1400px] items-start p-5">
+      <p
+        role="alert"
+        className="bg-destructive-soft text-destructive border-destructive/20 flex items-center gap-2 rounded-lg border p-3 text-sm"
+      >
         <Alert className="size-4" />
         {"Couldn't load this. Try again."}
       </p>
