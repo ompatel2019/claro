@@ -394,7 +394,11 @@ export function AppShell({
         </TopBar>
         <div
           id="main"
-          className="mx-auto w-full max-w-[1400px] min-w-0 flex-1 px-4 pt-6 pb-24 sm:px-8 sm:pt-8"
+          className={
+            kind === "student"
+              ? "mx-auto w-full max-w-[1400px] min-w-0 flex-1 px-4 pt-6 pb-24 sm:px-8 sm:pt-8"
+              : "mx-auto w-full max-w-[1464px] min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8"
+          }
         >
           {children}
         </div>
