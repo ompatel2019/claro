@@ -108,10 +108,6 @@ export const Minus = icon("minus", <path d="M5 12h14" />);
 export const Plus = icon("plus", <path d="M5 12h14M12 5v14" />);
 export const ArrowUp = icon("arrow-up", <path d="M12 19V5m-6 6 6-6 6 6" />);
 export const ArrowDown = icon("arrow-down", <path d="M12 5v14m-6-6 6 6 6-6" />);
-export const ArrowUpRight = icon(
-  "arrow-up-right",
-  <path d="M7 17 17 7M8 7h9v9" />,
-);
 export const Flag = icon("flag", <path d="M5 21V4h11l-2 4 2 4H5" />);
 export const ImagePlus = icon(
   "image-plus",
