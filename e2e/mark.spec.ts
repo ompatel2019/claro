@@ -84,9 +84,12 @@ test.describe("Mark my answer form — no AI or writes", () => {
         await page.setViewportSize({ width, height: 850 });
         await expect(
           page.getByRole("button", { name: "My own question", exact: true }),
-        ).toHaveCount(0);
+        ).toBeDisabled();
         await expect(
-          page.getByText("From the Claro bank", { exact: true }),
+          page.getByRole("button", {
+            name: "From the Claro bank",
+            exact: true,
+          }),
         ).toBeVisible();
         await page
           .getByLabel("Search questions")
@@ -170,9 +173,7 @@ test.describe("Mark my answer form — no AI or writes", () => {
         .getByRole("option", { name: /inflation/i })
         .first()
         .click();
-      await expect(
-        page.getByText(/Selected question · \d+ marks/),
-      ).toBeVisible();
+      await expect(page.getByText("Answering", { exact: true })).toBeVisible();
     }).toPass();
     await expect(async () => {
       await page.getByLabel("Search questions").fill("no-such-question-zzzz");

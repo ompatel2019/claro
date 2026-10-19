@@ -38,6 +38,7 @@ vi.mock("@/components/marking-progress", () => ({
 }));
 vi.mock("@/components/feedback-widget", () => ({
   ReportProblem: () => <button>Report a problem</button>,
+  useFeedback: () => vi.fn(),
 }));
 afterEach(cleanup);
 import Page from "./page";
@@ -123,6 +124,29 @@ it.each([
       }),
     }));
     render(await resolve(await Page({ params: Promise.resolve({ id }) })));
+    if (count === 1 && status === "marked") {
+      expect(
+        screen.getByRole("heading", {
+          level: 1,
+          name: "Explain low wage growth.",
+        }),
+      ).toBeVisible();
+      expect(screen.getByText(/^Marked /)).toHaveTextContent(
+        "Economic growth · 4 marks",
+      );
+      expect(screen.getByRole("table")).toHaveTextContent("YearWages20253%");
+      expect(screen.getByRole("img", { name: "3 out of 4" })).toBeVisible();
+      expect(
+        screen.getByRole("link", { name: "Rewrite answer" }),
+      ).toHaveAttribute("href", "/student/mark?question=q1");
+      expect(
+        screen.getByRole("button", { name: "Report a problem" }),
+      ).toBeVisible();
+      expect(
+        screen.getByRole("button", { name: "Question this mark" }),
+      ).toBeInTheDocument();
+      return;
+    }
     expect(screen.getByTestId("results")).toHaveAttribute(
       "data-single",
       String(count === 1),

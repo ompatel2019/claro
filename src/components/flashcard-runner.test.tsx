@@ -319,7 +319,7 @@ it("reveals and self-rates without fetching a verdict", async () => {
       deckName="Deck"
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Reveal answer" }));
+  fireEvent.click(screen.getByRole("button", { name: "Flip card" }));
   expect(screen.getByText(cards[0].back)).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Mostly (2)" }));
   await waitFor(() =>
@@ -437,7 +437,7 @@ it("renders speech interim text, stops after silence and submits spoken mode", a
     answer: cards[0].back,
   });
 });
-it("opens the exit dialog with Escape and saves back to Home", async () => {
+it("opens the exit dialog with Escape and saves back to Flashcards", async () => {
   render(
     <FlashcardRunner
       session={session}
@@ -452,7 +452,7 @@ it("opens the exit dialog with Escape and saves back to Home", async () => {
   fireEvent.click(
     within(dialog).getByRole("button", { name: "Save and exit" }),
   );
-  await waitFor(() => expect(push).toHaveBeenCalledWith("/student"));
+  await waitFor(() => expect(push).toHaveBeenCalledWith("/student/flashcards"));
 });
 
 it("restores an unsaved spoken answer after reopening the session", () => {

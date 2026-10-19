@@ -140,7 +140,7 @@ it("starts with no pressed topics and the All chip toggles its parent", () => {
   const summary = screen
     .getByRole("button", { name: "Start" })
     .closest("form")!;
-  expect(within(summary).getByText("All topics")).toBeInTheDocument();
+  expect(within(summary).getByText("All")).toBeInTheDocument();
   expect(within(summary).getByText("Study")).toBeInTheDocument();
 });
 
@@ -150,7 +150,10 @@ it("shows the selected default size alongside Mode before the filters", () => {
     "aria-pressed",
     "true",
   );
-  const headings = screen.getAllByRole("heading").map((h) => h.textContent);
+  const headings = screen
+    .getAllByRole("heading")
+    .filter((h) => !h.closest("details"))
+    .map((h) => h.textContent);
   expect(headings.slice(0, 4)).toEqual([
     "Mode",
     "Deck size",
@@ -172,8 +175,10 @@ it("renders the live summary after setup controls with desktop sticky positionin
   ).toBeTruthy();
   expect(summary).toBe(summary.parentElement!.lastElementChild);
   expect(summary).toHaveClass("xl:sticky");
-  expect(summary).not.toHaveTextContent(/about.*minute/i);
-  expect(within(summary).getByText("cards", { exact: true })).toBeVisible();
+  expect(summary).toHaveTextContent(/cards · about 1 minute/i);
+  expect(
+    within(summary).getByText("cards · about 1 minute", { exact: true }),
+  ).toBeVisible();
   expect(summary.className).not.toMatch(/(?:^|\s)(?:sticky|fixed)(?:\s|$)/);
 });
 

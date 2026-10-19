@@ -728,7 +728,7 @@ export function FlashcardRunner({
         act(async () => {
           stopSpeech();
           await saveTime();
-          router.push("/student");
+          router.push("/student/flashcards");
         })
       }
       onFinish={() => act(finish)}
@@ -738,7 +738,7 @@ export function FlashcardRunner({
       }}
       booklet={null}
     >
-      <div className="mx-auto grid max-w-[680px] gap-5 py-4 sm:py-6">
+      <div className="mx-auto grid max-w-[680px] gap-5 py-2 sm:py-2">
         {offline && (
           <p role="status">{"You're offline. We'll save when you're back."}</p>
         )}
@@ -816,7 +816,7 @@ export function FlashcardRunner({
                 <h2
                   ref={heading}
                   tabIndex={-1}
-                  className="mt-6 text-[30px] leading-tight font-bold tracking-[-0.03em] text-balance break-words"
+                  className="mt-6 text-[30px] leading-tight font-bold tracking-[-0.03em] text-balance break-words outline-none"
                 >
                   {card.front}
                 </h2>
@@ -908,14 +908,15 @@ export function FlashcardRunner({
                 <>
                   {answerInput}
                   <Button
-                    variant="ghost"
+                    className="mt-7 h-11 w-full"
                     disabled={busy}
                     onClick={() => {
                       stopSpeech();
                       setFlipped(true);
                     }}
                   >
-                    Reveal answer
+                    <PortalIcon name="refresh-cw" />
+                    Flip card
                   </Button>
                 </>
               )}
@@ -926,12 +927,13 @@ export function FlashcardRunner({
               )}
               {!verdict && (
                 <Button
+                  aria-label="Skip (S)"
                   className="text-muted-foreground mt-1.5 h-8 w-full text-[13px]"
                   variant="ghost"
                   disabled={busy}
                   onClick={() => act(skip)}
                 >
-                  Skip (S)
+                  Skip <Kbd>S</Kbd>
                 </Button>
               )}
             </Card>
@@ -979,7 +981,7 @@ export function FlashcardRunner({
               act(async () => {
                 stopSpeech();
                 await saveTime();
-                router.push("/student");
+                router.push("/student/flashcards");
               })
             }
           >

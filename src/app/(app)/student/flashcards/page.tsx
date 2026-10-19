@@ -1,12 +1,13 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { Cards, PortalIcon } from "@/components/icons";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import { sydneyToday } from "@/lib/flashcards";
 import { DECK_DEFAULTS, filterDeck } from "@/lib/deck";
 import { loadDeckBank } from "@/lib/flashcard-data";
-import { dateLabel, type Topic } from "@/lib/practice";
+import { dateLabel, plural, type Topic } from "@/lib/practice";
 import { FlashcardStart } from "@/components/flashcard-start";
 import { FlashcardBuilder } from "@/components/flashcard-builder";
 import { PageHeader, EmptyState } from "@/components/claro/layout";
@@ -99,7 +100,12 @@ export default async function Flashcards({
     .map((t) => ({
       ...t,
       count: dueCards.filter(
-        (c) => c.topic_id === t.id || c.topic_id.startsWith(`${t.id}-`),
+        (c) =>
+          c.topic_id === t.id ||
+          c.topic_id.startsWith(`${t.id}-`) ||
+          topics.some(
+            (child) => child.id === c.topic_id && child.parent_id === t.id,
+          ),
       ).length,
     }));
   const maxDue = Math.max(1, ...byTopic.map((t) => t.count));
@@ -119,7 +125,7 @@ export default async function Flashcards({
       tone: "bg-chart-1/55",
     },
     {
-      label: "Known",
+      label: "Mastered",
       count: cards.filter((c) => {
         const p = progressById.get(c.id);
         return p && p.reviews > 0 && Number(p.last_mark) === 1;
@@ -136,8 +142,8 @@ export default async function Flashcards({
         actions={
           <>
             <Link
-              className={buttonVariants({ variant: "outline" })}
-              href="/student/flashcards/mine"
+              className={cn(buttonVariants({ variant: "outline" }))}
+              href="#my-cards"
             >
               <PortalIcon name="layers" />
               My cards ({mine})
@@ -161,7 +167,7 @@ export default async function Flashcards({
               </p>
               <p className="text-muted-foreground mt-2 text-[13px]">
                 {due
-                  ? `${tomorrowCount} due tomorrow`
+                  ? `About ${plural(Math.max(1, Math.round(due * 0.33)), "minute")} · ${tomorrowCount} due tomorrow`
                   : next
                     ? `Nothing due. Next review ${dateLabel(next, true)}.`
                     : "Nothing due. Start a deck below."}
@@ -270,6 +276,7 @@ export default async function Flashcards({
         </Card>
         <FlashcardBuilder
           cards={cards}
+          defaults={{ ...DECK_DEFAULTS, kinds: ["term"] }}
           topics={topics}
           history={history}
           topic={params.topic}
@@ -305,7 +312,7 @@ export default async function Flashcards({
                 </p>
                 <Link
                   href="/student/flashcards/mine"
-                  className={buttonVariants({ variant: "outline" })}
+                  className={cn(buttonVariants({ variant: "outline" }))}
                 >
                   Manage my cards
                 </Link>

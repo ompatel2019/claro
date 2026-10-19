@@ -30,11 +30,13 @@ function Options({
   title,
   value,
   description,
+  showReasons = false,
   options,
   onChange,
 }: {
   title: string;
   description?: React.ReactNode;
+  showReasons?: boolean;
   value: string;
   options: {
     value: string;
@@ -71,19 +73,34 @@ function Options({
             <ToggleGroupItem
               key={o.value}
               value={o.value}
+              aria-label={o.label}
               disabled={o.disabled}
+              title={o.reason}
               className={
                 title === "Mode" || title === "Answer by"
                   ? ""
                   : "aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:hover:bg-primary"
               }
             >
-              {o.label}
+              {title === "Answer by" && o.value !== "either" && (
+                <PortalIcon
+                  name={o.value === "typing" ? "keyboard" : "mic"}
+                  className="size-3.5"
+                />
+              )}
+              {o.label.replace(/\s*\(\d+\)/g, "")}
+              {/\((\d+)\)/.test(o.label) && (
+                <span className="text-muted-foreground">
+                  {o.label.match(/\((\d+)\)/)?.[1]}
+                </span>
+              )}
             </ToggleGroupItem>
           ))}
         </ToggleGroup>
         {options
-          .filter((o) => o.disabled && o.reason)
+          .filter(
+            (o) => o.disabled && o.reason && (value === o.value || showReasons),
+          )
           .map((o) => (
             <p key={o.value} className="text-muted-foreground text-xs">
               {o.reason}
@@ -98,13 +115,15 @@ export function FlashcardBuilder({
   topics,
   history,
   topic,
+  defaults = DECK_DEFAULTS,
 }: {
   cards: DeckCard[];
   topics: Topic[];
   history: DeckHistory;
   topic?: string;
+  defaults?: DeckConfig;
 }) {
-  const [c, setC] = useState<DeckConfig>(DECK_DEFAULTS);
+  const [c, setC] = useState<DeckConfig>(defaults);
   const [customSize, setCustomSize] = useState("20");
   const [custom, setCustom] = useState(false);
   const [speech, setSpeech] = useState(false);
@@ -112,9 +131,10 @@ export function FlashcardBuilder({
   const ready = useRef(false);
   const form = useRef<HTMLFormElement>(null);
   useEffect(() => {
-    let saved = DECK_DEFAULTS;
+    let saved = defaults;
     try {
-      saved = restoreDeck(JSON.parse(localStorage.getItem(KEY) ?? "null"));
+      const raw = localStorage.getItem(KEY);
+      if (raw) saved = restoreDeck(JSON.parse(raw));
     } catch {}
     const hasSpeech =
       "SpeechRecognition" in window || "webkitSpeechRecognition" in window;
@@ -136,7 +156,7 @@ export function FlashcardBuilder({
     setCustomSize(String(saved.size === "all" ? 20 : saved.size));
     setSpeech(hasSpeech);
     ready.current = true;
-  }, [topic, topics]);
+  }, [topic, topics, defaults]);
   useEffect(() => {
     if (ready.current) {
       try {
@@ -181,7 +201,7 @@ export function FlashcardBuilder({
     .filter(Boolean);
   const names = selectedNames.length
     ? `${selectedNames.slice(0, 2).join(", ")}${selectedNames.length > 2 ? ` +${selectedNames.length - 2} more` : ""}`
-    : "All topics";
+    : "All";
   const mine = cards.filter((card) => card.owner_id === history.userId).length;
   const kinds = c.kinds.length === 2 ? "both" : c.kinds[0];
   const sizeValue = custom ? "custom" : String(c.size);
@@ -201,159 +221,16 @@ export function FlashcardBuilder({
   return (
     <div className="contents">
       <Card className="gap-0 py-0 xl:col-span-2">
-        <CardHeader className="border-b py-4">
+        <CardHeader className="relative border-b py-4">
           <CardTitle>Build a custom deck</CardTitle>
           <CardDescription>Or skip this and review what’s due.</CardDescription>
-        </CardHeader>
-        <CardContent className="divide-y px-0">
-          <Options
-            title="Mode"
-            description={
-              c.mode === "study"
-                ? "Type or say your answer, then flip and rate yourself."
-                : "Type or say it, we check it."
-            }
-            value={c.mode}
-            options={[
-              { value: "study", label: "Study" },
-              { value: "test", label: "Test" },
-            ]}
-            onChange={(mode) => set({ mode: mode as DeckConfig["mode"] })}
-          />
-          <Options
-            title="Deck size"
-            description={
-              <p role="status">
-                {size} of {plural(counts.total, "card")}
-              </p>
-            }
-            value={sizeValue}
-            options={[10, 20, 30, 50]
-              .map((n) => ({ value: String(n), label: String(n) }))
-              .concat([
-                { value: "all", label: `All (${counts.total})` },
-                { value: "custom", label: "Custom" },
-              ])}
-            onChange={(value) => {
-              setCustom(value === "custom");
-              if (value !== "custom")
-                set({ size: value === "all" ? "all" : Number(value) });
-              else setCustomSize(String(c.size === "all" ? 20 : c.size));
-            }}
-          />
-          {custom && (
-            <Input
-              aria-label="Custom deck size"
-              type="number"
-              min={1}
-              max={200}
-              className="mx-5 my-3 w-24"
-              value={customSize}
-              onChange={(e) => setCustomSize(e.target.value)}
-              onBlur={() => {
-                setCustomSize(String(customNumber));
-                set({ size: customNumber });
-              }}
-            />
-          )}
-          <Options
-            title="Answer by"
-            value={c.answer_by}
-            options={[
-              { value: "typing", label: "Typing" },
-              {
-                value: "speaking",
-                label: "Speaking",
-                disabled: !speech,
-                reason: !speech
-                  ? "Speech input is not available in this browser."
-                  : undefined,
-              },
-              { value: "either", label: "Either" },
-            ]}
-            onChange={(answer_by) =>
-              set({ answer_by: answer_by as DeckConfig["answer_by"] })
-            }
-          />
-          <Options
-            title="Card type"
-            value={kinds}
-            options={[
-              {
-                value: "term",
-                label: `Terms (${counts.kinds.term})`,
-                disabled: counts.kinds.term === 0,
-              },
-              {
-                value: "stat",
-                label: `Stats (${counts.kinds.stat})`,
-                disabled: counts.kinds.stat === 0,
-              },
-              { value: "both", label: `Both (${counts.kinds.both})` },
-            ]}
-            onChange={(kind) =>
-              set({
-                kinds:
-                  kind === "both"
-                    ? ["term", "stat"]
-                    : [kind as "term" | "stat"],
-              })
-            }
-          />
-          <Options
-            title="Source"
-            value={c.source}
-            options={[
-              { value: "claro", label: `Claro cards (${counts.source.claro})` },
-              {
-                value: "my",
-                label: `My cards (${counts.source.my})`,
-                disabled: counts.source.my === 0,
-                reason:
-                  counts.source.my === 0
-                    ? mine === 0
-                      ? "Make your own in My cards"
-                      : "No My cards match these filters."
-                    : undefined,
-              },
-              { value: "both", label: `Both (${counts.source.both})` },
-            ]}
-            onChange={(source) =>
-              set({ source: source as DeckConfig["source"] })
-            }
-          />
-          <section className="grid gap-3 px-5 py-4 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-6 sm:px-6">
-            <div>
-              <h2 className="text-sm font-medium">Topics</h2>
-              <p className="text-muted-foreground text-[13px]">{names}</p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {topics
-                .filter((t) => !t.parent_id)
-                .map((parent) => (
-                  <Chip
-                    key={parent.id}
-                    pressed={c.topics.includes(parent.id)}
-                    disabled={!counts.topics[parent.id]}
-                    onPressedChange={() =>
-                      set({
-                        topics: c.topics.includes(parent.id)
-                          ? c.topics.filter((id) => id !== parent.id)
-                          : [...c.topics, parent.id],
-                        subtopics: c.subtopics.filter(
-                          (id) => !id.startsWith(`${parent.id}-`),
-                        ),
-                      })
-                    }
-                  >
-                    {parent.name}
-                  </Chip>
-                ))}
-            </div>
-          </section>
-          <details className="group">
-            <summary className="text-muted-foreground cursor-pointer px-5 py-4 text-[13px] sm:px-6">
-              More deck options
+          <details className="group col-span-full">
+            <summary
+              aria-label="More deck options"
+              title="More deck options"
+              className="text-muted-foreground hover:bg-accent absolute top-4 right-4 grid size-8 cursor-pointer list-none place-items-center rounded-full"
+            >
+              <PortalIcon name="ellipsis" />
             </summary>
             <section className="space-y-4 px-5 pb-4 sm:px-6">
               <h2 className="text-sm font-medium">Subtopics</h2>
@@ -455,6 +332,156 @@ export function FlashcardBuilder({
               Repeat missed cards
             </label>
           </details>
+        </CardHeader>
+        <CardContent className="divide-y px-0">
+          <Options
+            title="Mode"
+            description={
+              c.mode === "study"
+                ? "Type or say your answer, then flip and rate yourself."
+                : "Type or say it, we check it."
+            }
+            value={c.mode}
+            options={[
+              { value: "study", label: "Study" },
+              { value: "test", label: "Test" },
+            ]}
+            onChange={(mode) => set({ mode: mode as DeckConfig["mode"] })}
+          />
+          <Options
+            title="Deck size"
+            description={
+              <p role="status">
+                {size} of {plural(counts.total, "card")}
+              </p>
+            }
+            value={sizeValue}
+            options={[10, 20, 30, 50]
+              .map((n) => ({ value: String(n), label: String(n) }))
+              .concat([
+                { value: "all", label: `All (${counts.total})` },
+                { value: "custom", label: "Custom" },
+              ])}
+            onChange={(value) => {
+              setCustom(value === "custom");
+              if (value !== "custom")
+                set({ size: value === "all" ? "all" : Number(value) });
+              else setCustomSize(String(c.size === "all" ? 20 : c.size));
+            }}
+          />
+          {custom && (
+            <Input
+              aria-label="Custom deck size"
+              type="number"
+              min={1}
+              max={200}
+              className="mx-5 my-3 w-24"
+              value={customSize}
+              onChange={(e) => setCustomSize(e.target.value)}
+              onBlur={() => {
+                setCustomSize(String(customNumber));
+                set({ size: customNumber });
+              }}
+            />
+          )}
+          <Options
+            title="Answer by"
+            showReasons={c.mode === "test"}
+            value={c.answer_by}
+            options={[
+              { value: "typing", label: "Typing" },
+              {
+                value: "speaking",
+                label: "Speaking",
+                disabled: !speech,
+                reason: !speech
+                  ? "Speech input is not available in this browser."
+                  : undefined,
+              },
+              { value: "either", label: "Either" },
+            ]}
+            onChange={(answer_by) =>
+              set({ answer_by: answer_by as DeckConfig["answer_by"] })
+            }
+          />
+          <Options
+            title="Card type"
+            value={kinds}
+            options={[
+              {
+                value: "term",
+                label: `Terms (${counts.kinds.term})`,
+                disabled: counts.kinds.term === 0,
+              },
+              {
+                value: "stat",
+                label: `Stats (${counts.kinds.stat})`,
+                disabled: counts.kinds.stat === 0,
+              },
+              { value: "both", label: `Both (${counts.kinds.both})` },
+            ]}
+            onChange={(kind) =>
+              set({
+                kinds:
+                  kind === "both"
+                    ? ["term", "stat"]
+                    : [kind as "term" | "stat"],
+              })
+            }
+          />
+          <Options
+            title="Source"
+            value={c.source}
+            options={[
+              { value: "claro", label: `Claro cards (${counts.source.claro})` },
+              {
+                value: "my",
+                label: `My cards (${counts.source.my})`,
+                disabled: counts.source.my === 0,
+                reason:
+                  counts.source.my === 0
+                    ? mine === 0
+                      ? "Make your own in My cards"
+                      : "No My cards match these filters."
+                    : undefined,
+              },
+              { value: "both", label: `Both (${counts.source.both})` },
+            ]}
+            onChange={(source) =>
+              set({ source: source as DeckConfig["source"] })
+            }
+          />
+          <section className="grid gap-3 px-5 py-4 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-6 sm:px-6">
+            <div>
+              <h2 className="text-sm font-medium">Topics</h2>
+              <p className="text-muted-foreground text-[13px]">
+                {names === "All" ? "All topics" : names}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {topics
+                .filter((t) => !t.parent_id)
+                .map((parent) => (
+                  <Chip
+                    key={parent.id}
+                    pressed={c.topics.includes(parent.id)}
+                    disabled={!counts.topics[parent.id]}
+                    onPressedChange={() =>
+                      set({
+                        topics: c.topics.includes(parent.id)
+                          ? c.topics.filter((id) => id !== parent.id)
+                          : [...c.topics, parent.id],
+                        subtopics: c.subtopics.filter(
+                          (id) => !id.startsWith(`${parent.id}-`),
+                        ),
+                      })
+                    }
+                  >
+                    {parent.name}
+                  </Chip>
+                ))}
+            </div>
+          </section>
         </CardContent>
       </Card>
       <form
@@ -514,7 +541,11 @@ export function FlashcardBuilder({
           <p className="text-[36px] leading-none font-bold tracking-[-0.04em]">
             {size}
           </p>
-          <p className="text-muted-foreground mt-1.5 text-xs">cards</p>
+          <p className="text-muted-foreground mt-1.5 text-xs">
+            cards
+            {size > 0 &&
+              ` · about ${plural(Math.max(1, Math.round(size * 0.33)), "minute")}`}
+          </p>
         </div>
         <dl className="grid gap-2.5 px-5 text-[13px]">
           {[
@@ -571,7 +602,7 @@ export function FlashcardBuilder({
             size="sm"
             className="text-muted-foreground w-full"
             onClick={() => {
-              setC(DECK_DEFAULTS);
+              setC(defaults);
               setCustom(false);
               setCustomSize("20");
             }}

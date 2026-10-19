@@ -27,10 +27,11 @@ import {
 } from "@/lib/single-check";
 import type { Attempt, Topic } from "@/lib/practice";
 import { WrittenAnswer } from "./written-answer";
-import { QuestionView } from "./question-view";
 import {
   MARK_MY_ANSWER_DAILY_LIMIT,
   LONG_PHOTO_PAGE_LIMIT,
+  WRITTEN_WORD_LIMIT,
+  wordGuide,
 } from "@/lib/limits";
 import { Button } from "./ui/button";
 import {
@@ -114,6 +115,8 @@ const emptyAnswer = {
 } satisfies Omit<Attempt, "question">;
 export function MarkMyAnswer({
   questions,
+  initialQuestionId,
+  defaultQuestionId,
   topics,
   userId,
   left,
@@ -122,6 +125,8 @@ export function MarkMyAnswer({
   allowAutofill = false,
 }: {
   questions: BankQuestion[];
+  initialQuestionId?: string;
+  defaultQuestionId?: string;
   topics: Topic[];
   userId: string;
   left: number;
@@ -139,7 +144,9 @@ export function MarkMyAnswer({
   const [restored, setRestored] = useState(false);
   const draftKey = `claro.single.${userId}`;
   const [source, setSource] = useState(initial?.question ? "own" : "bank");
-  const [selected, setSelected] = useState(initial?.questionId ?? "");
+  const [selected, setSelected] = useState(
+    initial?.questionId ?? initialQuestionId ?? defaultQuestionId ?? "",
+  );
   const [search, setSearch] = useState("");
   const [bankOpen, setBankOpen] = useState(true);
   const [activeOption, setActiveOption] = useState(0);
@@ -252,7 +259,7 @@ export function MarkMyAnswer({
   useEffect(() => {
     const timer = setTimeout(async () => {
       try {
-        const raw = localStorage.getItem(draftKey);
+        const raw = initialQuestionId ? null : localStorage.getItem(draftKey);
         if (raw) {
           const draft = z
             .object({
@@ -326,7 +333,7 @@ export function MarkMyAnswer({
       setRestored(true);
     }, 0);
     return () => clearTimeout(timer);
-  }, [allowOwnQuestion, draftKey, initial, router, userId]);
+  }, [allowOwnQuestion, draftKey, initial, initialQuestionId, router, userId]);
   useEffect(() => {
     if (!restored || submitted) return;
     try {
@@ -572,22 +579,39 @@ export function MarkMyAnswer({
                     My own
                   </ToggleGroupItem>
                 </ToggleGroup>
+              ) : initial?.question ? (
+                <p className="text-sm font-medium">Your saved question</p>
               ) : (
-                <p className="text-sm font-medium">
-                  {initial?.question
-                    ? "Your saved question"
-                    : "From the Claro bank"}
-                </p>
+                <ToggleGroup value={["bank"]} aria-label="Question source">
+                  <ToggleGroupItem
+                    value="bank"
+                    aria-label="From the Claro bank"
+                  >
+                    Claro bank
+                  </ToggleGroupItem>
+                  <ToggleGroupItem
+                    value="own"
+                    aria-label="My own question"
+                    disabled
+                  >
+                    My own
+                  </ToggleGroupItem>
+                </ToggleGroup>
               )}
             </CardAction>
           </CardHeader>
           <CardContent className="space-y-3">
             {source === "bank" ? (
               <>
-                <label className="grid gap-1.5 text-sm font-medium">
+                <label className="relative grid gap-1.5 text-sm font-medium">
+                  <PortalIcon
+                    name="search"
+                    className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 size-4"
+                  />
                   <span className="sr-only">Search questions</span>
                   <Input
                     value={search}
+                    className="pl-9 font-normal"
                     role="combobox"
                     aria-autocomplete="list"
                     aria-expanded={bankOpen && !questionLocked}
@@ -636,7 +660,7 @@ export function MarkMyAnswer({
                     disabled={questionLocked}
                   />
                 </label>
-                <div className="grid gap-3 sm:grid-cols-3">
+                <div className="grid gap-2 sm:grid-cols-3">
                   <Choice
                     label="Type"
                     value={type}
@@ -655,7 +679,9 @@ export function MarkMyAnswer({
                     disabled={questionLocked}
                     items={[
                       { value: "all", label: "All topics" },
-                      ...topics.map((t) => ({ value: t.id, label: t.name })),
+                      ...topics
+                        .filter((t) => !t.parent_id)
+                        .map((t) => ({ value: t.id, label: t.name })),
                     ]}
                   />
                   <Choice
@@ -676,10 +702,7 @@ export function MarkMyAnswer({
                   />
                 </div>
                 {!questionLocked && (
-                  <div
-                    className="max-h-[480px] overflow-y-auto xl:max-h-[464px]"
-                    hidden={!bankOpen}
-                  >
+                  <div className="overflow-hidden" hidden={!bankOpen}>
                     <p
                       role="status"
                       className="text-muted-foreground pt-1 pb-2 text-xs"
@@ -694,7 +717,7 @@ export function MarkMyAnswer({
                       id={bankListId}
                       role="listbox"
                       aria-label="Matching questions"
-                      className="grid gap-1.5"
+                      className="grid max-h-[440px] gap-1.5 overflow-y-auto px-px pb-px"
                     >
                       {results.map((q) => (
                         <li key={q.id}>
@@ -705,7 +728,7 @@ export function MarkMyAnswer({
                             aria-selected={selected === q.id}
                             onClick={() => {
                               setSelected(q.id);
-                              setBankOpen(false);
+                              setBankOpen(true);
                             }}
                             className={`hover:bg-accent flex w-full items-start gap-3 rounded-xl border px-3.5 py-3 text-left focus-visible:outline-2 ${selected === q.id ? "border-primary bg-primary/[0.035] ring-primary ring-1" : ""}`}
                           >
@@ -890,11 +913,15 @@ export function MarkMyAnswer({
           </CardHeader>
           <CardContent className="space-y-3 [&_textarea]:min-h-[240px] [&_textarea]:text-[15px] [&_textarea]:leading-7">
             {question && (
-              <div className="bg-muted space-y-1 rounded-xl px-3.5 py-3">
-                <p className="text-muted-foreground text-xs">
-                  Selected question · {question.marks} marks
+              <div className="bg-muted rounded-xl px-3.5 py-3">
+                <p className="text-muted-foreground text-xs">Answering</p>
+                <p className="mt-0.5 text-sm leading-snug font-medium">
+                  {question.stem}
                 </p>
-                <QuestionView question={question} />
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {question.marks} marks ·{" "}
+                  {topics.find((t) => t.id === question.topic_id)?.name}
+                </p>
               </div>
             )}
             {mode === "photo" && (
@@ -903,52 +930,85 @@ export function MarkMyAnswer({
                 confirm your transcript. Each photo must be 10 MB or less.
               </p>
             )}
-            <WrittenAnswer
-              attempt={{
-                ...answer,
-                question: question ?? {
-                  id: "",
-                  type: "short",
-                  topic_id: "",
-                  marks: 1,
-                  stem: "",
-                  stimulus: null,
-                  options: null,
-                  source: "",
-                  year: null,
-                },
-              }}
-              userId={userId}
-              edit={patch}
-              local={patch}
-              save={save}
-              flush={async () => {
-                await save({});
-              }}
-              inputOnly
-              mode={mode}
-              disabled={
-                busy ||
-                submitted ||
-                offline ||
-                (mode === "photo" &&
-                  (!validQuestion ||
-                    (remaining === 0 && answer.id === "draft")))
-              }
-              onBusy={setInputBusy}
-              onConfirmed={setConfirmed}
-              onModeChange={setMode}
-              onError={setError}
-            />
+            {mode === "type" ? (
+              <div>
+                <label className="sr-only" htmlFor="single-answer">
+                  Your answer
+                </label>
+                <Textarea
+                  id="single-answer"
+                  placeholder="Start with the key idea, then explain how one thing leads to another."
+                  value={answer.answer_text ?? ""}
+                  disabled={busy || submitted || offline}
+                  onChange={(e) => {
+                    if (
+                      e.target.value.trim().split(/\s+/).filter(Boolean)
+                        .length <= WRITTEN_WORD_LIMIT ||
+                      e.target.value.length < (answer.answer_text ?? "").length
+                    )
+                      patch({ answer_text: e.target.value });
+                  }}
+                />
+                <div className="text-muted-foreground mt-2 flex items-center justify-between gap-3 text-xs">
+                  <span>
+                    {
+                      (answer.answer_text ?? "")
+                        .trim()
+                        .split(/\s+/)
+                        .filter(Boolean).length
+                    }{" "}
+                    words
+                    {source === "own" && question
+                      ? ` · aim for about ${wordGuide(question.marks).join("–")}`
+                      : ""}
+                  </span>
+                </div>
+              </div>
+            ) : (
+              <WrittenAnswer
+                attempt={{
+                  ...answer,
+                  question: question ?? {
+                    id: "",
+                    type: "short",
+                    topic_id: "",
+                    marks: 1,
+                    stem: "",
+                    stimulus: null,
+                    options: null,
+                    source: "",
+                    year: null,
+                  },
+                }}
+                userId={userId}
+                edit={patch}
+                local={patch}
+                save={save}
+                flush={async () => {
+                  await save({});
+                }}
+                inputOnly
+                mode={mode}
+                disabled={
+                  busy ||
+                  submitted ||
+                  offline ||
+                  (mode === "photo" &&
+                    (!validQuestion ||
+                      (remaining === 0 && answer.id === "draft")))
+                }
+                onBusy={setInputBusy}
+                onConfirmed={setConfirmed}
+                onModeChange={setMode}
+                onError={setError}
+              />
+            )}
           </CardContent>
           <div className="flex flex-wrap items-center justify-between gap-3 px-5">
             <p className="text-muted-foreground text-xs">
               Marked against the question’s marking criteria
             </p>
-            <p
-              className="text-muted-foreground text-xs tabular-nums"
-              role="status"
-            >
+            <p className="sr-only" role="status">
               {remaining} of {MARK_MY_ANSWER_DAILY_LIMIT} checks left today
             </p>
             <Button type="submit" disabled={!valid || locked || filling}>
