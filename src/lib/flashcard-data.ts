@@ -61,9 +61,9 @@ export async function pages<T>(
     from: number,
     to: number,
   ) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  pageSize = 500,
 ) {
   const rows: T[] = [];
-  const pageSize = 500;
   for (let from = 0; ; from += pageSize) {
     const result = await query(from, from + pageSize - 1);
     if (result.error) throw result.error;

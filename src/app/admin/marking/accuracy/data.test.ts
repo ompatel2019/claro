@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 vi.mock("@/utils/supabase/admin", () => {
   const client = { from: vi.fn(), auth: { admin: { listUsers: vi.fn() } } };
   return { admin: () => client };

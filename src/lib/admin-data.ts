@@ -23,6 +23,7 @@ import {
   OPEN_DISPUTES_PER_STUDENT,
 } from "@/lib/limits";
 import { z } from "zod";
+import { lookupAuthUsers } from "@/lib/admin-auth-users";
 import { pages } from "@/lib/flashcard-data";
 import { addDays, type ActivityDay } from "@/lib/activity";
 import type { ReviewRow } from "@/lib/feedback";
@@ -59,27 +60,11 @@ export const SPEND_CAP_USD = 100;
 
 /** Auth users by id: email and whether sign-in is blocked (banned_until in the future). */
 async function authUsers(ids: string[]) {
-  const users = new Map<string, { email: string; blocked: boolean }>();
   const svc = admin();
   const now = Date.now();
-  const wanted = new Set(ids);
-  for (let page = 1; ; page++) {
-    const { data, error } = await svc.auth.admin.listUsers({
-      page,
-      perPage: 1000,
-    });
-    if (error) throw new Error("Could not load student emails.");
-    for (const u of data.users)
-      if (wanted.has(u.id)) {
-        const until = (u as { banned_until?: string | null }).banned_until;
-        users.set(u.id, {
-          email: u.email ?? "",
-          blocked: !!until && Date.parse(until) > now,
-        });
-      }
-    if (data.users.length < 1000 || users.size === wanted.size) break;
-  }
-  return users;
+  return lookupAuthUsers(svc, ids, now, {
+    errorMessage: "Could not load student emails.",
+  });
 }
 
 /** SQL owns §4.2 aggregates; auth emails never leave this admin-only loader. */
