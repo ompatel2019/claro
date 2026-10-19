@@ -12,30 +12,24 @@ try {
   const page = await browser.newPage({ deviceScaleFactor: 1 });
   const sizes = [16, 32, 48];
   const images = [];
-  for (const size of [...sizes, 180]) {
-    await page.setViewportSize({ width: size, height: size });
-    await page.setContent(`<!doctype html>
-      <style>body { margin: 0; } svg { display: block; width: ${size}px; height: ${size}px; }</style>
-      ${svg}`);
-    const png = await page.screenshot({ omitBackground: true });
-    if (size === 180) {
-      // Flatten the full-size transparent render onto the warm white iOS tile.
-      await page.setContent(
-        '<style>body { margin: 0; } canvas { display: block; }</style><canvas width="180" height="180"></canvas>',
-      );
-      await page.evaluate(async (data) => {
+  // favicon.ico only; apple-icon.png is the marketing site's file, copied as-is.
+  // Canvas PNGs are always RGBA, which Next's ICO decoder requires.
+  for (const size of sizes) {
+    const data = await page.evaluate(
+      async ([svg, size]) => {
         const image = new Image();
-        image.src = `data:image/png;base64,${data}`;
+        image.src = `data:image/svg+xml,${encodeURIComponent(svg)}`;
         await image.decode();
-        const context = document.querySelector("canvas").getContext("2d");
-        context.fillStyle = "#fffdfb";
-        context.fillRect(0, 0, 180, 180);
-        context.drawImage(image, 0, 0);
-      }, png.toString("base64"));
-      await page.screenshot({ path: appFile("apple-icon.png").pathname });
-    } else {
-      images.push(png);
-    }
+        const canvas = Object.assign(document.createElement("canvas"), {
+          width: size,
+          height: size,
+        });
+        canvas.getContext("2d").drawImage(image, 0, 0, size, size);
+        return canvas.toDataURL("image/png").split(",")[1];
+      },
+      [svg, size],
+    );
+    images.push(Buffer.from(data, "base64"));
   }
 
   // ICONDIR followed by one ICONDIRENTRY per embedded PNG.

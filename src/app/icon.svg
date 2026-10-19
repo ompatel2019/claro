@@ -1,1 +1,20 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40"><rect width="40" height="40" rx="13" fill="#f54f1b"/><path d="M27 14.5a8 8 0 1 0 0 11" fill="none" stroke="#efe9e9" stroke-width="5" stroke-linecap="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" role="img" aria-label="Claro">
+  <!--
+    The Claro mark on the pen tile: an open C with the dot in its mouth,
+    nudged a touch outward from the midpoint between the terminals
+    (+0.05 × ring radius). Stroke 0.44 × ring radius, dot 1.18 × stroke
+    width — the geometry every derived brand asset shares (see
+    scripts/generate-brand-assets.mjs).
+  -->
+  <!-- Full-bleed tile: platforms round their own corners, and transparent
+       corners read as white fringing on light embed cards. -->
+  <rect width="32" height="32" fill="#e86239" />
+  <path
+    d="M21 10.1A8 8 0 1 0 21 21.9"
+    fill="none"
+    stroke="#fffdfb"
+    stroke-width="3.5"
+    stroke-linecap="round"
+  />
+  <circle cx="21.4" cy="16" r="2.1" fill="#fffdfb" />
+</svg>
