@@ -1,6 +1,13 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Alert } from "@/components/icons";
 import { PenTick, PenCaret } from "./claro/markup-answer";
 import {
@@ -18,6 +25,7 @@ import {
 } from "@/lib/feedback";
 import { criteriaCoverMarks } from "@/lib/marking/own-criteria";
 import { highlightSegments } from "@/lib/practice";
+import { ScoreRing } from "./claro/data-display";
 import { cn } from "@/lib/utils";
 import { RetryAnswer } from "./retry-answer";
 import { StatusPill, statePill } from "./status-pill";
@@ -338,6 +346,14 @@ function Photos({ photos }: { photos: string[] }) {
   );
 }
 
+function ResultAnswerCard({ children }: { children: React.ReactNode }) {
+  return (
+    <section className="bg-card shadow-card min-w-0 space-y-4 rounded-xl border p-5">
+      {children}
+    </section>
+  );
+}
+
 /** §2.1 K14: summary, annotated answer with margin comments, guidelines and actions. */
 export function AnnotatedFeedback({
   row,
@@ -346,6 +362,7 @@ export function AnnotatedFeedback({
   readOnly = false,
   edit,
   showReferences = true,
+  singleResult = false,
 }: {
   row: ReviewRow;
   photos?: string[];
@@ -353,7 +370,10 @@ export function AnnotatedFeedback({
   readOnly?: boolean;
   edit?: FeedbackEdit;
   showReferences?: boolean;
+  /** Standalone student result cards; defaults preserve embedded/admin rendering. */
+  singleResult?: boolean;
 }) {
+  const AnswerContainer = singleResult ? ResultAnswerCard : Fragment;
   const nextCommentId = useRef(
     Math.min(0, ...(edit?.comments.map((c) => c.id) ?? [])) - 1,
   );
@@ -713,295 +733,395 @@ export function AnnotatedFeedback({
     <div
       ref={root}
       data-comment-navigation
-      className="space-y-4"
+      className={cn("space-y-4", singleResult && "min-w-0")}
       onKeyDown={onKey}
     >
-      <Card>
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap items-center gap-3">
-            {showMark ? (
-              <p className="text-[28px] leading-9 font-semibold tabular-nums">
-                {markLabel(row)}
-              </p>
-            ) : (
-              state === "marking" && (
-                <div
-                  aria-hidden
-                  className="bg-muted h-9 w-24 animate-pulse rounded-lg"
-                />
-              )
-            )}
-            {showMark && band && (
-              <Tooltip>
-                <TooltipTrigger render={<span tabIndex={0} />}>
-                  <Badge variant="secondary">{band.label}</Badge>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  {band.row.descriptor}
-                </TooltipContent>
-              </Tooltip>
-            )}
-            {pill && <StatusPill pill={pill} />}
-          </div>
-          {lowConfidence && (
-            <p>
-              {String(row.feedback?.note ?? "We can't mark this reliably.")}
-            </p>
-          )}
-          {!edit &&
-            state === "in_review" &&
-            row.review?.reason !== "student_dispute" && (
-              <p>Our team is double-checking this mark.</p>
-            )}
-          {state === "failed" && (
-            <div
-              role="alert"
-              className="bg-destructive-soft space-y-2 rounded-xl p-3"
-            >
-              <p className="text-destructive flex items-center gap-2 font-semibold">
-                <Alert aria-hidden className="size-4" />
-                We couldn’t mark this one.
-              </p>
-              {!readOnly && <RetryAnswer ids={[row.attempt_id]} />}
+      {singleResult && showMark ? (
+        <div className="grid items-stretch gap-5 xl:grid-cols-3">
+          <Card className="min-w-0 p-5">
+            <div className="flex items-center gap-5">
+              <ScoreRing score={Number(row.mark)} of={max} size={96} />
+              <div className="space-y-2">
+                {pill && <StatusPill pill={pill} />}
+                <p className="text-sm font-semibold">
+                  {max - Number(row.mark) > 0
+                    ? `${max - Number(row.mark)} ${max - Number(row.mark) === 1 ? "mark" : "marks"} from full marks`
+                    : "Full marks"}
+                </p>
+                {state === "in_review" && (
+                  <p className="text-muted-foreground text-[13px]">
+                    Our team is double-checking this mark.
+                  </p>
+                )}
+              </div>
             </div>
-          )}
-          {state === "unreadable" && (
-            <p role="alert" className="font-semibold">
-              We couldn’t read this photo.
-            </p>
-          )}
-          {state === "not_answered" && (
-            <p>No answer was given, so there was nothing to mark.</p>
-          )}
-          {state === "marking" && (
-            <div aria-hidden className="space-y-2">
-              <div className="bg-muted h-4 w-2/3 animate-pulse rounded" />
-              <div className="bg-muted h-4 w-1/2 animate-pulse rounded" />
-            </div>
-          )}
-          {showMark && (edit || next) && (
-            <div>
-              <h3 className="text-sm font-semibold">
-                What gets you the next mark
-              </h3>
-              {edit ? (
-                <Textarea
-                  aria-label="What gets you the next mark"
-                  className="mt-1"
-                  value={edit.nextMark}
-                  disabled={edit.disabled}
-                  maxLength={4000}
-                  onChange={(e) => edit.onChange(edit.comments, e.target.value)}
-                />
-              ) : (
-                <p className="mt-1">{next}</p>
-              )}
-            </div>
-          )}
-          {showMark && comments.length > 0 && (
-            <div className="grid gap-4 sm:grid-cols-2">
-              {(
-                [
-                  ["Strengths", "strength"],
-                  ["Top fixes", "fix"],
-                ] as const
-              ).map(([title, kind]) => {
-                const items = comments
-                  .filter((c) => c.kind === kind)
-                  .slice(0, 3);
-                return items.length ? (
-                  <div key={kind}>
-                    <h3 className="text-sm font-semibold">{title}</h3>
-                    <ul className="mt-1 space-y-1">
-                      {items.map((c) => (
-                        <li key={c.id}>
-                          <button
-                            type="button"
-                            className="text-left underline-offset-4 hover:underline"
-                            onClick={() => {
-                              setFilter("all");
-                              jumpTo(c.id);
-                              card(c.id)?.focus({ preventScroll: true });
-                            }}
-                          >
-                            {c.n}. {c.body}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                ) : null;
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {(filterBar || (photos.length > 0 && text)) && (
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {view === "typed" && filterBar}
-          {photos.length > 0 && text && (
-            <ToggleGroup
-              aria-label="Answer view"
-              variant="outline"
-              size="sm"
-              value={[view]}
-              onValueChange={(v) => v[0] && setView(v[0] as typeof view)}
-            >
-              <ToggleGroupItem value="typed">Typed copy</ToggleGroupItem>
-              <ToggleGroupItem value="photo">Photo</ToggleGroupItem>
-            </ToggleGroup>
-          )}
-        </div>
-      )}
-      {(view === "photo" || !text) && photos.length > 0 ? (
-        <Photos photos={photos} />
-      ) : text ? (
-        <div
-          className={cn(
-            "grid gap-6",
-            wide && "grid-cols-[minmax(0,1fr)_300px]",
-          )}
-        >
-          <div className="space-y-2">
-            {photos.length > 0 && (
-              <p className="text-muted-foreground text-[13px]">
-                Highlights show on the typed copy of your photo.
-              </p>
-            )}
-            {answer}
-          </div>
-          {marginCards}
-        </div>
-      ) : null}
-      {edit && (
-        <>
-          <p className="text-muted-foreground text-xs">
-            Select answer text to add a comment · Esc clears selection.
-          </p>
-          <Popover
-            open={!!selection}
-            onOpenChange={(open) => !open && setSelection(null)}
-          >
-            <PopoverContent
-              anchor={
-                selection
-                  ? { getBoundingClientRect: () => selection.rect }
-                  : undefined
-              }
-              className="max-h-[75vh] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto"
-              initialFocus={false}
-            >
-              <h3 className="font-semibold">Add comment</h3>
-              <p className="max-h-20 overflow-auto text-xs">
-                “{selection?.quote}”
-              </p>
-              <fieldset disabled={edit.disabled}>
-                <CommentFields value={draft} onChange={setDraft} />
-              </fieldset>
-              <Button
-                type="button"
-                disabled={edit.disabled || !draft.body.trim() || !draft.tag}
-                onClick={() => {
-                  edit.onChange(
-                    [
-                      ...edit.comments,
-                      {
-                        ...draft,
-                        id: nextCommentId.current--,
-                      },
-                    ],
-                    edit.nextMark,
-                  );
-                  setSelection(null);
-                  window.getSelection()?.removeAllRanges();
-                }}
-              >
-                Add comment
-              </Button>
-            </PopoverContent>
-          </Popover>
-        </>
-      )}
-      <Popover
-        open={!!popComment}
-        onOpenChange={(open) => !open && setPopover(null)}
-      >
-        <PopoverContent anchor={popover?.el} className="w-80 p-0">
-          {popComment &&
-            (edit ? (
-              <CommentCard edit={edit} c={popComment} className="border-0" />
-            ) : (
-              <CommentCard c={popComment} className="border-0" />
-            ))}
-        </PopoverContent>
-      </Popover>
-
-      {showMark && (
-        <div className="space-y-2">
-          {showReferences && !!row.criteria?.length && (
-            <FeedbackDetails name="guidelines" title="Marking guidelines">
+          </Card>
+          {!!row.criteria?.length && (
+            <Card className="min-w-0 gap-4 p-5">
+              <div>
+                <h2 className="text-sm font-semibold">Marking criteria</h2>
+                <p className="text-muted-foreground mt-1 text-[13px]">
+                  Where your answer sits
+                </p>
+              </div>
               {completeCriteria ? (
-                <table className="w-full text-left">
-                  <thead className="text-muted-foreground text-xs uppercase">
-                    <tr>
-                      <th className="py-2 pr-3 font-medium">Marks</th>
-                      <th className="py-2 font-medium">Descriptor</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {row.criteria.map((c) => (
-                      <tr
-                        key={c.descriptor}
-                        className={cn(
-                          "border-t border-dashed",
-                          c === band?.row && "bg-accent",
+                <ul className="space-y-2">
+                  {row.criteria.map((c) => (
+                    <li
+                      key={c.descriptor}
+                      className={cn(
+                        "flex items-start gap-5 rounded-xl border p-3 text-[13px]",
+                        c === band?.row && "bg-muted border-foreground/25",
+                      )}
+                    >
+                      <span className="shrink-0">
+                        {c.min === c.max ? c.min : `${c.min}–${c.max}`}
+                      </span>
+                      <span>
+                        {c.descriptor}
+                        {c === band?.row && (
+                          <Badge className="ml-2" variant="secondary">
+                            Your band
+                          </Badge>
                         )}
-                      >
-                        <td className="py-2 pr-3 align-top tabular-nums">
-                          {c.min === c.max ? c.min : `${c.min}–${c.max}`}
-                        </td>
-                        <td className="py-2">
-                          {c.descriptor}
-                          {c === band?.row && (
-                            <Badge variant="outline" className="ml-2">
-                              Your band
-                            </Badge>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               ) : (
-                <p>
+                <p className="text-muted-foreground text-sm">
                   The marking guidelines are incomplete, so the band table is
                   unavailable.
                 </p>
               )}
-            </FeedbackDetails>
+            </Card>
           )}
-          {showReferences && row.sample_answer && (
-            <FeedbackDetails name="model" title="Model answer">
-              <p className="whitespace-pre-wrap">{row.sample_answer}</p>
-              <p className="text-muted-foreground mt-2 text-[13px]">
-                One strong answer. Other answers can earn the same marks.
-              </p>
-            </FeedbackDetails>
-          )}
-          {Number(row.mark) < max && outline.length > 0 && (
-            <FeedbackDetails name="outline" title="How to reach full marks">
-              <ul className="list-disc space-y-1 pl-5">
-                {outline.map((t, i) => (
-                  <li key={i}>{t}</li>
-                ))}
+          {(next || comments.some((c) => c.kind === "fix")) && (
+            <Card className="min-w-0 gap-4 p-5">
+              <h2 className="text-sm font-semibold">Your next mark</h2>
+              {next && (
+                <p className="text-muted-foreground text-[13px]">{next}</p>
+              )}
+              <ul className="space-y-3">
+                {comments
+                  .filter((c) => c.kind === "fix")
+                  .slice(0, 3)
+                  .map((c) => (
+                    <li key={c.id} className="flex gap-3 text-[13px]">
+                      <PenCaret
+                        className="text-brand mt-0.5 shrink-0"
+                        aria-hidden
+                      />
+                      <span>{c.next_mark || c.body}</span>
+                    </li>
+                  ))}
               </ul>
-            </FeedbackDetails>
+            </Card>
           )}
         </div>
+      ) : (
+        <Card>
+          <CardContent className="space-y-4">
+            <div className="flex flex-wrap items-center gap-3">
+              {showMark ? (
+                <p className="text-[28px] leading-9 font-semibold tabular-nums">
+                  {markLabel(row)}
+                </p>
+              ) : (
+                state === "marking" && (
+                  <div
+                    aria-hidden
+                    className="bg-muted h-9 w-24 animate-pulse rounded-lg"
+                  />
+                )
+              )}
+              {showMark && band && (
+                <Tooltip>
+                  <TooltipTrigger render={<span tabIndex={0} />}>
+                    <Badge variant="secondary">{band.label}</Badge>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    {band.row.descriptor}
+                  </TooltipContent>
+                </Tooltip>
+              )}
+              {pill && <StatusPill pill={pill} />}
+            </div>
+            {lowConfidence && (
+              <p>
+                {String(row.feedback?.note ?? "We can't mark this reliably.")}
+              </p>
+            )}
+            {!edit &&
+              state === "in_review" &&
+              row.review?.reason !== "student_dispute" && (
+                <p>Our team is double-checking this mark.</p>
+              )}
+            {state === "failed" && (
+              <div
+                role="alert"
+                className="bg-destructive-soft space-y-2 rounded-xl p-3"
+              >
+                <p className="text-destructive flex items-center gap-2 font-semibold">
+                  <Alert aria-hidden className="size-4" />
+                  We couldn’t mark this one.
+                </p>
+                {!readOnly && <RetryAnswer ids={[row.attempt_id]} />}
+              </div>
+            )}
+            {state === "unreadable" && (
+              <p role="alert" className="font-semibold">
+                We couldn’t read this photo.
+              </p>
+            )}
+            {state === "not_answered" && (
+              <p>No answer was given, so there was nothing to mark.</p>
+            )}
+            {state === "marking" && (
+              <div aria-hidden className="space-y-2">
+                <div className="bg-muted h-4 w-2/3 animate-pulse rounded" />
+                <div className="bg-muted h-4 w-1/2 animate-pulse rounded" />
+              </div>
+            )}
+            {showMark && (edit || next) && (
+              <div>
+                <h3 className="text-sm font-semibold">
+                  What gets you the next mark
+                </h3>
+                {edit ? (
+                  <Textarea
+                    aria-label="What gets you the next mark"
+                    className="mt-1"
+                    value={edit.nextMark}
+                    disabled={edit.disabled}
+                    maxLength={4000}
+                    onChange={(e) =>
+                      edit.onChange(edit.comments, e.target.value)
+                    }
+                  />
+                ) : (
+                  <p className="mt-1">{next}</p>
+                )}
+              </div>
+            )}
+            {showMark && comments.length > 0 && (
+              <div className="grid gap-4 sm:grid-cols-2">
+                {(
+                  [
+                    ["Strengths", "strength"],
+                    ["Top fixes", "fix"],
+                  ] as const
+                ).map(([title, kind]) => {
+                  const items = comments
+                    .filter((c) => c.kind === kind)
+                    .slice(0, 3);
+                  return items.length ? (
+                    <div key={kind}>
+                      <h3 className="text-sm font-semibold">{title}</h3>
+                      <ul className="mt-1 space-y-1">
+                        {items.map((c) => (
+                          <li key={c.id}>
+                            <button
+                              type="button"
+                              className="text-left underline-offset-4 hover:underline"
+                              onClick={() => {
+                                setFilter("all");
+                                jumpTo(c.id);
+                                card(c.id)?.focus({ preventScroll: true });
+                              }}
+                            >
+                              {c.n}. {c.body}
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ) : null;
+                })}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
+      <AnswerContainer>
+        {singleResult && (text || photos.length > 0) && (
+          <div>
+            <h2 className="text-sm font-semibold">
+              {showMark ? "Your answer, marked" : "Your answer"}
+            </h2>
+            {comments.length > 0 && (
+              <p className="text-muted-foreground mt-1 text-[13px]">
+                Hover or focus a note to see the words it refers to.
+              </p>
+            )}
+          </div>
+        )}
+        {(filterBar || (photos.length > 0 && text)) && (
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            {view === "typed" && filterBar}
+            {photos.length > 0 && text && (
+              <ToggleGroup
+                aria-label="Answer view"
+                variant="outline"
+                size="sm"
+                value={[view]}
+                onValueChange={(v) => v[0] && setView(v[0] as typeof view)}
+              >
+                <ToggleGroupItem value="typed">Typed copy</ToggleGroupItem>
+                <ToggleGroupItem value="photo">Photo</ToggleGroupItem>
+              </ToggleGroup>
+            )}
+          </div>
+        )}
+        {(view === "photo" || !text) && photos.length > 0 ? (
+          <Photos photos={photos} />
+        ) : text ? (
+          <div
+            className={cn(
+              "grid gap-6",
+              wide && "grid-cols-[minmax(0,1fr)_300px]",
+            )}
+          >
+            <div className="space-y-2">
+              {photos.length > 0 && (
+                <p className="text-muted-foreground text-[13px]">
+                  Highlights show on the typed copy of your photo.
+                </p>
+              )}
+              {answer}
+            </div>
+            {marginCards}
+          </div>
+        ) : null}
+        {edit && (
+          <>
+            <p className="text-muted-foreground text-xs">
+              Select answer text to add a comment · Esc clears selection.
+            </p>
+            <Popover
+              open={!!selection}
+              onOpenChange={(open) => !open && setSelection(null)}
+            >
+              <PopoverContent
+                anchor={
+                  selection
+                    ? { getBoundingClientRect: () => selection.rect }
+                    : undefined
+                }
+                className="max-h-[75vh] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto"
+                initialFocus={false}
+              >
+                <h3 className="font-semibold">Add comment</h3>
+                <p className="max-h-20 overflow-auto text-xs">
+                  “{selection?.quote}”
+                </p>
+                <fieldset disabled={edit.disabled}>
+                  <CommentFields value={draft} onChange={setDraft} />
+                </fieldset>
+                <Button
+                  type="button"
+                  disabled={edit.disabled || !draft.body.trim() || !draft.tag}
+                  onClick={() => {
+                    edit.onChange(
+                      [
+                        ...edit.comments,
+                        {
+                          ...draft,
+                          id: nextCommentId.current--,
+                        },
+                      ],
+                      edit.nextMark,
+                    );
+                    setSelection(null);
+                    window.getSelection()?.removeAllRanges();
+                  }}
+                >
+                  Add comment
+                </Button>
+              </PopoverContent>
+            </Popover>
+          </>
+        )}
+        <Popover
+          open={!!popComment}
+          onOpenChange={(open) => !open && setPopover(null)}
+        >
+          <PopoverContent anchor={popover?.el} className="w-80 p-0">
+            {popComment &&
+              (edit ? (
+                <CommentCard edit={edit} c={popComment} className="border-0" />
+              ) : (
+                <CommentCard c={popComment} className="border-0" />
+              ))}
+          </PopoverContent>
+        </Popover>
+
+        {showMark && (
+          <div className="space-y-2">
+            {showReferences && !singleResult && !!row.criteria?.length && (
+              <FeedbackDetails name="guidelines" title="Marking guidelines">
+                {completeCriteria ? (
+                  <table className="w-full text-left">
+                    <thead className="text-muted-foreground text-xs uppercase">
+                      <tr>
+                        <th className="py-2 pr-3 font-medium">Marks</th>
+                        <th className="py-2 font-medium">Descriptor</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {row.criteria.map((c) => (
+                        <tr
+                          key={c.descriptor}
+                          className={cn(
+                            "border-t border-dashed",
+                            c === band?.row && "bg-accent",
+                          )}
+                        >
+                          <td className="py-2 pr-3 align-top tabular-nums">
+                            {c.min === c.max ? c.min : `${c.min}–${c.max}`}
+                          </td>
+                          <td className="py-2">
+                            {c.descriptor}
+                            {c === band?.row && (
+                              <Badge variant="outline" className="ml-2">
+                                Your band
+                              </Badge>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                ) : (
+                  <p>
+                    The marking guidelines are incomplete, so the band table is
+                    unavailable.
+                  </p>
+                )}
+              </FeedbackDetails>
+            )}
+            {showReferences && row.sample_answer && (
+              <FeedbackDetails name="model" title="Model answer">
+                <p className="whitespace-pre-wrap">{row.sample_answer}</p>
+                <p className="text-muted-foreground mt-2 text-[13px]">
+                  One strong answer. Other answers can earn the same marks.
+                </p>
+              </FeedbackDetails>
+            )}
+            {Number(row.mark) < max && outline.length > 0 && (
+              <FeedbackDetails name="outline" title="How to reach full marks">
+                <ul className="list-disc space-y-1 pl-5">
+                  {outline.map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ul>
+              </FeedbackDetails>
+            )}
+          </div>
+        )}
+      </AnswerContainer>
       <div className="flex flex-wrap gap-2">
-        {!edit && row.topic_id && (
+        {!edit && !singleResult && row.topic_id && (
           <Link
             className={buttonVariants({ variant: "outline", size: "sm" })}
             href={`/student/sprint?type=${row.type}&sub=${encodeURIComponent(row.topic_id)}`}

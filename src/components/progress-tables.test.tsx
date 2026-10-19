@@ -1,4 +1,5 @@
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -198,4 +199,86 @@ it("positions sessions by finish time, including distinct sessions on one Sydney
   expect(
     (positions[1] - positions[0]) / (positions[2] - positions[0]),
   ).toBeCloseTo(0.1);
+});
+
+it("sorts unordered score dates, drops invalid/out-of-range points and spans the plot", () => {
+  const { container } = render(
+    <SessionScoreTrend
+      from="2026-07-12"
+      today="2026-10-09"
+      range="90"
+      points={[
+        { id: "last", day: "2026-10-09", pct: 80, label: "Last", href: null },
+        {
+          id: "invalid",
+          day: "",
+          at: "bad",
+          pct: 10,
+          label: "Bad date",
+          href: null,
+        },
+        { id: "epoch", day: "1970-01-01", pct: 30, label: "Epoch", href: null },
+        { id: "first", day: "2026-10-01", pct: 50, label: "First", href: null },
+      ]}
+    />,
+  );
+  const dots = [...container.querySelectorAll('circle[r="4"]')];
+  expect(dots).toHaveLength(2);
+  expect(
+    Number(dots[1].getAttribute("cx")) - Number(dots[0].getAttribute("cx")),
+  ).toBeGreaterThan(500);
+  expect(screen.queryByText(/1970/)).toBeNull();
+  expect(container.querySelector("svg")?.innerHTML).not.toMatch(/NaN|Infinity/);
+  expect(screen.getByText("80%")).toBeVisible();
+});
+
+it("keeps chart labels at CSS-pixel size when its card resizes", () => {
+  let resize: ResizeObserverCallback;
+  const disconnect = vi.fn();
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      constructor(callback: ResizeObserverCallback) {
+        resize = callback;
+      }
+      observe() {}
+      disconnect = disconnect;
+    },
+  );
+  const view = render(
+    <SessionScoreTrend
+      from="2026-07-12"
+      today="2026-10-09"
+      range="90"
+      points={[]}
+    />,
+  );
+  // A narrow mobile card uses a matching viewBox, rather than scaling 600px labels down.
+  act(() =>
+    resize(
+      [{ contentRect: { width: 280 } } as ResizeObserverEntry],
+      {} as ResizeObserver,
+    ),
+  );
+  expect(view.container.querySelector("svg")).toHaveAttribute(
+    "viewBox",
+    "0 0 280 180",
+  );
+  expect(view.container.querySelector("text")).toHaveAttribute(
+    "font-size",
+    "10",
+  );
+  act(() =>
+    resize(
+      [{ contentRect: { width: 640 } } as ResizeObserverEntry],
+      {} as ResizeObserver,
+    ),
+  );
+  expect(view.container.querySelector("svg")).toHaveAttribute(
+    "viewBox",
+    "0 0 640 230",
+  );
+  view.unmount();
+  expect(disconnect).toHaveBeenCalledOnce();
+  vi.unstubAllGlobals();
 });

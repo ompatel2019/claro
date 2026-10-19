@@ -116,7 +116,9 @@ async function HistoryCard({
   );
   const points = sessions.flatMap((s) => {
     const pct = type ? s.by_type[type] : s.pct;
-    return pct === null
+    return pct == null ||
+      !s.finished_at ||
+      !Number.isFinite(Date.parse(s.finished_at))
       ? []
       : [
           {
@@ -139,7 +141,7 @@ async function HistoryCard({
         <div className="mt-4">
           <SessionScoreTrend
             points={points}
-            from={rangeFrom(range, today) ?? points[0].day}
+            from={rangeFrom(range, today) ?? points.map((p) => p.day).sort()[0]}
             today={today}
             range={range}
           />

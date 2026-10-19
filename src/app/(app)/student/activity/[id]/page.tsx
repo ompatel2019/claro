@@ -20,6 +20,8 @@ import { RetryAnswer } from "@/components/retry-answer";
 import { MarkingProgress } from "@/components/marking-progress";
 import { MarkMyAnswer } from "@/components/mark-my-answer";
 import { RichText } from "@/components/rich-text";
+import { ReportProblem } from "@/components/feedback-widget";
+import { QuestionMark } from "@/components/question-mark";
 import { Card } from "@/components/ui/card";
 
 export const metadata = pageMetadata("Answer results");
@@ -140,13 +142,49 @@ export default async function Page({
   const photos = new Map(
     (signed ?? []).map((p) => [p.path ?? null, p.signedUrl ?? null]),
   );
+  const single = rows.length === 1 && rows[0].type !== "mcq" ? rows[0] : null;
   const pending = rows.some((r) => markingState(r) === "marking");
   return (
     <div className="min-w-0 space-y-5">
-      <PageHeader
-        title="Mark my answer"
-        description={`${dateLabel(s.started_at, true)} · One question, one clear next step.`}
-      />
+      {single ? (
+        <>
+          <Link
+            href="/student/mark"
+            className="text-muted-foreground inline-flex text-[13px]"
+          >
+            ← Mark my answer
+          </Link>
+          <PageHeader
+            eyebrow={`Marked ${dateLabel(s.finished_at, true)}${single.topic_id ? ` · ${topics.data.find((t) => t.id === single.topic_id)?.name ?? ""}` : ""} · ${single.marks} marks`}
+            title={single.stem}
+            actions={
+              <>
+                {single.question_id && (
+                  <ReportProblem
+                    questionId={single.question_id}
+                    sessionId={id}
+                    label={`Linked: ${single.source}`}
+                  />
+                )}
+                {single.topic_id && (
+                  <Link
+                    href={`/student/sprint?type=${single.type}&sub=${encodeURIComponent(single.topic_id)}`}
+                    className={buttonVariants({ variant: "outline" })}
+                  >
+                    Practise similar
+                  </Link>
+                )}
+              </>
+            }
+          />
+          {single.stimulus && <RichText text={single.stimulus} />}
+        </>
+      ) : (
+        <PageHeader
+          title="Mark my answer"
+          description={`${dateLabel(s.started_at, true)} · One question, one clear next step.`}
+        />
+      )}
       <MarkingProgress
         done={
           rows.filter((r) =>
@@ -201,6 +239,15 @@ export default async function Page({
         />
       )}
       <ResultsAnswers
+        singleResult={!!single}
+        writtenAction={
+          single
+            ? (row) =>
+                ["marked", "reviewed"].includes(markingState(row)) ? (
+                  <QuestionMark attemptId={row.attempt_id} />
+                ) : null
+            : undefined
+        }
         rows={rows}
         id={id}
         name={(tid) => topics.data.find((t) => t.id === tid)?.name ?? ""}

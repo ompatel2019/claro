@@ -31,6 +31,7 @@ export function ResultsAnswers({
   mcGrid,
   readOnly = false,
   writtenAction,
+  singleResult = false,
 }: {
   rows: ReviewRow[];
   id: string;
@@ -39,6 +40,7 @@ export function ResultsAnswers({
   mcGrid?: McGridRow[];
   readOnly?: boolean;
   writtenAction?: (row: ReviewRow) => React.ReactNode;
+  singleResult?: boolean;
 }) {
   const report = (r: ReviewRow) =>
     !readOnly &&
@@ -49,6 +51,30 @@ export function ResultsAnswers({
         label={`Linked: ${r.source}`}
       />
     );
+  if (singleResult && rows.length === 1 && rows[0].type !== "mcq") {
+    const r = rows[0];
+    return (
+      <AnnotatedFeedback
+        singleResult
+        row={r}
+        readOnly={readOnly}
+        photos={(r.image_paths ?? []).flatMap((p) => photos.get(p) ?? [])}
+        actions={
+          writtenAction ? (
+            writtenAction(r)
+          ) : (
+            <>
+              {!readOnly &&
+                ["marked", "reviewed"].includes(markingState(r)) && (
+                  <QuestionMark attemptId={r.attempt_id} />
+                )}
+              {report(r)}
+            </>
+          )
+        }
+      />
+    );
+  }
   const views = rows.map((r) => {
     const state = markingState(r);
     return (

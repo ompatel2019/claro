@@ -218,3 +218,23 @@ it("derives the practice summary from parent topic marks without counting subtop
   ).toBeInTheDocument();
   expect(screen.queryByText("Against your target")).not.toBeInTheDocument();
 });
+
+it("rejects missing finish dates before converting them to Sydney dates", async () => {
+  const session = {
+    id: "valid",
+    kind: "sprint",
+    config: {},
+    finished_at: "2026-10-08T00:00:00Z",
+    elapsed_s: 60,
+    pct: 75,
+    by_type: {},
+  };
+  mocks.load.mockResolvedValue({
+    ...empty,
+    history: [session, { ...session, id: "unfinished", finished_at: null }],
+  });
+  render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
+  expect(screen.getByText("View 1 session")).toBeVisible();
+  expect(screen.queryByText(/1970/)).toBeNull();
+  expect(screen.queryByRole("link", { name: /unfinished/ })).toBeNull();
+});

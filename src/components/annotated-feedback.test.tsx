@@ -547,3 +547,38 @@ it.each(["short", "extended"] as const)(
     expect(screen.getByText("How to reach full marks")).toBeVisible();
   },
 );
+
+it("opts into standalone score, criteria, next steps and annotated-answer cards", () => {
+  render(<AnnotatedFeedback row={row} singleResult />);
+  for (const name of [
+    "Marking criteria",
+    "Your next mark",
+    "Your answer, marked",
+  ]) {
+    expect(screen.getByRole("heading", { name })).toBeVisible();
+  }
+  expect(screen.getByRole("img", { name: "3 out of 6" })).toBeVisible();
+  expect(screen.getByText("Your band")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Fix 1, Evidence: Give a CPI figure." }),
+  ).toBeVisible();
+  expect(screen.getByText("3 marks from full marks")).toBeVisible();
+  expect(screen.queryByText("What gets you the next mark")).toBeNull();
+});
+
+it("keeps low-confidence states honest in standalone results", () => {
+  render(
+    <AnnotatedFeedback
+      singleResult
+      row={{
+        ...row,
+        feedback: { confidence: "low", note: "Needs a clearer answer." },
+      }}
+    />,
+  );
+  expect(screen.getByText("Needs a clearer answer.")).toBeVisible();
+  expect(screen.queryByRole("img", { name: "3 out of 6" })).toBeNull();
+  expect(
+    screen.queryByRole("heading", { name: "Marking criteria" }),
+  ).toBeNull();
+});
