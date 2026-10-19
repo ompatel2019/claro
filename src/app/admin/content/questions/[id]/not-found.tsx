@@ -1,11 +1,9 @@
 import Link from "next/link";
-import { SearchOff } from "@/components/icons";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/claro/layout";
 import { buttonVariants } from "@/components/ui/button";
 export default function NotFound() {
   return (
     <EmptyState
-      icon={SearchOff}
       title="Question not found"
       description="This question is unavailable."
       action={

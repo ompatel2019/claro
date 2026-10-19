@@ -1,6 +1,5 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
-import { QuestionFile, SearchOff } from "@/components/icons";
 import { requireAdmin } from "@/lib/auth";
 import { singleParams } from "@/lib/admin";
 import { loadImportReview } from "@/lib/admin-questions";
@@ -17,11 +16,10 @@ import {
   TYPE_LABELS,
   VERBS,
 } from "@/lib/question-bank";
-import { EmptyState } from "@/components/empty-state";
 import { FilterBar } from "@/components/filter-bar";
 import { ImportReview } from "@/components/import-review";
 import { LinkTabs } from "@/components/link-tabs";
-import { PageHeader } from "@/components/claro/layout";
+import { EmptyState, PageHeader } from "@/components/claro/layout";
 import { QuestionsTable } from "@/components/questions-table";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -217,7 +215,6 @@ export default async function QuestionsPage({
               />
             ) : (
               <EmptyState
-                icon={filtered ? SearchOff : QuestionFile}
                 title={
                   filtered ? "No questions match" : `No ${status} questions`
                 }

@@ -2,15 +2,13 @@ import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 import { singleParams } from "@/lib/admin";
-import { Cards, SearchOff } from "@/components/icons";
 import { loadFlashcardCounts, loadFlashcardList } from "@/lib/admin-flashcards";
 import { loadTopics } from "@/lib/admin-content";
-import { EmptyState } from "@/components/empty-state";
 import { FilterBar } from "@/components/filter-bar";
 import { FlashcardImport } from "@/components/flashcard-import";
 import { AddCard, FlashcardsTable } from "@/components/flashcards-table";
 import { LinkTabs } from "@/components/link-tabs";
-import { PageHeader } from "@/components/claro/layout";
+import { EmptyState, PageHeader } from "@/components/claro/layout";
 import { buttonVariants } from "@/components/ui/button";
 
 const BASE = "/admin/content/flashcards";
@@ -123,7 +121,6 @@ export default async function FlashcardsPage({
           />
         ) : (
           <EmptyState
-            icon={filtered ? SearchOff : Cards}
             title={filtered ? "No cards match" : `No ${list.status} cards`}
             description={
               filtered
