@@ -7,27 +7,19 @@ import {
 } from "./spend";
 
 function mockDb(rows: { model: string; usd: unknown }[] = []) {
-  let filtered = rows;
-  const range = vi.fn<
+  // Stands in for public.ai_spend_for_prefixes: sum(usd) over rows whose model starts with a prefix.
+  const rpc = vi.fn<
     (
-      from: number,
-      to: number,
-    ) => Promise<{
-      data: { usd: unknown }[] | null;
-      error: { message: string } | null;
-    }>
-  >(async (from, to) => ({
-    data: filtered.slice(from, to + 1).map(({ usd }) => ({ usd })),
+      fn: "ai_spend_for_prefixes",
+      args: { p_prefixes: string[] },
+    ) => Promise<{ data: unknown; error: { message: string } | null }>
+  >(async (_fn, { p_prefixes }) => ({
+    data: rows
+      .filter((row) => p_prefixes.some((p) => row.model.startsWith(p)))
+      .reduce((total: number, row) => total + Number(row.usd), 0),
     error: null,
   }));
-  const order = vi.fn(() => ({ range }));
-  const like = vi.fn((_column: string, pattern: string) => {
-    filtered = rows.filter((row) => row.model.startsWith(pattern.slice(0, -1)));
-    return { order };
-  });
-  const select = vi.fn(() => ({ like }));
-  const from = vi.fn(() => ({ select }));
-  return { db: { from }, from, select, like, order, range };
+  return { db: { rpc }, rpc };
 }
 
 it("identifies OpenRouter models by the Anthropic prefix", () => {
@@ -54,15 +46,12 @@ it("excludes $61.00 of OpenAI spend and counts $19.20 of OpenRouter spend", asyn
     .reduce((total, row) => total + Number(row.usd), 0);
   expect(expected).toBeCloseTo(19.2);
   await expect(openRouterSpend(mocks.db)).resolves.toBe(expected);
-  expect(mocks.from).toHaveBeenCalledWith("ai_usage");
-  expect(mocks.select).toHaveBeenCalledWith("usd");
-  expect(mocks.like).toHaveBeenCalledWith("model", "anthropic/%");
-  expect(mocks.like).toHaveBeenCalledWith("model", "openai/%");
-  expect(mocks.order).toHaveBeenCalledWith("id");
-  expect(mocks.range).toHaveBeenCalledWith(0, 999);
+  expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("ai_spend_for_prefixes", {
+    p_prefixes: ["anthropic/", "openai/"],
+  });
 });
 
-it("paginates beyond the 1000-row cap", async () => {
+it("sums more than 1000 rows in one SQL call", async () => {
   const mocks = mockDb(
     Array.from({ length: 1001 }, () => ({
       model: "anthropic/claude-sonnet-5.5",
@@ -70,11 +59,7 @@ it("paginates beyond the 1000-row cap", async () => {
     })),
   );
   await expect(openRouterSpend(mocks.db)).resolves.toBe(1251.25);
-  expect(mocks.range).toHaveBeenCalledTimes(3);
-  expect(mocks.range).toHaveBeenNthCalledWith(1, 0, 999);
-  expect(mocks.range).toHaveBeenNthCalledWith(2, 1000, 1999);
-  expect(mocks.like).toHaveBeenNthCalledWith(2, "model", "anthropic/%");
-  expect(mocks.order).toHaveBeenNthCalledWith(2, "id");
+  expect(mocks.rpc).toHaveBeenCalledTimes(1);
 });
 
 it("returns zero when there are no OpenRouter rows", async () => {
@@ -83,7 +68,7 @@ it("returns zero when there are no OpenRouter rows", async () => {
 
 it("throws on a spend query error", async () => {
   const mocks = mockDb();
-  mocks.range.mockResolvedValueOnce({
+  mocks.rpc.mockResolvedValueOnce({
     data: null,
     error: { message: "Mock storage failure" },
   });
@@ -104,7 +89,7 @@ it.each(["invalid", NaN, Infinity, -Infinity])(
 
 it("rejects a missing spend result", async () => {
   const mocks = mockDb();
-  mocks.range.mockResolvedValueOnce({ data: null, error: null });
+  mocks.rpc.mockResolvedValueOnce({ data: null, error: null });
   await expect(openRouterSpend(mocks.db)).rejects.toThrow(
     "Invalid ai_spend result",
   );
