@@ -8,6 +8,7 @@ import { assertSafeE2ETarget, GUARD_FLAG } from "./guard";
  * baseURL. Mock configs pass when credentials are unset or point at a test project.
  */
 export default function globalSetup(config: FullConfig) {
+  delete process.env[GUARD_FLAG];
   assertSafeE2ETarget({
     appSupabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
     baseUrls: config.projects.map((project) => project.use.baseURL),

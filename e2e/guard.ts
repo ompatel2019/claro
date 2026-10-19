@@ -22,12 +22,13 @@ export function assertTestSupabaseUrl(
   );
 }
 
-/** Sign-in credentials: they act through the app under test. */
-const LOGINS = [
+/** Env vars that let a run sign in or write as a real user or the service role. */
+const CREDENTIALS = [
   "STUDENT_EMAIL",
   "STUDENT_PASSWORD",
   "ADMIN_EMAIL",
   "ADMIN_PASSWORD",
+  "SUPABASE_SECRET_KEY",
 ] as const;
 
 type Env = Record<string, string | undefined>;
@@ -36,7 +37,7 @@ type Env = Record<string, string | undefined>;
 export const GUARD_FLAG = "CLARO_E2E_TARGET_VERIFIED";
 
 export function hasE2ECredentials(env: Env = process.env) {
-  return [...LOGINS, "SUPABASE_SECRET_KEY"].some((name) => env[name]);
+  return CREDENTIALS.some((name) => env[name]);
 }
 
 /** The resolved targets of a run: the app's Supabase URL and every base URL. */
@@ -48,17 +49,16 @@ export type E2ETarget = {
 
 /**
  * Playwright globalSetup check, run before any spec can sign in or write.
- * Credential-free runs (CI, offline mocks) pass untouched. With the service
- * key set, the runner's Supabase URL must pass assertTestSupabaseUrl. With a
- * sign-in credential set, the app's Supabase URL must pass it too, and every
- * remote base URL must be an origin listed in E2E_TEST_BASE_URLS.
+ * Credential-free runs (CI, offline mocks) pass untouched. With any credential
+ * set (sign-in or service key):
+ * - the app's Supabase URL must pass assertTestSupabaseUrl;
+ * - an unmanaged app (E2E_BASE_URL, even on localhost) must be an origin
+ *   listed in E2E_TEST_BASE_URLS, since its env can't be checked from here;
+ * - any other remote project baseURL must be listed too.
  */
 export function assertSafeE2ETarget(target: E2ETarget, env: Env = process.env) {
-  const refs = env.E2E_TEST_SUPABASE_REFS;
-  if (env.SUPABASE_SECRET_KEY)
-    assertTestSupabaseUrl(env.NEXT_PUBLIC_SUPABASE_URL, refs);
-  if (!LOGINS.some((name) => env[name])) return;
-  assertTestSupabaseUrl(target.appSupabaseUrl, refs);
+  if (!hasE2ECredentials(env)) return;
+  assertTestSupabaseUrl(target.appSupabaseUrl, env.E2E_TEST_SUPABASE_REFS);
   const allowed = list(env.E2E_TEST_BASE_URLS).flatMap((item) => {
     try {
       return [new URL(item).origin];
@@ -66,7 +66,8 @@ export function assertSafeE2ETarget(target: E2ETarget, env: Env = process.env) {
       return [];
     }
   });
-  for (const base of target.baseUrls) {
+  const unmanaged = env.E2E_BASE_URL;
+  for (const base of [unmanaged, ...target.baseUrls]) {
     if (!base) continue;
     let origin: URL;
     try {
@@ -74,10 +75,10 @@ export function assertSafeE2ETarget(target: E2ETarget, env: Env = process.env) {
     } catch {
       throw new Error("E2E: the base URL is not a valid URL.");
     }
-    if (isLocalHost(origin.hostname)) continue;
     if (origin.origin !== "null" && allowed.includes(origin.origin)) continue;
+    if (base !== unmanaged && isLocalHost(origin.hostname)) continue;
     throw new Error(
-      `E2E: refusing to sign in against ${origin.host}. Use a local app or add its origin to E2E_TEST_BASE_URLS.`,
+      `E2E: refusing to sign in against ${origin.host}. Let Playwright start the app, or add its origin to E2E_TEST_BASE_URLS.`,
     );
   }
 }
