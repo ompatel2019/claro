@@ -13,7 +13,7 @@ type QuestionText = Pick<
 >;
 
 type QuestionViewProps =
-  | { question: QuestionText }
+  | { question: QuestionText; showMetadata?: boolean }
   | (Omit<QuestionText, "stimulus"> & {
       stimulus?: string | null;
       options?: string[] | null;
@@ -35,23 +35,25 @@ export function QuestionView(props: QuestionViewProps) {
           : "min-w-0 space-y-4 break-words"
       }
     >
-      <p
-        className={
-          student
-            ? "text-muted-foreground text-xs"
-            : "text-muted-foreground text-sm"
-        }
-      >
-        {student ? (
-          <>
-            {plural(marks, "mark")} · {source}
-          </>
-        ) : (
-          <>
-            {source || "No source"} · {plural(marks, "mark")}
-          </>
-        )}
-      </p>
+      {(!student || props.showMetadata !== false) && (
+        <p
+          className={
+            student
+              ? "text-muted-foreground text-xs"
+              : "text-muted-foreground text-sm"
+          }
+        >
+          {student ? (
+            <>
+              {plural(marks, "mark")} · {source}
+            </>
+          ) : (
+            <>
+              {source || "No source"} · {plural(marks, "mark")}
+            </>
+          )}
+        </p>
+      )}
       <RichText
         renderImages={!student}
         className={

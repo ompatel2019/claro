@@ -1,7 +1,7 @@
 import {
   cleanup,
   fireEvent,
-  render,
+  render as rtlRender,
   screen,
   waitFor,
   within,
@@ -13,6 +13,13 @@ vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({ rpc: mocks.rpc }),
 }));
 import { SprintSetup } from "./sprint-setup";
+
+function render(ui: React.ReactNode) {
+  const result = rtlRender(ui);
+  fireEvent.click(screen.getByRole("button", { name: "Custom" }));
+  return result;
+}
+
 const topics = [1, 2, 3].map((i) => ({
   id: `t${i}`,
   parent_id: null,
@@ -286,7 +293,7 @@ it("selects a dot point with its parent, enforces the topic limit and clears bot
   render(<SprintSetup topics={[...topics, ...dotPoints]} params={{}} />);
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Topic 1 dot point · 5" }),
+      screen.getByRole("button", { name: "Topic 1 dot point 5" }),
     ).toBeEnabled(),
   );
   const config = () =>
@@ -296,7 +303,7 @@ it("selects a dot point with its parent, enforces the topic limit and clears bot
     );
   for (const i of [1, 2, 3])
     fireEvent.click(
-      screen.getByRole("button", { name: `Topic ${i} dot point · 5` }),
+      screen.getByRole("button", { name: `Topic ${i} dot point 5` }),
     );
   expect(config().topics).toEqual(["t1", "t2"]);
   expect(config().subtopics).toEqual(["t1-1", "t2-1"]);
@@ -310,11 +317,13 @@ it.each(["mistakes", "new_only", "flagged"])(
   "preserves the advanced %s history without a conflicting switch",
   async (history) => {
     render(<SprintSetup topics={topics} params={{ type: "short", history }} />);
-    await screen.findByText("Last 5 years");
+    await screen.findByRole("combobox", { name: "From year" });
     expect(
       screen.queryByRole("switch", { name: /Prefer questions/ }),
     ).not.toBeInTheDocument();
-    expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config.history).toBe(history);
+    await waitFor(() =>
+      expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config.history).toBe(history),
+    );
     fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
     const selected = within(
       screen.getByRole("radiogroup", { name: "Question history" }),
@@ -370,7 +379,7 @@ it("summarises a whole topic alongside the other topic's selected subtopic", () 
     />,
   );
   const summary = start().closest("form")!;
-  expect(within(summary).getByText("Topic 1", { exact: true })).toBeVisible();
+  expect(within(summary).queryByText("Topic 1", { exact: true })).toBeNull();
   expect(
     within(summary).getByText("Dot point A", { exact: true }),
   ).toBeVisible();

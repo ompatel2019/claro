@@ -80,7 +80,7 @@ export function ResultsBrowser({
     `Question ${it.position ?? i + 1}${it.mark ? `, ${it.mark} marks` : ""}${it.pill ? `, ${it.pill}` : ""}`;
   return (
     <section className="bg-card shadow-card space-y-5 rounded-xl border p-5">
-      {mcGrid && mcGrid.length > 0 && (
+      {table && mcGrid && mcGrid.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>
@@ -164,13 +164,13 @@ export function ResultsBrowser({
       )}
       <div
         id="results-questions"
-        className="flex scroll-mt-20 flex-wrap items-center justify-between gap-3"
+        className="relative flex scroll-mt-20 flex-wrap items-start justify-between gap-3"
       >
         <div>
           <h2 className="text-sm font-semibold">Your answers</h2>
           <ul
             aria-label="Answer key"
-            className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs"
+            className="text-muted-foreground mt-2 flex flex-col gap-x-4 gap-y-1 text-xs sm:flex-row sm:flex-wrap"
           >
             {[
               ["Correct", "bg-success-soft"],
@@ -185,14 +185,27 @@ export function ResultsBrowser({
             ))}
           </ul>
         </div>
-        <Toggle
-          variant="outline"
-          size="sm"
-          pressed={table}
-          onPressedChange={setTable}
-        >
-          Table view
-        </Toggle>
+        <div className="bg-muted absolute top-0 right-0 flex rounded-full p-0.5 sm:static">
+          <button
+            type="button"
+            onClick={() => setTable(false)}
+            className={cn(
+              "rounded-full px-3 py-1 text-[13px]",
+              !table && "bg-card shadow-xs",
+            )}
+          >
+            Review
+          </button>
+          <Toggle
+            aria-label="Table view"
+            variant="default"
+            size="sm"
+            pressed={table}
+            onPressedChange={setTable}
+          >
+            Table
+          </Toggle>
+        </div>
       </div>
       {table ? (
         <Table aria-label="Questions">
@@ -251,7 +264,10 @@ export function ResultsBrowser({
                         onClick={() => setIndex(i)}
                         className={cn(
                           "grid size-12 content-center rounded-xl border border-transparent text-sm font-medium tabular-nums",
-                          it.tone,
+                          it.tone.replace(
+                            /border-(success|warning|destructive)/g,
+                            "border-transparent",
+                          ),
                           !it.mark && "border-border border-dashed",
                           i === index && "ring-primary ring-2 ring-offset-2",
                         )}

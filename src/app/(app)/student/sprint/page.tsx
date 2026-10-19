@@ -1,5 +1,6 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
+import { restore } from "@/lib/sprint";
 import { continueTime } from "@/lib/home";
 import { Alert } from "@/components/icons";
 import { requireProfile } from "@/lib/auth";
@@ -26,7 +27,7 @@ export default async function SprintPage({
 }) {
   const profile = await requireProfile();
   const db = await createClient();
-  const [topics, open] = await Promise.all([
+  const [topics, open, progress, previous] = await Promise.all([
     db.from("topics").select("id,parent_id,name,sort").order("sort"),
     db
       .from("sessions")
@@ -37,8 +38,27 @@ export default async function SprintPage({
       .order("started_at", { ascending: false })
       .limit(1)
       .maybeSingle(),
+    db.rpc("student_progress"),
+    db
+      .from("sessions")
+      .select("config")
+      .eq("user_id", profile.id)
+      .eq("kind", "sprint")
+      .not("finished_at", "is", null)
+      .order("finished_at", { ascending: false })
+      .limit(1)
+      .maybeSingle(),
   ]);
   if (topics.error) throw new Error("Could not load topics.");
+  const measured = (progress.data?.topics ?? []) as {
+    id: string;
+    answered: number;
+    pct: number | null;
+  }[];
+  const weakest = measured
+    .filter((t) => t.answered > 0 && t.pct != null)
+    .sort((a, b) => a.pct! - b.pct!)[0];
+  const weak = (topics.data as Topic[]).find((t) => t.id === weakest?.id);
   const p = await searchParams;
   const params = Object.fromEntries(
     ["type", "topics", "sub", "history", "verb", "size"].map((k) => [k, p[k]]),
@@ -59,18 +79,23 @@ export default async function SprintPage({
         description="Build exactly the practice you need. The summary shows what you’ll get."
       />
       {unfinished && (
-        <Card>
+        <Card className="py-3.5">
           <CardContent className="flex flex-col items-start gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-3 sm:flex-1">
               <span className="bg-warning-soft text-warning grid size-9 shrink-0 place-items-center rounded-xl">
                 <Alert aria-hidden className="size-4" />
               </span>
-              <p>
-                You have an unfinished {modeLabel(unfinished.config.mode)}{" "}
-                sprint · {unfinished.attempts.filter(answered).length}/
-                {unfinished.attempts.length} answered
-                {` · ${continueTime(unfinished, limit, new Date())}`}
-              </p>
+              <div>
+                <p className="font-semibold">
+                  You have an unfinished {modeLabel(unfinished.config.mode)}{" "}
+                  sprint
+                </p>
+                <p className="text-muted-foreground text-[13px]">
+                  {unfinished.attempts.filter(answered).length} of{" "}
+                  {unfinished.attempts.length} answered
+                  {` · ${continueTime(unfinished, limit, new Date())}`}
+                </p>
+              </div>
             </div>
             <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:max-w-xs">
               <Link
@@ -84,8 +109,14 @@ export default async function SprintPage({
           </CardContent>
         </Card>
       )}
-      <div className="grid gap-3 md:grid-cols-2">
-        <QuickStarts />
+      <div className="grid gap-3 md:grid-cols-3">
+        <QuickStarts
+          weak={weak}
+          previousRaw={previous.data?.config}
+          previous={
+            previous.data?.config ? restore(previous.data.config) : undefined
+          }
+        />
       </div>
       <SprintSetup topics={(topics.data ?? []) as Topic[]} params={params} />
     </div>
