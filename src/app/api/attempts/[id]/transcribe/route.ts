@@ -1,3 +1,4 @@
+import { isAnswerImageKey } from "@/lib/answer-image-key";
 import { withAttemptUsage } from "@/lib/ai/usage-context";
 import { singleSlotIds } from "@/lib/single-check";
 import {
@@ -62,7 +63,7 @@ export async function POST(
       { status: 409 },
     );
   const pages: string[] = attempt.image_paths ?? [];
-  if (!pages.length || !pages.every((p) => p.startsWith(`${user.id}/`)))
+  if (!pages.length || !pages.every((p) => isAnswerImageKey(p, user.id)))
     return Response.json({ error: "No answer image" }, { status: 400 });
   const question = attempt.question as unknown as {
     type: string;
@@ -110,8 +111,8 @@ export async function POST(
       return Response.json({ error: "Question not found" }, { status: 400 });
     const images: Blob[] = [];
     for (const page of pages) {
-      const { data: image, error } = await admin()
-        .storage.from("answers")
+      const { data: image, error } = await supabase.storage
+        .from("answers")
         .download(page);
       if (error || !image) throw new Error("Image not found");
       if (
