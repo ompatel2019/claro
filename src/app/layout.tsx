@@ -10,9 +10,22 @@ const sans = Bricolage_Grotesque({
   axes: ["opsz"],
 });
 
+const description = "HSC Economics practice with instant AI marking.";
 export const metadata: Metadata = {
+  metadataBase: new URL(
+    process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
+  ),
   title: { default: "Claro", template: "%s · Claro" },
-  description: "HSC Economics practice with instant AI marking.",
+  description,
+  openGraph: {
+    siteName: "Claro",
+    title: "Claro",
+    description,
+    images: [
+      { url: "/og/claro-og.png", width: 1200, height: 630, alt: "Claro" },
+    ],
+  },
+  twitter: { card: "summary_large_image", images: ["/og/claro-og.png"] },
 };
 
 export default function RootLayout({

@@ -87,30 +87,31 @@ const TERMS: Record<string, [string, string][]> = {
     ["10-12", "12-20"],
   ],
 };
+/** Monday-first week of an NSW term; null outside term or for an unknown year. */
 export function schoolWeek(today: string) {
   const year = today.slice(0, 4);
-  const terms = TERMS[year];
-  if (!terms) return "Your study week";
+  const terms = TERMS[year] ?? [];
   const index = terms.findIndex(
     ([start, end]) => today >= `${year}-${start}` && today <= `${year}-${end}`,
   );
-  if (index < 0) return "School break";
-  const start = new Date(`${year}-${terms[index][0]}T00:00:00Z`);
-  const offset = (start.getUTCDay() + 6) % 7;
-  const week =
+  if (index < 0) return null;
+  const [start, end] = terms[index].map((d) => `${year}-${d}`);
+  const offset = (new Date(`${start}T00:00:00Z`).getUTCDay() + 6) % 7;
+  const week = (day: string) =>
     Math.floor(
-      ((Date.parse(today) - start.getTime()) / 86400000 + offset) / 7,
+      ((Date.parse(day) - Date.parse(start)) / 86400000 + offset) / 7,
     ) + 1;
-  return `Term ${index + 1} · Week ${week}`;
+  return { term: index + 1, week: week(today), weeks: week(end) };
 }
+// Claro's own short lines, one per day.
 const QUOTES = [
-  "One question is a good place to start.",
-  "Small steps make steady progress.",
-  "Give your next answer your full attention.",
-  "Make a little room for practice today.",
-  "Learn from the answer, then try again.",
-  "Build a habit, one study day at a time.",
-  "A short session still counts.",
+  "Habits beat cramming.",
+  "Show up first. Marks follow.",
+  "Small sessions, big results.",
+  "Practise now, relax in the exam.",
+  "Consistency is the cheat code.",
+  "Done today beats perfect tomorrow.",
+  "Every answer sharpens the next.",
 ];
 export function dailyQuote(today: string) {
   return QUOTES[Math.floor(Date.parse(today) / 86400000) % QUOTES.length];

@@ -1,23 +1,66 @@
-export function Logo({ wordClassName }: { wordClassName?: string }) {
+import Image from "next/image";
+import { cn } from "@/lib/utils";
+
+// Brand SVGs in public/logos (from the marketing site). White variants for dark theme.
+const ART = {
+  lockup: { file: "claro-lockup", ratio: 726 / 228 },
+  mark: { file: "claro-mark", ratio: 90 / 100 },
+};
+
+function Art({
+  kind,
+  height,
+  className,
+}: {
+  kind: keyof typeof ART;
+  height: number;
+  className?: string;
+}) {
+  const { file, ratio } = ART[kind];
+  const size = { width: Math.round(height * ratio), height };
   return (
-    <span className="text-ink inline-flex items-center gap-2 text-xl leading-none font-bold tracking-[-0.04em]">
-      <svg
-        width="24"
-        height="24"
-        viewBox="0 0 40 40"
-        fill="none"
-        aria-hidden="true"
-        className="shrink-0"
+    <>
+      <Image
+        src={`/logos/${file}.svg`}
+        alt=""
+        {...size}
+        unoptimized
+        className={cn("dark:hidden", className)}
+      />
+      <Image
+        src={`/logos/${file}-white.svg`}
+        alt=""
+        {...size}
+        unoptimized
+        className={cn("hidden dark:block", className)}
+      />
+    </>
+  );
+}
+
+/** Claro lockup; `collapsible` swaps to the mark in the icon-only sidebar. */
+export function Logo({
+  height = 28,
+  collapsible = false,
+}: {
+  height?: number;
+  collapsible?: boolean;
+}) {
+  return (
+    <span role="img" aria-label="Claro" className="inline-flex shrink-0">
+      <span
+        className={cn(
+          "contents",
+          collapsible && "group-data-[collapsible=icon]:hidden",
+        )}
       >
-        <rect width="40" height="40" rx="11" fill="var(--color-brand)" />
-        <path
-          d="M27 14.5a8 8 0 1 0 0 11"
-          stroke="var(--primary-foreground)"
-          strokeWidth="5"
-          strokeLinecap="round"
-        />
-      </svg>
-      <span className={wordClassName}>claro.</span>
+        <Art kind="lockup" height={height} />
+      </span>
+      {collapsible && (
+        <span className="hidden group-data-[collapsible=icon]:contents">
+          <Art kind="mark" height={24} />
+        </span>
+      )}
     </span>
   );
 }

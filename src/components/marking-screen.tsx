@@ -10,7 +10,7 @@ export function MarkingScreen({ single = false }: { single?: boolean }) {
       aria-atomic="true"
     >
       <div className="mx-auto flex max-w-md flex-col items-center gap-6 text-center">
-        <Logo />
+        <Logo height={32} />
         <svg
           aria-hidden="true"
           viewBox="0 0 120 100"

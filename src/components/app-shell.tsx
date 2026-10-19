@@ -160,7 +160,7 @@ export function AppShell({
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
             className="flex justify-start group-data-[collapsible=icon]:justify-center"
           >
-            <Logo wordClassName="group-data-[collapsible=icon]:hidden" />
+            <Logo collapsible />
           </Link>
         </SidebarHeader>
         <SidebarContent className="py-2">
@@ -257,6 +257,13 @@ export function AppShell({
       <SidebarInset className="min-w-0">
         <header className="bg-card sticky top-0 z-10 flex h-16 items-center gap-3 border-b px-4 md:px-6">
           <SidebarTrigger className="-ml-1" />
+          <Link
+            href={home}
+            aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
+            className="md:hidden"
+          >
+            <Logo height={22} />
+          </Link>
           <p className="min-w-0 truncate text-sm font-semibold">{pageLabel}</p>
           <div className="ml-auto flex shrink-0 items-center gap-1">
             {kind === "student" && <HeaderFeedback />}

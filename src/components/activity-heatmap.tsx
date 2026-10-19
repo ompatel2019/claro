@@ -25,6 +25,7 @@ export function ActivityHeatmap({
   link = "/student/activity?date=",
   error,
   errorContent,
+  home,
 }: {
   days: ActivityDay[];
   today: string;
@@ -34,6 +35,8 @@ export function ActivityHeatmap({
   link?: string;
   error?: boolean;
   errorContent?: React.ReactNode;
+  /** Home's "Your study days" card: big streak numbers, today marker and a call to action. */
+  home?: { action: React.ReactNode };
 }) {
   const allWeeks = heatmapWeeks(today);
   const [weekCount, setWeekCount] = useState(53);
@@ -110,10 +113,39 @@ export function ActivityHeatmap({
     : [0, 0];
 
   return (
-    <Card>
+    <Card className={home && "h-full"}>
       <CardContent className="space-y-3">
-        <h2 className="sr-only">Activity</h2>
-        {!error && (
+        {home ? (
+          <div className="space-y-3">
+            <div>
+              <h2 className="text-base">Your study days</h2>
+              <p className="text-muted-foreground text-xs">
+                Every day you study lights up a square.
+              </p>
+            </div>
+            {!error && (
+              <dl className="flex gap-6">
+                {(
+                  [
+                    [current, "Day streak"],
+                    [longest, "Longest streak"],
+                    [active, "Days studied"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <div key={label} className="flex flex-col-reverse">
+                    <dt className="text-muted-foreground text-xs">{label}</dt>
+                    <dd className="text-2xl leading-tight font-bold">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+          </div>
+        ) : (
+          <h2 className="sr-only">Activity</h2>
+        )}
+        {!error && !home && (
           <p className="text-sm">
             Current streak <strong>{plural(current, "day")}</strong> · Longest{" "}
             <strong>{plural(longest, "day")}</strong> ·{" "}
@@ -184,7 +216,8 @@ export function ActivityHeatmap({
                       }}
                       onBlur={() => setTip(null)}
                       onMouseEnter={() => setTip(day)}
-                      className="focus-visible:outline-ink size-[11px] rounded-[2px] focus-visible:outline-2"
+                      aria-current={home && day === today ? "date" : undefined}
+                      className="focus-visible:outline-ink aria-[current=date]:ring-ink aria-[current=date]:ring-offset-card size-[11px] rounded-[2px] focus-visible:outline-2 aria-[current=date]:ring-1 aria-[current=date]:ring-offset-1"
                       style={{ background: SHADES[shade(count)] }}
                     />
                   );
@@ -242,7 +275,14 @@ export function ActivityHeatmap({
               />
             ))}
             More
+            {home && (
+              <>
+                <span className="ring-ink ring-offset-card ml-3 size-[11px] rounded-[2px] ring-1 ring-offset-1" />
+                Today
+              </>
+            )}
           </span>
+          {home?.action}
         </div>
       </CardContent>
     </Card>
