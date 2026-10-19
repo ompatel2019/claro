@@ -8,6 +8,7 @@ import {
   STALE_CLAIM_MS,
 } from "@/lib/marking/engine";
 import type { MarkableQuestion } from "@/lib/marking/grade";
+import { markingPayload } from "./marking/payload";
 import { assessOwnCriteria } from "./marking/own-criteria";
 import { generateOwnQuestion } from "./single-check-autofill";
 import { ownQuestionSchema, type OwnQuestion } from "./single-check";
@@ -180,14 +181,11 @@ async function markCheck(
     const { data } = await db
       .from("attempts")
       .update({
-        ...studentMarking(marked),
+        ...markingPayload(marked, question.marks, check.status, MARKER.model),
         feedback: {
           ...studentMarking(marked).feedback,
           ...(ownAssessment && { confidence: "estimate" }),
         },
-        max_marks: question.marks,
-        check_status: check.status,
-        marked_by_model: MARKER.model,
         status: "marked",
         marked_at: new Date().toISOString(),
       })
