@@ -95,8 +95,10 @@ it.each([
   "keeps the active-student comparison for %i vs %i",
   async (now, prev, delta) => {
     mocks.loadDashboard.mockResolvedValue({ ...data, active: { now, prev } });
-    render(await dashboard());
-    expect(screen.getByText(delta)).toBeInTheDocument();
+    const { container } = render(await dashboard());
+    expect(
+      container.querySelector('[data-component="DeltaPill"]'),
+    ).toHaveTextContent(delta === "±0" ? "0" : delta);
   },
 );
 it("retains zero spend and both charts on an empty install", async () => {

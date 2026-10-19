@@ -7,9 +7,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { DataTable } from "@/components/data-table";
-import { EmptyState } from "@/components/empty-state";
-import { Target } from "@/components/icons";
+import { DataTable, EmptyState } from "@/components/claro";
 import type { Breakdown, computeAccuracy } from "./data";
 import { meanDelta, percentage, percentLabel } from "./helpers";
 
@@ -27,7 +25,6 @@ export function BreakdownTable({
   if (!rows.some((r) => r.checked || r.deltas.length))
     return (
       <EmptyState
-        icon={Target}
         title={`No data ${title.toLowerCase()}`}
         description="Checked written answers and resolved reviews in this range will appear here."
       />
@@ -93,7 +90,6 @@ export function DisagreedQuestions({
   if (!rows.length)
     return (
       <EmptyState
-        icon={Target}
         title="No questions with 3 checked answers yet"
         description="The ten questions with the highest disagreement rates will appear here."
       />

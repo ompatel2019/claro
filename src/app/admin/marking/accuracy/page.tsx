@@ -1,9 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
-import { PageHeader } from "@/components/page-header";
+import { EmptyState, PageHeader } from "@/components/claro";
 import { StatCard } from "@/components/stat-card";
-import { EmptyState } from "@/components/empty-state";
-import { Target } from "@/components/icons";
 import {
   Card,
   CardContent,
@@ -192,7 +190,6 @@ export default async function AccuracyPage({
         </Card>
       ) : (
         <EmptyState
-          icon={Target}
           title="No full offline eval yet"
           description="A full run with held-out test answers will appear here."
           action={engineLink}
