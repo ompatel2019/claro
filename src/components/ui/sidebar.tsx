@@ -222,7 +222,7 @@ function Sidebar({
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "relative flex h-full min-h-svh w-(--sidebar-width) flex-col bg-sidebar transition-[width] duration-200 ease-linear",
+          "bg-sidebar relative flex h-full min-h-svh w-(--sidebar-width) flex-col transition-[width] duration-200 ease-linear",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -236,9 +236,7 @@ function Sidebar({
           className={cn(
             "sticky top-0 z-10 flex h-svh w-full flex-col overflow-hidden transition-[width] duration-200 ease-linear",
             // Adjust the padding for floating and inset variants.
-            variant === "floating" || variant === "inset"
-              ? "p-2"
-              : "",
+            variant === "floating" || variant === "inset" ? "p-2" : "",
             className,
           )}
           {...props}
