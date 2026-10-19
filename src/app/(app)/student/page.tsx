@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { pageMetadata } from "@/lib/page-metadata";
 import { WelcomeDialog } from "@/components/welcome-dialog";
 import { needsWelcome } from "@/lib/welcome";
@@ -17,9 +18,11 @@ import {
   HomePlan,
   HomeRecent,
   HomeLostMarks,
+  readHomeMarks,
   readHomeSessions,
   readHomeUnfinishedSprint,
 } from "@/components/student/home/sections";
+import { HomeAsk } from "@/components/student/home/ask-card";
 import { ActivityHeatmap } from "@/components/activity-heatmap";
 import { FlashcardStart } from "@/components/flashcard-start";
 import { PageHeader, TermProgress } from "@/components/claro/layout";
@@ -60,13 +63,15 @@ function Hero({ today }: { today: string }) {
 async function StudyDays({
   today,
   due,
+  activity,
 }: {
   today: string;
   due: Promise<number | null>;
+  activity: Promise<ActivityDay[]>;
 }) {
   const db = await createClient();
   const [days, streaks, dueNow] = await Promise.all([
-    db.rpc("activity_days", { p_from: addDays(today, -371), p_to: today }),
+    activity,
     db.rpc("activity_streaks").single(),
     due,
   ]);
@@ -75,19 +80,23 @@ async function StudyDays({
     longest_streak: number;
   } | null;
   const action = dueNow ? (
-    <FlashcardStart due label="Light up today" />
+    <FlashcardStart key="light-up-today" due label="Light up today" />
   ) : (
-    <Link href="/student/sprint" className={buttonVariants()}>
-      <Flame /> Light up today
+    <Link
+      key="light-up-today"
+      href="/student/sprint"
+      className={buttonVariants()}
+    >
+      <Flame key="icon" /> Light up today
     </Link>
   );
   return (
     <ActivityHeatmap
-      days={(days.data ?? []) as ActivityDay[]}
+      days={days}
       today={today}
       current={streak?.current_streak ?? 0}
       longest={streak?.longest_streak ?? 0}
-      error={!!days.error || !!streaks.error || !streak}
+      error={!!streaks.error || !streak}
       errorContent={<TryAgain what="your study days" />}
       home={{ action, template: true }}
     />
@@ -125,8 +134,18 @@ export default async function Home() {
   const today = sydneyToday();
   const due = dueCount(id).catch(() => null);
   const progress = loadProgress("90", today).catch(() => null);
+  const activity = createClient().then(async (db) => {
+    const { data, error } = await db.rpc("activity_days", {
+      p_from: addDays(today, -371),
+      p_to: today,
+    });
+    if (error) throw error;
+    return (data ?? []) as ActivityDay[];
+  });
+  const marks = readHomeMarks(id, today);
   const sessions = readHomeSessions(id);
   const unfinished = readHomeUnfinishedSprint(id);
+  const dueNow = await due;
   return (
     <div className="min-w-0 space-y-5" data-testid="student-home">
       {showWelcome && <WelcomeDialog profile={profile} />}
@@ -139,10 +158,10 @@ export default async function Home() {
             <Hero today={today} />
             <Link
               href="/student/flashcards"
-              className={buttonVariants({ variant: "outline" })}
+              className={cn(buttonVariants({ variant: "outline" }))}
             >
               <Cards aria-hidden />
-              Review cards
+              Review {dueNow ?? ""} cards
             </Link>
             <Link href="/student/sprint" className={buttonVariants()}>
               <Sprint aria-hidden />
@@ -152,7 +171,13 @@ export default async function Home() {
         }
       />
       <Suspense fallback={<Card aria-hidden className="h-40 animate-pulse" />}>
-        <HomeStats progress={progress} due={due} />
+        <HomeStats
+          progress={progress}
+          marks={marks}
+          due={due}
+          today={today}
+          activity={activity.catch(() => [])}
+        />
       </Suspense>
       <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,2.06fr)_minmax(0,1fr)]">
         <Suspense
@@ -168,6 +193,7 @@ export default async function Home() {
             sessions={sessions}
             unfinished={unfinished}
             due={due}
+            today={today}
           />
         </Suspense>
       </div>
@@ -180,10 +206,10 @@ export default async function Home() {
         <Suspense
           fallback={<Card aria-hidden className="h-80 animate-pulse" />}
         >
-          <SafeStudyDays today={today} due={due} />
+          <SafeStudyDays today={today} due={due} activity={activity} />
         </Suspense>
       </div>
-      <div className="grid gap-5 lg:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 xl:gap-5">
         <Suspense
           fallback={<Card aria-hidden className="h-80 animate-pulse" />}
         >
@@ -194,6 +220,7 @@ export default async function Home() {
         >
           <HomeRecent sessions={sessions} progress={progress} />
         </Suspense>
+        <HomeAsk today={today} />
       </div>
     </div>
   );

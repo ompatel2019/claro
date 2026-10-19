@@ -52,8 +52,13 @@ test.beforeAll(async () => {
             { filter: /.*/, namespace: "synthetic" },
             ({ path }) => {
               const topics = [
-                { id: "t1", name: "Global", parent_id: null, sort: 1 },
-                { id: "t3", name: "Issues", parent_id: null, sort: 2 },
+                {
+                  id: "t1",
+                  name: "The Global Economy",
+                  parent_id: null,
+                  sort: 1,
+                },
+                { id: "t3", name: "Economic Issues", parent_id: null, sort: 2 },
                 {
                   id: "inflation",
                   name: "Inflation",
@@ -61,6 +66,18 @@ test.beforeAll(async () => {
                   sort: 3,
                 },
                 { id: "trade", name: "Trade", parent_id: "t1", sort: 4 },
+                {
+                  id: "t2",
+                  name: "Australia’s Place in the Global Economy",
+                  parent_id: null,
+                  sort: 2,
+                },
+                {
+                  id: "t4",
+                  name: "Economic Policies and Management",
+                  parent_id: null,
+                  sort: 4,
+                },
               ];
               const contents =
                 path === "next/link"
@@ -180,21 +197,18 @@ for (const [width, height] of [
       ["Study time", "/student/activity"],
       ["Cards due", "/student/flashcards"],
     ])
-      await expect(quick.getByRole("link", { name: name })).toHaveAttribute(
-        "href",
-        href,
-      );
+      await expect(
+        quick.getByRole("link", { name: new RegExp(`^${name}`) }),
+      ).toHaveAttribute("href", href);
     await expect(page.getByTestId("activity-heatmap")).toBeVisible();
     await expect(page.locator('[aria-current="date"]')).toHaveAttribute(
       "data-day",
       "2026-10-19",
     );
     await expect(page.getByText("Day streak")).toBeVisible();
-    await expect(
-      page.getByRole("button", { name: "Light up today" }),
-    ).toBeVisible();
+    await expect(page.getByText("Today is lit")).toBeVisible();
     const hub = page.getByRole("region", { name: "Study hub" });
-    await expect(hub.getByRole("listitem")).toHaveCount(2);
+    await expect(hub.getByRole("listitem")).toHaveCount(4);
     await expect(
       hub.getByRole("listitem").first().getByRole("link"),
     ).toHaveAttribute("href", "/student/sprint?topics=t1");
@@ -275,7 +289,9 @@ test("A2: Topic selection changes Subtopic choices and clears an old child", asy
   await expect(
     page.getByRole("option", { name: "Inflation", exact: true }),
   ).toHaveCount(0);
-  await page.getByRole("option", { name: "Global", exact: true }).click();
+  await page
+    .getByRole("option", { name: "The Global Economy", exact: true })
+    .click();
   await expect(page).toHaveURL(
     "http://claro.test/admin/content/flashcards?status=live&q=&kind=&topic=t1&origin=",
   );
