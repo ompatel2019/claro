@@ -84,7 +84,7 @@ The offline Playwright suite exercises real page/component code with synthetic d
 ## Production status (19 Oct 2026)
 
 - Migration 0050 (Mixed sprint minimum 5) is applied to production.
-- The S9 criteria data fix is applied to production: 6 questions repaired, backup in `public.questions_criteria_backup_20261019`.
+- The S9 criteria data fix is applied to production: 6 questions repaired, backup archived off-database and dropped (migration `0064`).
 
 ## Iteration 3 — small fixes
 
