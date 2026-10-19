@@ -318,6 +318,8 @@ async function shoot(
   await expect(page.getByRole("heading").first()).toBeVisible({
     timeout: 15_000,
   });
+  // Let colour transitions (e.g. after toggling .dark) settle before capture.
+  await page.waitForTimeout(600);
   if (width === 390) {
     const sw = await page.evaluate(() => document.documentElement.scrollWidth);
     expect(sw).toBeLessThanOrEqual(width);
