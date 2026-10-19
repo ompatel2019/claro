@@ -40,7 +40,7 @@ export function ProgressControls({
           value={range}
           onValueChange={(v) => v && update("range", v)}
         >
-          <SelectTrigger aria-label="Progress range" className="w-36">
+          <SelectTrigger aria-label="Progress range" className="w-44">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
