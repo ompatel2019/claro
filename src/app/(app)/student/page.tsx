@@ -1,58 +1,35 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import { WelcomeDialog } from "@/components/welcome-dialog";
 import { needsWelcome } from "@/lib/welcome";
-import { sessionTitle, sessionHref } from "@/lib/session-summary";
 import { Suspense } from "react";
 import Link from "next/link";
-import { Cards, Sprint, Pen, History, Flame, Target } from "@/components/icons";
+import {
+  ArrowUpRight,
+  Cards,
+  Flame,
+  History,
+  Pen,
+  Sprint,
+} from "@/components/icons";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import { sydneyToday } from "@/lib/flashcards";
-import {
-  continueTime,
-  greeting,
-  longDate,
-  schoolWeek,
-  dailyQuote,
-} from "@/lib/home";
-import {
-  answered,
-  plural,
-  timeLimit,
-  type Session,
-  type Topic,
-} from "@/lib/practice";
+import { addDays, type ActivityDay } from "@/lib/activity";
+import { greeting, longDate, schoolWeek, dailyQuote } from "@/lib/home";
+import type { Topic } from "@/lib/practice";
+import { cn } from "@/lib/utils";
+import { ActivityHeatmap } from "@/components/activity-heatmap";
+import { FlashcardStart } from "@/components/flashcard-start";
 import { PageHeader } from "@/components/page-header";
 import { Shortcut } from "@/components/shortcut";
 import { TryAgain } from "@/components/try-again";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 
-const Section = ({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) => (
-  <Card className="gap-2 p-3 sm:p-4">
-    <h2 className="text-sm">{title}</h2>
-    {children}
-  </Card>
-);
-const KIND_ICON = { sprint: Sprint, flashcards: Cards, single: Pen };
-const load = {
-  topics: async () => {
-    const db = await createClient();
-    const { data, error } = await db
-      .from("topics")
-      .select("id,parent_id,name,sort")
-      .order("sort");
-    if (error) throw new Error("topics");
-    return data as Topic[];
-  },
-};
-async function DueCount({ userId }: { userId: string }) {
+export const metadata = pageMetadata("Home");
+
+/** Live flashcards due today, or null when the count can't be read. */
+async function dueCount(userId: string) {
   const db = await createClient();
   const { count, error } = await db
     .from("flashcard_progress")
@@ -60,110 +37,145 @@ async function DueCount({ userId }: { userId: string }) {
     .eq("flashcards.status", "live")
     .eq("user_id", userId)
     .lte("due_on", sydneyToday());
-  return <span>{error ? "Choose a deck" : `${count ?? 0} due`}</span>;
+  return error ? null : (count ?? 0);
 }
-async function Streak() {
-  const db = await createClient();
-  const { data, error } = await db.rpc("activity_streaks").single();
-  const streak = data as {
-    current_streak: number;
-    longest_streak: number;
-  } | null;
+
+async function DueCount({ due }: { due: Promise<number | null> }) {
+  const count = await due;
+  return <>{count === null ? "Choose a deck" : `${count} due`}</>;
+}
+
+function Hero({ today }: { today: string }) {
+  const week = schoolWeek(today);
   return (
-    <Card className="flex-row items-center gap-3 p-3 sm:p-4">
-      <Flame className="text-brand size-6 shrink-0" />
-      {error || !streak ? (
-        <TryAgain what="your streak" />
-      ) : (
-        <div className="flex flex-1 flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <p>
-            <strong>{plural(streak.current_streak, "day")}</strong> streak
+    <section
+      aria-label="Your study week"
+      className="relative overflow-hidden rounded-2xl bg-[#1e223d] px-5 py-5 text-white sm:px-8 sm:py-6"
+    >
+      <div
+        aria-hidden
+        className="bg-brand absolute -top-10 -right-16 h-[200%] w-40 rotate-[24deg] opacity-90 sm:right-10"
+      />
+      <div
+        aria-hidden
+        className="bg-brand/40 absolute -top-10 right-24 hidden h-[200%] w-10 rotate-[24deg] sm:right-56 sm:block"
+      />
+      <div className="relative flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-xs font-semibold tracking-[0.18em] text-[#f99576] uppercase">
+            {week ? `Term ${week.term}` : "NSW school holidays"}
           </p>
-          <p className="text-muted-foreground text-xs">
-            Longest {plural(streak.longest_streak, "day")}
-          </p>
+          <h2 className="text-4xl leading-none font-bold tracking-tight sm:text-5xl">
+            {week ? `Week ${week.week}` : "Holiday mode"}
+          </h2>
         </div>
-      )}
-      <Link
-        href="/student/progress"
-        aria-label="View progress and weak topics"
-        className="text-sm font-semibold underline underline-offset-4"
-      >
-        <Target className="size-5 sm:hidden" />
-        <span className="hidden sm:inline">Progress</span>
-      </Link>
-    </Card>
-  );
-}
-async function Continue({ userId }: { userId: string }) {
-  const db = await createClient();
-  const { data, error } = await db
-    .from("sessions")
-    .select(
-      "id,kind,config,elapsed_s,started_at,attempts(choice_index,answer_text,transcript,image_paths),flashcard_reviews(flashcard_id)",
-    )
-    .in("kind", ["sprint", "flashcards", "single"])
-    .eq("user_id", userId)
-    .is("finished_at", null)
-    .order("started_at", { ascending: false })
-    .limit(1);
-  if (error)
-    return (
-      <Section title="Continue where you left off">
-        <TryAgain what="your unfinished sessions" />
-      </Section>
-    );
-  if (!data.length) return null;
-  const topics = await load.topics().catch(() => []);
-  return (
-    <Section title="Continue where you left off">
-      <ul className="divide-y divide-dashed">
-        {data.map((s) => {
-          const config = s.config as Session["config"] & {
-            card_ids?: string[];
-          };
-          const cards = s.kind === "flashcards";
-          const done = cards
-            ? new Set(s.flashcard_reviews.map((r) => r.flashcard_id)).size
-            : s.attempts.filter(answered).length;
-          const total = cards
-            ? (config.card_ids?.length ?? 0)
-            : s.attempts.length;
-          const limit = cards ? null : timeLimit(config);
-          const time = continueTime(s, limit, new Date());
-          const Icon = KIND_ICON[s.kind as keyof typeof KIND_ICON] ?? Sprint;
-          return (
-            <li key={s.id} className="flex items-center gap-3">
-              <Icon
-                aria-hidden
-                className="text-muted-foreground size-5 shrink-0"
-              />
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-semibold">
-                  {sessionTitle(s, topics)}
-                </p>
-                <p className="text-muted-foreground text-[13px]">
-                  {done}/{total} {cards ? "cards" : "answered"}
-                  {` · ${time}`}
-                </p>
-              </div>
-              {sessionHref(s) && (
-                <Link
-                  href={sessionHref(s)!}
-                  className={buttonVariants({ size: "sm" })}
-                >
-                  Continue
-                </Link>
+        <p className="text-lg font-semibold text-white/90 sm:mr-56 sm:text-xl">
+          {dailyQuote(today)}
+        </p>
+      </div>
+      {week && (
+        <ol
+          aria-label={`Week ${week.week} of ${week.weeks}`}
+          className="relative mt-4 flex gap-1.5"
+        >
+          {Array.from({ length: week.weeks }, (_, i) => (
+            <li
+              key={i}
+              className={cn(
+                "h-1.5 rounded-full",
+                i + 1 === week.week ? "bg-brand w-6" : "w-3",
+                i + 1 < week.week && "bg-white/80",
+                i + 1 > week.week && "bg-white/25",
               )}
-            </li>
-          );
-        })}
-      </ul>
-    </Section>
+            />
+          ))}
+        </ol>
+      )}
+    </section>
   );
 }
 
-export const metadata = pageMetadata("Home");
+async function StudyDays({
+  today,
+  due,
+}: {
+  today: string;
+  due: Promise<number | null>;
+}) {
+  const db = await createClient();
+  const [days, streaks, dueNow] = await Promise.all([
+    db.rpc("activity_days", { p_from: addDays(today, -371), p_to: today }),
+    db.rpc("activity_streaks").single(),
+    due,
+  ]);
+  const streak = streaks.data as {
+    current_streak: number;
+    longest_streak: number;
+  } | null;
+  const action = dueNow ? (
+    <FlashcardStart due label="Light up today" />
+  ) : (
+    <Link href="/student/sprint" className={buttonVariants()}>
+      <Flame /> Light up today
+    </Link>
+  );
+  return (
+    <ActivityHeatmap
+      days={(days.data ?? []) as ActivityDay[]}
+      today={today}
+      current={streak?.current_streak ?? 0}
+      longest={streak?.longest_streak ?? 0}
+      error={!!days.error || !!streaks.error || !streak}
+      errorContent={<TryAgain what="your study days" />}
+      home={{ action }}
+    />
+  );
+}
+
+async function StudyHub() {
+  const db = await createClient();
+  const { data, error } = await db
+    .from("topics")
+    .select("id,parent_id,name,sort")
+    .order("sort");
+  const topics = ((data ?? []) as Topic[]).filter((t) => !t.parent_id);
+  return (
+    <section aria-labelledby="study-hub" className="space-y-2">
+      <div className="flex items-baseline justify-between">
+        <h2 id="study-hub" className="text-base">
+          Study hub
+        </h2>
+        <Link
+          href="/student/sprint"
+          className="text-sm font-semibold underline underline-offset-4"
+        >
+          All topics
+        </Link>
+      </div>
+      {error ? (
+        <TryAgain what="your topics" />
+      ) : (
+        <ul className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {topics.map((t, i) => (
+            <li key={t.id}>
+              <Link
+                href={`/student/sprint?topics=${encodeURIComponent(t.id)}`}
+                className="bg-accent hover:border-brand focus-visible:ring-ring flex h-full min-h-20 items-start gap-3 rounded-xl border p-3 outline-none focus-visible:ring-2"
+              >
+                <span className="text-brand text-3xl leading-none font-bold">
+                  {i + 1}
+                </span>
+                <span className="text-sm leading-snug font-semibold">
+                  {t.name}
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
 
 export default async function Home() {
   const profile = await requireProfile();
@@ -182,6 +194,7 @@ export default async function Home() {
   }
   const showWelcome = needsWelcome(profile, sessionCount);
   const today = sydneyToday();
+  const due = dueCount(id).catch(() => null);
   const tiles = [
     {
       title: "Topic Sprint",
@@ -195,7 +208,7 @@ export default async function Home() {
       icon: Cards,
       copy: (
         <Suspense fallback="Choose a deck">
-          <DueCount userId={id} />
+          <DueCount due={due} />
         </Suspense>
       ),
     },
@@ -209,47 +222,54 @@ export default async function Home() {
       title: "Activity",
       href: "/student/activity",
       icon: History,
-      copy: "Open your sessions and results",
+      copy: "Your sessions and results",
     },
   ];
   return (
-    <div className="space-y-3" data-testid="student-home">
+    <div className="space-y-4" data-testid="student-home">
       {showWelcome && <WelcomeDialog profile={profile} />}
       {!showWelcome && <Shortcut k="s" href="/student/sprint" />}
       <PageHeader
         eyebrow={longDate()}
         title={`${greeting()}${first ? `, ${first}` : ""}`}
       />
-      <section
-        aria-label="Your study week"
-        className="bg-brand/10 border-brand/20 rounded-xl border px-4 py-3"
-      >
-        <p className="text-brand text-xs font-semibold">NSW school calendar</p>
-        <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-          <h2>{schoolWeek(today)}</h2>
-          <p className="text-muted-foreground text-sm">{dailyQuote(today)}</p>
-        </div>
-      </section>
-      <section aria-label="Quick start" className="grid grid-cols-2 gap-3">
-        {tiles.map(({ title, href, icon: Icon, copy }) => (
-          <Link
-            key={href}
-            href={href}
-            className="bg-card hover:border-brand focus-visible:ring-ring flex min-h-24 min-w-0 flex-col justify-between gap-2 rounded-xl border p-3 outline-none focus-visible:ring-2"
-          >
-            <Icon className="text-brand size-6" />
-            <div>
-              <h2 className="text-sm sm:text-base">{title}</h2>
-              <p className="text-muted-foreground text-xs">{copy}</p>
-            </div>
-          </Link>
-        ))}
-      </section>
-      <Suspense fallback={<Card aria-hidden className="h-14 animate-pulse" />}>
-        <Streak />
-      </Suspense>
-      <Suspense fallback={<Card aria-hidden className="h-20 animate-pulse" />}>
-        <Continue userId={id} />
+      <Hero today={today} />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <section aria-label="Quick start" className="grid grid-cols-2 gap-3">
+          {tiles.map(({ title, href, icon: Icon, copy }) => (
+            <Link
+              key={href}
+              href={href}
+              className="bg-card hover:border-brand focus-visible:ring-ring group relative flex min-h-32 min-w-0 flex-col justify-between gap-3 overflow-hidden rounded-2xl border p-4 outline-none focus-visible:ring-2 sm:min-h-36 sm:p-5"
+            >
+              <Icon
+                aria-hidden
+                className="text-brand/10 absolute -right-4 -bottom-4 size-28"
+              />
+              <span className="bg-accent text-brand grid size-11 place-items-center rounded-xl">
+                <Icon className="size-6" />
+              </span>
+              <ArrowUpRight
+                aria-hidden
+                className="text-muted-foreground group-hover:text-brand absolute top-4 right-4 size-5"
+              />
+              <div className="relative">
+                <h2 className="text-base sm:text-lg">{title}</h2>
+                <p className="text-muted-foreground text-xs sm:text-sm">
+                  {copy}
+                </p>
+              </div>
+            </Link>
+          ))}
+        </section>
+        <Suspense
+          fallback={<Card aria-hidden className="h-72 animate-pulse" />}
+        >
+          <StudyDays today={today} due={due} />
+        </Suspense>
+      </div>
+      <Suspense fallback={<Card aria-hidden className="h-28 animate-pulse" />}>
+        <StudyHub />
       </Suspense>
     </div>
   );

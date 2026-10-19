@@ -7,7 +7,9 @@ test.describe("Student home", () => {
     await signIn(page);
   });
 
-  test("greeting, term banner, four tiles and streak", async ({ page }) => {
+  test("greeting, hero, four tiles, study days and study hub", async ({
+    page,
+  }) => {
     await expect(
       page.getByRole("heading", {
         level: 1,
@@ -28,10 +30,14 @@ test.describe("Student home", () => {
         quick.getByRole("link", { name: new RegExp(`^${name}`) }),
       ).toHaveAttribute("href", href);
     }
-    await expect(page.getByText(/^Longest \d+ days?$/)).toBeVisible();
     await expect(
-      page.getByRole("link", { name: "View progress and weak topics" }),
-    ).toHaveAttribute("href", "/student/progress");
+      page.getByRole("heading", { name: "Your study days" }),
+    ).toBeVisible();
+    await expect(page.getByText("Day streak")).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Study hub" }).getByRole("listitem"),
+    ).toHaveCount(4);
+    await expect(page.getByText("Continue where you left off")).toHaveCount(0);
     for (const name of ["Score trend", "Recent activity", "Weak topics"])
       await expect(
         page.getByRole("heading", { name, exact: true }),

@@ -12,6 +12,7 @@ import {
   type ActivityDay,
 } from "@/lib/activity";
 import { plural } from "@/lib/practice";
+import { cn } from "@/lib/utils";
 import { Card, CardContent } from "./ui/card";
 
 const CELL = 14; // 11 px cell + 3 px gap
@@ -25,6 +26,7 @@ export function ActivityHeatmap({
   link = "/student/activity?date=",
   error,
   errorContent,
+  home,
 }: {
   days: ActivityDay[];
   today: string;
@@ -34,6 +36,8 @@ export function ActivityHeatmap({
   link?: string;
   error?: boolean;
   errorContent?: React.ReactNode;
+  /** Home's "Your study days" card: big streak numbers, today marker and a call to action. */
+  home?: { action: React.ReactNode };
 }) {
   const allWeeks = heatmapWeeks(today);
   const [weekCount, setWeekCount] = useState(53);
@@ -109,11 +113,47 @@ export function ActivityHeatmap({
       ]
     : [0, 0];
 
+  const caption =
+    active === 0 && !error
+      ? "Answer a question or review a flashcard to start your streak."
+      : null;
   return (
-    <Card>
-      <CardContent className="space-y-3">
-        <h2 className="sr-only">Activity</h2>
-        {!error && (
+    <Card className={cn(home && "h-full")}>
+      <CardContent className={cn("space-y-3", home && "flex h-full flex-col")}>
+        {home ? (
+          <div className="space-y-3">
+            <div>
+              <h2 className="text-base">Your study days</h2>
+              <p className="text-muted-foreground text-xs">
+                Every day you study lights up a square.
+              </p>
+            </div>
+            {!error && (
+              <dl className="flex gap-6">
+                {(
+                  [
+                    [current, "Day streak"],
+                    [longest, "Longest streak"],
+                    [active, "Days studied"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <div key={label} className="flex flex-col-reverse">
+                    <dt className="text-muted-foreground text-xs">{label}</dt>
+                    <dd className="text-2xl leading-tight font-bold">
+                      {value}
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            )}
+            {caption && (
+              <p className="text-muted-foreground text-xs">{caption}</p>
+            )}
+          </div>
+        ) : (
+          <h2 className="sr-only">Activity</h2>
+        )}
+        {!error && !home && (
           <p className="text-sm">
             Current streak <strong>{plural(current, "day")}</strong> · Longest{" "}
             <strong>{plural(longest, "day")}</strong> ·{" "}
@@ -184,7 +224,8 @@ export function ActivityHeatmap({
                       }}
                       onBlur={() => setTip(null)}
                       onMouseEnter={() => setTip(day)}
-                      className="focus-visible:outline-ink size-[11px] rounded-[2px] focus-visible:outline-2"
+                      aria-current={home && day === today ? "date" : undefined}
+                      className="focus-visible:outline-ink aria-[current=date]:ring-ink aria-[current=date]:ring-offset-card size-[11px] rounded-[2px] focus-visible:outline-2 aria-[current=date]:ring-1 aria-[current=date]:ring-offset-1"
                       style={{ background: SHADES[shade(count)] }}
                     />
                   );
@@ -226,12 +267,13 @@ export function ActivityHeatmap({
             </button>
           </div>
         )}
-        <div className="text-muted-foreground flex flex-col-reverse items-start gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            {active === 0 &&
-              !error &&
-              "Answer a question or review a flashcard to start your streak."}
-          </span>
+        <div
+          className={cn(
+            "text-muted-foreground flex flex-col-reverse items-start gap-2 text-xs sm:flex-row sm:items-center sm:justify-between",
+            home && "mt-auto flex-row flex-wrap items-center justify-between",
+          )}
+        >
+          {!home && <span>{caption}</span>}
           <span className="flex items-center gap-1" aria-hidden>
             Less
             {SHADES.map((c) => (
@@ -242,7 +284,14 @@ export function ActivityHeatmap({
               />
             ))}
             More
+            {home && (
+              <span className="ml-3 flex items-center gap-1">
+                <span className="ring-ink ring-offset-card size-[11px] rounded-[2px] ring-1 ring-offset-1" />
+                Today
+              </span>
+            )}
           </span>
+          {home?.action}
         </div>
       </CardContent>
     </Card>

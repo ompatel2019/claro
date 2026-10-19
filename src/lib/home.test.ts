@@ -59,16 +59,18 @@ describe("continueTime", () => {
   });
 });
 
-it("labels school terms, Monday week boundaries, breaks and unknown years", () => {
-  expect(schoolWeek("2026-10-13")).toBe("Term 4 · Week 1");
-  expect(schoolWeek("2026-10-18")).toBe("Term 4 · Week 1");
-  expect(schoolWeek("2026-10-19")).toBe("Term 4 · Week 2");
-  expect(schoolWeek("2026-12-17")).toBe("Term 4 · Week 10");
-  expect(schoolWeek("2026-12-18")).toBe("School break");
-  expect(schoolWeek("2027-02-03")).toBe("Term 1 · Week 1");
-  expect(schoolWeek("2027-04-09")).toBe("Term 1 · Week 10");
-  expect(schoolWeek("2027-04-10")).toBe("School break");
-  expect(schoolWeek("2028-02-01")).toBe("Your study week");
+it("finds the NSW term, Monday week boundaries and term length", () => {
+  const t4 = { term: 4, weeks: 10 };
+  expect(schoolWeek("2026-10-13")).toEqual({ ...t4, week: 1 });
+  expect(schoolWeek("2026-10-18")).toEqual({ ...t4, week: 1 });
+  expect(schoolWeek("2026-10-19")).toEqual({ ...t4, week: 2 });
+  expect(schoolWeek("2026-12-17")).toEqual({ ...t4, week: 10 });
+  expect(schoolWeek("2026-02-02")).toEqual({ term: 1, week: 1, weeks: 9 });
+  expect(schoolWeek("2027-02-03")).toEqual({ term: 1, week: 1, weeks: 10 });
+  expect(schoolWeek("2027-04-09")).toEqual({ term: 1, week: 10, weeks: 10 });
+  expect(schoolWeek("2026-12-18")).toBeNull();
+  expect(schoolWeek("2027-04-10")).toBeNull();
+  expect(schoolWeek("2028-02-01")).toBeNull();
 });
 it("rotates the same short quote deterministically for a Sydney day", () => {
   expect(dailyQuote("2026-10-19")).toBe(dailyQuote("2026-10-19"));

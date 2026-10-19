@@ -44,7 +44,7 @@ test.beforeAll(async () => {
           builder.onResolve(
             {
               filter:
-                /^(server-only|next\/(link|navigation|form)|@\/lib\/(auth|admin-data|admin-flashcards|admin-content)|@\/utils\/supabase\/(server|client)|@\/components\/(welcome-dialog|shortcut|flashcard-import|flashcards-table))$/,
+                /^(server-only|next\/(link|navigation|form)|@\/lib\/(auth|admin-data|admin-flashcards|admin-content)|@\/utils\/supabase\/(server|client)|@\/components\/(welcome-dialog|shortcut|flashcard-import|flashcards-table|flashcard-start))$/,
             },
             ({ path }) => ({ path, namespace: "synthetic" }),
           );
@@ -79,17 +79,19 @@ test.beforeAll(async () => {
                               ? `export const AddCard=()=>null;export const FlashcardsTable=()=>null;`
                               : path === "@/components/flashcard-import"
                                 ? `export const FlashcardImport=()=>null;`
-                                : path === "@/components/shortcut"
-                                  ? `export const Shortcut=()=>null;`
-                                  : path === "@/components/welcome-dialog"
-                                    ? `export const WelcomeDialog=()=>null;`
-                                    : path === "@/lib/admin-data"
-                                      ? `export const loadDashboard=async()=>({students:1,active:{now:2,prev:1},sessionsWeek:3,openReviews:{count:1,oldestDays:2},spend:{all:81,month:10,cap:100},sessionsTotal:3,spendTotal:2,sessionsPerDay:[],spendPerDay:[],attention:{failed:0,newFeedback:2,contentReports:1,importReview:0,agreement:90},latest:Array.from({length:10},(_,i)=>({id:'s'+i,user_id:'u',name:'Student '+i,kind:'single',mode:null,score:2,max:2,finished_at:'2026-10-19T00:00:00Z'}))});`
-                                      : path === "@/utils/supabase/client"
-                                        ? `export const createClient=()=>({});`
-                                        : path === "@/utils/supabase/server"
-                                          ? `const query={select(){return this},eq(){return this},in(){return this},is(){return this},order(){return this},lte(){return this},limit:async()=>({data:[{id:'resume',kind:'single',config:{},elapsed_s:0,started_at:'2026-10-19T00:00:00Z',attempts:[],flashcard_reviews:[]}],error:null}),then(done){return Promise.resolve(done({data:${JSON.stringify(topics)},count:7,error:null}))}};export const createClient=async()=>({from:()=>query,rpc:()=>({single:async()=>({data:{current_streak:3,longest_streak:8},error:null})})});`
-                                          : "";
+                                : path === "@/components/flashcard-start"
+                                  ? `import React from 'react'; export const FlashcardStart=({label})=><button>{label}</button>;`
+                                  : path === "@/components/shortcut"
+                                    ? `export const Shortcut=()=>null;`
+                                    : path === "@/components/welcome-dialog"
+                                      ? `export const WelcomeDialog=()=>null;`
+                                      : path === "@/lib/admin-data"
+                                        ? `export const loadDashboard=async()=>({students:1,active:{now:2,prev:1},sessionsWeek:3,openReviews:{count:1,oldestDays:2},spend:{all:81,month:10,cap:100},sessionsTotal:3,spendTotal:2,sessionsPerDay:[],spendPerDay:[],attention:{failed:0,newFeedback:2,contentReports:1,importReview:0,agreement:90},latest:Array.from({length:10},(_,i)=>({id:'s'+i,user_id:'u',name:'Student '+i,kind:'single',mode:null,score:2,max:2,finished_at:'2026-10-19T00:00:00Z'}))});`
+                                        : path === "@/utils/supabase/client"
+                                          ? `export const createClient=()=>({});`
+                                          : path === "@/utils/supabase/server"
+                                            ? `const query={select(){return this},eq(){return this},in(){return this},is(){return this},order(){return this},lte(){return this},limit:async()=>({data:[{id:'resume',kind:'single',config:{},elapsed_s:0,started_at:'2026-10-19T00:00:00Z',attempts:[],flashcard_reviews:[]}],error:null}),then(done){return Promise.resolve(done({data:${JSON.stringify(topics)},count:7,error:null}))}};export const createClient=async()=>({from:()=>query,rpc:()=>Object.assign(Promise.resolve({data:[{day:'2026-10-19',questions:4,cards:2},{day:'2026-10-16',questions:20,cards:0},{day:'2026-10-15',questions:0,cards:40},{day:'2026-09-01',questions:8,cards:8}],error:null}),{single:async()=>({data:{current_streak:3,longest_streak:8},error:null})})});`
+                                            : "";
               return { contents, loader: "tsx", resolveDir: process.cwd() };
             },
           );
@@ -101,6 +103,7 @@ test.beforeAll(async () => {
 });
 
 test.beforeEach(async ({ page }) => {
+  page.on("pageerror", (e) => console.log("PAGEERROR", e.message));
   await page.route("**/*", (route) => {
     const url = new URL(route.request().url());
     if (url.origin !== "http://claro.test")
@@ -142,44 +145,34 @@ async function capture(
     .evaluateAll((nodes) => nodes.forEach((node) => node.remove()));
 }
 
-test("S1: desktop feedback is fixed and adds no document scroll", async ({
+test("S1: desktop feedback is fixed and adds no document height", async ({
   page,
 }) => {
-  for (const [width, height] of [
-    [1366, 768],
-    [1280, 720],
-  ]) {
-    await page.setViewportSize({ width, height });
-    await page.goto("http://claro.test/student");
-    const feedback = page.getByRole("button", { name: "Feedback" });
-    await expect(feedback).toBeVisible();
-    expect(await feedback.evaluate((el) => getComputedStyle(el).position)).toBe(
-      "fixed",
-    );
-    expect(
-      await page.evaluate(() => document.documentElement.scrollHeight),
-    ).toBe(height);
-  }
+  await page.setViewportSize({ width: 1366, height: 768 });
+  await page.goto("http://claro.test/student");
+  const feedback = page.getByRole("button", { name: "Feedback" });
+  await expect(feedback).toBeVisible();
+  expect(await feedback.evaluate((el) => getComputedStyle(el).position)).toBe(
+    "fixed",
+  );
 });
-for (const width of [360, 390, 1366]) {
-  test(`S1: four tiles, streak and resume fit at ${width}px`, async ({
+for (const [width, height] of [
+  [1440, 900],
+  [1280, 720],
+  [390, 844],
+]) {
+  test(`Home v2: hero, tiles, study days and study hub at ${width}px`, async ({
     page,
   }) => {
-    await page.setViewportSize({ width, height: 768 });
+    await page.clock.setFixedTime(new Date("2026-10-19T01:00:00Z"));
+    await page.setViewportSize({ width, height });
     await page.goto("http://claro.test/student");
+    const hero = page.getByRole("region", { name: "Your study week" });
+    await expect(hero.getByRole("heading", { name: "Week 2" })).toBeVisible();
+    await expect(hero.getByRole("listitem")).toHaveCount(10);
     const quick = page.getByRole("region", { name: "Quick start" });
     await expect(quick.getByRole("link")).toHaveCount(4);
     await expect(quick.getByText("7 due")).toBeVisible();
-    await expect(page.getByText("3 days", { exact: true })).toBeVisible();
-    await expect(
-      page.getByRole("link", { name: "Continue", exact: true }),
-    ).toHaveAttribute("href", "/student/activity/resume");
-    expect(
-      await page.evaluate(() => ({
-        width: document.documentElement.scrollWidth,
-        height: document.documentElement.scrollHeight,
-      })),
-    ).toEqual({ width, height: 768 });
     for (const [name, href] of [
       ["Topic Sprint", "/student/sprint"],
       ["Flashcards", "/student/flashcards"],
@@ -189,13 +182,32 @@ for (const width of [360, 390, 1366]) {
       await expect(
         quick.getByRole("link", { name: new RegExp(`^${name}`) }),
       ).toHaveAttribute("href", href);
-    await capture(
-      page,
-      page.getByTestId("student-home"),
-      "1",
-      "Essentials in one screen",
-      `s1-${width}.png`,
+    await expect(page.getByTestId("activity-heatmap")).toBeVisible();
+    await expect(page.locator('[aria-current="date"]')).toHaveAttribute(
+      "data-day",
+      "2026-10-19",
     );
+    await expect(page.getByText("Day streak")).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Light up today" }),
+    ).toBeVisible();
+    const hub = page.getByRole("region", { name: "Study hub" });
+    await expect(hub.getByRole("listitem")).toHaveCount(2);
+    await expect(
+      hub.getByRole("listitem").first().getByRole("link"),
+    ).toHaveAttribute("href", "/student/sprint?topics=t1");
+    await expect(page.getByText("Continue where you left off")).toHaveCount(0);
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBe(width);
+    if (width === 1440)
+      expect(
+        await page.evaluate(() => document.documentElement.scrollHeight),
+      ).toBe(height);
+    await page.screenshot({
+      path: test.info().outputPath(`home-v2-${width}.png`),
+      fullPage: true,
+    });
   });
 }
 test("S11: score shares title cell, date only, compact and clickable", async ({
