@@ -5,6 +5,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 const submit = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ usePathname: () => "/admin/feedback" }));
@@ -132,7 +133,7 @@ it("keeps keyboard selection, submission and navigation values in sync", async (
   );
   expect(submissions).toHaveLength(1);
   const data = new FormData(
-    screen.getByRole("button", { name: "Apply" }).closest("form")!,
+    screen.getByRole("combobox", { name: "Topic" }).closest("form")!,
   );
   expect(data.get("topic")).toBe("");
   expect(data.get("status")).toBe("live");
@@ -202,7 +203,6 @@ it("submits Calendar endpoints from its portal through the owning form", async (
   );
   fireEvent.click(screen.getByRole("button", { name: /8 Oct.*9 Oct/ }));
   fireEvent.click(await screen.findByRole("button", { name: "2026-10-07" }));
-  fireEvent.click(screen.getByRole("button", { name: "Apply dates" }));
   await waitFor(() =>
     expect(submit).toHaveBeenLastCalledWith({
       status: "triaged",
@@ -228,4 +228,62 @@ it("shows 'Any date' on the date button instead of repeating the label", () => {
   const button = screen.getByRole("button", { name: "Date range: Any date" });
   expect(button).toHaveTextContent(/^Any date$/);
   expect(screen.getAllByText("Date range")).toHaveLength(1);
+});
+
+it("keeps search and primary inline and moves active overflow filters into a sheet", async () => {
+  render(
+    <FilterBar
+      primary="year"
+      values={{ q: "lee", year: "12", activity: "active", flagged: "1" }}
+      hidden={{ status: "live" }}
+      filters={[
+        { name: "q", label: "Search", placeholder: "Student name" },
+        {
+          name: "year",
+          label: "Year",
+          all: "All years",
+          options: [{ value: "12", label: "Year 12" }],
+        },
+        {
+          name: "activity",
+          label: "Activity",
+          all: "Any activity",
+          options: [
+            { value: "active", label: "Active" },
+            { value: "inactive", label: "Inactive" },
+          ],
+        },
+        { name: "flagged", label: "Flagged only", checkbox: true },
+      ]}
+    />,
+  );
+
+  const mobile = document.querySelector(
+    '[data-slot="filter-bar-mobile"]',
+  ) as HTMLElement;
+  expect(within(mobile).getByLabelText("Search")).toHaveValue("lee");
+  expect(within(mobile).getByLabelText("Year")).toHaveValue("12");
+  expect(within(mobile).queryByLabelText("Activity")).toBeNull();
+  const filtersButton = within(mobile).getByRole("button", {
+    name: "Filters (2 active)",
+  });
+  expect(filtersButton).toBeInTheDocument();
+
+  fireEvent.click(filtersButton);
+  const dialog = await screen.findByRole("dialog");
+  const activity = within(dialog).getByLabelText("Activity");
+  expect(activity).toHaveValue("active");
+  expect(within(dialog).getByLabelText("Flagged only")).toBeChecked();
+  expect(
+    within(dialog).getByRole("link", { name: "Clear filters" }),
+  ).toHaveAttribute("href", "/admin/feedback?status=live&q=lee&year=12");
+  fireEvent.change(activity, { target: { value: "inactive" } });
+  expect(submit).toHaveBeenLastCalledWith({
+    status: "live",
+    q: "lee",
+    year: "12",
+    activity: "inactive",
+    flagged: "1",
+  });
+  expect(screen.queryByRole("button", { name: /^Apply/ })).toBeNull();
 });
