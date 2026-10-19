@@ -6,6 +6,7 @@ import { DataTable, type Column } from "@/components/data-table";
 import type { Pager } from "@/lib/admin";
 import { dateLabel } from "@/lib/practice";
 import type { StudentRow } from "@/lib/students";
+import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
 // Sorting is server-side by column id (STUDENT_KEYS); `sort: true` marks the header.
@@ -157,7 +158,7 @@ export function StudentsTable({
             </>
           )
         : c.cell,
-    className:
+    className: cn(
       c.id === "name"
         ? "max-w-48 whitespace-normal wrap-anywhere max-sm:max-w-32"
         : c.id === "last"
@@ -167,6 +168,18 @@ export function StudentsTable({
             : ["year", "sessions7", "avg", "blocked"].includes(c.id)
               ? "hidden whitespace-normal sm:table-cell"
               : "hidden whitespace-normal 2xl:table-cell",
+      [
+        "joined",
+        "last",
+        "sessions7",
+        "sessions",
+        "answered",
+        "avg",
+        "streak",
+        "disputes",
+        "spend",
+      ].includes(c.id) && "tabular-nums",
+    ),
   }));
   return (
     <DataTable
