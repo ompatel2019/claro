@@ -2,7 +2,14 @@ import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { requireProfile } from "@/lib/auth";
 import { loadProgress, progressToday } from "@/lib/progress-data";
-import { parseRange, rangeFrom, practiseHref, weakSpots } from "@/lib/progress";
+import {
+  parseRange,
+  rangeFrom,
+  practiseHref,
+  weakSpots,
+  PRACTICE_TARGET,
+  weeklyScores,
+} from "@/lib/progress";
 import { weakTopicUnlock } from "@/lib/weak-topics";
 import { addDays, type ActivityDay } from "@/lib/activity";
 import { createClient } from "@/utils/supabase/server";
@@ -12,11 +19,8 @@ import {
   TopicProgressTable,
   VerbProgressTable,
 } from "@/components/progress-tables";
-import {
-  PracticeGauge,
-  ProgressChart,
-} from "@/components/student/progress/charts";
-import { Meter } from "@/components/claro/data-display";
+import { ProgressChart } from "@/components/student/progress/charts";
+import { Meter, TargetGauge } from "@/components/claro/data-display";
 import { PortalIcon } from "@/components/icons";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -36,7 +40,7 @@ function Section({
   return (
     <section
       data-slot="card"
-      className={`bg-card shadow-card min-w-0 gap-0 overflow-hidden rounded-2xl border py-0 ${className}`}
+      className={`bg-card shadow-card relative min-w-0 gap-0 overflow-hidden rounded-2xl border py-0 ${className}`}
     >
       <div className="px-5 pt-5 pb-4">
         <h2 className="text-sm font-semibold">{title}</h2>
@@ -78,6 +82,17 @@ export default async function Progress({
     .map((s) =>
       typeof p.type === "string" ? { ...s, pct: s.by_type[p.type] ?? null } : s,
     );
+  const weeks = weeklyScores(d.history, rangeFrom(range, today), today);
+  const change =
+    weeks.length > 1 && answered > 0
+      ? {
+          month: new Intl.DateTimeFormat("en-AU", {
+            month: "long",
+            timeZone: "UTC",
+          }).format(new Date(weeks[0].day)),
+          points: pct - Math.round(weeks[0].value),
+        }
+      : null;
   const weak = weakSpots(d.topics, d.missed);
   const unlocked = weak
     .filter((r) => r.id.startsWith("q-"))
@@ -96,42 +111,53 @@ export default async function Progress({
         description="See where your marks come from and make your next session count."
         actions={<ProgressControls range={range} />}
       />
-      <div className="grid min-w-0 gap-5 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid min-w-0 gap-4 md:grid-cols-2 xl:grid-cols-3 xl:gap-5">
         <Section
-          title="Practice average"
+          title="Against your target"
           caption={`${answered} marked answers ${range === "all" ? "across all time" : range === "year" ? "this year" : `in the last ${range} days`}`}
-          className="min-h-[316px] xl:min-h-[364px]"
         >
-          <div className="pt-3 pb-4">
-            <PracticeGauge value={pct} />
+          <div className="flex justify-center pt-1">
+            <TargetGauge value={pct} target={PRACTICE_TARGET} size={260} />
           </div>
-          <div className="text-muted-foreground grid grid-cols-2 gap-3 border-t pt-4 text-[13px]">
+          <div className="text-muted-foreground mt-4 grid grid-cols-2 gap-3 border-t pt-4 text-[13px]">
             <div>
-              Marks earned
-              <p className="text-foreground mt-1 text-[15px] font-semibold">
-                {earned} / {possible}
+              To your target
+              <p className="text-foreground mt-0.5 text-[15px] font-semibold">
+                {pct >= PRACTICE_TARGET
+                  ? "On target"
+                  : `${PRACTICE_TARGET - pct} pts`}
               </p>
             </div>
-            <div>
-              Questions answered
-              <p className="text-foreground mt-1 text-[15px] font-semibold">
-                {answered}
-              </p>
-            </div>
+            {change && (
+              <div>
+                Since {change.month}
+                <p
+                  className={`mt-0.5 flex items-center gap-1.5 text-[15px] font-semibold ${change.points >= 0 ? "text-success-text" : "text-foreground"}`}
+                >
+                  <PortalIcon
+                    name="trending-up"
+                    className={`size-4 ${change.points < 0 ? "rotate-90" : ""}`}
+                  />
+                  {change.points > 0 ? "+" : ""}
+                  {change.points} pts
+                </p>
+              </div>
+            )}
           </div>
         </Section>
         <Section
           title="Practice average over time"
-          caption="Weekly average of your finished sessions"
+          caption="Weekly average, with your target as the dashed line"
           className="xl:col-span-2"
         >
-          <ProgressChart history={history} />
-          <details className="text-muted-foreground mt-2 text-xs">
-            <summary className="cursor-pointer">Filter score history</summary>
-            <div className="mt-3">
-              <ProgressControls range={range} filters />
-            </div>
-          </details>
+          <ProgressChart history={history}>
+            <details className="text-muted-foreground mt-2 text-xs">
+              <summary className="cursor-pointer">Filter score history</summary>
+              <div className="mt-3">
+                <ProgressControls range={range} filters />
+              </div>
+            </details>
+          </ProgressChart>
         </Section>
         <Section
           title="Marks by topic"
@@ -199,6 +225,7 @@ export default async function Progress({
                         href={`/student/sprint?type=${id}`}
                         className={buttonVariants({
                           variant: "outline",
+                          className: "border-input!",
                           size: "sm",
                         })}
                       >
@@ -240,7 +267,7 @@ export default async function Progress({
               return (
                 <div
                   key={r.id}
-                  className="flex min-h-[170px] flex-col gap-3 rounded-2xl border p-4 xl:min-h-[210px]"
+                  className="flex min-h-[170px] flex-col gap-3 rounded-xl border p-4 xl:min-h-[210px]"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
@@ -272,6 +299,7 @@ export default async function Progress({
                         href={`/student/flashcards?topic=${encodeURIComponent(t.id)}`}
                         className={buttonVariants({
                           variant: "outline",
+                          className: "border-input!",
                           size: "sm",
                         })}
                       >
@@ -292,7 +320,7 @@ export default async function Progress({
               .map((r) => (
                 <div
                   key={r.id}
-                  className="flex min-h-[170px] flex-col gap-3 rounded-2xl border p-4 xl:min-h-[210px]"
+                  className="flex min-h-[170px] flex-col gap-3 rounded-xl border p-4 xl:min-h-[210px]"
                 >
                   <h3 className="text-sm font-semibold">{r.name}</h3>
                   <p className="text-muted-foreground text-[13px]">
@@ -303,7 +331,7 @@ export default async function Progress({
                     className={buttonVariants({
                       variant: "outline",
                       size: "sm",
-                      className: "mt-auto",
+                      className: "border-input! mt-auto",
                     })}
                   >
                     Review cards
@@ -313,7 +341,7 @@ export default async function Progress({
             {locked.map((t) => (
               <div
                 key={t.id}
-                className="flex min-h-[170px] flex-col gap-3 rounded-2xl border border-dashed p-4 xl:min-h-[210px]"
+                className="flex min-h-[170px] flex-col gap-3 rounded-xl border border-dashed p-4 xl:min-h-[210px]"
               >
                 <div className="flex items-start justify-between gap-3">
                   <h3 className="text-sm font-semibold">{t.name}</h3>
@@ -346,7 +374,7 @@ export default async function Progress({
                     className={buttonVariants({
                       variant: "outline",
                       size: "sm",
-                      className: "w-full",
+                      className: "border-input! w-full",
                     })}
                   >
                     Practise now

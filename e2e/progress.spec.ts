@@ -101,6 +101,7 @@ test.describe("Student progress (read only)", () => {
   test("history chips survive hydration and preserve the range", async ({
     page,
   }) => {
+    await page.getByRole("button", { name: "Show chart data" }).first().click();
     await expect(async () => {
       await page.getByText("Filter score history", { exact: true }).click();
       if (new URL(page.url()).searchParams.get("kind") !== "sprint")

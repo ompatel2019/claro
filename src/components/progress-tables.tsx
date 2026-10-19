@@ -126,7 +126,7 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
       key={r.id}
       className={r.parent_id ? "bg-muted/35 border-t text-[13px]" : "border-t"}
     >
-      <td className={r.parent_id ? "py-3 pr-3 pl-11" : "px-5 py-3"}>
+      <td className={r.parent_id ? "py-2.5 pr-3 pl-11" : "px-5 py-3"}>
         {r.parent_id ? (
           r.name
         ) : (
@@ -151,12 +151,14 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
                   : "text-muted-foreground size-4 shrink-0"
               }
             />
-            {r.name}
-            {r.id === focus && (
-              <span className="bg-brand-soft text-brand rounded-full px-2 py-1 text-[11px] font-medium">
-                Focus
-              </span>
-            )}
+            <span className="min-w-0">
+              {r.name}
+              {r.id === focus && (
+                <span className="bg-brand-soft text-brand ml-2 inline-block rounded-full px-2 py-1 text-[11px] font-medium">
+                  Focus
+                </span>
+              )}
+            </span>
           </button>
         )}
         <span className="sr-only">
@@ -190,13 +192,18 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
       <td className="text-muted-foreground px-3">
         {r.last_answered ? dateLabel(r.last_answered, true) : "—"}
       </td>
-      <td className="py-3 pr-5 text-right">
+      <td
+        className={
+          r.parent_id ? "py-2.5 pr-5 text-right" : "py-3 pr-5 text-right"
+        }
+      >
         <Link
           aria-label={`${r.answered ? "Practise" : "Start"} ${r.name}`}
           href={practiseHref(r)}
           className={buttonVariants({
             variant: r.parent_id ? "ghost" : "outline",
             size: "sm",
+            className: r.parent_id ? "text-[13px]" : "border-input!",
           })}
         >
           {r.parent_id ? "Sprint" : "Practise"}
@@ -208,17 +215,17 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
     <div className="relative overflow-x-auto">
       <table
         aria-label="Marks by topic"
-        className="w-full min-w-[720px] text-[13px]"
+        className="w-full min-w-[720px] table-fixed text-sm md:table-auto"
       >
         <colgroup>
-          <col className="w-[32%]" />
-          <col className="w-[8%]" />
+          <col className="w-[25%] md:w-[32%]" />
+          <col className="w-[11%] md:w-[8%]" />
           <col className="w-[9%]" />
           <col className="w-[30%]" />
           <col className="w-[12%]" />
           <col />
         </colgroup>
-        <thead className="text-muted-foreground border-t text-left text-[11px]">
+        <thead className="text-muted-foreground border-t text-left text-xs">
           <tr>
             {[
               ["name", "Topic"],
@@ -227,7 +234,10 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
               ["pct", "Average"],
               ["last", "Last practised"],
             ].map(([id, label]) => (
-              <th key={id} className="h-10 px-3 first:pl-5">
+              <th
+                key={id}
+                className={`h-10 px-3 font-medium first:pl-5 ${id === "answered" || id === "marks" ? "text-right" : ""}`}
+              >
                 <button
                   onClick={() =>
                     sort.onSortChange({

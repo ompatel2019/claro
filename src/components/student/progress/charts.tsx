@@ -1,53 +1,28 @@
 "use client";
 
-import { useId, useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { PortalIcon } from "@/components/icons";
 import { addDays, type ActivityDay } from "@/lib/activity";
-import { type HistoryScore, reportHref } from "@/lib/progress";
+import { type HistoryScore, reportHref, weeklyScores } from "@/lib/progress";
 import { dateLabel } from "@/lib/practice";
 import Link from "next/link";
+import { WeeklyAverageTrend } from "@/components/score-trend";
 import { sessionTitle } from "@/lib/session-summary";
 
-export function weeklyScores(history: HistoryScore[]) {
-  const weeks = new Map<string, number[]>();
-  for (const s of history) {
-    if (
-      !s.finished_at ||
-      s.pct == null ||
-      !Number.isFinite(Date.parse(s.finished_at))
-    )
-      continue;
-    const day = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Australia/Sydney",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date(s.finished_at));
-    const monday = addDays(
-      day,
-      -((new Date(`${day}T00:00:00Z`).getUTCDay() + 6) % 7),
-    );
-    weeks.set(monday, [...(weeks.get(monday) ?? []), s.pct]);
-  }
-  return [...weeks]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([day, values]) => ({
-      day,
-      value: values.reduce((a, b) => a + b, 0) / values.length,
-    }));
-}
+export { weeklyScores } from "@/lib/progress";
 
 export function ProgressChart({
   history,
   days,
   volume = false,
+  children,
 }: {
   history: HistoryScore[];
   days?: ActivityDay[];
   volume?: boolean;
+  children?: React.ReactNode;
 }) {
   const [table, setTable] = useState(false);
-  const id = useId();
   const container = useRef<HTMLDivElement>(null);
   const [measured, setMeasured] = useState<number>();
   useEffect(() => {
@@ -91,21 +66,13 @@ export function ProgressChart({
       (right - left) * (values.length === 1 ? 0.5 : i / (values.length - 1)),
     y: bottom - ((bottom - top) * v.value) / max,
   }));
-  const line = points
-    .map((p, i) => {
-      if (!i) return `M${p.x},${p.y}`;
-      const prev = points[i - 1],
-        middle = (prev.x + p.x) / 2;
-      return `C${middle},${prev.y} ${middle},${p.y} ${p.x},${p.y}`;
-    })
-    .join(" ");
   const last = points.at(-1);
   return (
-    <div ref={container} className="relative">
+    <div ref={container}>
       <button
         aria-label={table ? "Show chart" : "Show chart data"}
         onClick={() => setTable(!table)}
-        className="text-muted-foreground absolute -top-[57px] right-0 rounded p-1"
+        className="text-muted-foreground absolute top-5 right-5 rounded p-1"
       >
         <PortalIcon name="table" size={16} />
       </button>
@@ -130,6 +97,7 @@ export function ProgressChart({
               ))}
             </tbody>
           </table>
+          {children}
           {!volume && (
             <ul>
               {history
@@ -146,6 +114,11 @@ export function ProgressChart({
             </ul>
           )}
         </div>
+      ) : !volume && values.length ? (
+        <WeeklyAverageTrend
+          points={values.map((v) => ({ day: v.day, pct: v.value }))}
+          height={264}
+        />
       ) : (
         <svg
           role="img"
@@ -156,16 +129,6 @@ export function ProgressChart({
           className={volume ? "h-[220px] w-full" : "h-[264px] w-full"}
           preserveAspectRatio="none"
         >
-          <defs>
-            <linearGradient id={id} x1="0" x2="0" y1="0" y2="1">
-              <stop offset="0%" stopColor="var(--chart-1)" stopOpacity=".12" />
-              <stop
-                offset="100%"
-                stopColor="var(--chart-1)"
-                stopOpacity=".01"
-              />
-            </linearGradient>
-          </defs>
           {[0, 0.25, 0.5, 0.75, 1]
             .filter((n) => !volume || n === 0 || n === 0.5 || n === 1)
             .map((n) => (
@@ -190,44 +153,20 @@ export function ProgressChart({
                 </text>
               </g>
             ))}
-          {volume
-            ? points.map((p, i) => (
-                <rect
-                  key={values[i].day}
-                  x={p.x - 6}
-                  y={p.y}
-                  width={12}
-                  height={bottom - p.y}
-                  rx="3"
-                  fill={
-                    i === points.length - 1
-                      ? "var(--chart-2)"
-                      : "var(--chart-3)"
-                  }
-                />
-              ))
-            : last && (
-                <>
-                  <path
-                    d={`${line} L${last.x},${bottom} L${points[0].x},${bottom} Z`}
-                    fill={`url(#${id})`}
-                  />
-                  <path
-                    d={line}
-                    fill="none"
-                    stroke="var(--chart-1)"
-                    strokeWidth="2"
-                  />
-                  <circle
-                    cx={last.x}
-                    cy={last.y}
-                    r="4"
-                    fill="var(--chart-2)"
-                    stroke="var(--card)"
-                    strokeWidth="2"
-                  />
-                </>
-              )}
+          {volume &&
+            points.map((p, i) => (
+              <rect
+                key={values[i].day}
+                x={p.x - 6}
+                y={p.y}
+                width={12}
+                height={bottom - p.y}
+                rx="3"
+                fill={
+                  i === points.length - 1 ? "var(--chart-2)" : "var(--chart-3)"
+                }
+              />
+            ))}
           {last && (
             <text
               x={volume ? last.x : last.x + 10}
@@ -277,57 +216,5 @@ export function ProgressChart({
         </svg>
       )}
     </div>
-  );
-}
-
-export function PracticeGauge({ value }: { value: number }) {
-  const point = (v: number, r: number) => {
-    const a = Math.PI * (1 - v / 100);
-    return [
-      Number((110 + Math.cos(a) * r).toFixed(4)),
-      Number((105 - Math.sin(a) * r).toFixed(4)),
-    ];
-  };
-  return (
-    <svg
-      width="240"
-      viewBox="0 0 220 125"
-      className="mx-auto max-w-full"
-      role="img"
-      aria-label={`${value}% practice average`}
-    >
-      {Array.from({ length: 51 }, (_, i) => {
-        const a = point(i * 2, 82),
-          b = point(i * 2, 99);
-        return (
-          <path
-            key={i}
-            d={`M${a[0]} ${a[1]}L${b[0]} ${b[1]}`}
-            stroke={i * 2 <= value ? "var(--chart-1)" : "var(--chart-track)"}
-            strokeWidth="2.5"
-            strokeLinecap="round"
-          />
-        );
-      })}
-      <text
-        x="110"
-        y="83"
-        textAnchor="middle"
-        fill="var(--foreground)"
-        fontSize="32"
-        fontWeight="700"
-      >
-        {value}%
-      </text>
-      <text
-        x="110"
-        y="104"
-        textAnchor="middle"
-        fill="var(--muted-foreground)"
-        fontSize="10"
-      >
-        practice average
-      </text>
-    </svg>
   );
 }

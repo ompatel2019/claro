@@ -70,7 +70,7 @@ it("renders range-scoped breakdowns and per-card empty states while keeping unto
   expect(screen.queryByTestId("progress-stats")).toBeNull();
   expect(screen.queryByText("Year heatmap")).toBeNull();
   expect(screen.getAllByRole("heading", { level: 2 })[0]).toHaveTextContent(
-    "Practice average",
+    "Against your target",
   );
 });
 it("passes load failures to the route error boundary", async () => {
@@ -219,12 +219,14 @@ it("derives the practice summary from parent topic marks without counting subtop
   });
   render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
   expect(
-    screen.getByRole("img", { name: "70% practice average" }),
+    screen.getByRole("img", { name: "70% practice average; target 80%" }),
   ).toBeInTheDocument();
   expect(
     screen.getByText("4 marked answers in the last 90 days"),
   ).toBeInTheDocument();
-  expect(screen.queryByText("Against your target")).not.toBeInTheDocument();
+  expect(screen.getByText("Against your target")).toBeInTheDocument();
+  expect(screen.getByText("10 pts")).toBeInTheDocument();
+  expect(screen.queryByText(/^Since /)).toBeNull();
 });
 
 it("rejects missing finish dates before converting them to Sydney dates", async () => {
@@ -248,4 +250,39 @@ it("rejects missing finish dates before converting them to Sydney dates", async 
   expect(screen.getAllByRole("link", { name: /75%/ })).toHaveLength(1);
   expect(screen.queryByText(/1970/)).toBeNull();
   expect(screen.queryByRole("link", { name: /unfinished/ })).toBeNull();
+});
+
+it("derives the target gap and change from the first scored week in the selected range", async () => {
+  const session = { kind: "sprint", config: {}, elapsed_s: 60, by_type: {} };
+  mocks.load.mockResolvedValue({
+    ...empty,
+    topics: [
+      { ...empty.topics[0], answered: 4, earned: 9, possible: 10, pct: 90 },
+    ],
+    history: [
+      {
+        ...session,
+        id: "outside",
+        finished_at: "2026-08-01T01:00:00Z",
+        pct: 10,
+      },
+      { ...session, id: "first", finished_at: "2026-09-14T01:00:00Z", pct: 40 },
+      {
+        ...session,
+        id: "second",
+        finished_at: "2026-09-15T01:00:00Z",
+        pct: 60,
+      },
+      { ...session, id: "now", finished_at: "2026-10-08T01:00:00Z", pct: 90 },
+    ],
+  });
+  render(
+    await resolve(
+      await Progress({ searchParams: Promise.resolve({ range: "30" }) }),
+    ),
+  );
+  expect(screen.getByText("On target")).toBeInTheDocument();
+  expect(screen.getByText("Since September")).toBeInTheDocument();
+  expect(screen.getByText("+40 pts")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
 });
