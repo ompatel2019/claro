@@ -83,6 +83,10 @@ type Case = {
   cap?: number;
   cap_applies?: boolean;
 };
+// Acceptance threshold (met by the last recorded run, 2026-10-14: 40/40 completed, 96.4% within one mark,
+// caps 12/12, no malformed rubric parsed and no valid rubric rejected).
+const ACCEPT = { minWithin1Percent: 90 } as const;
+
 type Row = {
   id: string;
   kind: string;
@@ -113,6 +117,7 @@ test("local own-criteria marking eval (paid OpenRouter calls)", async () => {
     await readFile(path.join(directory, "cases.json"), "utf8"),
   );
   const rows: Row[] = [];
+  let report: Record<string, unknown> = {};
   const limit = 2.75;
   const budgetAbort = () => {
     throw new Error(
@@ -275,5 +280,19 @@ test("local own-criteria marking eval (paid OpenRouter calls)", async () => {
     await writeFile(output, JSON.stringify({ rows, summary }, null, 2) + "\n");
     console.log("S16 summary:", summary);
     console.log("S16 results:", output);
+    report = summary;
   }
+  expect(report).toMatchObject({
+    completed: cases.length,
+    skipped: 0,
+    unexpectedParsed: 0,
+    unexpectedRejected: 0,
+  });
+  expect(rows.filter((row) => row.kind === "malformed" && !row.pass)).toEqual(
+    [],
+  );
+  expect(rows.filter((row) => row.capObeyed === false)).toEqual([]);
+  expect(report.within1Percent).toBeGreaterThanOrEqual(
+    ACCEPT.minWithin1Percent,
+  );
 });
