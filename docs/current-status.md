@@ -1,5 +1,7 @@
 ## 19 Oct 2026 — Student Home v2, brand assets, Progress fix
 
+- Link-preview image is now a student card (navy, white lockup, "HSC Economics,
+  marked in seconds."), replacing the marketing teacher image.
 - Home rebuilt like the A1 layout reference in Claro's own design: greeting/date, bold
   term/week hero with a daily line and week-of-term dots, 2×2 launch tiles beside
   "Your study days" (streaks, days studied, heatmap with today marker, Light up today),
