@@ -52,7 +52,7 @@ describe("assertTestSupabaseUrl", () => {
 
 describe("assertSafeE2ETarget", () => {
   const prod = "https://prodref.supabase.co";
-  const env = (vars: Record<string, string>): NodeJS.ProcessEnv => vars;
+  const env = (vars: Record<string, string>) => vars as NodeJS.ProcessEnv;
 
   beforeEach(() => {
     vi.stubEnv("E2E_TEST_SUPABASE_REFS", "testref");
