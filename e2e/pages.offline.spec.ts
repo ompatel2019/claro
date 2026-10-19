@@ -112,7 +112,7 @@ test.beforeEach(async ({ page }) => {
       return route.fulfill({ contentType: "text/javascript", body: bundle });
     return route.fulfill({
       contentType: "text/html",
-      body: `<!doctype html><html lang="en-AU" style="--font-bricolage:Arial"><head><style>${css}</style></head><body><div id="root"></div><script type="module" src="/__fixture.js"></script></body></html>`,
+      body: `<!doctype html><html lang="en-AU" style="--font-claro-sans:Arial"><head><style>${css}</style></head><body><div id="root"></div><script type="module" src="/__fixture.js"></script></body></html>`,
     });
   });
 });

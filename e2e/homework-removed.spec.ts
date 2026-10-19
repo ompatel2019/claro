@@ -19,7 +19,7 @@ test.describe("Homework is removed", () => {
       await page
         .getByText("Page not found")
         .evaluate((el) => getComputedStyle(el).fontFamily),
-    ).toMatch(/Bricolage/);
+    ).toMatch(/claroSans/);
   });
   test("admin homework routes 404", async ({ page }) => {
     await page.goto("/sign-in");
