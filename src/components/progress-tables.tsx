@@ -1,9 +1,9 @@
 "use client";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Alert, CheckCircle, Clock, ChevronDown, ChevronUp } from "./icons";
-import { DataTable, type Column, type TableSorting } from "./data-table";
+import { Alert, CheckCircle, Clock, PortalIcon } from "./icons";
+import { type TableSorting } from "./data-table";
 import { Meter } from "./claro/data-display";
 import { buttonVariants } from "./ui/button";
 import { dateLabel, scoreTone } from "@/lib/practice";
@@ -74,6 +74,12 @@ export function ProgressScore({
 }
 
 export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
+  const parents = rows
+    .filter((r) => !r.parent_id)
+    .sort((a, b) => a.sort - b.sort);
+  const [open, setOpen] = useState<Set<string>>(
+    () => new Set(parents.length === 4 ? [parents.at(-1)!.id] : []),
+  );
   const sort = useTableSort("topicsSort", [
     "name",
     "answered",
@@ -81,181 +87,215 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
     "pct",
     "last",
   ]);
-  const [open, setOpen] = useState<Set<string>>(new Set());
-  const parents = rows.filter((r) => !r.parent_id);
-  const columns: Column<TopicProgress>[] = [
-    {
-      id: "name",
-      header: "Topic",
-      sort: (r) => r.name,
-      className:
-        "w-full min-w-0 max-w-[10rem] wrap-anywhere whitespace-normal max-sm:px-2 max-sm:first:pl-2",
-      cell: (r) => (
-        <>
-          {r.parent_id ? (
-            <span className="block py-2 pl-2">{r.name}</span>
-          ) : (
-            <button
-              className="flex w-full items-center gap-2 py-2 text-left font-semibold"
-              aria-expanded={open.has(r.id)}
-              aria-controls={open.has(r.id) ? `topic-${r.id}` : undefined}
-              onClick={() =>
-                setOpen((s) => {
-                  const next = new Set(s);
-                  if (next.has(r.id)) next.delete(r.id);
-                  else next.add(r.id);
-                  return next;
-                })
-              }
-            >
-              {open.has(r.id) ? (
-                <ChevronUp className="size-4 shrink-0" />
-              ) : (
-                <ChevronDown className="size-4 shrink-0" />
-              )}
-              {r.name}
-            </button>
-          )}
-          <p className="sr-only">
-            {r.answered} answered · {r.earned} / {r.possible} marks · Last
-            practised{" "}
-            {r.last_answered ? dateLabel(r.last_answered, true) : "Not started"}
-          </p>
-        </>
-      ),
-    },
-    {
-      id: "answered",
-      header: "Answered",
-      className: "whitespace-nowrap",
-      sort: (r) => r.answered,
-
-      cell: (r) => r.answered,
-    },
-    {
-      id: "marks",
-      header: "Marks",
-      className: "whitespace-nowrap",
-      sort: (r) => r.earned,
-
-      cell: (r) => `${r.earned} / ${r.possible}`,
-    },
-    {
-      id: "pct",
-      header: "Average",
-      className: "min-w-44",
-      sort: (r) => r.pct,
-      cell: (r) =>
-        r.possible ? (
-          <ProgressScore pct={r.pct} bar />
+  const focus = [...parents]
+    .filter((r) => r.pct != null && r.answered > 0)
+    .sort((a, b) => a.pct! - b.pct!)[0]?.id;
+  const ordered = (items: TopicProgress[]) =>
+    sort.sorting
+      ? [...items].sort((a, b) => {
+          const key = sort.sorting!.id;
+          const av =
+            key === "name"
+              ? a.name
+              : key === "answered"
+                ? a.answered
+                : key === "marks"
+                  ? a.earned
+                  : key === "pct"
+                    ? (a.pct ?? -1)
+                    : (a.last_answered ?? "");
+          const bv =
+            key === "name"
+              ? b.name
+              : key === "answered"
+                ? b.answered
+                : key === "marks"
+                  ? b.earned
+                  : key === "pct"
+                    ? (b.pct ?? -1)
+                    : (b.last_answered ?? "");
+          return (
+            (typeof av === "string"
+              ? av.localeCompare(String(bv))
+              : av - Number(bv)) * (sort.sorting!.dir === "desc" ? -1 : 1)
+          );
+        })
+      : items;
+  const row = (r: TopicProgress) => (
+    <tr
+      key={r.id}
+      className={r.parent_id ? "bg-muted/35 border-t text-[13px]" : "border-t"}
+    >
+      <td className={r.parent_id ? "py-3 pr-3 pl-11" : "px-5 py-3"}>
+        {r.parent_id ? (
+          r.name
         ) : (
-          <span className="text-muted-foreground text-xs whitespace-normal">
-            Not started
-          </span>
-        ),
-    },
-    {
-      id: "last",
-      header: "Last practised",
-      className: "whitespace-nowrap",
-      sort: (r) => r.last_answered,
-
-      cell: (r) =>
-        r.last_answered ? dateLabel(r.last_answered, true) : "Not started",
-    },
-    {
-      id: "action",
-      header: "",
-      className: "max-sm:px-2 max-sm:last:pr-2",
-      cell: (r) => (
+          <button
+            aria-label={r.name}
+            aria-expanded={open.has(r.id)}
+            onClick={() =>
+              setOpen((s) => {
+                const next = new Set(s);
+                if (next.has(r.id)) next.delete(r.id);
+                else next.add(r.id);
+                return next;
+              })
+            }
+            className="flex items-center gap-2 text-left font-semibold"
+          >
+            <PortalIcon
+              name="chevron-right"
+              className={
+                open.has(r.id)
+                  ? "text-muted-foreground size-4 shrink-0 rotate-90"
+                  : "text-muted-foreground size-4 shrink-0"
+              }
+            />
+            {r.name}
+            {r.id === focus && (
+              <span className="bg-brand-soft text-brand rounded-full px-2 py-1 text-[11px] font-medium">
+                Focus
+              </span>
+            )}
+          </button>
+        )}
+        <span className="sr-only">
+          {r.answered} answered · {r.earned} / {r.possible} marks · Last
+          practised{" "}
+          {r.last_answered ? dateLabel(r.last_answered, true) : "Not started"}
+        </span>
+      </td>
+      <td className="px-3 text-right">{r.answered}</td>
+      <td className="text-muted-foreground px-3 text-right">
+        <span className="text-foreground font-medium">{r.earned}</span> /{" "}
+        {r.possible}
+      </td>
+      <td className="px-3">
+        {r.pct == null ? (
+          <span className="text-muted-foreground">Not started</span>
+        ) : (
+          <div className="flex items-center gap-3">
+            <Meter
+              value={r.pct}
+              label={`${r.name} average`}
+              tone={r.id === focus ? "brand" : "default"}
+              className={r.parent_id ? "h-1.5 flex-1" : "h-2 flex-1"}
+            />
+            <span className="w-10 text-right font-semibold">
+              {Math.round(r.pct)}%
+            </span>
+          </div>
+        )}
+      </td>
+      <td className="text-muted-foreground px-3">
+        {r.last_answered ? dateLabel(r.last_answered, true) : "—"}
+      </td>
+      <td className="py-3 pr-5 text-right">
         <Link
           aria-label={`${r.answered ? "Practise" : "Start"} ${r.name}`}
-          className={buttonVariants({
-            variant: "outline",
-            size: "sm",
-            className: "px-2",
-          })}
           href={practiseHref(r)}
+          className={buttonVariants({
+            variant: r.parent_id ? "ghost" : "outline",
+            size: "sm",
+          })}
         >
-          {r.answered ? "Practise" : "Start"}
+          {r.parent_id ? "Sprint" : "Practise"}
         </Link>
-      ),
-    },
-  ];
+      </td>
+    </tr>
+  );
   return (
-    <div className="overflow-x-auto [&_th]:normal-case [&_th_button]:normal-case [&_tr]:border-solid [&>div]:min-w-[720px]">
-      <DataTable
-        student
-        {...sort}
-        label="Marks by topic"
-        columns={columns}
-        rows={parents}
-        // Nested table widths must not contribute to the parent's intrinsic width.
-        renderDetail={(r) =>
-          open.has(r.id) ? (
-            <div
-              id={`topic-${r.id}`}
-              className="bg-surface p-2 [contain:inline-size] max-sm:px-1"
-            >
-              <DataTable
-                student
-                {...sort}
-                label={`${r.name} subtopics`}
-                columns={columns}
-                rows={rows.filter((t) => t.parent_id === r.id)}
-              />
-            </div>
-          ) : null
-        }
-      />
+    <div className="relative overflow-x-auto">
+      <table
+        aria-label="Marks by topic"
+        className="w-full min-w-[720px] text-[13px]"
+      >
+        <colgroup>
+          <col className="w-[32%]" />
+          <col className="w-[8%]" />
+          <col className="w-[9%]" />
+          <col className="w-[30%]" />
+          <col className="w-[12%]" />
+          <col />
+        </colgroup>
+        <thead className="text-muted-foreground border-t text-left text-[11px]">
+          <tr>
+            {[
+              ["name", "Topic"],
+              ["answered", "Answered"],
+              ["marks", "Marks"],
+              ["pct", "Average"],
+              ["last", "Last practised"],
+            ].map(([id, label]) => (
+              <th key={id} className="h-10 px-3 first:pl-5">
+                <button
+                  onClick={() =>
+                    sort.onSortChange({
+                      id,
+                      dir:
+                        sort.sorting?.id === id && sort.sorting.dir === "asc"
+                          ? "desc"
+                          : "asc",
+                    })
+                  }
+                >
+                  {label}
+                </button>
+              </th>
+            ))}
+            <th>
+              <span className="sr-only">Practise</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {ordered(parents).map((p) => (
+            <Fragment key={p.id}>
+              {row(p)}
+              {open.has(p.id) &&
+                ordered(rows.filter((r) => r.parent_id === p.id)).map(row)}
+            </Fragment>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
 export function VerbProgressTable({ rows }: { rows: Breakdown[] }) {
   const shown = verbRows(rows);
-  const sort = useTableSort("verbsSort", ["verb", "answered", "pct"]);
   return (
-    <DataTable
-      student
-      {...sort}
-      label="By directive verb"
-      rows={shown}
-      columns={[
-        {
-          id: "verb",
-          header: "Verb",
-          sort: (r) => r.id,
-          className: "w-full whitespace-normal",
-          cell: (r) => r.id,
-        },
-        {
-          id: "answered",
-          header: "Answered",
-          sort: (r) => r.answered,
-
-          cell: (r) => r.answered,
-        },
-        {
-          id: "pct",
-          header: "Avg %",
-          sort: (r) => r.pct,
-          cell: (r) => <ProgressScore pct={r.pct} bar />,
-        },
-        {
-          id: "action",
-          header: "",
-          cell: (r) =>
-            r.id === shown[0]?.id ? (
-              <Link
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-                href={`/student/sprint?type=short&verb=${encodeURIComponent(r.id)}`}
-              >
-                Practise
-              </Link>
-            ) : null,
-        },
-      ]}
-    />
+    <ul>
+      {shown.map((r, i) => (
+        <li
+          key={r.id}
+          className="grid grid-cols-[76px_minmax(0,1fr)_40px] items-center gap-3 rounded-lg py-2 text-[13px]"
+        >
+          <Link
+            href={`/student/sprint?type=short&verb=${encodeURIComponent(r.id)}`}
+            aria-label={i === 0 ? "Practise" : `Practise ${r.id}`}
+            className="font-medium hover:underline"
+          >
+            {r.id}
+          </Link>
+          <span className="h-2">
+            <span
+              className={
+                i === 0
+                  ? "bg-chart-2 block h-2 rounded-r-full"
+                  : "bg-chart-3 block h-2 rounded-r-full"
+              }
+              style={{ width: `${r.pct}%` }}
+            />
+          </span>
+          <span
+            className="text-right font-semibold"
+            title={`${r.answered} answers`}
+          >
+            {Math.round(r.pct!)}%
+          </span>
+        </li>
+      ))}
+    </ul>
   );
 }

@@ -41,14 +41,14 @@ test.describe("Activity browser", () => {
   test.beforeEach(async ({ page }) => {
     await page.goto("/student/activity");
     await expect(
-      page.getByRole("heading", { name: "Your activity", exact: true }),
+      page.getByRole("heading", { name: "Activity", exact: true }),
     ).toBeVisible();
   });
   test("filters update the URL and show matching rows or a filtered empty state", async ({
     page,
   }) => {
     await expect(async () => {
-      await page.getByRole("button", { name: /^Sprints ·/ }).click();
+      await page.getByRole("button", { name: /^Sprints / }).click();
       await expect(page).toHaveURL(/kind=sprint/, { timeout: 1000 });
       // Wait for the form's hidden context to commit before submitting Status.
       await expect(
@@ -66,7 +66,9 @@ test.describe("Activity browser", () => {
         .or(page.getByText("No sessions match"))
         .or(page.getByText("Nothing here yet")),
     ).toBeVisible();
-    const rows = page.locator("table tbody tr");
+    const rows = page
+      .locator("table tbody tr")
+      .filter({ has: page.locator("td") });
     expect(await rows.count()).toBeLessThanOrEqual(20);
     await expect
       .poll(async () => {
@@ -91,19 +93,17 @@ test.describe("Activity browser", () => {
         .or(page.getByText("Nothing here yet")),
     ).toBeVisible();
   });
-  test("compact rows put scores beside titles and show dates without duration", async ({
+  test("template columns show results beside session titles", async ({
     page,
   }) => {
     const table = page.getByRole("table", { name: "Your activity" });
     test.skip(!(await table.count()), "No existing activity");
-    await expect(table.getByRole("columnheader")).toHaveCount(2);
-    for (const name of ["Kind", "Items", "Time", "Status", "Action", "Score"])
-      await expect(
-        table.getByRole("columnheader", { name, exact: true }),
-      ).toHaveCount(0);
-    const first = table.locator("tbody tr").first();
-    await expect(first.locator("td").first().getByRole("link")).toBeVisible();
-    await expect(first.locator("td").last()).not.toContainText(/\d+:\d+/);
+    await expect(
+      table.getByRole("columnheader", { name: "Session", exact: true }),
+    ).toBeVisible();
+    await expect(
+      table.getByRole("columnheader", { name: "Result", exact: true }),
+    ).toBeVisible();
     await expect(page.getByLabel("Sort", { exact: true })).toHaveValue("");
   });
   test("row title links to the existing session report", async ({ page }) => {

@@ -40,16 +40,36 @@ export function ActivityBrowser({
   data: suppliedData,
   topics,
   today,
+  details,
 }: {
   filters: ActivityFilters;
   data: ActivityData;
   topics: Topic[];
   today: string;
+  details?: Record<
+    string,
+    import("./student/activity/session-table").SessionDetail
+  >;
 }) {
-  const data = {
-    ...suppliedData,
-    rows: suppliedData.rows.filter(isStudentSession),
-  };
+  const [loaded, setLoaded] = useState({
+    page: suppliedData.page,
+    rows: suppliedData.rows,
+    details: details ?? {},
+  });
+  const [visible, setVisible] = useState(12);
+  if (loaded.page !== suppliedData.page) {
+    const rows =
+      suppliedData.page > loaded.page
+        ? [...loaded.rows, ...suppliedData.rows]
+        : suppliedData.rows;
+    setLoaded({
+      page: suppliedData.page,
+      rows: [...new Map(rows.map((r) => [r.id, r])).values()],
+      details: { ...loaded.details, ...details },
+    });
+    setVisible((n) => n + 12);
+  }
+  const data = { ...suppliedData, rows: loaded.rows.filter(isStudentSession) };
   const router = useRouter();
   const online = useSyncExternalStore(
     subscribeOnline,
@@ -77,7 +97,7 @@ export function ActivityBrowser({
         : {}),
   };
   return (
-    <div className="bg-card shadow-card min-w-0 overflow-hidden rounded-xl border">
+    <div className="bg-card shadow-card min-w-0 overflow-hidden rounded-2xl border">
       {!online && (
         <p role="status" className="bg-muted rounded-lg px-3 py-2 text-sm">
           You&apos;re offline. We&apos;ll save when you&apos;re back.
@@ -141,12 +161,12 @@ export function ActivityBrowser({
             {
               name: "q",
               label: "Search",
-              placeholder: "Search session titles",
+              placeholder: "Search sessions",
             },
             {
               name: "sort",
               label: "Sort",
-              all: "Newest",
+              all: "Newest first",
               options: [
                 { value: "oldest", label: "Oldest" },
                 { value: "highest", label: "Highest score" },
@@ -161,16 +181,14 @@ export function ActivityBrowser({
             onValueChange={(v) =>
               go({ kind: v[0] === "all" ? "" : v[0] || "" })
             }
-            variant="outline"
-            size="lg"
-            className="max-w-full justify-start overflow-x-auto"
+            variant="default"
+            size="sm"
+            className="bg-muted [&_button[data-state=on]]:bg-card max-w-full justify-start gap-0 overflow-x-auto rounded-full p-0.5 [&_button]:h-7 [&_button]:rounded-full [&_button]:px-3 [&_button]:text-[13px] [&_button[data-state=on]]:shadow-sm"
           >
-            <ToggleGroupItem value="all">
-              All · {data.kind_total}
-            </ToggleGroupItem>
+            <ToggleGroupItem value="all">All {data.kind_total}</ToggleGroupItem>
             {Object.entries(kindLabels).map(([kind, label]) => (
               <ToggleGroupItem key={kind} value={kind}>
-                {label} · {data.kinds[kind] || 0}
+                {label} {data.kinds[kind] || 0}
               </ToggleGroupItem>
             ))}
           </ToggleGroup>
@@ -261,7 +279,9 @@ export function ActivityBrowser({
       ) : (
         <>
           <SessionTable
-            rows={data.rows}
+            rows={data.rows.slice(0, visible)}
+            topics={topics}
+            details={loaded.details}
             today={today}
             sort={f.sort}
             onOpen={(r) => {
@@ -277,27 +297,24 @@ export function ActivityBrowser({
             className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-[13px]"
           >
             <p className="text-muted-foreground" aria-live="polite">
-              {(data.page - 1) * 20 + 1}–{Math.min(data.page * 20, data.total)}{" "}
-              of {data.total} sessions
+              Showing {Math.min(visible, data.rows.length)} of {data.total}
             </p>
             <div className="flex items-center gap-2">
-              {data.page > 1 && (
-                <Link
-                  href={activityHref(f, { page: data.page - 1 })}
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
+              {visible < data.rows.length && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setVisible((n) => n + 12)}
                 >
-                  Previous
-                </Link>
+                  Load more
+                </Button>
               )}
-              <span className="text-muted-foreground text-xs">
-                Page {data.page} of {Math.ceil(data.total / 20)}
-              </span>
-              {data.page * 20 < data.total && (
+              {visible >= data.rows.length && data.page * 20 < data.total && (
                 <Link
                   href={activityHref(f, { page: data.page + 1 })}
                   className={buttonVariants({ variant: "outline", size: "sm" })}
                 >
-                  Next
+                  Load more
                 </Link>
               )}
             </div>

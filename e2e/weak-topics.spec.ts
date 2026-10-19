@@ -24,7 +24,7 @@ test.describe("S17/S2 topic history", () => {
         await expect(card).toBeVisible();
         if (copy) await expect(card.getByText(copy)).toBeVisible();
         const practice = card.getByRole("link", {
-          name: "Practise",
+          name: "Retry questions",
           exact: true,
         });
         await expect(practice).toHaveCount(unlocked ? 1 : 0);
@@ -34,14 +34,17 @@ test.describe("S17/S2 topic history", () => {
             `/student/sprint?topics=t3&sub=t3-inflation&history=mistakes`,
           );
         const headings = page.getByRole("heading", { level: 2 });
-        await expect(headings.first()).toHaveText("Marks by topic");
+        await expect(headings.first()).toHaveText("Practice average");
         await expect(
           page.getByText("By directive verb", { exact: true }),
         ).toBeVisible();
         await expect(page.getByTestId("activity-heatmap")).toHaveCount(0);
         await expect(
-          page.getByText("Questions answered", { exact: true }),
-        ).toHaveCount(0);
+          page.getByRole("heading", {
+            name: "Questions answered",
+            exact: true,
+          }),
+        ).toHaveCount(1);
         await expect
           .poll(() =>
             page.evaluate(
@@ -53,7 +56,7 @@ test.describe("S17/S2 topic history", () => {
           .toBe(true);
       };
       await checkProgress(
-        /unlock after 3 marked answers across 2 sessions/,
+        /Unlock after 3 marked answers across 2 sessions/,
         false,
       );
       await historyStudent.addAnswers(2);
@@ -77,11 +80,11 @@ test.describe("S17/S2 topic history", () => {
         marked_at: new Date().toISOString(),
       });
       if (insertError) throw insertError;
-      await checkProgress(/Practise Inflation in another session/, false);
+      await checkProgress(/Practise in one more session to unlock/, false);
       await historyStudent.addAnswers(1);
       await checkProgress(null, true);
       await weakCard(page)
-        .getByRole("link", { name: "Practise", exact: true })
+        .getByRole("link", { name: "Retry questions", exact: true })
         .click();
       await expect(page).toHaveURL(
         /\/student\/sprint\?topics=t3&sub=t3-inflation&history=mistakes/,
@@ -108,12 +111,12 @@ test.describe("S17/S2 topic history", () => {
           .eq("user_id", historyStudent.userId);
         if (error) throw error;
         await page.goto("/student/progress");
-        const card = weakCard(page);
+        const card = page.locator("main");
         await expect(card.getByRole("alert")).toHaveText(
-          /Couldn't load your weak (spots|topics)/,
+          /Couldn't load this. Try again./,
         );
         await expect(
-          card.getByRole("link", { name: "Practise", exact: true }),
+          card.getByRole("link", { name: "Retry questions", exact: true }),
         ).toHaveCount(0);
         const { error: repairError } = await db
           .from("sessions")
@@ -122,7 +125,7 @@ test.describe("S17/S2 topic history", () => {
         if (repairError) throw repairError;
         await card.getByRole("button", { name: "Try again" }).click();
         await expect(
-          card.getByText(/Practise Inflation in another session/),
+          card.getByText(/Practise in one more session to unlock/),
         ).toBeVisible();
         await expect(card.getByRole("alert")).toHaveCount(0);
       }
@@ -141,7 +144,7 @@ test.describe("S17/S2 topic history", () => {
         ).toBeVisible();
         await expect(
           weakCard(page).getByRole("link", {
-            name: "Practise",
+            name: "Retry questions",
             exact: true,
           }),
         ).toHaveCount(0);
