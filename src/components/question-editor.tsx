@@ -41,7 +41,13 @@ import {
 import { AnnotatedFeedback } from "./annotated-feedback";
 import { QuestionKey, QuestionView } from "./question-view";
 import { Button, buttonVariants } from "./ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 import { Input } from "./ui/input";
 import { TopicSelect } from "./topic-select";
 import { FormSelect } from "./ui/form-select";
@@ -306,7 +312,7 @@ export function QuestionEditor({
   return (
     <form
       noValidate
-      className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+      className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(20rem,1fr)]"
       onSubmit={(e) => {
         e.preventDefault();
         save();
@@ -357,6 +363,12 @@ export function QuestionEditor({
           </ul>
         )}
         <Card>
+          <CardHeader>
+            <CardTitle>Question details</CardTitle>
+            <CardDescription>
+              Classification, marks and source metadata.
+            </CardDescription>
+          </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <Field
               label="ID"
@@ -452,6 +464,12 @@ export function QuestionEditor({
           </CardContent>
         </Card>
         <Card>
+          <CardHeader>
+            <CardTitle>Question content</CardTitle>
+            <CardDescription>
+              Student-facing stem, stimulus and optional image.
+            </CardDescription>
+          </CardHeader>
           <CardContent className="grid gap-4">
             <Field
               label="Stem"
@@ -477,11 +495,9 @@ export function QuestionEditor({
                 onChange={(e) => set("stimulus", e.target.value || null)}
               />
             </Field>
-            <label className="grid gap-1 text-sm font-medium">
-              Insert image
+            <Field label="Insert image" hint="JPEG, PNG or WebP, up to 10 MB.">
               <Input
                 type="file"
-                aria-label="Insert image"
                 accept="image/jpeg,image/png,image/webp"
                 disabled={uploading}
                 onChange={(e) => {
@@ -490,16 +506,16 @@ export function QuestionEditor({
                   if (file) void insertImage(file);
                 }}
               />
-              <span className="text-muted-foreground text-xs">
-                JPEG, PNG or WebP, up to 10 MB.
-              </span>
-            </label>
+            </Field>
           </CardContent>
         </Card>
         {mc ? (
           <Card>
             <CardHeader>
               <CardTitle>Options</CardTitle>
+              <CardDescription>
+                Pick the key and explain why each alternative is right or wrong.
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
               <RadioGroup
@@ -646,6 +662,10 @@ export function QuestionEditor({
           <Card>
             <CardHeader>
               <CardTitle>Marking</CardTitle>
+              <CardDescription>
+                Define complete mark bands and the guidance used by the marking
+                engine.
+              </CardDescription>
             </CardHeader>
             <CardContent className="grid gap-4">
               <fieldset className="grid gap-2">
@@ -821,6 +841,12 @@ export function QuestionEditor({
           </Card>
         )}
         <Card>
+          <CardHeader>
+            <CardTitle>Publishing</CardTitle>
+            <CardDescription>
+              Live questions must pass every validation rule.
+            </CardDescription>
+          </CardHeader>
           <CardContent className="flex flex-wrap items-end gap-3">
             <Field
               label="Status"
@@ -855,8 +881,14 @@ export function QuestionEditor({
           </CardContent>
         </Card>
       </fieldset>
-      <div className="min-w-0">
+      <div className="min-w-0 xl:sticky xl:top-20 xl:self-start">
         <Card>
+          <CardHeader>
+            <CardTitle>Live summary</CardTitle>
+            <CardDescription>
+              Preview the student view, test the marker and inspect usage.
+            </CardDescription>
+          </CardHeader>
           <CardContent>
             <Tabs defaultValue="preview">
               <TabsList>
