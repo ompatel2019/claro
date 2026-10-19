@@ -220,3 +220,125 @@ it("shows unstarted question types with working Try one links", async () => {
     screen.getByRole("img", { name: /Weekly practice average/ }),
   ).toBeVisible();
 });
+
+import { readHomeMarks } from "./sections";
+it("reads only owned marked attempts in a bounded date range", async () => {
+  const query = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    gte: vi.fn().mockReturnThis(),
+    lt: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    range: vi.fn().mockResolvedValue({
+      data: [{ mark: 5, marked_at: "2026-10-20T00:00:00Z" }],
+      error: null,
+    }),
+  };
+  mocks.from.mockReturnValue(query);
+  expect(await readHomeMarks("student", "2026-10-20")).toEqual({
+    values: [0, 0, 0, 0, 0, 0, 5],
+    delta: undefined,
+  });
+  expect(mocks.from).toHaveBeenCalledWith("attempts");
+  expect(query.select).toHaveBeenCalledWith("mark,marked_at");
+  expect(query.eq).toHaveBeenCalledWith("user_id", "student");
+  expect(query.eq).toHaveBeenCalledWith("status", "marked");
+  expect(query.gte).toHaveBeenCalledWith("marked_at", "2026-10-06T00:00:00Z");
+  expect(query.lt).toHaveBeenCalledWith("marked_at", "2026-10-21T00:00:00Z");
+});
+it("counts fully known reviews only for the finished flashcard sessions in the recent five", async () => {
+  const rows = [
+    {
+      ...session,
+      id: "cards",
+      kind: "flashcards",
+      finished_at: "2026-10-20T00:00:00Z",
+    },
+  ];
+  const reviews = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    range: vi.fn().mockResolvedValue({
+      data: [
+        { session_id: "cards", mark: 1 },
+        { session_id: "cards", mark: 0.5 },
+        { session_id: "cards", mark: 0 },
+      ],
+    }),
+  };
+  const sessions = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    in: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    limit: vi.fn().mockResolvedValue({ data: rows }),
+  };
+  mocks.from.mockImplementation((table) =>
+    table === "sessions" ? sessions : reviews,
+  );
+  expect(await readHomeSessions("student")).toEqual([
+    { ...rows[0], recall: { knew: 1, total: 3 } },
+  ]);
+  expect(reviews.eq).toHaveBeenCalledWith("user_id", "student");
+  expect(reviews.in).toHaveBeenCalledWith("session_id", ["cards"]);
+});
+it("shows the completed sprint state and one-of-three plan from real completion data", async () => {
+  render(
+    await HomePlan({
+      progress: Promise.resolve(progress()),
+      today: "2026-10-20",
+      sessions: Promise.resolve([
+        {
+          ...session,
+          id: "done",
+          finished_at: "2026-10-20T00:15:00Z",
+          score: 6,
+          max_score: 10,
+        },
+      ]),
+      unfinished: Promise.resolve(session),
+      due: Promise.resolve(16),
+    }),
+  );
+  expect(screen.getByText("1 of 3")).toBeVisible();
+  expect(screen.getByText("Sprint on Economic growth")).toBeVisible();
+  expect(screen.getByText("Done at 11:15am · 60%")).toBeVisible();
+});
+it("renders real dated marks as a sparkline and comparison without replacing the RPC total", async () => {
+  render(
+    await HomeStats({
+      progress: Promise.resolve(progress()),
+      due: Promise.resolve(0),
+      marks: Promise.resolve({ values: [0, 1, 0, 2, 0, 1, 4], delta: 5 }),
+    }),
+  );
+  const marks = screen.getByRole("link", { name: /Marks earned 3/ });
+  expect(marks).toHaveTextContent("+5vs previous 7 days");
+  expect(screen.getByRole("img", { name: "Marks earned trend" })).toBeVisible();
+});
+it("omits the marks trend when dated attempts are unavailable", async () => {
+  const query = {
+    select: vi.fn().mockReturnThis(),
+    eq: vi.fn().mockReturnThis(),
+    gte: vi.fn().mockReturnThis(),
+    lt: vi.fn().mockReturnThis(),
+    order: vi.fn().mockReturnThis(),
+    range: vi
+      .fn()
+      .mockResolvedValue({ data: [{ mark: 5, marked_at: null }], error: null }),
+  };
+  mocks.from.mockReturnValue(query);
+  expect(await readHomeMarks("student", "2026-10-20")).toBeNull();
+  render(
+    await HomeStats({
+      progress: Promise.resolve(progress()),
+      due: Promise.resolve(0),
+      marks: Promise.resolve(null),
+    }),
+  );
+  expect(
+    screen.queryByRole("img", { name: "Marks earned trend" }),
+  ).not.toBeInTheDocument();
+});

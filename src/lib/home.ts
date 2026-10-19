@@ -1,5 +1,9 @@
 import { timer, modeLabel, topicNames } from "./practice";
 
+import { HSC_EXAM, examDaysLeft } from "./hsc-exam";
+import { addDays } from "./activity";
+import { sydneyToday } from "./flashcards";
+
 const SYDNEY = "Australia/Sydney";
 
 /** "Good morning" before 12, afternoon before 17, else evening (Sydney time). */
@@ -230,4 +234,44 @@ export function homeSprintMinutes(
   if (seconds != null) return Math.max(1, Math.ceil((seconds - elapsed) / 60));
   const count = config.actual_questions ?? config.count;
   return count != null && count > 0 ? homeMinutes(count, "questions") : null;
+}
+
+/** Daily earned marks on Sydney dates; no comparison without prior marked work. */
+export function homeEarnedMarks(
+  rows: { mark: number | null; marked_at: string | null }[],
+  today: string,
+) {
+  const days = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13));
+  const totals = new Map(days.map((day) => [day, 0]));
+  let prior = false;
+  for (const row of rows) {
+    if (
+      row.mark == null ||
+      !Number.isFinite(row.mark) ||
+      !row.marked_at ||
+      !Number.isFinite(Date.parse(row.marked_at))
+    )
+      continue;
+    const day = sydneyToday(new Date(row.marked_at));
+    if (!totals.has(day)) continue;
+    totals.set(day, totals.get(day)! + row.mark);
+    if (day < days[7]) prior = true;
+  }
+  const daily = days.map((day) => totals.get(day)!);
+  return {
+    values: daily.slice(7),
+    delta: prior
+      ? daily.slice(7).reduce((a, b) => a + b, 0) -
+        daily.slice(0, 7).reduce((a, b) => a + b, 0)
+      : undefined,
+  };
+}
+
+export function homeExamPrompt(today: string) {
+  const days = examDaysLeft(today);
+  const when =
+    days != null && days <= 7
+      ? `${new Intl.DateTimeFormat("en-AU", { timeZone: SYDNEY, weekday: "long" }).format(new Date(HSC_EXAM.startsAt))}'s`
+      : "my";
+  return `What should I study before ${when} exam?`;
 }

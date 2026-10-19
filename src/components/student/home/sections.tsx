@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import type { ReactNode, ComponentProps } from "react";
 import { createClient } from "@/utils/supabase/server";
 import type { ProgressData } from "@/lib/progress";
@@ -9,6 +10,7 @@ import { type Session, type Topic } from "@/lib/practice";
 import { isWeakTopic } from "@/lib/weak-topics";
 import { sessionHref } from "@/lib/session-summary";
 import {
+  homeEarnedMarks,
   homeUnits,
   homeWeeks,
   homeComparison,
@@ -32,7 +34,45 @@ import {
 import { PortalIcon } from "@/components/icons";
 import { buttonVariants } from "@/components/ui/button";
 export type HomeProgress = Promise<ProgressData | null>;
-export type HomeSessions = Promise<Session[] | null>;
+export type HomeSession = Session & {
+  recall?: { knew: number; total: number };
+};
+export type HomeSessions = Promise<HomeSession[] | null>;
+
+/** Read only dated earned marks. Page narrow projections to avoid PostgREST row caps. */
+export async function readHomeMarks(userId: string, today: string) {
+  try {
+    const db = await createClient();
+    const rows: { mark: number | null; marked_at: string | null }[] = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await db
+        .from("attempts")
+        .select("mark,marked_at")
+        .eq("user_id", userId)
+        .eq("status", "marked")
+        // UTC bounds enclose all fourteen Sydney days, including DST transitions.
+        .gte("marked_at", `${addDays(today, -14)}T00:00:00Z`)
+        .lt("marked_at", `${addDays(today, 1)}T00:00:00Z`)
+        .order("id")
+        .range(offset, offset + 999);
+      if (error) return null;
+      rows.push(...(data ?? []));
+      if (!data || data.length < 1000) break;
+    }
+    if (
+      !rows.some(
+        (row) =>
+          row.mark != null &&
+          row.marked_at &&
+          Number.isFinite(Date.parse(row.marked_at)),
+      )
+    )
+      return null;
+    return homeEarnedMarks(rows, today);
+  } catch {
+    return null;
+  }
+}
 export async function readHomeSessions(userId: string): HomeSessions {
   try {
     const db = await createClient();
@@ -43,7 +83,35 @@ export async function readHomeSessions(userId: string): HomeSessions {
       .in("kind", ["sprint", "flashcards", "single"])
       .order("started_at", { ascending: false })
       .limit(5);
-    return error ? null : (data as Session[]);
+    if (error) return null;
+    const rows = (data ?? []) as HomeSession[];
+    const ids = rows
+      .filter((s) => s.kind === "flashcards" && s.finished_at)
+      .map((s) => s.id);
+    if (ids.length) {
+      const reviews: { session_id: string | null; mark: number }[] = [];
+      for (let offset = 0; ; offset += 1000) {
+        const result = await db
+          .from("flashcard_reviews")
+          .select("session_id,mark")
+          .eq("user_id", userId)
+          .in("session_id", ids)
+          .order("id")
+          .range(offset, offset + 999);
+        if (result.error) return rows;
+        reviews.push(...(result.data ?? []));
+        if (!result.data || result.data.length < 1000) break;
+      }
+      for (const row of rows) {
+        const outcomes = reviews.filter((r) => r.session_id === row.id);
+        if (outcomes.length)
+          row.recall = {
+            knew: outcomes.filter((r) => r.mark === 1).length,
+            total: outcomes.length,
+          };
+      }
+    }
+    return rows;
   } catch {
     return null;
   }
@@ -128,16 +196,19 @@ export async function HomeStats({
   due,
   today = sydneyToday(),
   activity,
+  marks,
 }: {
   progress: HomeProgress;
   due: Promise<number | null>;
   today?: string;
   activity?: Promise<ActivityDay[]>;
+  marks?: ReturnType<typeof readHomeMarks>;
 }) {
-  const [d, count, days] = await Promise.all([
+  const [d, count, days, earnedMarks] = await Promise.all([
     progress,
     due,
     activity ?? Promise.resolve([]),
+    marks ?? Promise.resolve(null),
   ]);
   const parents = d ? homeUnits(d.topics) : undefined;
   const seconds = d?.history
@@ -178,6 +249,8 @@ export async function HomeStats({
       value: parents?.reduce((n, t) => n + t.earned, 0),
       href: "/student/progress",
       icon: "target",
+      values: earnedMarks?.values,
+      delta: earnedMarks?.delta,
     },
     {
       title: "Questions answered",
@@ -304,7 +377,7 @@ export async function HomeAverage({
               </p>
             )}
             <p className="text-muted-foreground ml-auto flex items-center gap-2 pb-1 text-[13px]">
-              <span className="inline-block w-5 border-t-[1.5px] border-dashed" />
+              <span className="border-muted-foreground inline-block w-5 border-t-[1.5px] border-dashed" />
               Your target{" "}
               <span className="text-foreground font-semibold">80%</span>
             </p>
@@ -441,7 +514,13 @@ export async function HomeTopics({ progress }: { progress: HomeProgress }) {
                   </div>
                   <Link
                     href={practiseHref(t)}
-                    className={`${buttonVariants({ variant: isFocus ? "default" : "outline", size: "sm" })} col-start-3 row-start-1 sm:col-start-auto sm:row-start-auto`}
+                    className={cn(
+                      buttonVariants({
+                        variant: isFocus ? "default" : "outline",
+                        size: "sm",
+                      }),
+                      "col-start-3 row-start-1 sm:col-start-auto sm:row-start-auto",
+                    )}
                   >
                     Practise
                   </Link>
@@ -499,7 +578,7 @@ export async function HomePlan({
     items.push({
       href: sessionHref(done)!,
       title: `Sprint on ${d?.topics.find((t) => t.id === (done.config.subtopics?.[0] ?? done.config.topics?.[0]))?.name ?? "your selected topics"}`,
-      caption: `Done at ${new Intl.DateTimeFormat("en-AU", { hour: "numeric", minute: "2-digit", timeZone: "Australia/Sydney" }).format(new Date(done.finished_at!))}${done.max_score ? ` · ${Math.round((100 * (done.score ?? 0)) / done.max_score)}%` : ""}`,
+      caption: `Done at ${new Intl.DateTimeFormat("en-AU", { hour: "numeric", minute: "2-digit", timeZone: "Australia/Sydney" }).format(new Date(done.finished_at!)).replace(/\s/g, "")}${done.max_score ? ` · ${Math.round((100 * (done.score ?? 0)) / done.max_score)}%` : ""}`,
       minutes: 0,
       icon: "check",
       done: true,

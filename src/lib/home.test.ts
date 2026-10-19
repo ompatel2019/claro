@@ -134,3 +134,43 @@ it("uses saved sprint sizing or timer and hides unknown estimates", () => {
   expect(homeSprintMinutes({ time_limit_s: 600 }, 180)).toBe(7);
   expect(homeSprintMinutes({}, 30)).toBeNull();
 });
+
+import { homeEarnedMarks, homeExamPrompt } from "./home";
+it("sums earned marks by Sydney day, compares seven against seven, and ignores invalid/outside rows", () => {
+  const rows = [
+    { marked_at: "2026-10-05T13:00:00Z", mark: 4 }, // first Sydney day
+    { marked_at: "2026-10-11T13:00:00Z", mark: 3 }, // last prior day
+    { marked_at: "2026-10-12T13:00:00Z", mark: 8 }, // first current day
+    { marked_at: "2026-10-19T12:59:59Z", mark: 2 }, // today
+    { marked_at: "2026-10-19T13:00:00Z", mark: 100 }, // tomorrow
+    { marked_at: "2026-10-05T12:59:59Z", mark: 100 }, // before range
+    { marked_at: "invalid", mark: 100 },
+    { marked_at: null, mark: 100 },
+    { marked_at: "2026-10-19T00:00:00Z", mark: null },
+  ];
+  expect(homeEarnedMarks(rows, "2026-10-19")).toEqual({
+    values: [8, 0, 0, 0, 0, 0, 2],
+    delta: 3,
+  });
+  expect(homeEarnedMarks(rows.slice(2), "2026-10-19").delta).toBeUndefined();
+  expect(
+    homeEarnedMarks(
+      [{ marked_at: "2026-10-12T00:00:00Z", mark: 0 }],
+      "2026-10-19",
+    ).delta,
+  ).toBe(0);
+});
+it("uses the real Sydney exam weekday only within seven days, including exam day", () => {
+  expect(homeExamPrompt("2026-10-19")).toBe(
+    "What should I study before my exam?",
+  );
+  expect(homeExamPrompt("2026-10-20")).toBe(
+    "What should I study before Tuesday's exam?",
+  );
+  expect(homeExamPrompt("2026-10-27")).toBe(
+    "What should I study before Tuesday's exam?",
+  );
+  expect(homeExamPrompt("2026-10-28")).toBe(
+    "What should I study before my exam?",
+  );
+});

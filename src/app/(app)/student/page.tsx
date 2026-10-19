@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import { pageMetadata } from "@/lib/page-metadata";
 import { WelcomeDialog } from "@/components/welcome-dialog";
 import { needsWelcome } from "@/lib/welcome";
@@ -17,6 +18,7 @@ import {
   HomePlan,
   HomeRecent,
   HomeLostMarks,
+  readHomeMarks,
   readHomeSessions,
   readHomeUnfinishedSprint,
 } from "@/components/student/home/sections";
@@ -140,6 +142,7 @@ export default async function Home() {
     if (error) throw error;
     return (data ?? []) as ActivityDay[];
   });
+  const marks = readHomeMarks(id, today);
   const sessions = readHomeSessions(id);
   const unfinished = readHomeUnfinishedSprint(id);
   const dueNow = await due;
@@ -155,7 +158,7 @@ export default async function Home() {
             <Hero today={today} />
             <Link
               href="/student/flashcards"
-              className={buttonVariants({ variant: "outline" })}
+              className={cn(buttonVariants({ variant: "outline" }))}
             >
               <Cards aria-hidden />
               Review {dueNow ?? ""} cards
@@ -170,6 +173,7 @@ export default async function Home() {
       <Suspense fallback={<Card aria-hidden className="h-40 animate-pulse" />}>
         <HomeStats
           progress={progress}
+          marks={marks}
           due={due}
           today={today}
           activity={activity.catch(() => [])}
@@ -216,7 +220,7 @@ export default async function Home() {
         >
           <HomeRecent sessions={sessions} progress={progress} />
         </Suspense>
-        <HomeAsk />
+        <HomeAsk today={today} />
       </div>
     </div>
   );

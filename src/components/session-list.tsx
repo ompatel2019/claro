@@ -25,6 +25,7 @@ export function SessionList({
 }: {
   sessions: (Session & {
     attempts?: { status: string; check_status?: string }[];
+    recall?: { knew: number; total: number };
   })[];
   topics: Topic[];
   home?: boolean;
@@ -51,7 +52,13 @@ export function SessionList({
               <div className="flex min-w-0 items-center gap-3">
                 <SessionIcon kind={s.kind ?? "sprint"} />
                 <div className="min-w-0">
-                  <p className="truncate text-[13px] font-medium">
+                  <p
+                    className={
+                      home
+                        ? "truncate text-sm font-medium"
+                        : "truncate text-[13px] font-medium"
+                    }
+                  >
                     {sessionTitle(
                       home
                         ? {
@@ -64,20 +71,30 @@ export function SessionList({
                   </p>
                   <p className="text-muted-foreground truncate text-xs">
                     {home
-                      ? `${new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Sydney", hour: "numeric", minute: "2-digit" }).format(new Date(s.started_at))} · ${!s.finished_at && s.kind === "flashcards" ? "Due for review" : topicNames(s.config.subtopics?.length ? s.config.subtopics : s.config.topics, topics)}`
+                      ? `${new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Sydney", hour: "numeric", minute: "2-digit" }).format(new Date(s.started_at)).replace(/\s/g, "")} · ${!s.finished_at && s.kind === "flashcards" ? "Due for review" : topicNames(s.config.subtopics?.length ? s.config.subtopics : s.config.topics, topics)}`
                       : dateLabel(s.started_at)}
                   </p>
                 </div>
               </div>
               {s.finished_at ? (
                 <span className="shrink-0 text-[13px] font-semibold tabular-nums">
-                  {sessionScore(
-                    s.score != null && s.max_score
-                      ? (100 * s.score) / s.max_score
-                      : null,
-                    sessionStatus(s, s.attempts),
-                    s.kind === "flashcards" &&
-                      String(s.config.mode) === "study",
+                  {home && s.kind === "flashcards" && s.recall ? (
+                    <>
+                      {s.recall.knew}/{s.recall.total}
+                      <span className="text-muted-foreground font-normal">
+                        {" "}
+                        knew
+                      </span>
+                    </>
+                  ) : (
+                    sessionScore(
+                      s.score != null && s.max_score
+                        ? (100 * s.score) / s.max_score
+                        : null,
+                      sessionStatus(s, s.attempts),
+                      s.kind === "flashcards" &&
+                        String(s.config.mode) === "study",
+                    )
                   )}
                   {home &&
                     s.kind !== "flashcards" &&

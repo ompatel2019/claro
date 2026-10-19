@@ -58,3 +58,36 @@ Three visual rounds captured and inspected at both widths. Round 2 exposed long-
 - Visual rounds: `/tmp/s2b-H/r1`, `/tmp/s2b-H/r2`, final `/tmp/s2b-H/r3` (`home-1440.png`, `home-390.png`). Shared read-only mock left running untouched.
 
 The dev harness also emits an existing-style React key warning for the server-provided heatmap action, without rendering or navigation failure. Live credential-based e2e was not run; no production calls or secret files were used.
+
+## H2 — Home polish
+
+### Files and behavior
+
+- `src/components/student/home/sections.tsx`: adds an owned, status=marked attempts read for dated earned marks; projects only `mark,marked_at`, encloses the last fourteen Sydney dates with UTC query bounds, and filters exact Sydney dates in the pure helper. Adds a narrow `session_id,mark` review read restricted to finished flashcard sessions among the five recent rows. Both reads paginate at 1,000 to avoid silently truncating totals; read errors omit the supplemental data. Topics outline buttons now resolve the shared variant's conflicting border utilities locally. Target legend dash uses muted foreground.
+- `src/lib/home.ts`: pure `homeEarnedMarks` totals seven daily earned-mark values and compares their sum with the preceding seven days. Prior marked work (including a zero mark) is required for a delta. Invalid, undated, null-mark and out-of-window rows do not contribute. `homeExamPrompt` derives the weekday from `HSC_EXAM.startsAt` in Sydney when the exam is zero through seven days away; otherwise it uses “my exam”.
+- `src/app/(app)/student/page.tsx`: starts the marks read alongside other home reads, shares the request's Sydney day with Ask Claro, and resolves the review button's outline border locally.
+- `src/components/student/home/ask-card.tsx`: shows and sends the derived exam prompt. The Tuesday text is sent verbatim; the shared sheet's fallback reply is accepted. Its canned reply map and shared file remain unchanged.
+- `src/components/session-list.tsx`: additive optional recall counts, used only in home presentation; fully known means `mark === 1`, denominator is every review row for that session. Default/admin consumers retain their score presentation. Home titles use the prototype's 14px size and times use compact `h:mmam` format.
+- Tests updated in `src/lib/home.test.ts`, `src/components/student/home/{sections,ask-card}.test.tsx`, and `src/components/session-list.test.tsx` for Sydney midnight/period boundaries, invalid/missing dates, absent prior comparisons, exam timing, owned queries, partial review outcomes, completed plan state and unchanged non-home presentation.
+
+### Read permissions and data notes
+
+- `0002_core_schema.sql` grants authenticated SELECT on both `attempts` and `flashcard_reviews`; their “own or admin read” SELECT policies allow `user_id = auth.uid()`. Later migrations retain those reads. `0048_student_marking_privacy.sql` restricts `mark_reviews`, not these two tables. No service-role bypass, schema change or production request was added.
+- The Marks earned headline remains the actual 90-day RPC parent total; its supplemental trend/delta use dated earned marks over the last fourteen Sydney days. No percentage-to-earned-mark conversion is used.
+- The shared mock's attempts currently have no `marked_at`. Therefore the screenshots honestly omit the marks sparkline/pill; tests exercise actual dated rows and rendered trend/pill. An empty or failed dated read also omits them.
+- The mock flashcard session renders **5/8 knew**, calculated from its eight actual review rows. No template sample count was substituted.
+- The mock now verifies **1 of 3**, “Sprint on Inflation”, a real compact completion time and **55%**, a grey done row with green tick, and an outlined lit current-day heatmap cell with “Today is lit”. The footer sums only remaining work (22 minutes in this fixture).
+
+### Visual verification and remaining differences
+
+Two H2 rounds captured and opened at both widths: `/tmp/s2b-H/h2-r1` and final **`/tmp/s2b-H/h2-r2`**. Round two verifies restored outlined Practise buttons, visible dashed target legend, compact session times/title sizing, dynamic Tuesday prompt, completed-plan styling and lit heatmap state. The original template ordering and three-column desktop final row remain intact.
+
+Real fixture values, chart shape, topic focus, timestamps and dates differ from the sample by design. The owned marks-dropped subtitle still states the actual 90-day window. Existing shared shell right padding, logo/topbar, fonts/tokens, feedback/FAB positioning and their resulting desktop widths remain slice S concerns; no compensating layout hacks or non-owned changes were made. The narrower shared desktop Ask column wraps its first and third prompts; it will have the template's available width after the shell reservation is removed.
+
+### H2 validation
+
+- Prettier and changed-file ESLint: passed.
+- Whole-project `tsc --noEmit` through q-run: passed.
+- Relevant Vitest through q-run: six suites, 49 tests passed (home helpers, home sections, Ask card, session list, home page and quick-start).
+- Two screenshot rounds through the required harness on port 3151: passed at 1440 and 390. Shared mock left running untouched.
+- `git diff --check`: passed. No push, PR, merge, dependencies, secrets or database changes.

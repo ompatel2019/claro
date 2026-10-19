@@ -1,4 +1,6 @@
 "use client";
+import { homeExamPrompt } from "@/lib/home";
+import { sydneyToday } from "@/lib/flashcards";
 import { useState } from "react";
 import { askClaro } from "@/components/claro/ask-claro";
 import { PortalIcon } from "@/components/icons";
@@ -6,9 +8,8 @@ import { Card } from "@/components/ui/card";
 const suggestions = [
   "Explain the J-curve effect in two sentences",
   "Why does fiscal policy have time lags?",
-  "What should I study before my exam?",
 ];
-export function HomeAsk() {
+export function HomeAsk({ today = sydneyToday() }: { today?: string }) {
   const [text, setText] = useState("");
   return (
     <Card className="gap-4 p-5 xl:min-h-[390px]">
@@ -25,7 +26,7 @@ export function HomeAsk() {
         </p>
       </div>
       <div className="grid gap-2">
-        {suggestions.map((q) => (
+        {[...suggestions, homeExamPrompt(today)].map((q) => (
           <button
             key={q}
             type="button"

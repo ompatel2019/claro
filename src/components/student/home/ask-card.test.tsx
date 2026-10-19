@@ -20,3 +20,14 @@ it("sends suggestions and typed questions through the shared Ask Claro entrypoin
   expect(ask).toHaveBeenLastCalledWith("Explain inflation");
   expect(screen.getByRole("textbox")).toHaveValue("");
 });
+it("sends the exam weekday prompt to the shared sheet when the exam is near", () => {
+  render(<HomeAsk today="2026-10-20" />);
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: "What should I study before Tuesday's exam?",
+    }),
+  );
+  expect(ask).toHaveBeenCalledWith(
+    "What should I study before Tuesday's exam?",
+  );
+});
