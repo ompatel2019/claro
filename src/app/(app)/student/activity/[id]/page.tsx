@@ -1,3 +1,4 @@
+import { ActiveNav } from "@/components/claro/active-nav";
 import { SingleResult } from "@/components/student/mark/single-result";
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
@@ -81,6 +82,7 @@ export default async function Page({
     }
     return (
       <div className="mx-auto max-w-3xl min-w-0 space-y-5">
+        <ActiveNav href="/student/mark" path={`/student/activity/${id}`} />
         <PageHeader
           title="Continue your check"
           description="Your question is saved. Finish your answer when you're ready."
@@ -154,16 +156,20 @@ export default async function Page({
     !paths.length
   ) {
     return (
-      <SingleResult
-        row={single}
-        sessionId={id}
-        when={s.finished_at}
-        topic={topics.data.find((t) => t.id === single.topic_id)?.name ?? ""}
-      />
+      <>
+        <ActiveNav href="/student/mark" path={`/student/activity/${id}`} />
+        <SingleResult
+          row={single}
+          sessionId={id}
+          when={s.finished_at}
+          topic={topics.data.find((t) => t.id === single.topic_id)?.name ?? ""}
+        />
+      </>
     );
   }
   return (
     <div className="min-w-0 space-y-5">
+      <ActiveNav href="/student/mark" path={`/student/activity/${id}`} />
       {single ? (
         <>
           <Link

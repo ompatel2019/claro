@@ -1,4 +1,5 @@
 "use client";
+import { ActiveNavProvider, useActiveNav } from "@/components/claro/active-nav";
 import { AskClaro } from "@/components/claro/ask-claro";
 import { CommandPalette } from "@/components/claro/command-palette";
 import {
@@ -147,7 +148,15 @@ const initials = (name: string | null) =>
     .map((w) => w[0]?.toUpperCase())
     .join("") || "?";
 
-export function AppShell({
+export function AppShell(props: React.ComponentProps<typeof AppShellContent>) {
+  return (
+    <ActiveNavProvider>
+      <AppShellContent {...props} />
+    </ActiveNavProvider>
+  );
+}
+
+function AppShellContent({
   kind,
   name,
   badges = {},
@@ -164,7 +173,11 @@ export function AppShell({
 }) {
   const path = usePathname();
   const feedback = useFeedback();
-  const active = activeItem(kind, path);
+  const override = useActiveNav(path);
+  const active = activeItem(
+    kind,
+    kind === "student" ? (override ?? path) : path,
+  );
   const signOutForm = useRef<HTMLFormElement>(null);
   const home = nav[kind][0].items[0].href;
   const commands = [

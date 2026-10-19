@@ -270,44 +270,51 @@ export function SingleResult({
                 text: c.body,
               }))}
             />
+            <details className="mt-4 text-[13px]">
+              <summary className="text-muted-foreground cursor-pointer">
+                More
+              </summary>
+              <div className="space-y-4 pt-3">
+                {row.review?.status === "open" && (
+                  <p className="text-muted-foreground mt-5 text-[13px]">
+                    Your mark is being reviewed.
+                  </p>
+                )}
+                {row.sample_answer && (
+                  <details className="mt-5 text-[13px]">
+                    <summary className="text-muted-foreground cursor-pointer">
+                      Sample answer
+                    </summary>
+                    <div className="mt-3">
+                      <RichText text={row.sample_answer} />
+                    </div>
+                  </details>
+                )}
+                {row.explanation && (
+                  <details className="mt-5 text-[13px]">
+                    <summary className="text-muted-foreground cursor-pointer">
+                      Explanation
+                    </summary>
+                    <div className="mt-3">
+                      <RichText text={row.explanation} />
+                    </div>
+                  </details>
+                )}
+                {["marked", "reviewed"].includes(markingState(row)) && (
+                  <details className="mt-5 text-[13px]">
+                    <summary className="text-muted-foreground cursor-pointer">
+                      Marking review
+                    </summary>
+                    <div className="mt-3">
+                      <QuestionMark attemptId={row.attempt_id} />
+                    </div>
+                  </details>
+                )}
+              </div>
+            </details>
           </CardContent>
         </Card>
       </div>
-      {row.review?.status === "open" && (
-        <p className="text-muted-foreground mt-5 text-[13px]">
-          Your mark is being reviewed.
-        </p>
-      )}
-      {row.sample_answer && (
-        <details className="mt-5 text-[13px]">
-          <summary className="text-muted-foreground cursor-pointer">
-            Sample answer
-          </summary>
-          <div className="mt-3">
-            <RichText text={row.sample_answer} />
-          </div>
-        </details>
-      )}
-      {row.explanation && (
-        <details className="mt-5 text-[13px]">
-          <summary className="text-muted-foreground cursor-pointer">
-            Explanation
-          </summary>
-          <div className="mt-3">
-            <RichText text={row.explanation} />
-          </div>
-        </details>
-      )}
-      {["marked", "reviewed"].includes(markingState(row)) && (
-        <details className="mt-5 text-[13px]">
-          <summary className="text-muted-foreground cursor-pointer">
-            Marking review
-          </summary>
-          <div className="mt-3">
-            <QuestionMark attemptId={row.attempt_id} />
-          </div>
-        </details>
-      )}
     </div>
   );
 }
