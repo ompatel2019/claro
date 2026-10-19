@@ -105,17 +105,13 @@ for (const width of [390, 1280]) {
     expect(
       await card.evaluate((element) => getComputedStyle(element).position),
     ).toBe("static");
-    const feedback = page
-      .getByRole("button", { name: "Feedback", exact: true })
-      .filter({ visible: true });
-    if (width === 1280) {
-      expect(
-        await feedback.evaluate(
-          (element) => getComputedStyle(element).position,
-        ),
-      ).toBe("static");
-    }
-    await feedback.click();
+    // Feedback lives in the account menu (topbar avatar / sidebar user row).
+    await page
+      .getByRole("button", { name: "Account menu" })
+      .filter({ visible: true })
+      .first()
+      .click();
+    await page.getByRole("menuitem", { name: "Feedback", exact: true }).click();
     await expect(
       page.getByRole("dialog", { name: "Send feedback" }),
     ).toBeVisible();
