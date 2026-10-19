@@ -28,13 +28,14 @@ import { RichText } from "./rich-text";
 import { McqExplanationView } from "./mcq-explanation";
 import type { McqExplanation } from "@/lib/mcq-explanation";
 import { QuestionView } from "./question-view";
-import { isTyping, SessionShell, type SaveState } from "./session-shell";
+import { isTyping, type SaveState } from "./session-shell";
 import { WrittenAnswer } from "./written-answer";
 import { AnnotatedFeedback } from "./annotated-feedback";
 import { inlineSprintFeedback } from "@/lib/feedback";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { markTone, TYPE_LABEL } from "@/lib/results";
 
+import { SprintFocusShell } from "./student/sprint/focus-shell";
 import { BookletFilter, BookletLegend } from "./booklet-controls";
 
 const LETTERS = "ABCD";
@@ -476,8 +477,11 @@ export function SprintRunner({
   const qLabel = (i: number) => `Q${i + 1}`;
   const sprintBooklet = (
     <div className="flex min-h-[calc(100svh-9rem)] flex-col gap-5">
+      <p className="text-muted-foreground absolute top-6 right-5 text-xs">
+        {attempts.filter(answered).length} of {attempts.length} answered
+      </p>
       <BookletFilter filter={filter} onFilter={setFilter} />
-      <nav aria-label="Question booklet" className="space-y-3">
+      <nav aria-label="Question booklet" className="space-y-5">
         {(["mcq", "short", "extended"] as const).map((type) => {
           const items = attempts
             .map((row, i) => ({ row, i }))
@@ -491,7 +495,7 @@ export function SprintRunner({
             );
           return items.length ? (
             <div key={type}>
-              <h3 className="text-muted-foreground mb-1.5 text-xs font-medium">
+              <h3 className="text-muted-foreground mb-2.5 text-xs font-medium">
                 {TYPE_LABEL[type]}
               </h3>
               <div className="grid grid-cols-5 gap-2">
@@ -534,7 +538,7 @@ export function SprintRunner({
         className="mt-auto w-full"
         onClick={() => setReadAll(true)}
       >
-        Read all questions
+        <PortalIcon name="list" className="size-4" /> Read all questions
       </Button>
     </div>
   );
@@ -547,280 +551,285 @@ export function SprintRunner({
     });
 
   return (
-    <SessionShell
-      title={title}
-      wide={checkMode && a.question.type !== "mcq" && a.status === "marked"}
-      position={index + 1}
-      total={attempts.length}
-      answered={attempts.length - unanswered.length}
-      saveState={saveState}
-      onRetry={() => void flush().catch((e) => setError(e.message))}
-      clock={
-        limit
-          ? { mode: "down", seconds: limit - elapsed }
-          : { mode: "up", seconds: elapsed }
-      }
-      busy={busy}
-      onExit={exit}
-      onFinish={() => setConfirm(true)}
-      onMove={(d) => !busy && go(index + d)}
-      booklet={sprintBooklet}
-    >
-      {!!limit && elapsed >= limit && (
-        <div role="alert" className="bg-accent rounded-xl border p-4 text-sm">
-          Time’s up. You can keep working in overtime or choose Finish and mark.
-        </div>
-      )}
-      {error && (
-        <div
-          role="alert"
-          className="border-destructive bg-destructive-soft text-destructive flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"
-        >
-          <p>{error}</p>
-          {finishFailed && (
-            <a
-              href={`/student/sprint/${session.id}/results`}
-              className="underline"
-            >
-              View results
-            </a>
-          )}
-          {error.includes("sign-in expired") && (
-            <a
-              className="button-link"
-              href={`/sign-in?next=/student/sprint/${session.id}`}
-            >
-              Sign in again
-            </a>
-          )}
-        </div>
-      )}
-      <article className="bg-card shadow-card space-y-6 overflow-hidden rounded-xl border p-6 sm:p-7">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
-            <Badge variant="outline">Question {index + 1}</Badge>
-            <Badge variant="secondary">{TYPE_LABEL[a.question.type]}</Badge>
-            <Badge variant="secondary">
-              {plural(a.question.marks, "mark")}
-            </Badge>
-            <span>{topicNames[a.question.topic_id]}</span>
-            {seen.includes(a.question_id) && (
-              <Badge variant="outline" className="ml-2 align-middle">
-                Seen before
-              </Badge>
-            )}
-          </p>
-        </div>
-        <QuestionView question={a.question} />
-        {a.question.type === "mcq" ? (
-          <fieldset className="space-y-2.5">
-            <legend className="sr-only">Choose your answer</legend>
-            {a.question.options?.map((option, i) => (
-              <label
-                key={i}
-                className={cn(
-                  "has-[:focus-visible]:ring-ring flex cursor-pointer items-center gap-3.5 rounded-xl border px-4 py-3.5 text-[15px] leading-snug transition-colors has-[:focus-visible]:ring-2",
-                  a.choice_index === i
-                    ? "border-primary bg-accent"
-                    : "hover:bg-muted",
-                  answerKey === i && "border-success bg-success-soft",
-                  answerKey != null &&
-                    answerKey !== i &&
-                    a.choice_index === i &&
-                    "border-destructive bg-destructive-soft",
-                )}
+    <>
+      <SprintFocusShell
+        title={title}
+        wide={checkMode && a.question.type !== "mcq" && a.status === "marked"}
+        position={index + 1}
+        total={attempts.length}
+        answered={attempts.length - unanswered.length}
+        saveState={saveState}
+        onRetry={() => void flush().catch((e) => setError(e.message))}
+        clock={
+          limit
+            ? { mode: "down", seconds: limit - elapsed }
+            : { mode: "up", seconds: elapsed }
+        }
+        busy={busy}
+        onExit={exit}
+        onFinish={() => setConfirm(true)}
+        onMove={(d) => !busy && go(index + d)}
+        booklet={sprintBooklet}
+      >
+        {!!limit && elapsed >= limit && (
+          <div role="alert" className="bg-accent rounded-xl border p-4 text-sm">
+            Time’s up. You can keep working in overtime or choose Finish and
+            mark.
+          </div>
+        )}
+        {error && (
+          <div
+            role="alert"
+            className="border-destructive bg-destructive-soft text-destructive flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"
+          >
+            <p>{error}</p>
+            {finishFailed && (
+              <a
+                href={`/student/sprint/${session.id}/results`}
+                className="underline"
               >
-                <input
-                  type="radio"
-                  className="sr-only"
-                  name={`choice-${a.id}`}
-                  aria-label={`Option ${LETTERS[i]}: ${option}`}
-                  checked={a.choice_index === i}
-                  disabled={busy || !editable}
-                  onChange={() => choose(i)}
-                  onClick={() => a.choice_index === i && choose(null)}
-                />
-                <span
-                  aria-hidden
+                View results
+              </a>
+            )}
+            {error.includes("sign-in expired") && (
+              <a
+                className="button-link"
+                href={`/sign-in?next=/student/sprint/${session.id}`}
+              >
+                Sign in again
+              </a>
+            )}
+          </div>
+        )}
+        <article className="bg-card shadow-card space-y-6 overflow-hidden rounded-xl border p-6 sm:p-7">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
+              <Badge variant="outline">Question {index + 1}</Badge>
+              <Badge variant="secondary">{TYPE_LABEL[a.question.type]}</Badge>
+              <Badge variant="secondary">
+                {plural(a.question.marks, "mark")}
+              </Badge>
+              <span>{topicNames[a.question.topic_id]}</span>
+              {seen.includes(a.question_id) && (
+                <Badge variant="outline" className="ml-2 align-middle">
+                  Seen before
+                </Badge>
+              )}
+            </p>
+          </div>
+          <QuestionView question={a.question} showMetadata={false} />
+          {a.question.type === "mcq" ? (
+            <fieldset className="space-y-2.5">
+              <legend className="sr-only">Choose your answer</legend>
+              {a.question.options?.map((option, i) => (
+                <label
+                  key={i}
                   className={cn(
-                    "text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-lg border text-xs font-semibold",
-                    a.choice_index === i &&
-                      "bg-primary border-primary text-primary-foreground",
+                    "has-[:focus-visible]:ring-ring flex cursor-pointer items-center gap-3.5 rounded-xl border px-4 py-3.5 text-[15px] leading-snug transition-colors has-[:focus-visible]:ring-2",
+                    a.choice_index === i
+                      ? "border-primary bg-accent"
+                      : "hover:bg-muted",
+                    answerKey === i && "border-success bg-success-soft",
+                    answerKey != null &&
+                      answerKey !== i &&
+                      a.choice_index === i &&
+                      "border-destructive bg-destructive-soft",
                   )}
                 >
-                  {LETTERS[i]}
-                </span>
-                <span>{option}</span>
-              </label>
-            ))}
-          </fieldset>
-        ) : checkMode && a.status === "marked" ? null : (
-          <WrittenAnswer
-            inputOnly
-            disabled={busy || !editable}
-            onBusy={setBusy}
-            key={a.question_id ?? a.id}
-            attempt={backgroundAnswer(a) ? { ...a, status: "pending" } : a}
-            userId={userId}
-            edit={(patch) => edit(a.id, patch)}
-            save={(patch) => save(a.id, patch)}
-            flush={flush}
-            local={(patch) => local(a.id, patch)}
-          />
-        )}
-        {backgroundAnswer(a) && (
-          <Button
-            disabled={busy || !answered(a)}
-            onClick={() =>
-              void act(async () => {
-                await flush();
-                enqueueAnswer(rows.current[index]);
-              })
-            }
-          >
-            Submit answer
-          </Button>
-        )}
-        {checkMode && a.status === "marked" && (
-          <CheckResult
-            attempt={a}
-            explanation={explanations[a.id]}
-            checking={false}
-            canCheck={false}
-            onCheck={() => void check()}
-          />
-        )}
-        <div
-          role="group"
-          aria-label="Answer actions"
-          className="-mx-6 -mb-6 flex flex-wrap items-center gap-3 border-t px-6 py-5 sm:-mx-7 sm:-mb-7 sm:px-7"
-        >
-          {checkMode && a.status !== "marked" && (
+                  <input
+                    type="radio"
+                    className="sr-only"
+                    name={`choice-${a.id}`}
+                    aria-label={`Option ${LETTERS[i]}: ${option}`}
+                    checked={a.choice_index === i}
+                    disabled={busy || !editable}
+                    onChange={() => choose(i)}
+                    onClick={() => a.choice_index === i && choose(null)}
+                  />
+                  <span
+                    aria-hidden
+                    className={cn(
+                      "text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-lg border text-xs font-semibold",
+                      a.choice_index === i &&
+                        "bg-primary border-primary text-primary-foreground",
+                    )}
+                  >
+                    {LETTERS[i]}
+                  </span>
+                  <span>{option}</span>
+                </label>
+              ))}
+            </fieldset>
+          ) : checkMode && a.status === "marked" ? null : (
+            <WrittenAnswer
+              inputOnly
+              disabled={busy || !editable}
+              onBusy={setBusy}
+              key={a.question_id ?? a.id}
+              attempt={backgroundAnswer(a) ? { ...a, status: "pending" } : a}
+              userId={userId}
+              edit={(patch) => edit(a.id, patch)}
+              save={(patch) => save(a.id, patch)}
+              flush={flush}
+              local={(patch) => local(a.id, patch)}
+            />
+          )}
+          {backgroundAnswer(a) && (
+            <Button
+              disabled={busy || !answered(a)}
+              onClick={() =>
+                void act(async () => {
+                  await flush();
+                  enqueueAnswer(rows.current[index]);
+                })
+              }
+            >
+              Submit answer
+            </Button>
+          )}
+          {checkMode && a.status === "marked" && (
             <CheckResult
               attempt={a}
               explanation={explanations[a.id]}
-              checking={checking === a.id}
-              highlight={needsCheck}
-              canCheck={editable && answered(a) && !busy && !checking}
+              checking={false}
+              canCheck={false}
               onCheck={() => void check()}
             />
           )}
+          <div
+            role="group"
+            aria-label="Answer actions"
+            className="-mx-6 -mb-6 flex flex-wrap items-center gap-3 border-t px-6 pt-5 pb-6 sm:-mx-7 sm:-mb-7 sm:px-7 sm:pb-7"
+          >
+            {checkMode && a.status !== "marked" && (
+              <CheckResult
+                attempt={a}
+                explanation={explanations[a.id]}
+                checking={checking === a.id}
+                highlight={needsCheck}
+                canCheck={editable && answered(a) && !busy && !checking}
+                onCheck={() => void check()}
+              />
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              aria-pressed={a.flagged}
+              disabled={busy || !editable}
+              onClick={flag}
+            >
+              <Flag className={cn(a.flagged && "fill-brand text-brand")} />
+              Flag for review
+            </Button>
+            <p className="text-muted-foreground ml-auto hidden text-xs sm:block">
+              {a.question.type === "mcq" && "A – D to answer · "}← → to move · F
+              to flag
+            </p>
+          </div>
+        </article>
+        <div className="flex items-center justify-between gap-3 pt-1">
           <Button
             variant="outline"
-            size="sm"
-            aria-pressed={a.flagged}
-            disabled={busy || !editable}
-            onClick={flag}
+            aria-label="Previous question"
+            disabled={busy || index === 0}
+            onClick={() => go(index - 1)}
           >
-            <Flag className={cn(a.flagged && "fill-brand text-brand")} />
-            Flag for review
+            <PortalIcon name="arrow-left" aria-hidden />
+            <span className="sm:hidden">Previous</span>
+            <span className="hidden sm:inline">Previous</span>
           </Button>
-          <p className="text-muted-foreground ml-auto hidden text-xs sm:block">
-            {a.question.type === "mcq" && "A – D to answer · "}← → to move · F
-            to flag
-          </p>
-        </div>
-      </article>
-      <div className="flex items-center justify-between gap-3 pt-1">
-        <Button
-          variant="outline"
-          aria-label="Previous question"
-          disabled={busy || index === 0}
-          onClick={() => go(index - 1)}
-        >
-          <PortalIcon name="arrow-left" aria-hidden />
-          <span className="sm:hidden">Previous</span>
-          <span className="hidden sm:inline">Previous question</span>
-        </Button>
-        <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums md:hidden">
-          {index + 1} / {attempts.length}
-        </span>
-        {index < attempts.length - 1 ? (
-          <Tooltip disabled={!needsCheck}>
-            <TooltipTrigger
-              render={<Button disabled={busy} onClick={() => go(index + 1)} />}
-            >
-              Next question <PortalIcon name="arrow-right" aria-hidden />
-            </TooltipTrigger>
-            <TooltipContent role="tooltip">
-              You’ve selected an answer, check it first?
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <Button disabled={busy} onClick={() => setConfirm(true)}>
-            Finish
-          </Button>
-        )}
-      </div>
-      <Dialog open={confirm} onOpenChange={setConfirm}>
-        <DialogContent className="max-h-[85dvh] overflow-y-auto">
-          <DialogTitle>Finish and mark?</DialogTitle>
-          <DialogDescription>
-            {attempts.length - unanswered.length} of {attempts.length} answered.
-            Unanswered questions score 0.
-          </DialogDescription>
-          {[
-            ["Unanswered", unanswered],
-            ["Flagged", flagged],
-          ].map(([label, list]) =>
-            (list as number[]).length ? (
-              <p key={label as string} className="text-sm">
-                {label as string}:{" "}
-                {(list as number[]).map((i, n) => (
-                  <span key={i}>
-                    {n > 0 && ", "}
-                    <button
-                      type="button"
-                      className="underline"
-                      onClick={() => {
-                        setConfirm(false);
-                        go(i);
-                      }}
-                    >
-                      {qLabel(i)}
-                    </button>
-                  </span>
-                ))}
-              </p>
-            ) : null,
-          )}
-          <div className="flex flex-wrap justify-end gap-2">
-            <Button variant="outline" onClick={() => setConfirm(false)}>
-              Keep working
-            </Button>
-            <Button disabled={busy} onClick={() => void act(() => finish())}>
-              Finish and mark
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-      <Dialog open={readAll} onOpenChange={setReadAll}>
-        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-          <DialogTitle>All questions</DialogTitle>
-          <ol className="space-y-4">
-            {attempts.map((row, i) => (
-              <li
-                key={row.id}
-                className="space-y-1 border-b border-dashed pb-4"
+          <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums md:hidden">
+            {index + 1} / {attempts.length}
+          </span>
+          {index < attempts.length - 1 ? (
+            <Tooltip disabled={!needsCheck}>
+              <TooltipTrigger
+                render={
+                  <Button disabled={busy} onClick={() => go(index + 1)} />
+                }
               >
-                <button
-                  type="button"
-                  className="text-sm font-semibold underline-offset-4 hover:underline"
-                  onClick={() => {
-                    setReadAll(false);
-                    go(i);
-                  }}
+                Next question <PortalIcon name="arrow-right" aria-hidden />
+              </TooltipTrigger>
+              <TooltipContent role="tooltip">
+                You’ve selected an answer, check it first?
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <Button disabled={busy} onClick={() => setConfirm(true)}>
+              Finish
+            </Button>
+          )}
+        </div>
+        <Dialog open={confirm} onOpenChange={setConfirm}>
+          <DialogContent className="max-h-[85dvh] overflow-y-auto">
+            <DialogTitle>Finish and mark?</DialogTitle>
+            <DialogDescription>
+              {attempts.length - unanswered.length} of {attempts.length}{" "}
+              answered. Unanswered questions score 0.
+            </DialogDescription>
+            {[
+              ["Unanswered", unanswered],
+              ["Flagged", flagged],
+            ].map(([label, list]) =>
+              (list as number[]).length ? (
+                <p key={label as string} className="text-sm">
+                  {label as string}:{" "}
+                  {(list as number[]).map((i, n) => (
+                    <span key={i}>
+                      {n > 0 && ", "}
+                      <button
+                        type="button"
+                        className="underline"
+                        onClick={() => {
+                          setConfirm(false);
+                          go(i);
+                        }}
+                      >
+                        {qLabel(i)}
+                      </button>
+                    </span>
+                  ))}
+                </p>
+              ) : null,
+            )}
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="outline" onClick={() => setConfirm(false)}>
+                Keep working
+              </Button>
+              <Button disabled={busy} onClick={() => void act(() => finish())}>
+                Finish and mark
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+        <Dialog open={readAll} onOpenChange={setReadAll}>
+          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+            <DialogTitle>All questions</DialogTitle>
+            <ol className="space-y-4">
+              {attempts.map((row, i) => (
+                <li
+                  key={row.id}
+                  className="space-y-1 border-b border-dashed pb-4"
                 >
-                  Question {i + 1} · {row.question.marks}{" "}
-                  {row.question.marks === 1 ? "mark" : "marks"}
-                </button>
-                <RichText className="text-sm" text={row.question.stem} />
-              </li>
-            ))}
-          </ol>
-        </DialogContent>
-      </Dialog>
-    </SessionShell>
+                  <button
+                    type="button"
+                    className="text-sm font-semibold underline-offset-4 hover:underline"
+                    onClick={() => {
+                      setReadAll(false);
+                      go(i);
+                    }}
+                  >
+                    Question {i + 1} · {row.question.marks}{" "}
+                    {row.question.marks === 1 ? "mark" : "marks"}
+                  </button>
+                  <RichText className="text-sm" text={row.question.stem} />
+                </li>
+              ))}
+            </ol>
+          </DialogContent>
+        </Dialog>
+      </SprintFocusShell>
+    </>
   );
 }
 

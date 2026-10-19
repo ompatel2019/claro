@@ -1,5 +1,4 @@
 "use client";
-import { Flag } from "@/components/icons";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 type Filter = "all" | "unanswered" | "flagged";
 export function BookletFilter({
@@ -28,13 +27,13 @@ export function BookletLegend() {
   return (
     <ul className="text-muted-foreground space-y-2 text-xs">
       <li className="flex items-center gap-2">
-        <span className="bg-card size-3 rounded-full border" /> Not answered
-      </li>
-      <li className="flex items-center gap-2">
         <span className="bg-ink size-3 rounded-full" /> Answered
       </li>
       <li className="flex items-center gap-2">
-        <Flag aria-hidden className="text-brand fill-brand size-3" /> Flagged
+        <span className="bg-card size-3 rounded-full border" /> Not answered
+      </li>
+      <li className="flex items-center gap-2">
+        <span className="bg-brand size-3 rounded-full" /> Flagged
       </li>
       <li className="flex items-center gap-2">
         <span className="ring-brand size-3 rounded-full ring-2" /> Current

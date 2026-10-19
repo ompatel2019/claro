@@ -37,7 +37,9 @@ vi.mock("@/utils/supabase/client", () => ({
 }));
 vi.mock("./session-shell", () => ({
   isTyping: () => false,
-  SessionShell: ({
+}));
+vi.mock("./student/sprint/focus-shell", () => ({
+  SprintFocusShell: ({
     booklet,
     children,
     onExit,

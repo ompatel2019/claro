@@ -24,6 +24,7 @@ import { RetryAnswer } from "@/components/retry-answer";
 import { ResultsAnswers, OverallFeedback } from "@/components/results-report";
 import { SameSetup } from "@/components/sprint-setup";
 import { ResultStat } from "@/components/student/sprint/result-stat";
+import { ResultsNextStep } from "@/components/student/sprint/results-next-step";
 import { StatusPill } from "@/components/status-pill";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -150,36 +151,39 @@ export default async function Results({
     <div className="space-y-5">
       <Link
         href="/student/activity"
+        aria-label="Back to activity"
         className="text-muted-foreground inline-flex items-center gap-1.5 text-[13px]"
       >
         <PortalIcon name="arrow-left" className="size-3.5" />
-        Back to activity
+        Activity
       </Link>
-      <PageHeader
-        eyebrow={`${when(s.started_at)} · ${timeMeta(elapsed, limit)}`}
-        title={`${modeLabel(s.config.mode)} sprint · ${places?.length ? places.map(name).join(", ") : "All topics"}`}
-        actions={
-          <>
-            {failed.length > 0 && (
-              <RetryAnswer
-                ids={failed.map((r) => r.attempt_id)}
-                label={`Retry all failed (${failed.length})`}
-              />
-            )}
-            {mistakes > 0 && (
-              <Link
-                href={sprintHref(s.config, { history: "mistakes" })}
-                className={buttonVariants()}
-              >
-                Practise mistakes ({mistakes})
-              </Link>
-            )}
-            <SameSetup config={s.config} />
-          </>
-        }
-      />
+      <div className="[&>[data-component=PageHeader]]:flex-col [&>[data-component=PageHeader]]:items-start">
+        <PageHeader
+          eyebrow={`${when(s.started_at)} · ${timeMeta(elapsed, limit)}`}
+          title={`${modeLabel(s.config.mode)} sprint · ${places?.length ? places.map(name).join(", ") : "All topics"}`}
+          actions={
+            <>
+              <SameSetup config={s.config} />
+              {failed.length > 0 && (
+                <RetryAnswer
+                  ids={failed.map((r) => r.attempt_id)}
+                  label={`Retry all failed (${failed.length})`}
+                />
+              )}
+              {mistakes > 0 && (
+                <Link
+                  href={sprintHref(s.config, { history: "mistakes" })}
+                  className={buttonVariants()}
+                >
+                  Practise mistakes ({mistakes})
+                </Link>
+              )}
+            </>
+          }
+        />
+      </div>
       <MarkingProgress {...progress} />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
         <ResultStat
           label={
             <span className="flex items-center gap-2">
@@ -199,15 +203,27 @@ export default async function Results({
         {k.mcCount > 0 && (
           <ResultStat
             label="Multiple choice"
-            value={`${k.mc.mark} / ${k.mc.max}`}
+            value={
+              <>
+                {k.mc.mark}
+                <span className="text-muted-foreground text-base font-medium">
+                  /{k.mc.max}
+                </span>
+              </>
+            }
             comparison={delta(pct(k.mc), typeAvg(true), " pts")}
           />
         )}
         {k.writtenCount > 0 && (
           <ResultStat
-            label="Written average"
+            label="Written"
             value={
-              pct(k.written) == null ? "–" : `${Math.round(pct(k.written)!)}%`
+              <>
+                {k.written.mark}
+                <span className="text-muted-foreground text-base font-medium">
+                  /{k.written.max}
+                </span>
+              </>
             }
             comparison={delta(pct(k.written), typeAvg(false), " pts")}
           />
@@ -218,6 +234,14 @@ export default async function Results({
         pending={progress.summaryPending}
         actions={actions}
         rows={rows}
+        nextStep={
+          <ResultsNextStep
+            rows={rows}
+            topics={topics}
+            config={s.config}
+            cards={cards}
+          />
+        }
       />
       <ResultsAnswers rows={rows} id={id} name={name} photos={url} />
     </div>

@@ -83,15 +83,22 @@ export function ResultsAnswers({
           <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
             <Badge variant="outline">Question {r.position}</Badge>
             <Badge variant="secondary">{TYPE_LABEL[r.type]}</Badge>
-            <span>{r.source}</span>
-            {r.topic_id && ` · ${name(r.topic_id)}`}
+            <span className="text-xs">
+              {name(r.topic_id)} · {r.marks} {r.marks === 1 ? "mark" : "marks"}
+            </span>
             {r.type === "mcq" && scored(r) && (
               <span className="text-ink font-semibold tabular-nums">
                 {markLabel(r)}
               </span>
             )}
           </p>
-          <QuestionView question={r} />
+          <div
+            className={
+              readOnly ? undefined : "[&>div>div:first-child]:text-[17px]"
+            }
+          >
+            <QuestionView question={r} showMetadata={readOnly} />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
           {r.type === "mcq" ? (
@@ -165,11 +172,13 @@ export function OverallFeedback({
   pending,
   actions,
   rows = [],
+  nextStep,
 }: {
   summary: OverallSummary | null;
   pending: boolean;
   actions?: NextAction[];
   rows?: ReviewRow[];
+  nextStep?: React.ReactNode;
 }) {
   const actionLinks = actions && actions.length > 0 && (
     <div className="flex flex-wrap gap-2">
@@ -197,6 +206,7 @@ export function OverallFeedback({
                   Review Q{q.position} · {TYPE_LABEL[q.type]}
                 </a>
               ))}
+              {!nextStep && references(false)}
             </div>
           )}
         </div>
@@ -244,21 +254,25 @@ export function OverallFeedback({
           </p>
         </CardHeader>
         <CardContent className="space-y-4">
-          <section
-            className="bg-brand-soft/60 border-brand/30 space-y-3 rounded-xl border p-4"
-            aria-label="Next steps"
-          >
-            <h3 className="text-sm font-semibold">Next steps</h3>
-            {!!summary?.next_steps?.length && (
-              <ul className="space-y-2 text-[13px]">
-                {summary.next_steps.map((text, i) => (
-                  <li key={i}>{text}</li>
-                ))}
-              </ul>
-            )}
-            {actionLinks}
-          </section>
-          {references(true)}
+          {nextStep ?? (
+            <>
+              <section
+                className="bg-brand-soft/60 border-brand/30 space-y-3 rounded-xl border p-4"
+                aria-label="Next steps"
+              >
+                <h3 className="text-sm font-semibold">Next steps</h3>
+                {!!summary?.next_steps?.length && (
+                  <ul className="space-y-2 text-[13px]">
+                    {summary.next_steps.map((text, i) => (
+                      <li key={i}>{text}</li>
+                    ))}
+                  </ul>
+                )}
+                {actionLinks}
+              </section>
+              {references(true)}
+            </>
+          )}
         </CardContent>
       </Card>
       <Card>
@@ -304,7 +318,7 @@ export function OverallFeedback({
                   </ul>
                 </section>
               ))}
-              {references(false)}
+              {!nextStep && references(false)}
             </div>
           ) : (
             <div className="space-y-3">
