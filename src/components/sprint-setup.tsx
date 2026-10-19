@@ -612,15 +612,17 @@ export function SprintSetup({
                   >
                     Last 5 years
                   </button>
-                  <label className="ml-auto flex items-center gap-2 text-[13px]">
-                    <Switch
-                      checked={c.history === "prefer_new"}
-                      onCheckedChange={(prefer) =>
-                        set({ history: prefer ? "prefer_new" : "any" })
-                      }
-                    />
-                    Prefer questions I haven’t seen
-                  </label>
+                  {(c.history === "prefer_new" || c.history === "any") && (
+                    <label className="ml-auto flex items-center gap-2 text-[13px]">
+                      <Switch
+                        checked={c.history === "prefer_new"}
+                        onCheckedChange={(prefer) =>
+                          set({ history: prefer ? "prefer_new" : "any" })
+                        }
+                      />
+                      Prefer questions I haven’t seen
+                    </label>
+                  )}
                 </div>
               </Section>
             )}
@@ -866,7 +868,7 @@ export function SprintSetup({
                       <label
                         key={value}
                         className={cn(
-                          "relative flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full px-2 py-1.5 text-xs",
+                          "has-[:focus-visible]:ring-ring relative flex flex-1 cursor-pointer items-center justify-center gap-2 rounded-full px-2 py-1.5 text-xs has-[:focus-visible]:ring-2",
                           c.feedback === value && "bg-card shadow-xs",
                         )}
                       >
@@ -970,11 +972,25 @@ export function SprintSetup({
             ))}
           </dl>
           <div className="flex flex-wrap gap-1.5">
-            {(c.subtopics.length ? c.subtopics : c.topics).map((id) => (
-              <Badge variant="secondary" key={id}>
-                {names[id]}
-              </Badge>
-            ))}
+            {c.topics.map((id) => {
+              const subs = c.subtopics.filter((sub) =>
+                sub.startsWith(`${id}-`),
+              );
+              return (
+                <div key={id} className="space-y-1">
+                  <Badge variant="secondary">{names[id]}</Badge>
+                  {subs.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 pl-2">
+                      {subs.map((sub) => (
+                        <Badge variant="secondary" key={sub}>
+                          {names[sub]}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div className="bg-muted min-w-0 space-y-2 rounded-xl p-3.5 text-[13px]">
             <p className="sr-only">{summary(c, names, years)}</p>

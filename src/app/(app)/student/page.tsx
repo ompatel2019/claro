@@ -18,6 +18,7 @@ import {
   HomeRecent,
   HomeLostMarks,
   readHomeSessions,
+  readHomeUnfinishedSprint,
 } from "@/components/student/home/sections";
 import { ActivityHeatmap } from "@/components/activity-heatmap";
 import { FlashcardStart } from "@/components/flashcard-start";
@@ -125,6 +126,7 @@ export default async function Home() {
   const due = dueCount(id).catch(() => null);
   const progress = loadProgress("90", today).catch(() => null);
   const sessions = readHomeSessions(id);
+  const unfinished = readHomeUnfinishedSprint(id);
   return (
     <div className="min-w-0 space-y-5" data-testid="student-home">
       {showWelcome && <WelcomeDialog profile={profile} />}
@@ -161,7 +163,12 @@ export default async function Home() {
         <Suspense
           fallback={<Card aria-hidden className="h-96 animate-pulse" />}
         >
-          <HomePlan progress={progress} sessions={sessions} due={due} />
+          <HomePlan
+            progress={progress}
+            sessions={sessions}
+            unfinished={unfinished}
+            due={due}
+          />
         </Suspense>
       </div>
       <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,2.06fr)_minmax(0,1fr)] xl:gap-5">

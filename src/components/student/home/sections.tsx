@@ -5,6 +5,7 @@ import type { ProgressData } from "@/lib/progress";
 import { rangeFrom, reportHref } from "@/lib/progress";
 import { sydneyToday } from "@/lib/flashcards";
 import { dateLabel, type Session, type Topic } from "@/lib/practice";
+import { isWeakTopic } from "@/lib/weak-topics";
 import { sessionHref } from "@/lib/session-summary";
 import { Card } from "@/components/ui/card";
 import { TryAgain } from "@/components/try-again";
@@ -32,6 +33,37 @@ export async function readHomeSessions(userId: string): HomeSessions {
       .order("started_at", { ascending: false })
       .limit(5);
     return error ? null : (data as Session[]);
+  } catch {
+    return null;
+  }
+}
+export async function readHomeUnfinishedSprint(
+  userId: string,
+): Promise<Session | null> {
+  try {
+    const db = await createClient();
+    const { data, error } = await db
+      .from("sessions")
+      .select("*")
+      .eq("user_id", userId)
+      .is("finished_at", null)
+      .eq("kind", "sprint")
+      .order("started_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    return error ? null : (data as Session | null);
+  } catch {
+    return null;
+  }
+}
+async function readHomeTopics(): Promise<Topic[] | null> {
+  try {
+    const db = await createClient();
+    const result = await db
+      .from("topics")
+      .select("id,parent_id,name,sort")
+      .order("sort");
+    return result.error ? null : result.data;
   } catch {
     return null;
   }
@@ -98,7 +130,6 @@ export async function HomeStats({
           caption: "Last 90 days",
           href: "/student/progress",
           icon: Target,
-          label: "View marks earned",
         },
         {
           title: "Questions answered",
@@ -106,7 +137,6 @@ export async function HomeStats({
           caption: "Last 90 days",
           href: "/student/sprint",
           icon: Sprint,
-          label: "Topic Sprint",
         },
         {
           title: "Study time",
@@ -117,7 +147,6 @@ export async function HomeStats({
           caption: "Finished sessions · last 90 days",
           href: "/student/activity",
           icon: History,
-          label: "Activity",
         },
         {
           title: "Cards due",
@@ -125,13 +154,11 @@ export async function HomeStats({
           caption: "Review now",
           href: "/student/flashcards",
           icon: Cards,
-          label: `Flashcards ${count ?? "Choose a deck"}${count == null ? "" : " due"}`,
         },
-      ].map(({ title, value, caption, href, icon: Icon, label }) => (
+      ].map(({ title, value, caption, href, icon: Icon }) => (
         <Link
           key={title}
           href={href}
-          aria-label={`${label} · ${title}`}
           className="bg-card shadow-card hover:border-foreground/20 flex min-h-[152px] flex-col justify-between rounded-xl border p-5 focus-visible:outline-2"
         >
           <div className="flex items-center justify-between">
@@ -241,19 +268,7 @@ export async function HomeAverage({
 }
 export async function HomeTopics({ progress }: { progress: HomeProgress }) {
   const d = await progress;
-  let topics: Topic[] | null = d?.topics ?? null;
-  if (!topics) {
-    try {
-      const db = await createClient();
-      const result = await db
-        .from("topics")
-        .select("id,parent_id,name,sort")
-        .order("sort");
-      topics = result.error ? null : result.data;
-    } catch {
-      topics = null;
-    }
-  }
+  const topics = d?.topics ?? (await readHomeTopics());
   return (
     <section aria-label="Study hub" className="min-w-0">
       <HomeCard
@@ -316,17 +331,25 @@ export async function HomeTopics({ progress }: { progress: HomeProgress }) {
 export async function HomePlan({
   progress,
   sessions,
+  unfinished: open,
   due,
 }: {
   progress: HomeProgress;
   sessions: HomeSessions;
+  unfinished?: Promise<Session | null>;
   due: Promise<number | null>;
 }) {
-  const [d, recent, count] = await Promise.all([progress, sessions, due]);
-  const unfinished = recent?.find((s) => !s.finished_at && s.kind === "sprint");
-  const weak = d?.topics
-    .filter((t) => t.pct != null && t.possible > 0)
-    .sort((a, b) => a.pct! - b.pct!)[0];
+  const [d, recent, count, unfinished] = await Promise.all([
+    progress,
+    sessions,
+    due,
+    open ??
+      sessions.then(
+        (rows) =>
+          rows?.find((s) => !s.finished_at && s.kind === "sprint") ?? null,
+      ),
+  ]);
+  const weak = d?.topics.filter(isWeakTopic).sort((a, b) => a.pct! - b.pct!)[0];
   const actions = [
     ...(count
       ? [
@@ -361,7 +384,7 @@ export async function HomePlan({
       title="Today's plan"
       description="Built from your due cards and practice history"
     >
-      {!d && !recent && count == null ? (
+      {!d && !recent && !unfinished && count == null ? (
         <TryAgain what="your study plan" />
       ) : actions.length ? (
         <ul className="space-y-2">
@@ -406,6 +429,7 @@ export async function HomeRecent({
   progress: HomeProgress;
 }) {
   const [rows, d] = await Promise.all([sessions, progress]);
+  const topics = d?.topics ?? (await readHomeTopics());
   return (
     <HomeCard
       title="Recent sessions"
@@ -413,7 +437,7 @@ export async function HomeRecent({
       href="/student/activity"
     >
       {rows ? (
-        <SessionList sessions={rows} topics={d?.topics ?? []} />
+        <SessionList sessions={rows} topics={topics ?? []} />
       ) : (
         <TryAgain what="your recent sessions" />
       )}

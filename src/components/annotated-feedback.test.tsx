@@ -582,3 +582,54 @@ it("keeps low-confidence states honest in standalone results", () => {
     screen.queryByRole("heading", { name: "Marking criteria" }),
   ).toBeNull();
 });
+
+it.each([
+  [false, false, 900, false],
+  [false, true, 1099, false],
+  [false, false, 1100, true],
+  [false, true, 1100, true],
+  [true, false, 899, false],
+  [true, false, 900, true],
+] as const)(
+  "preserves default/admin layout and gates student styling (single=%s edit=%s width=%s)",
+  (singleResult, editing, width, wide) => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(private callback: ResizeObserverCallback) {}
+        observe(target: Element) {
+          if (target.hasAttribute("data-comment-navigation")) {
+            this.callback(
+              [{ contentRect: { width } } as ResizeObserverEntry],
+              this as unknown as ResizeObserver,
+            );
+          }
+        }
+        disconnect() {}
+      },
+    );
+    const edit = editing
+      ? { comments: [], nextMark: "", onChange: vi.fn(), onUndo: vi.fn() }
+      : undefined;
+    const { container } = render(
+      <AnnotatedFeedback row={row} singleResult={singleResult} edit={edit} />,
+    );
+    expect(container.querySelector(".whitespace-pre-wrap")).toHaveClass(
+      "relative",
+    );
+    expect(container.querySelector(".whitespace-pre-wrap")?.className).toBe(
+      singleResult
+        ? "booklet relative min-h-28 text-[15px] leading-8 whitespace-pre-wrap"
+        : "relative max-w-[70ch] text-base leading-[26px] whitespace-pre-wrap",
+    );
+    expect(!!container.querySelector(".booklet")).toBe(singleResult);
+    const grid = container.querySelector(".grid.gap-6")!;
+    expect(grid).toBeTruthy();
+    expect(grid.classList.contains("grid-cols-[minmax(0,1fr)_300px]")).toBe(
+      wide && singleResult,
+    );
+    expect(grid.classList.contains("grid-cols-[minmax(0,1fr)_320px]")).toBe(
+      wide && !singleResult,
+    );
+  },
+);

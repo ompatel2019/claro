@@ -284,7 +284,7 @@ export function OverallFeedback({
                   <h3
                     className={
                       lost
-                        ? "text-warning text-xs font-semibold"
+                        ? "text-warning-text text-xs font-semibold"
                         : "text-success text-xs font-semibold"
                     }
                   >

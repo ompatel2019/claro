@@ -172,6 +172,8 @@ it("renders the live summary after setup controls with desktop sticky positionin
   ).toBeTruthy();
   expect(summary).toBe(summary.parentElement!.lastElementChild);
   expect(summary).toHaveClass("xl:sticky");
+  expect(summary).not.toHaveTextContent(/about.*minute/i);
+  expect(within(summary).getByText("cards", { exact: true })).toBeVisible();
   expect(summary.className).not.toMatch(/(?:^|\s)(?:sticky|fixed)(?:\s|$)/);
 });
 

@@ -139,9 +139,8 @@ it("derives the due-topic meter, library states and deduplicated unfinished revi
   expect(
     screen.getByRole("meter", { name: "Global Economy: 1 due" }),
   ).toHaveAttribute("aria-valuenow", "100");
-  expect(
-    screen.getByText("About 1 minute · 1 due tomorrow"),
-  ).toBeInTheDocument();
+  expect(screen.getByText("1 due tomorrow")).toBeInTheDocument();
+  expect(screen.queryByText(/about.*minute/i)).not.toBeInTheDocument();
   const resume = screen.getByText("Unfinished session").parentElement!;
   expect(within(resume).getByText(/1 of 2 reviewed/)).toBeInTheDocument();
   expect(screen.getByRole("link", { name: "Continue" })).toHaveAttribute(

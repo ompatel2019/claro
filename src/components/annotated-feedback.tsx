@@ -41,7 +41,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
 const reduced = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const WIDE = 900;
+const WIDE = 1100;
 
 /** Display only: keep UTF-16 offsets, including both characters of a lone CRLF. */
 export function displayAnswer(text: string) {
@@ -447,11 +447,11 @@ export function AnnotatedFeedback({
     const el = root.current;
     if (!el) return;
     const observer = new ResizeObserver(([entry]) =>
-      setWide(entry.contentRect.width >= WIDE),
+      setWide(entry.contentRect.width >= (singleResult ? 900 : WIDE)),
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, []);
+  }, [singleResult]);
 
   // Google Docs layout: each card level with its highlight, pushed down on collision.
   useLayoutEffect(() => {
@@ -592,7 +592,11 @@ export function AnnotatedFeedback({
       ref={doc}
       onPointerUp={edit && !edit.disabled ? captureSelection : undefined}
       onKeyUp={edit && !edit.disabled ? captureSelection : undefined}
-      className="booklet relative min-h-28 text-[15px] leading-8 whitespace-pre-wrap"
+      className={
+        singleResult
+          ? "booklet relative min-h-28 text-[15px] leading-8 whitespace-pre-wrap"
+          : "relative max-w-[70ch] text-base leading-[26px] whitespace-pre-wrap"
+      }
     >
       {highlightSegments(displayedText, anchored).map((seg) => {
         const covering = seg.comments
@@ -979,7 +983,10 @@ export function AnnotatedFeedback({
           <div
             className={cn(
               "grid gap-6",
-              wide && "grid-cols-[minmax(0,1fr)_300px]",
+              wide &&
+                (singleResult
+                  ? "grid-cols-[minmax(0,1fr)_300px]"
+                  : "grid-cols-[minmax(0,1fr)_320px]"),
             )}
           >
             <div className="space-y-2">

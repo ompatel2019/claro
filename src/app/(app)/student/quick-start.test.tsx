@@ -73,6 +73,13 @@ vi.mock("@/utils/supabase/server", () => ({
       const query = {
         select: () => query,
         eq: () => query,
+        is: () => query,
+        maybeSingle: async () => ({
+          data:
+            mocks.sessions.find((s) => s.kind === "sprint" && !s.finished_at) ??
+            null,
+          error: mocks.failSessions,
+        }),
         lte: () => query,
         order: () => query,
         in: () => query,
@@ -115,9 +122,9 @@ it("shows the compact term indicator, launch cards, study days and study hub", a
       .map((h) => h.textContent),
   ).toEqual(["Marks earned", "Questions answered", "Study time", "Cards due"]);
   for (const [name, href] of [
-    ["Topic Sprint", "/student/sprint"],
-    ["Flashcards 0 due", "/student/flashcards"],
-    ["Activity", "/student/activity"],
+    ["Questions answered Unavailable", "/student/sprint"],
+    ["Cards due 0", "/student/flashcards"],
+    ["Study time Unavailable", "/student/activity"],
   ])
     expect(
       within(launches).getByRole("link", { name: new RegExp(`^${name}`) }),
@@ -158,7 +165,7 @@ it("lights up today with a sprint, or due flashcards in one click", async () => 
   mocks.due = 7;
   render(await resolve(await Home()));
   expect(screen.getByRole("button", { name: "Light up today" })).toBeVisible();
-  expect(screen.getByRole("link", { name: /^Flashcards 7 due/ })).toBeVisible();
+  expect(screen.getByRole("link", { name: /^Cards due 7/ })).toBeVisible();
 });
 
 it("lists only top-level topics in the study hub, each opening its sprint", async () => {
@@ -181,7 +188,7 @@ it("keeps launches usable when due, activity and topic reads fail", async () => 
   mocks.failTopics = true;
   render(await resolve(await Home()));
   expect(
-    screen.getByRole("link", { name: /^Flashcards Choose a deck/ }),
+    screen.getByRole("link", { name: /^Cards due Unavailable/ }),
   ).toHaveAttribute("href", "/student/flashcards");
   expect(screen.getAllByRole("alert").map((a) => a.textContent)).toEqual([
     "Couldn't load your practice average.Try again",
@@ -239,8 +246,8 @@ it("uses real progress totals, per-type marks, topic history and leaf-only lost 
   expect(screen.getByText("8 marks")).toBeVisible();
   expect(screen.getByText(/10 answered · last practised/)).toBeVisible();
   expect(
-    screen.getByRole("link", { name: /Practise The Global Economy/ }),
-  ).toHaveAttribute("href", "/student/sprint?topics=t1");
+    screen.queryByRole("link", { name: /Practise The Global Economy/ }),
+  ).not.toBeInTheDocument();
   expect(screen.queryByText(/vs previous/)).toBeNull();
   expect(screen.getByText("Consistency is the cheat code.")).toBeVisible();
 });

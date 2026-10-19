@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
   notFound: () => {
     throw new Error("404");
   },
@@ -70,18 +71,23 @@ it.each([
   );
 });
 
-it.each([1, 2])(
+it.each([
+  [1, "marked"],
+  [1, "marking"],
+  [1, "pending"],
+  [2, "marked"],
+])(
   "uses the standalone question header only for one written answer (%s rows)",
-  async (count) => {
+  async (count, status) => {
     const row = {
       attempt_id: "attempt",
       type: "short",
       marks: 4,
       max_marks: 4,
       mark: 3,
-      status: "marked",
+      status,
       check_status: "agreed",
-      stem: "Explain low wage growth.",
+      stem: "Explain low wage growth.\n\n| Year | Wages |\n| --- | --- |\n| 2025 | 3% |",
       topic_id: "growth",
       question_id: "q1",
       feedback: null,
@@ -123,9 +129,14 @@ it.each([1, 2])(
     );
     if (count === 1) {
       expect(
-        screen.getByRole("heading", { level: 1, name: row.stem }),
+        screen.getByRole("heading", { level: 1, name: "Answer results" }),
       ).toBeVisible();
-      expect(screen.getByText(/Economic growth · 4 marks/)).toBeVisible();
+      expect(screen.getByText(/Economic growth · 4 marks/)).toHaveTextContent(
+        /^Submitted /,
+      );
+      expect(screen.queryByText(/^Marked /)).not.toBeInTheDocument();
+      expect(screen.getByRole("table")).toHaveTextContent("YearWages20253%");
+      expect(screen.getByText("Explain low wage growth.")).toBeVisible();
       expect(
         screen.getByRole("button", { name: "Report a problem" }),
       ).toBeVisible();

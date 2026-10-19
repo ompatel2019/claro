@@ -6,7 +6,7 @@ import { createClient } from "@/utils/supabase/server";
 import { sydneyToday } from "@/lib/flashcards";
 import { DECK_DEFAULTS, filterDeck } from "@/lib/deck";
 import { loadDeckBank } from "@/lib/flashcard-data";
-import { dateLabel, plural, type Topic } from "@/lib/practice";
+import { dateLabel, type Topic } from "@/lib/practice";
 import { FlashcardStart } from "@/components/flashcard-start";
 import { FlashcardBuilder } from "@/components/flashcard-builder";
 import { PageHeader, EmptyState } from "@/components/claro/layout";
@@ -161,7 +161,7 @@ export default async function Flashcards({
               </p>
               <p className="text-muted-foreground mt-2 text-[13px]">
                 {due
-                  ? `About ${plural(Math.max(1, Math.round(due / 3)), "minute")} · ${tomorrowCount} due tomorrow`
+                  ? `${tomorrowCount} due tomorrow`
                   : next
                     ? `Nothing due. Next review ${dateLabel(next, true)}.`
                     : "Nothing due. Start a deck below."}

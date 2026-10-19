@@ -155,8 +155,8 @@ export default async function Page({
             ← Mark my answer
           </Link>
           <PageHeader
-            eyebrow={`Marked ${dateLabel(s.finished_at, true)}${single.topic_id ? ` · ${topics.data.find((t) => t.id === single.topic_id)?.name ?? ""}` : ""} · ${single.marks} marks`}
-            title={single.stem}
+            eyebrow={`Submitted ${dateLabel(s.finished_at, true)}${single.topic_id ? ` · ${topics.data.find((t) => t.id === single.topic_id)?.name ?? ""}` : ""} · ${single.marks} marks`}
+            title="Answer results"
             actions={
               <>
                 {single.question_id && (
@@ -177,6 +177,7 @@ export default async function Page({
               </>
             }
           />
+          <RichText text={single.stem} />
           {single.stimulus && <RichText text={single.stimulus} />}
         </>
       ) : (

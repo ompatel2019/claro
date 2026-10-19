@@ -4,6 +4,7 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ rpc: vi.fn(), start: vi.fn() }));
@@ -303,4 +304,75 @@ it("selects a dot point with its parent, enforces the topic limit and clears bot
   fireEvent.click(screen.getByRole("button", { name: "Clear" }));
   expect(config().topics).toEqual([]);
   expect(config().subtopics).toEqual([]);
+});
+
+it.each(["mistakes", "new_only", "flagged"])(
+  "preserves the advanced %s history without a conflicting switch",
+  async (history) => {
+    render(<SprintSetup topics={topics} params={{ type: "short", history }} />);
+    await screen.findByText("Last 5 years");
+    expect(
+      screen.queryByRole("switch", { name: /Prefer questions/ }),
+    ).not.toBeInTheDocument();
+    expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config.history).toBe(history);
+    fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
+    const selected = within(
+      screen.getByRole("radiogroup", { name: "Question history" }),
+    )
+      .getAllByRole("radio")
+      .find((r) => r.getAttribute("aria-checked") === "true");
+    expect(selected).toBeDefined();
+    expect(
+      JSON.parse(
+        (document.querySelector('input[name="config"]') as HTMLInputElement)
+          .value,
+      ).history,
+    ).toBe(history);
+  },
+);
+it("toggles prefer-new only for the compatible history choices", async () => {
+  render(
+    <SprintSetup topics={topics} params={{ type: "short", history: "any" }} />,
+  );
+  const toggle = await screen.findByRole("switch", {
+    name: /Prefer questions/,
+  });
+  fireEvent.click(toggle);
+  await waitFor(() =>
+    expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config.history).toBe(
+      "prefer_new",
+    ),
+  );
+  fireEvent.click(toggle);
+  await waitFor(() =>
+    expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config.history).toBe("any"),
+  );
+});
+it("gives both feedback options a visible keyboard-focus ring", () => {
+  render(<SprintSetup topics={topics} params={{}} />);
+  for (const radio of within(
+    screen.getByRole("region", { name: "Feedback" }),
+  ).getAllByRole("radio")) {
+    expect(radio.closest("label")).toHaveClass(
+      "has-[:focus-visible]:ring-2",
+      "has-[:focus-visible]:ring-ring",
+    );
+  }
+});
+it("summarises a whole topic alongside the other topic's selected subtopic", () => {
+  render(
+    <SprintSetup
+      topics={[
+        ...topics,
+        { id: "t1-a", parent_id: "t1", name: "Dot point A", sort: 1 },
+      ]}
+      params={{ topics: "t1,t2", sub: "t1-a" }}
+    />,
+  );
+  const summary = start().closest("form")!;
+  expect(within(summary).getByText("Topic 1", { exact: true })).toBeVisible();
+  expect(
+    within(summary).getByText("Dot point A", { exact: true }),
+  ).toBeVisible();
+  expect(within(summary).getByText("Topic 2", { exact: true })).toBeVisible();
 });

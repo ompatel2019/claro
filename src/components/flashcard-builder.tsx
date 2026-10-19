@@ -514,9 +514,7 @@ export function FlashcardBuilder({
           <p className="text-[36px] leading-none font-bold tracking-[-0.04em]">
             {size}
           </p>
-          <p className="text-muted-foreground mt-1.5 text-xs">
-            cards · about {Math.max(1, Math.round(size / 3))} minutes
-          </p>
+          <p className="text-muted-foreground mt-1.5 text-xs">cards</p>
         </div>
         <dl className="grid gap-2.5 px-5 text-[13px]">
           {[
