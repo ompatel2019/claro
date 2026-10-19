@@ -1,9 +1,12 @@
+import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
 
 const port = process.env.PORT ?? "3000";
 
 export default defineConfig({
   testDir: "./e2e",
+  // Absolute so configs that spread this one keep the production-target guard.
+  globalSetup: path.join(__dirname, "e2e/global-setup.ts"),
   // Local screenshot harness; run via e2e/admin-revamp.config.ts
   testIgnore: ["**/admin-revamp.offline.spec.ts"],
   fullyParallel: true,
