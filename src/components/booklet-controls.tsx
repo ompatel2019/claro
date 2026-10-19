@@ -11,10 +11,10 @@ export function BookletFilter({
 }) {
   return (
     <ToggleGroup
-      className="max-w-full flex-wrap"
+      className="bg-muted w-full max-w-full flex-wrap rounded-full p-0.5 [&>*]:flex-1"
       aria-label="Show questions"
       size="sm"
-      variant="outline"
+      variant="default"
       value={[filter]}
       onValueChange={(v) => v[0] && onFilter(v[0] as Filter)}
     >
@@ -26,7 +26,7 @@ export function BookletFilter({
 }
 export function BookletLegend() {
   return (
-    <ul className="text-muted-foreground space-y-1 text-xs">
+    <ul className="text-muted-foreground space-y-2 text-xs">
       <li className="flex items-center gap-2">
         <span className="bg-card size-3 rounded-full border" /> Not answered
       </li>
@@ -34,11 +34,10 @@ export function BookletLegend() {
         <span className="bg-ink size-3 rounded-full" /> Answered
       </li>
       <li className="flex items-center gap-2">
-        <Flag aria-hidden className="text-primary fill-primary size-3" />{" "}
-        Flagged
+        <Flag aria-hidden className="text-brand fill-brand size-3" /> Flagged
       </li>
       <li className="flex items-center gap-2">
-        <span className="ring-primary size-3 rounded-full ring-2" /> Current
+        <span className="ring-brand size-3 rounded-full ring-2" /> Current
       </li>
     </ul>
   );

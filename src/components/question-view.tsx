@@ -55,7 +55,9 @@ export function QuestionView(props: QuestionViewProps) {
       <RichText
         renderImages={!student}
         className={
-          student ? "text-base leading-6 font-medium" : "block text-base"
+          student
+            ? "text-[19px] leading-snug font-semibold tracking-[-0.01em] sm:text-[21px]"
+            : "block text-base"
         }
         text={student ? stem : stem || "The question stem appears here."}
       />

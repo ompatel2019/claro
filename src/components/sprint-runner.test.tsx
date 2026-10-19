@@ -228,7 +228,7 @@ it("highlights an unchecked answer and warns on keyboard focus without blocking 
     "check it first?",
   );
   fireEvent.click(next);
-  await waitFor(() => expect(screen.getByText(/Question 2 ·/)).toBeVisible());
+  await waitFor(() => expect(screen.getByText("Question 2")).toBeVisible());
   expect(mocks.fetch).not.toHaveBeenCalled();
 });
 it.each(["blank", "checked", "end"])(
@@ -455,7 +455,7 @@ it("allows Next during checking but disables another check until it finishes", a
   fireEvent.click(screen.getByRole("button", { name: "Check answer" }));
   await waitFor(() => expect(mocks.fetch).toHaveBeenCalledTimes(1));
   fireEvent.click(screen.getByRole("button", { name: "Next question" }));
-  await waitFor(() => expect(screen.getByText(/Question 2 ·/)).toBeVisible());
+  await waitFor(() => expect(screen.getByText("Question 2")).toBeVisible());
   expect(screen.getByRole("button", { name: "Check answer" })).toBeDisabled();
 });
 
