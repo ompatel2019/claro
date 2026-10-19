@@ -21,7 +21,7 @@ import { EmptyState } from "@/components/empty-state";
 import { FilterBar } from "@/components/filter-bar";
 import { ImportReview } from "@/components/import-review";
 import { LinkTabs } from "@/components/link-tabs";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/claro/layout";
 import { QuestionsTable } from "@/components/questions-table";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -69,6 +69,7 @@ export default async function QuestionsPage({
   const filterBar = (
     <FilterBar
       customSelect
+      primary="type"
       values={{ ...f, topic: parentId, subtopic: subtopic?.id }}
       hidden={{
         status,
@@ -152,7 +153,7 @@ export default async function QuestionsPage({
     />
   );
   return (
-    <div className="space-y-4">
+    <div>
       <PageHeader
         title="Questions"
         description="Import drafts offline, then review, publish or edit them here."
@@ -162,80 +163,84 @@ export default async function QuestionsPage({
           </Link>
         }
       />
-      <LinkTabs
-        label="Question status"
-        active={status}
-        tabs={[
-          {
-            value: "live",
-            label: "Live",
-            count: counts.live,
-            href: `${BASE}?status=live`,
-          },
-          {
-            value: "draft",
-            label: "Draft",
-            count: counts.draft,
-            href: `${BASE}?status=draft`,
-          },
-          {
-            value: "review",
-            label: "Import review",
-            count: review.tabCount,
-            href: `${BASE}?status=review`,
-          },
-          {
-            value: "retired",
-            label: "Retired",
-            count: counts.retired,
-            href: `${BASE}?status=retired`,
-          },
-        ]}
-      />
-      {status === "review" ? (
-        <div className="min-w-0 space-y-4">
-          {filterBar}
-          <ImportReview
-            key={threshold}
-            rows={review.rows}
-            pager={review.pager}
-            threshold={threshold}
-            filtered={filtered}
-          />
-        </div>
-      ) : (
-        <>
-          {filterBar}
-          {list!.rows.length ? (
-            <QuestionsTable
-              rows={list!.rows}
-              pager={list!.pager}
-              topics={topics}
-              status={status}
+      <div className="space-y-5">
+        <LinkTabs
+          label="Question status"
+          active={status}
+          tabs={[
+            {
+              value: "live",
+              label: "Live",
+              count: counts.live,
+              href: `${BASE}?status=live`,
+            },
+            {
+              value: "draft",
+              label: "Draft",
+              count: counts.draft,
+              href: `${BASE}?status=draft`,
+            },
+            {
+              value: "review",
+              label: "Import review",
+              count: review.tabCount,
+              href: `${BASE}?status=review`,
+            },
+            {
+              value: "retired",
+              label: "Retired",
+              count: counts.retired,
+              href: `${BASE}?status=retired`,
+            },
+          ]}
+        />
+        {status === "review" ? (
+          <div className="min-w-0 space-y-4">
+            {filterBar}
+            <ImportReview
+              key={threshold}
+              rows={review.rows}
+              pager={review.pager}
+              threshold={threshold}
+              filtered={filtered}
             />
-          ) : (
-            <EmptyState
-              icon={filtered ? SearchOff : QuestionFile}
-              title={filtered ? "No questions match" : `No ${status} questions`}
-              description={
-                filtered
-                  ? "Try another search or clear the filters."
-                  : "Questions with this status appear here."
-              }
-              action={
-                filtered ? (
-                  <Link
-                    href={`${BASE}?status=${status}`}
-                    className={buttonVariants({ variant: "outline" })}
-                  >
-                    Clear filters
-                  </Link>
-                ) : undefined
-              }
-            />
-          )}
-        </>
-      )}
+          </div>
+        ) : (
+          <>
+            {filterBar}
+            {list!.rows.length ? (
+              <QuestionsTable
+                rows={list!.rows}
+                pager={list!.pager}
+                topics={topics}
+                status={status}
+              />
+            ) : (
+              <EmptyState
+                icon={filtered ? SearchOff : QuestionFile}
+                title={
+                  filtered ? "No questions match" : `No ${status} questions`
+                }
+                description={
+                  filtered
+                    ? "Try another search or clear the filters."
+                    : "Questions with this status appear here."
+                }
+                action={
+                  filtered ? (
+                    <Link
+                      href={`${BASE}?status=${status}`}
+                      className={buttonVariants({ variant: "outline" })}
+                    >
+                      Clear filters
+                    </Link>
+                  ) : undefined
+                }
+              />
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

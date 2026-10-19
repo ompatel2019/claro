@@ -118,6 +118,7 @@ it("separates parents from dependent subtopics and clears stale selections", asy
     }),
   );
   const props = mocks.filters.mock.calls.at(-1)![0];
+  expect(props.primary).toBe("topic");
   expect(props.values.sub).toBeUndefined();
   expect(
     props.filters.find((f: { name: string }) => f.name === "topic"),
