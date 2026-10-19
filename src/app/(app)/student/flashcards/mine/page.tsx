@@ -6,7 +6,7 @@ import { sydneyToday } from "@/lib/flashcards";
 import type { Topic } from "@/lib/practice";
 import { MyCards } from "@/components/my-cards";
 import { FilterBar } from "@/components/filter-bar";
-import { StatCard } from "@/components/stat-card";
+import { StatCard } from "@/components/claro/data-display";
 export const metadata = pageMetadata("My flashcards");
 
 export default async function Page({
@@ -61,9 +61,9 @@ export default async function Page({
       params={params}
     >
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatCard label="Total" value={total.count ?? 0} />
-        <StatCard label="Due today" value={due.count ?? 0} />
-        <StatCard label="Known" value={known.count ?? 0} />
+        <StatCard title="Total" value={total.count ?? 0} />
+        <StatCard title="Due today" value={due.count ?? 0} />
+        <StatCard title="Known" value={known.count ?? 0} />
       </div>
       <FilterBar
         values={params}

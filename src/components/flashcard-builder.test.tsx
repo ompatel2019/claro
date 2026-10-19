@@ -137,7 +137,11 @@ it("starts with no pressed topics and the All chip toggles its parent", () => {
   fireEvent.click(within(group).getByRole("button", { name: "Inflation · 1" }));
   fireEvent.click(within(group).getByRole("button", { name: "Inflation · 1" }));
   expect(all).toHaveAttribute("aria-pressed", "false");
-  expect(screen.getByText(/All topics · Study/)).toBeInTheDocument();
+  const summary = screen
+    .getByRole("button", { name: "Start" })
+    .closest("form")!;
+  expect(within(summary).getByText("All topics")).toBeInTheDocument();
+  expect(within(summary).getByText("Study")).toBeInTheDocument();
 });
 
 it("shows the selected default size alongside Mode before the filters", () => {
@@ -155,7 +159,7 @@ it("shows the selected default size alongside Mode before the filters", () => {
   ]);
 });
 
-it("renders the summary after Source and all setup controls without sticky positioning", () => {
+it("renders the live summary after setup controls with desktop sticky positioning", () => {
   render(<FlashcardBuilder cards={cards} topics={topics} history={history} />);
   const summary = screen
     .getByRole("button", { name: "Start" })
@@ -167,7 +171,24 @@ it("renders the summary after Source and all setup controls without sticky posit
     source.compareDocumentPosition(summary) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
   expect(summary).toBe(summary.parentElement!.lastElementChild);
-  expect(summary.className).not.toMatch(
-    /(?:^|\s)(?:\S+:)?(?:sticky|fixed)(?:\s|$)/,
+  expect(summary).toHaveClass("xl:sticky");
+  expect(summary.className).not.toMatch(/(?:^|\s)(?:sticky|fixed)(?:\s|$)/);
+});
+
+it("updates the summary and resets the saved deck preferences", () => {
+  render(<FlashcardBuilder cards={cards} topics={topics} history={history} />);
+  fireEvent.click(screen.getByRole("button", { name: "Test" }));
+  fireEvent.click(screen.getByRole("button", { name: "Terms (1)" }));
+  const summary = screen
+    .getByRole("button", { name: "Start" })
+    .closest("form")!;
+  expect(within(summary).getByText("Test")).toBeInTheDocument();
+  expect(within(summary).getByText("Terms")).toBeInTheDocument();
+  expect(screen.getByText("1 of 1 card")).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+  expect(screen.getByText("2 of 2 cards")).toBeInTheDocument();
+  expect(within(summary).getByText("Study")).toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("claro.flashcards.v1")!)).toEqual(
+    DECK_DEFAULTS,
   );
 });

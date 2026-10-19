@@ -11,10 +11,16 @@ import {
   type DeckHistory,
 } from "@/lib/deck";
 import { plural, type Topic } from "@/lib/practice";
-import { SearchOff } from "@/components/icons";
+import { SearchOff, PortalIcon } from "@/components/icons";
 import { EmptyState } from "./empty-state";
-import { Button } from "./ui/button";
-import { Card, CardContent } from "./ui/card";
+import { Button, Chip } from "./claro/controls";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "./ui/card";
 import { Input } from "./ui/input";
 import { Switch } from "./ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
@@ -23,10 +29,12 @@ const KEY = "claro.flashcards.v1";
 function Options({
   title,
   value,
+  description,
   options,
   onChange,
 }: {
   title: string;
+  description?: React.ReactNode;
   value: string;
   options: {
     value: string;
@@ -37,29 +45,51 @@ function Options({
   onChange: (value: string) => void;
 }) {
   return (
-    <section className="space-y-3">
-      <h2 className="text-sm font-semibold">{title}</h2>
-      <ToggleGroup
-        size="lg"
-        aria-label={title}
-        variant="outline"
-        className="flex-wrap"
-        value={[value]}
-        onValueChange={(v) => v[0] && onChange(v[0])}
-      >
-        {options.map((o) => (
-          <ToggleGroupItem key={o.value} value={o.value} disabled={o.disabled}>
-            {o.label}
-          </ToggleGroupItem>
-        ))}
-      </ToggleGroup>
-      {options
-        .filter((o) => o.disabled && o.reason)
-        .map((o) => (
-          <p key={o.value} className="text-muted-foreground text-xs">
-            {o.reason}
-          </p>
-        ))}
+    <section className="grid gap-3 px-5 py-4 sm:grid-cols-[180px_minmax(0,1fr)] sm:items-center sm:gap-6 sm:px-6">
+      <div>
+        <h2 className="text-sm font-medium">{title}</h2>
+        {description && (
+          <div className="text-muted-foreground text-[13px]">{description}</div>
+        )}
+      </div>
+      <div className="min-w-0">
+        <ToggleGroup
+          size="default"
+          aria-label={title}
+          variant={
+            title === "Mode" || title === "Answer by" ? "default" : "outline"
+          }
+          className={
+            title === "Mode" || title === "Answer by"
+              ? "max-w-full flex-wrap"
+              : "max-w-full flex-wrap gap-2 rounded-none bg-transparent p-0"
+          }
+          value={[value]}
+          onValueChange={(v) => v[0] && onChange(v[0])}
+        >
+          {options.map((o) => (
+            <ToggleGroupItem
+              key={o.value}
+              value={o.value}
+              disabled={o.disabled}
+              className={
+                title === "Mode" || title === "Answer by"
+                  ? ""
+                  : "aria-pressed:bg-primary aria-pressed:text-primary-foreground aria-pressed:hover:bg-primary"
+              }
+            >
+              {o.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+        {options
+          .filter((o) => o.disabled && o.reason)
+          .map((o) => (
+            <p key={o.value} className="text-muted-foreground text-xs">
+              {o.reason}
+            </p>
+          ))}
+      </div>
     </section>
   );
 }
@@ -169,11 +199,20 @@ export function FlashcardBuilder({
     });
   };
   return (
-    <div className="mx-auto max-w-[720px] space-y-4">
-      <Card>
-        <CardContent className="space-y-7">
+    <div className="contents">
+      <Card className="gap-0 py-0 xl:col-span-2">
+        <CardHeader className="border-b py-4">
+          <CardTitle>Build a custom deck</CardTitle>
+          <CardDescription>Or skip this and review what’s due.</CardDescription>
+        </CardHeader>
+        <CardContent className="divide-y px-0">
           <Options
             title="Mode"
+            description={
+              c.mode === "study"
+                ? "Type or say your answer, then flip and rate yourself."
+                : "Type or say it, we check it."
+            }
             value={c.mode}
             options={[
               { value: "study", label: "Study" },
@@ -181,13 +220,13 @@ export function FlashcardBuilder({
             ]}
             onChange={(mode) => set({ mode: mode as DeckConfig["mode"] })}
           />
-          <p className="text-muted-foreground text-xs">
-            {c.mode === "study"
-              ? "Type or say your answer, then flip and rate yourself."
-              : "Type or say it, we check it."}
-          </p>
           <Options
             title="Deck size"
+            description={
+              <p role="status">
+                {size} of {plural(counts.total, "card")}
+              </p>
+            }
             value={sizeValue}
             options={[10, 20, 30, 50]
               .map((n) => ({ value: String(n), label: String(n) }))
@@ -208,7 +247,7 @@ export function FlashcardBuilder({
               type="number"
               min={1}
               max={200}
-              className="w-24"
+              className="mx-5 my-3 w-24"
               value={customSize}
               onChange={(e) => setCustomSize(e.target.value)}
               onBlur={() => {
@@ -217,12 +256,6 @@ export function FlashcardBuilder({
               }}
             />
           )}
-          <p
-            className="text-muted-foreground text-sm tabular-nums"
-            role="status"
-          >
-            {size} of {plural(counts.total, "card")}
-          </p>
           <Options
             title="Answer by"
             value={c.answer_by}
@@ -289,133 +322,141 @@ export function FlashcardBuilder({
               set({ source: source as DeckConfig["source"] })
             }
           />
-          <section className="space-y-4">
-            <h2 className="text-sm font-semibold">Topics</h2>
-            <p className="text-muted-foreground text-xs">
-              None selected covers the whole course.
-            </p>
-            {topics
-              .filter((t) => !t.parent_id)
-              .map((parent) => (
-                <div key={parent.id} className="space-y-2">
-                  <h3 className="text-sm font-semibold">
-                    {parent.name} · {counts.topics[parent.id] ?? 0}
-                  </h3>
-                  <ToggleGroup
-                    multiple
-                    size="lg"
-                    aria-label={`${parent.name} subtopics`}
-                    className="flex-wrap"
-                    variant="outline"
-                    value={
-                      c.subtopics.filter((id) => id.startsWith(`${parent.id}-`))
-                        .length
-                        ? c.subtopics
-                        : c.topics.includes(parent.id)
-                          ? ["all"]
-                          : []
+          <section className="grid gap-3 px-5 py-4 sm:grid-cols-[180px_minmax(0,1fr)] sm:gap-6 sm:px-6">
+            <div>
+              <h2 className="text-sm font-medium">Topics</h2>
+              <p className="text-muted-foreground text-[13px]">{names}</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {topics
+                .filter((t) => !t.parent_id)
+                .map((parent) => (
+                  <Chip
+                    key={parent.id}
+                    pressed={c.topics.includes(parent.id)}
+                    disabled={!counts.topics[parent.id]}
+                    onPressedChange={() =>
+                      set({
+                        topics: c.topics.includes(parent.id)
+                          ? c.topics.filter((id) => id !== parent.id)
+                          : [...c.topics, parent.id],
+                        subtopics: c.subtopics.filter(
+                          (id) => !id.startsWith(`${parent.id}-`),
+                        ),
+                      })
                     }
                   >
-                    <ToggleGroupItem
-                      value="all"
-                      disabled={!counts.topics[parent.id]}
-                      onClick={() =>
-                        set({
-                          topics:
-                            c.topics.includes(parent.id) &&
-                            !c.subtopics.some((id) =>
-                              id.startsWith(`${parent.id}-`),
-                            )
-                              ? c.topics.filter((id) => id !== parent.id)
-                              : c.topics.includes(parent.id)
-                                ? c.topics
-                                : [...c.topics, parent.id],
-                          subtopics: c.subtopics.filter(
-                            (id) => !id.startsWith(`${parent.id}-`),
-                          ),
-                        })
+                    {parent.name}
+                  </Chip>
+                ))}
+            </div>
+          </section>
+          <details className="group">
+            <summary className="text-muted-foreground cursor-pointer px-5 py-4 text-[13px] sm:px-6">
+              More deck options
+            </summary>
+            <section className="space-y-4 px-5 pb-4 sm:px-6">
+              <h2 className="text-sm font-medium">Subtopics</h2>
+              <p className="text-muted-foreground text-xs">
+                None selected covers the whole course.
+              </p>
+              {topics
+                .filter((t) => !t.parent_id)
+                .map((parent) => (
+                  <div key={parent.id} className="space-y-2">
+                    <h3 className="text-sm font-semibold">
+                      {parent.name} · {counts.topics[parent.id] ?? 0}
+                    </h3>
+                    <ToggleGroup
+                      multiple
+                      size="default"
+                      aria-label={`${parent.name} subtopics`}
+                      className="max-w-full flex-wrap gap-2 rounded-none bg-transparent p-0"
+                      variant="outline"
+                      value={
+                        c.subtopics.filter((id) =>
+                          id.startsWith(`${parent.id}-`),
+                        ).length
+                          ? c.subtopics
+                          : c.topics.includes(parent.id)
+                            ? ["all"]
+                            : []
                       }
                     >
-                      All
-                    </ToggleGroupItem>
-                    {topics
-                      .filter((t) => t.parent_id === parent.id)
-                      .map((t) => (
-                        <ToggleGroupItem
-                          key={t.id}
-                          value={t.id}
-                          disabled={!counts.subtopics[t.id]}
-                          onClick={() => toggleSubtopic(t.id, parent.id)}
-                        >
-                          {t.name} · {counts.subtopics[t.id] ?? 0}
-                        </ToggleGroupItem>
-                      ))}
-                  </ToggleGroup>
-                </div>
-              ))}
-          </section>
-          <Options
-            title="Which cards"
-            value={c.which}
-            options={(
-              [
-                ["all", "All matching"],
-                ["due", "Due"],
-                ["new", "New, never reviewed"],
-                ["missed", "Missed last time"],
-              ] as const
-            ).map(([value, label]) => ({
-              value,
-              label: `${label} (${counts.which[value]})`,
-              disabled: counts.which[value] === 0,
-            }))}
-            onChange={(which) => set({ which: which as DeckConfig["which"] })}
-          />
-          <Options
-            title="Order"
-            value={c.order}
-            options={[
-              { value: "shuffled", label: "Shuffled" },
-              { value: "topic", label: "By topic" },
-            ]}
-            onChange={(order) => set({ order: order as DeckConfig["order"] })}
-          />
-          <label className="flex items-center gap-2 text-sm">
-            <Switch
-              checked={c.repeat_missed}
-              onCheckedChange={(repeat_missed) => set({ repeat_missed })}
+                      <ToggleGroupItem
+                        value="all"
+                        disabled={!counts.topics[parent.id]}
+                        onClick={() =>
+                          set({
+                            topics:
+                              c.topics.includes(parent.id) &&
+                              !c.subtopics.some((id) =>
+                                id.startsWith(`${parent.id}-`),
+                              )
+                                ? c.topics.filter((id) => id !== parent.id)
+                                : c.topics.includes(parent.id)
+                                  ? c.topics
+                                  : [...c.topics, parent.id],
+                            subtopics: c.subtopics.filter(
+                              (id) => !id.startsWith(`${parent.id}-`),
+                            ),
+                          })
+                        }
+                      >
+                        All
+                      </ToggleGroupItem>
+                      {topics
+                        .filter((t) => t.parent_id === parent.id)
+                        .map((t) => (
+                          <ToggleGroupItem
+                            key={t.id}
+                            value={t.id}
+                            disabled={!counts.subtopics[t.id]}
+                            onClick={() => toggleSubtopic(t.id, parent.id)}
+                          >
+                            {t.name} · {counts.subtopics[t.id] ?? 0}
+                          </ToggleGroupItem>
+                        ))}
+                    </ToggleGroup>
+                  </div>
+                ))}
+            </section>
+            <Options
+              title="Which cards"
+              value={c.which}
+              options={(
+                [
+                  ["all", "All matching"],
+                  ["due", "Due"],
+                  ["new", "New, never reviewed"],
+                  ["missed", "Missed last time"],
+                ] as const
+              ).map(([value, label]) => ({
+                value,
+                label: `${label} (${counts.which[value]})`,
+                disabled: counts.which[value] === 0,
+              }))}
+              onChange={(which) => set({ which: which as DeckConfig["which"] })}
             />
-            Repeat missed cards
-          </label>
+            <Options
+              title="Order"
+              value={c.order}
+              options={[
+                { value: "shuffled", label: "Shuffled" },
+                { value: "topic", label: "By topic" },
+              ]}
+              onChange={(order) => set({ order: order as DeckConfig["order"] })}
+            />
+            <label className="flex items-center gap-2 px-5 py-4 text-sm sm:px-6">
+              <Switch
+                checked={c.repeat_missed}
+                onCheckedChange={(repeat_missed) => set({ repeat_missed })}
+              />
+              Repeat missed cards
+            </label>
+          </details>
         </CardContent>
       </Card>
-      {counts.total === 0 && (
-        <EmptyState
-          icon={SearchOff}
-          title="No cards match"
-          description="Widen your selection to build a deck."
-          action={
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => set({ topics: [], subtopics: [] })}
-              >
-                Include all topics
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() =>
-                  set({ which: "all", source: "both", kinds: ["term", "stat"] })
-                }
-              >
-                All cards
-              </Button>
-            </div>
-          }
-        />
-      )}
       <form
         ref={form}
         action={action}
@@ -425,31 +466,123 @@ export function FlashcardBuilder({
             set({ size: customNumber });
           }
         }}
-        className="bg-background flex flex-wrap items-center justify-between gap-3 rounded-2xl border p-4"
+        className="bg-card shadow-card grid gap-5 rounded-xl border py-5 xl:sticky xl:top-20"
       >
         <input
           type="hidden"
           name="config"
           value={JSON.stringify(custom ? { ...c, size: customNumber } : c)}
         />
-        <p className="text-sm">
-          {plural(size, "card")} ·{" "}
-          {kinds === "both"
-            ? "Terms + Stats"
-            : kinds === "term"
-              ? "Terms"
-              : "Stats"}{" "}
-          · {names} · {c.mode === "study" ? "Study" : "Test"}
-        </p>
-        <Button
-          type="submit"
-          disabled={size === 0 || pending}
-          aria-keyshortcuts="Meta+Enter Control+Enter"
-        >
-          {pending ? "Building…" : "Start"}
-        </Button>
+        {counts.total === 0 && (
+          <EmptyState
+            icon={SearchOff}
+            title="No cards match"
+            description="Widen your selection to build a deck."
+            action={
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => set({ topics: [], subtopics: [] })}
+                >
+                  Include all topics
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() =>
+                    set({
+                      which: "all",
+                      source: "both",
+                      kinds: ["term", "stat"],
+                    })
+                  }
+                >
+                  All cards
+                </Button>
+              </div>
+            }
+          />
+        )}
+        <div className="px-5">
+          <h2 className="text-[15px] font-semibold">Your deck</h2>
+          <p className="text-muted-foreground mt-1 text-[13px]">
+            Updates as you build it
+          </p>
+        </div>
+        <div className="px-5">
+          <p className="text-[36px] leading-none font-bold tracking-[-0.04em]">
+            {size}
+          </p>
+          <p className="text-muted-foreground mt-1.5 text-xs">
+            cards · about {Math.max(1, Math.round(size / 3))} minutes
+          </p>
+        </div>
+        <dl className="grid gap-2.5 px-5 text-[13px]">
+          {[
+            ["Mode", c.mode === "study" ? "Study" : "Test"],
+            [
+              "Answer by",
+              c.answer_by === "either"
+                ? "Typing or speaking"
+                : c.answer_by === "typing"
+                  ? "Typing"
+                  : "Speaking",
+            ],
+            [
+              "Card type",
+              kinds === "both"
+                ? "Terms and stats"
+                : kinds === "term"
+                  ? "Terms"
+                  : "Stats",
+            ],
+            [
+              "Source",
+              c.source === "both"
+                ? "Claro and mine"
+                : c.source === "my"
+                  ? "My cards"
+                  : "Claro cards",
+            ],
+            ["Topics", names],
+          ].map(([label, value]) => (
+            <div
+              key={label}
+              className="flex items-baseline justify-between gap-4"
+            >
+              <dt className="text-muted-foreground">{label}</dt>
+              <dd className="text-right font-medium">{value}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="grid gap-1.5 px-5">
+          <Button
+            type="submit"
+            disabled={size === 0 || pending}
+            aria-keyshortcuts="Meta+Enter Control+Enter"
+            className="h-11 w-full"
+            aria-label="Start"
+          >
+            <PortalIcon name="play" />
+            {pending ? "Building…" : "Start deck"}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-muted-foreground w-full"
+            onClick={() => {
+              setC(DECK_DEFAULTS);
+              setCustom(false);
+              setCustomSize("20");
+            }}
+          >
+            Reset
+          </Button>
+        </div>
         {state.error && (
-          <p role="alert" className="text-destructive w-full text-sm">
+          <p role="alert" className="text-destructive w-full px-5 text-sm">
             {state.error}
           </p>
         )}
