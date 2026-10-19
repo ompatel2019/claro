@@ -25,9 +25,16 @@ import {
   loadPersistQueue,
 } from "@/lib/flashcard-persist-queue";
 import type { FlashcardSession } from "@/lib/flashcard-data";
-import { Button } from "./ui/button";
+import { Button, ToggleGroup, ToggleGroupItem } from "./claro/controls";
+import { Kbd } from "./claro/layout";
 import { SessionShell, isTyping } from "./session-shell";
-import { Microphone, Check, Minus, Close } from "@/components/icons";
+import {
+  Microphone,
+  Check,
+  Minus,
+  Close,
+  PortalIcon,
+} from "@/components/icons";
 import { Card } from "./ui/card";
 import { Badge } from "./ui/badge";
 import { Textarea } from "./ui/textarea";
@@ -619,9 +626,11 @@ export function FlashcardRunner({
         if (session.config.mode === "test") act(check);
       }}
     >
-      <label className="grid gap-2">
+      <label className="grid gap-2 text-[13px] font-medium">
         Your answer
         <Textarea
+          className="min-h-24 text-[15px] font-normal"
+          placeholder="What does it mean? Use your own words"
           maxLength={1000}
           value={answer}
           disabled={busy}
@@ -638,7 +647,7 @@ export function FlashcardRunner({
           onChange={(e) => setAnswer(e.target.value)}
         />
       </label>
-      <div className="flex gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {session.config.mode === "test" && (
           <Button type="submit" disabled={busy || !answer.trim()}>
             Check (⌘Enter)
@@ -648,6 +657,7 @@ export function FlashcardRunner({
           <Button
             type="button"
             variant="outline"
+            size="sm"
             aria-keyshortcuts="m"
             aria-pressed={listening}
             disabled={busy}
@@ -657,11 +667,16 @@ export function FlashcardRunner({
             {listening ? "Stop" : "Speak"}
           </Button>
         )}
+        {session.config.mode === "study" && (
+          <span className="text-muted-foreground text-xs">
+            or type, then flip
+          </span>
+        )}
       </div>
     </form>
   );
   const ratingControls = (
-    <div className="flex flex-wrap gap-2">
+    <div className="grid grid-cols-3 gap-2">
       {(
         [
           [0, disagree ? "Missed" : "Missed it (1)"],
@@ -672,6 +687,7 @@ export function FlashcardRunner({
         <Button
           key={mark}
           autoFocus={mark === 0}
+          className="h-14 rounded-xl px-1 text-xs sm:text-sm"
           variant="outline"
           disabled={busy}
           onClick={() => act(() => (disagree ? override(mark) : rate(mark)))}
@@ -722,205 +738,222 @@ export function FlashcardRunner({
       }}
       booklet={null}
     >
-      {offline && (
-        <p role="status">{"You're offline. We'll save when you're back."}</p>
-      )}
-      {welcome && (
-        <p role="status">
-          Welcome back, {left} {left === 1 ? "card" : "cards"} left
-        </p>
-      )}
-      <div role="group" aria-label="View" className="flex gap-2">
-        <Button
-          variant="outline"
-          aria-pressed={!list}
-          onClick={() => setList(false)}
-        >
-          One by one
-        </Button>
-        <Button
-          variant="outline"
-          aria-pressed={list}
-          onClick={() => {
-            stopSpeech();
-            setList(true);
-          }}
-        >
-          List (L)
-        </Button>
-      </div>
-      {recycled > 0 && (
-        <p>
-          {recycled} {recycled === 1 ? "card" : "cards"} coming back
-        </p>
-      )}
-      {list ? (
-        <Card className="p-5">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Card</TableHead>
-                <TableHead>Model answer</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {session.config.card_ids.flatMap((id) => {
-                const c = cards.find((c) => c.id === id);
-                return c
-                  ? [
-                      <TableRow key={id} data-card-id={id}>
-                        <TableCell>{c.front}</TableCell>
-                        <TableCell className="whitespace-pre-wrap">
-                          {c.back}
-                        </TableCell>
-                      </TableRow>,
-                    ]
-                  : [];
-              })}
-            </TableBody>
-          </Table>
-        </Card>
-      ) : card ? (
-        <article data-card-id={card.id}>
-          <Card className="space-y-4 p-5">
-            <div>
-              <p className="eyebrow">
-                {card.kind === "term" ? "Term" : "Key stat"}
+      <div className="mx-auto grid max-w-[680px] gap-5 py-4 sm:py-6">
+        {offline && (
+          <p role="status">{"You're offline. We'll save when you're back."}</p>
+        )}
+        {welcome && (
+          <p role="status">
+            Welcome back, {left} {left === 1 ? "card" : "cards"} left
+          </p>
+        )}
+        <div className="flex items-center justify-between gap-3">
+          <ToggleGroup
+            aria-label="View"
+            value={[list ? "list" : "one"]}
+            onValueChange={(values) => {
+              if (!values[0]) return;
+              stopSpeech();
+              setList(values[0] === "list");
+            }}
+          >
+            <ToggleGroupItem value="one">One by one</ToggleGroupItem>
+            <ToggleGroupItem value="list" aria-label="List (L)">
+              List
+            </ToggleGroupItem>
+          </ToggleGroup>
+          <span className="text-muted-foreground hidden items-center gap-1.5 text-xs sm:flex">
+            <Kbd>L</Kbd> switch view
+          </span>
+        </div>
+        {recycled > 0 && (
+          <p>
+            {recycled} {recycled === 1 ? "card" : "cards"} coming back
+          </p>
+        )}
+        {list ? (
+          <Card className="p-5">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Card</TableHead>
+                  <TableHead>Model answer</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {session.config.card_ids.flatMap((id) => {
+                  const c = cards.find((c) => c.id === id);
+                  return c
+                    ? [
+                        <TableRow key={id} data-card-id={id}>
+                          <TableCell>{c.front}</TableCell>
+                          <TableCell className="whitespace-pre-wrap">
+                            {c.back}
+                          </TableCell>
+                        </TableRow>,
+                      ]
+                    : [];
+                })}
+              </TableBody>
+            </Table>
+          </Card>
+        ) : card ? (
+          <article data-card-id={card.id}>
+            <Card
+              className={`min-h-[440px] px-6 py-6 sm:px-8 sm:py-7 ${flipped || verdict || failedCheck ? "gap-4" : "gap-0"}`}
+            >
+              <div className="mb-7">
+                <div className="flex flex-wrap items-center gap-2">
+                  <Badge variant="outline">
+                    {card.kind === "term" ? "Term" : "Key stat"}
+                  </Badge>
+                  {topic && <Badge variant="secondary">{topic.name}</Badge>}
+                  <span className="text-muted-foreground ml-auto text-xs tabular-nums">
+                    {session.config.card_ids.indexOf(card.id) + 1} /{" "}
+                    {session.config.card_ids.length}
+                  </span>
+                </div>
+                <h2
+                  ref={heading}
+                  tabIndex={-1}
+                  className="mt-6 text-[30px] leading-tight font-bold tracking-[-0.03em] text-balance break-words"
+                >
+                  {card.front}
+                </h2>
+              </div>
+              <p role="status" aria-live="polite" className="sr-only">
+                {announcement}
               </p>
-              <h2
-                ref={heading}
-                tabIndex={-1}
-                className="text-2xl font-semibold break-words"
-              >
-                {card.front}
-              </h2>
-              {topic && <Badge variant="outline">{topic.name}</Badge>}
-            </div>
-            <p role="status" aria-live="polite" className="sr-only">
-              {announcement}
-            </p>
-            {session.config.mode === "study" ? (
-              flipped ? (
+              {session.config.mode === "study" ? (
+                flipped ? (
+                  <>
+                    {model}
+                    {answer.trim() && (
+                      <div>
+                        <h3 className="font-semibold">Your answer</h3>
+                        <p className="whitespace-pre-wrap">{answer}</p>
+                      </div>
+                    )}
+                    {ratingControls}
+                  </>
+                ) : (
+                  <>
+                    {answerInput}
+                    <Button
+                      className="mt-7 h-11 w-full"
+                      disabled={busy}
+                      onClick={() => {
+                        stopSpeech();
+                        setFlipped(true);
+                      }}
+                    >
+                      <PortalIcon name="refresh-cw" />
+                      Flip card
+                    </Button>
+                  </>
+                )
+              ) : verdict ? (
+                <>
+                  <Badge
+                    variant={
+                      verdict.mark === 1
+                        ? "success"
+                        : verdict.mark === 0.5
+                          ? "warning"
+                          : "destructive"
+                    }
+                  >
+                    {verdict.mark === 1 ? (
+                      <Check />
+                    ) : verdict.mark === 0.5 ? (
+                      <Minus />
+                    ) : (
+                      <Close />
+                    )}
+                    {verdict.mark === 1
+                      ? "Knew it"
+                      : verdict.mark === 0.5
+                        ? "Mostly"
+                        : "Not yet"}
+                  </Badge>
+                  <p>{verdict.reason}</p>
+                  {model}
+                  <div>
+                    <h3 className="font-semibold">Your answer</h3>
+                    <p className="whitespace-pre-wrap">
+                      {answer || "Not answered"}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    aria-expanded={disagree}
+                    onClick={() => setDisagree((v) => !v)}
+                  >
+                    Disagree?
+                  </Button>
+                  {disagree && ratingControls}
+                  <Button
+                    disabled={busy}
+                    onClick={() => act(() => advance(verdict.mark))}
+                  >
+                    Next card
+                  </Button>
+                </>
+              ) : flipped || failedCheck ? (
                 <>
                   {model}
-                  {answer.trim() && (
-                    <div>
-                      <h3 className="font-semibold">Your answer</h3>
-                      <p className="whitespace-pre-wrap">{answer}</p>
-                    </div>
-                  )}
                   {ratingControls}
                 </>
               ) : (
                 <>
                   {answerInput}
                   <Button
+                    variant="ghost"
                     disabled={busy}
                     onClick={() => {
                       stopSpeech();
                       setFlipped(true);
                     }}
                   >
-                    Flip card
+                    Reveal answer
                   </Button>
                 </>
-              )
-            ) : verdict ? (
-              <>
-                <Badge
-                  variant={
-                    verdict.mark === 1
-                      ? "success"
-                      : verdict.mark === 0.5
-                        ? "warning"
-                        : "destructive"
-                  }
-                >
-                  {verdict.mark === 1 ? (
-                    <Check />
-                  ) : verdict.mark === 0.5 ? (
-                    <Minus />
-                  ) : (
-                    <Close />
-                  )}
-                  {verdict.mark === 1
-                    ? "Knew it"
-                    : verdict.mark === 0.5
-                      ? "Mostly"
-                      : "Not yet"}
-                </Badge>
-                <p>{verdict.reason}</p>
-                {model}
-                <div>
-                  <h3 className="font-semibold">Your answer</h3>
-                  <p className="whitespace-pre-wrap">
-                    {answer || "Not answered"}
-                  </p>
-                </div>
+              )}
+              {speechNote && (
+                <p role="status" className="text-muted-foreground text-sm">
+                  {speechNote}
+                </p>
+              )}
+              {!verdict && (
                 <Button
+                  className="text-muted-foreground mt-1.5 h-8 w-full text-[13px]"
                   variant="ghost"
-                  aria-expanded={disagree}
-                  onClick={() => setDisagree((v) => !v)}
-                >
-                  Disagree?
-                </Button>
-                {disagree && ratingControls}
-                <Button
                   disabled={busy}
-                  onClick={() => act(() => advance(verdict.mark))}
+                  onClick={() => act(skip)}
                 >
-                  Next card
+                  Skip (S)
                 </Button>
-              </>
-            ) : flipped || failedCheck ? (
-              <>
-                {model}
-                {ratingControls}
-              </>
+              )}
+            </Card>
+          </article>
+        ) : (
+          <Card className="p-5">
+            <h2>All cards reviewed</h2>
+            {finished ? (
+              <p role="status">Loading your results…</p>
             ) : (
-              <>
-                {answerInput}
-                <Button
-                  variant="ghost"
-                  disabled={busy}
-                  onClick={() => {
-                    stopSpeech();
-                    setFlipped(true);
-                  }}
-                >
-                  Reveal answer
-                </Button>
-              </>
-            )}
-            {speechNote && (
-              <p role="status" className="text-muted-foreground text-sm">
-                {speechNote}
-              </p>
-            )}
-            {!verdict && (
-              <Button variant="ghost" disabled={busy} onClick={() => act(skip)}>
-                Skip (S)
+              <Button disabled={busy} onClick={() => act(finish)}>
+                See results
               </Button>
             )}
           </Card>
-        </article>
-      ) : (
-        <Card className="p-5">
-          <h2>All cards reviewed</h2>
-          {finished ? (
-            <p role="status">Loading your results…</p>
-          ) : (
-            <Button disabled={busy} onClick={() => act(finish)}>
-              See results
-            </Button>
-          )}
-        </Card>
-      )}
-      {error && (
-        <p role="alert" className="text-destructive">
-          {error}
-        </p>
-      )}
+        )}
+        {error && (
+          <p role="alert" className="text-destructive">
+            {error}
+          </p>
+        )}
+      </div>
       <Dialog
         open={error.includes("sign-in expired")}
         onOpenChange={(open) => {

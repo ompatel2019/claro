@@ -10,8 +10,8 @@ import { createClient } from "@/utils/supabase/server";
 import { dateLabel, timer, topicNames } from "@/lib/practice";
 import { FlashcardRunner } from "@/components/flashcard-runner";
 import { FlashcardStart } from "@/components/flashcard-start";
-import { PageHeader } from "@/components/page-header";
-import { StatCard } from "@/components/stat-card";
+import { PageHeader } from "@/components/claro/layout";
+import { StatCard } from "@/components/claro/data-display";
 import { Check, Minus, Close } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
@@ -85,24 +85,36 @@ export default async function FlashcardSession({
     "flashcard_id" | "due_on"
   >[];
   return (
-    <main id="main" className="mx-auto max-w-7xl space-y-4 p-4 sm:p-6">
+    <main
+      id="main"
+      className="mx-auto max-w-5xl space-y-5 px-4 py-8 sm:px-6 sm:py-12"
+    >
       <PageHeader
         eyebrow={`${deckName} · ${session.config.mode === "study" ? "Study" : "Test"}`}
         title="Your flashcard results"
       />
+      <Card className="items-center gap-3 px-6 py-8 text-center">
+        <span className="bg-success-soft text-success-text grid size-12 place-items-center rounded-full">
+          <Check className="size-6" aria-hidden />
+        </span>
+        <h2 className="text-[22px] font-bold tracking-[-0.02em]">Deck done</h2>
+        <p className="text-muted-foreground text-sm">
+          Cards you missed come back sooner. Cards you knew come back later.
+        </p>
+      </Card>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
-          label="First-try score"
+          title="First-try score"
           value={
             first.size
               ? `${counts[0]} / ${session.config.card_ids.length}`
               : "No score yet"
           }
         />
-        <StatCard label="Knew / Mostly / Missed" value={counts.join(" / ")} />
-        <StatCard label="Time" value={timer(session.elapsed_s ?? 0)} />
+        <StatCard title="Knew / Mostly / Missed" value={counts.join(" / ")} />
+        <StatCard title="Time" value={timer(session.elapsed_s ?? 0)} />
         <StatCard
-          label="Repeats"
+          title="Repeats"
           value={Math.max(0, reviews.length - first.size)}
         />
       </div>

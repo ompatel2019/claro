@@ -41,7 +41,7 @@ export function Choose({
   onChange: (value: string) => void;
 }) {
   return (
-    <div className="grid min-w-0 gap-1">
+    <div className="grid min-w-0 gap-2 text-[13px] font-medium">
       {label}
       <Select
         value={value || null}
@@ -110,10 +110,10 @@ export function CardEditor({
       <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-lg">
         <DialogTitle>{id ? "Edit card" : "Add card"}</DialogTitle>
         <DialogDescription>
-          Write the prompt on the front and the answer on the back.
+          Your cards sit alongside Claro cards in every deck you build.
         </DialogDescription>
         <form
-          className="grid gap-3"
+          className="grid gap-4"
           onSubmit={(e) => {
             e.preventDefault();
             save(false);
@@ -138,19 +138,22 @@ export function CardEditor({
             placeholder="Choose a subtopic"
             onChange={(topic_id) => patch({ topic_id })}
           />
-          <label className="grid min-w-0 gap-1">
+          <label className="grid min-w-0 gap-2 text-[13px] font-medium">
             Front
             <Input
               ref={front}
               aria-label="Front"
+              placeholder="e.g. Terms of trade"
               value={value.front}
               onChange={(e) => patch({ front: e.target.value })}
             />
           </label>
-          <label className="grid min-w-0 gap-1">
+          <label className="grid min-w-0 gap-2 text-[13px] font-medium">
             Back
             <Textarea
               aria-label="Back"
+              className="min-h-24 font-normal"
+              placeholder="In your own words"
               value={value.back}
               onChange={(e) => patch({ back: e.target.value })}
             />
@@ -160,7 +163,7 @@ export function CardEditor({
               {error}
             </p>
           )}
-          <div className="flex flex-wrap gap-2">
+          <div className="mt-2 flex flex-wrap justify-end gap-2">
             <Button type="submit" disabled={pending}>
               Save
             </Button>
