@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
+import { Button, Input } from "@/components/claro";
 import {
   Select,
   SelectContent,
@@ -8,8 +9,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import type { Range } from "./data";
 
 const ranges = [

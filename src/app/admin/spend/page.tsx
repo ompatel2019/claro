@@ -1,10 +1,8 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
-import { PageHeader } from "@/components/page-header";
+import { EmptyState, Meter, PageHeader } from "@/components/claro";
 import { StatCard } from "@/components/stat-card";
 import { DailyChart } from "@/components/daily-chart";
-import { EmptyState } from "@/components/empty-state";
-import { Wallet } from "@/components/icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { loadSpend } from "@/lib/admin-data";
 import { dateLabel } from "@/lib/practice";
@@ -78,17 +76,16 @@ export default async function SpendPage({
                 aria-valuemax={100}
                 aria-valuenow={pct}
                 aria-valuetext={`${usd(spend.all)} of ${usd(spend.cap)}`}
-                className="bg-chart-5 relative h-2 rounded-full"
+                className="relative"
               >
-                <div
-                  className="bg-brand h-full rounded-full"
-                  style={{ width: `${pct}%` }}
-                />
+                <span aria-hidden="true">
+                  <Meter value={pct} tone="brand" label="Spend against cap" />
+                </span>
                 {spend.markers.map((marker) => (
                   <span
                     key={marker}
                     aria-hidden="true"
-                    className="bg-foreground absolute top-0 h-3 w-px"
+                    className="bg-foreground absolute -top-0.5 h-2.5 w-px"
                     style={{
                       left: `${Math.min(100, (marker / spend.cap) * 100)}%`,
                     }}
@@ -150,7 +147,6 @@ export default async function SpendPage({
           />
         ) : (
           <EmptyState
-            icon={Wallet}
             title="No spend in this range"
             description="Daily spend by model will appear after an AI call."
           />
@@ -213,7 +209,6 @@ export default async function SpendPage({
               </ul>
             ) : (
               <EmptyState
-                icon={Wallet}
                 title="None right now"
                 description="No student has made more than 150 AI calls in the last hour."
               />

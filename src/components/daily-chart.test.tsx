@@ -51,7 +51,7 @@ it("draws finite, zero-height spend bars when every day has zero usage", () => {
     />,
   );
   for (const bar of container.querySelectorAll("rect")) {
-    expect(Number(bar.getAttribute("y"))).toBe(136);
+    expect(Number(bar.getAttribute("y"))).toBe(192);
     expect(Number(bar.getAttribute("height"))).toBe(0);
   }
   expect(screen.getByRole("status")).toHaveTextContent("$0.00");
@@ -119,7 +119,7 @@ it("keeps dashboard area and unstacked spend charts working", () => {
       ]}
     />,
   );
-  expect(container.querySelectorAll("path")).toHaveLength(2);
+  expect(container.querySelectorAll('svg[role="img"] path')).toHaveLength(2);
   expect(screen.queryByRole("list")).toBeNull();
   cleanup();
   render(
@@ -131,4 +131,27 @@ it("keeps dashboard area and unstacked spend charts working", () => {
     />,
   );
   expect(screen.getByRole("status")).toHaveTextContent("$1.00");
+});
+
+it("offers the template table twin without changing chart data", () => {
+  render(
+    <DailyChart
+      title="Sessions per day"
+      hero="3"
+      kind="area"
+      points={[
+        { day: "2026-10-01", value: 1 },
+        { day: "2026-10-02", value: 2 },
+      ]}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Show as table" }));
+  const table = screen.getByRole("table", {
+    name: "Sessions per day data",
+  });
+  expect(table).toHaveTextContent("1 Oct 2026");
+  expect(table).toHaveTextContent("2");
+  expect(screen.queryByRole("img")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Show as chart" }));
+  expect(screen.getByRole("img")).toBeInTheDocument();
 });

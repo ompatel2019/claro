@@ -1,43 +1,35 @@
 "use client";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { ToggleGroup, ToggleGroupItem } from "@/components/claro";
 import type { Range } from "./data";
 
-const ranges = [7, 30, 90].map((n) => ({
-  value: String(n),
-  label: `${n} days`,
-}));
+const ranges = [7, 30, 90] as const;
 export function RangeSelect({ range }: { range: Range }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
+  const navigate = (value: number) => {
+    const next = new URLSearchParams(params);
+    next.set("range", String(value));
+    router.push(`${pathname}?${next}`);
+  };
   return (
-    <Select
-      items={ranges}
-      value={String(range)}
+    <ToggleGroup
+      aria-label="Date range"
+      value={[String(range)]}
+      size="sm"
+      spacing={0}
+      className="max-w-full"
       onValueChange={(value) => {
-        if (!value) return;
-        const next = new URLSearchParams(params);
-        next.set("range", value);
-        router.push(`${pathname}?${next}`);
+        const days = Number(value.at(-1));
+        if (days === 7 || days === 30 || days === 90) navigate(days);
       }}
     >
-      <SelectTrigger aria-label="Date range" className="w-32">
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {ranges.map((r) => (
-          <SelectItem key={r.value} value={r.value}>
-            {r.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      {ranges.map((days) => (
+        <ToggleGroupItem key={days} value={String(days)}>
+          {days} days
+        </ToggleGroupItem>
+      ))}
+    </ToggleGroup>
   );
 }

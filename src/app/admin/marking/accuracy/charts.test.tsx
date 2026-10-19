@@ -1,4 +1,10 @@
-import { cleanup, render, screen, within } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { CategoryBar, WeeklyChart } from "./charts";
 import type { Week } from "./data";
@@ -18,6 +24,12 @@ it("agreement chart names every week in the image label and an sr-only table", (
   expect(screen.getByRole("img")).toHaveAccessibleName(
     /^Agreement per week\. Week of 28 Sep\w* 2026: 100\.0%; Week of 5 Oct 2026: 50\.0%; Week of 12 Oct 2026: no checked answers$/,
   );
+  // The gap week has no point and the line only joins weeks with data.
+  expect(document.querySelectorAll("circle")).toHaveLength(2);
+  expect(
+    document.querySelector('path[class~="stroke-chart-1"]')!.getAttribute("d"),
+  ).toMatch(/^M[\d.]+,[\d.]+ L[\d.]+,[\d.]+ $/);
+  fireEvent.click(screen.getByRole("button", { name: "Show as table" }));
   const table = screen.getByRole("table", { name: "Agreement per week" });
   const rows = within(table)
     .getAllByRole("row")
@@ -28,11 +40,6 @@ it("agreement chart names every week in the image label and an sr-only table", (
     ["2026-10-05", "50.0%", "3", "6"],
     ["2026-10-12", "No answers", "0", "0"],
   ]);
-  // The gap week has no point and the line only joins weeks with data.
-  expect(document.querySelectorAll("circle")).toHaveLength(2);
-  expect(document.querySelector("path")!.getAttribute("d")).toMatch(
-    /^M[\d.]+,[\d.]+ L[\d.]+,[\d.]+ $/,
-  );
 });
 
 it("disputes chart is per 100 written answers and scales to the maximum", () => {

@@ -10,14 +10,13 @@ import { RangeSelect } from "./range-select";
 
 afterEach(cleanup);
 
-it("shows the current range and writes the chosen one to the URL", async () => {
+it("shows the current range and writes the chosen one to the URL", () => {
   render(<RangeSelect range={30} />);
-  const select = screen.getByRole("combobox", { name: "Date range" });
-  expect(select).toHaveTextContent("30 days");
-  fireEvent.click(select);
-  const option = await screen.findByRole("option", { name: "7 days" });
-  // Base UI only commits a mouse click that started on the item.
-  fireEvent.pointerDown(option);
-  fireEvent.click(option);
+  expect(screen.getByRole("group", { name: "Date range" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "30 days" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "7 days" }));
   expect(push).toHaveBeenCalledWith("/admin/marking/accuracy?tab=x&range=7");
 });
