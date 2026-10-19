@@ -1,6 +1,12 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { assertSafeE2ETarget, assertTestSupabaseUrl } from "./guard";
+import {
+  assertSafeE2ETarget,
+  assertTargetVerified,
+  assertTestSupabaseUrl,
+  GUARD_FLAG,
+  hasE2ECredentials,
+} from "./guard";
 
 describe("assertTestSupabaseUrl", () => {
   beforeEach(() => {
@@ -52,21 +58,33 @@ describe("assertTestSupabaseUrl", () => {
 
 describe("assertSafeE2ETarget", () => {
   const prod = "https://prodref.supabase.co";
-  const env = (vars: Record<string, string>) => vars as NodeJS.ProcessEnv;
+  const test = "https://testref.supabase.co";
+  const refs = { E2E_TEST_SUPABASE_REFS: "testref" };
+  const env = (vars: Record<string, string>) => ({ ...refs, ...vars });
+  const local = (url: string | undefined) => ({
+    appSupabaseUrl: url,
+    baseUrls: ["http://localhost:3000"],
+  });
 
   beforeEach(() => {
-    vi.stubEnv("E2E_TEST_SUPABASE_REFS", "testref");
+    // The ambient allow-list must not leak into an explicit env.
+    vi.stubEnv("E2E_TEST_SUPABASE_REFS", "prodref");
   });
 
   afterEach(() => {
     vi.unstubAllEnvs();
   });
 
-  it("lets credential-free runs through, whatever the URL", () => {
+  it("lets credential-free runs through, whatever the targets", () => {
     expect(() =>
-      assertSafeE2ETarget(env({ NEXT_PUBLIC_SUPABASE_URL: prod })),
+      assertSafeE2ETarget(
+        { appSupabaseUrl: prod, baseUrls: ["https://claro.example"] },
+        env({ NEXT_PUBLIC_SUPABASE_URL: prod }),
+      ),
     ).not.toThrow();
-    expect(() => assertSafeE2ETarget(env({}))).not.toThrow();
+    expect(() =>
+      assertSafeE2ETarget({ appSupabaseUrl: undefined, baseUrls: [] }, env({})),
+    ).not.toThrow();
   });
 
   it.each([
@@ -74,29 +92,44 @@ describe("assertSafeE2ETarget", () => {
     "STUDENT_PASSWORD",
     "ADMIN_EMAIL",
     "ADMIN_PASSWORD",
-    "SUPABASE_SECRET_KEY",
-  ])("refuses a production Supabase URL when %s is set", (name) => {
+  ])("refuses a production app Supabase URL when %s is set", (name) => {
     expect(() =>
-      assertSafeE2ETarget(env({ [name]: "x", NEXT_PUBLIC_SUPABASE_URL: prod })),
+      assertSafeE2ETarget(local(prod), env({ [name]: "x" })),
     ).toThrow("refusing to run against prodref.supabase.co");
   });
 
-  it("refuses credentials with no Supabase URL", () => {
-    expect(() => assertSafeE2ETarget(env({ STUDENT_EMAIL: "x" }))).toThrow(
-      "NEXT_PUBLIC_SUPABASE_URL is not set",
-    );
+  it("refuses the service key with a production runner URL", () => {
+    expect(() =>
+      assertSafeE2ETarget(
+        local(undefined),
+        env({ SUPABASE_SECRET_KEY: "x", NEXT_PUBLIC_SUPABASE_URL: prod }),
+      ),
+    ).toThrow("refusing to run against prodref.supabase.co");
   });
 
-  it.each(["http://127.0.0.1:54321", "https://testref.supabase.co"])(
+  it("uses the supplied allow-list, not the ambient one", () => {
+    expect(() =>
+      assertSafeE2ETarget(local(test), env({ STUDENT_EMAIL: "x" })),
+    ).not.toThrow();
+  });
+
+  it("refuses sign-in credentials with no app Supabase URL", () => {
+    expect(() =>
+      assertSafeE2ETarget(local(undefined), env({ STUDENT_EMAIL: "x" })),
+    ).toThrow("NEXT_PUBLIC_SUPABASE_URL is not set");
+  });
+
+  it.each(["http://127.0.0.1:54321", test])(
     "allows credentials against %s with a local app",
     (url) => {
-      for (const base of [undefined, "http://localhost:3000"])
+      for (const baseUrls of [[], [undefined], ["http://localhost:3104"]])
         expect(() =>
           assertSafeE2ETarget(
+            { appSupabaseUrl: url, baseUrls },
             env({
               STUDENT_EMAIL: "x",
+              SUPABASE_SECRET_KEY: "x",
               NEXT_PUBLIC_SUPABASE_URL: url,
-              ...(base ? { E2E_BASE_URL: base } : {}),
             }),
           ),
         ).not.toThrow();
@@ -104,18 +137,21 @@ describe("assertSafeE2ETarget", () => {
   );
 
   it("refuses a remote app origin that is not listed", () => {
-    const vars = {
-      STUDENT_EMAIL: "x",
-      NEXT_PUBLIC_SUPABASE_URL: "https://testref.supabase.co",
-      E2E_BASE_URL: "https://claro-b2c-portal.vercel.app",
+    const target = {
+      appSupabaseUrl: test,
+      baseUrls: [
+        "http://localhost:3000",
+        "https://claro-b2c-portal.vercel.app",
+      ],
     };
-    expect(() => assertSafeE2ETarget(env(vars))).toThrow(
-      "refusing to sign in against claro-b2c-portal.vercel.app",
-    );
+    expect(() =>
+      assertSafeE2ETarget(target, env({ STUDENT_EMAIL: "x" })),
+    ).toThrow("refusing to sign in against claro-b2c-portal.vercel.app");
     expect(() =>
       assertSafeE2ETarget(
+        target,
         env({
-          ...vars,
+          STUDENT_EMAIL: "x",
           E2E_TEST_BASE_URLS: "https://claro-b2c-portal.vercel.app.evil.com",
         }),
       ),
@@ -125,10 +161,12 @@ describe("assertSafeE2ETarget", () => {
   it("allows a listed remote app origin", () => {
     expect(() =>
       assertSafeE2ETarget(
+        {
+          appSupabaseUrl: test,
+          baseUrls: ["https://preview.example.com/student"],
+        },
         env({
           ADMIN_EMAIL: "x",
-          NEXT_PUBLIC_SUPABASE_URL: "https://testref.supabase.co",
-          E2E_BASE_URL: "https://preview.example.com/student",
           E2E_TEST_BASE_URLS:
             "https://other.example.com, https://preview.example.com/",
         }),
@@ -136,15 +174,28 @@ describe("assertSafeE2ETarget", () => {
     ).not.toThrow();
   });
 
-  it("refuses an invalid app URL when credentials are set", () => {
+  it("refuses an invalid base URL when credentials are set", () => {
     expect(() =>
       assertSafeE2ETarget(
-        env({
-          STUDENT_EMAIL: "x",
-          NEXT_PUBLIC_SUPABASE_URL: "http://localhost:54321",
-          E2E_BASE_URL: "not a URL",
-        }),
+        { appSupabaseUrl: "http://localhost:54321", baseUrls: ["not a URL"] },
+        env({ STUDENT_EMAIL: "x" }),
       ),
-    ).toThrow("E2E_BASE_URL is not a valid URL");
+    ).toThrow("the base URL is not a valid URL");
+  });
+});
+
+describe("assertTargetVerified", () => {
+  it("refuses to sign in unless globalSetup passed", () => {
+    expect(() => assertTargetVerified({})).toThrow(
+      "production-target guard in globalSetup did not pass",
+    );
+    expect(() => assertTargetVerified({ [GUARD_FLAG]: "1" })).not.toThrow();
+  });
+});
+
+describe("hasE2ECredentials", () => {
+  it("detects any sign-in or service credential", () => {
+    expect(hasE2ECredentials({})).toBe(false);
+    expect(hasE2ECredentials({ SUPABASE_SECRET_KEY: "x" })).toBe(true);
   });
 });

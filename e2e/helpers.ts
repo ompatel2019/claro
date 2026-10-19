@@ -1,6 +1,6 @@
 import { expect, type Locator, type Page } from "@playwright/test";
 import { createClient } from "@supabase/supabase-js";
-import { assertTestSupabaseUrl } from "./guard";
+import { assertTargetVerified, assertTestSupabaseUrl } from "./guard";
 
 export async function expectStackedBelow(text: Locator, button: Locator) {
   await expect(text).toBeVisible();
@@ -50,6 +50,8 @@ async function signInAs(
       `Missing sign-in credentials: provide both ${role}_EMAIL and ${role}_PASSWORD (or explicit credentials for signIn).`,
     );
   }
+  // Watch/UI modes can keep running after a failed globalSetup.
+  assertTargetVerified();
   await page.goto(
     nextPath ? `/sign-in?next=${encodeURIComponent(nextPath)}` : "/sign-in",
   );

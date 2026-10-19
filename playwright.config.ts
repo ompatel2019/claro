@@ -1,5 +1,6 @@
 import path from "node:path";
 import { defineConfig, devices } from "@playwright/test";
+import { hasE2ECredentials } from "./e2e/guard";
 
 const port = process.env.PORT ?? "3000";
 
@@ -32,6 +33,7 @@ export default defineConfig({
     : {
         command: `npm run dev -- -p ${port}`,
         url: `http://localhost:${port}`,
-        reuseExistingServer: !process.env.CI,
+        // A reused server may have loaded production env; credentialed runs start their own.
+        reuseExistingServer: !process.env.CI && !hasE2ECredentials(),
       },
 });
