@@ -5,6 +5,7 @@ import {
 } from "@/lib/flashcard-progress";
 import { matchFlashcardAnswer } from "@/lib/flashcards";
 import { markFlashcard } from "@/lib/marking/engine";
+import { BUDGET_USD } from "@/lib/ai/prices";
 import {
   assertStudentAiRateLimit,
   rateLimitedResponse,
@@ -109,6 +110,13 @@ export async function POST(
     if (!result) {
       const limited = await assertStudentAiRateLimit({ userId: user.id });
       if (!limited.ok) return rateLimitedResponse(limited);
+      const { data: spent, error: spendError } = await db.rpc("ai_spend");
+      if (spendError) throw spendError;
+      if (Number(spent) >= BUDGET_USD)
+        return Response.json(
+          { error: "Marking is paused right now. Rate yourself instead." },
+          { status: 503 },
+        );
       result = await markFlashcard(
         { ...card, kind: card.kind as "term" | "stat" },
         answer,
