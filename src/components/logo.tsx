@@ -33,7 +33,13 @@ function Art({ kind, height }: { kind: keyof typeof ART; height: number }) {
 function Tile({ size }: { size: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element -- static SVG
-    <img src="/logos/claro-tile.svg" alt="" width={size} height={size} className="shrink-0 rounded-[22%]" />
+    <img
+      src="/logos/claro-tile.svg"
+      alt=""
+      width={size}
+      height={size}
+      className="shrink-0 rounded-[22%]"
+    />
   );
 }
 
@@ -53,7 +59,10 @@ export function Logo({
           collapsible && "group-data-[collapsible=icon]:hidden",
         )}
       >
-        <span className="inline-flex items-center" style={{ gap: Math.round(height * 0.3) }}>
+        <span
+          className="inline-flex items-center"
+          style={{ gap: Math.round(height * 0.3) }}
+        >
           <Tile size={Math.round(height * 1.2)} />
           <Art kind="lockup" height={height} />
         </span>
