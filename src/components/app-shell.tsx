@@ -1,7 +1,11 @@
 "use client";
 import { AskClaro } from "@/components/claro/ask-claro";
 import { CommandPalette } from "@/components/claro/command-palette";
-import { SubjectSwitcher, TopBar } from "@/components/claro/layout";
+import {
+  ExamCountdown,
+  SubjectSwitcher,
+  TopBar,
+} from "@/components/claro/layout";
 import { ThemeToggle, setTheme } from "./theme-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -24,7 +28,9 @@ import {
 } from "@/components/icons";
 import { signOut } from "@/app/(auth)/actions";
 import { Logo } from "@/components/logo";
-import { HeaderFeedback } from "@/components/feedback-widget";
+import { useFeedback } from "@/components/feedback-widget";
+import { HSC_EXAM } from "@/lib/hsc-exam";
+import { PortalIcon } from "@/components/icons";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -121,6 +127,18 @@ export function activeItem(kind: keyof typeof nav, path: string) {
   );
 }
 
+const studentIcons: Record<
+  string,
+  React.ComponentProps<typeof PortalIcon>["name"]
+> = {
+  Home: "layout-grid",
+  "Topic Sprint": "zap",
+  Flashcards: "copy",
+  "Mark my answer": "pen-line",
+  Activity: "history",
+  Progress: "target",
+};
+
 const initials = (name: string | null) =>
   (name ?? "")
     .trim()
@@ -134,15 +152,18 @@ export function AppShell({
   name,
   badges = {},
   defaultOpen,
+  examDays = null,
   children,
 }: {
   kind: keyof typeof nav;
   name: string | null;
   badges?: Record<string, number>;
   defaultOpen: boolean;
+  examDays?: number | null;
   children: React.ReactNode;
 }) {
   const path = usePathname();
+  const feedback = useFeedback();
   const active = activeItem(kind, path);
   const signOutForm = useRef<HTMLFormElement>(null);
   const home = nav[kind][0].items[0].href;
@@ -166,26 +187,29 @@ export function AppShell({
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
             className="flex justify-start group-data-[collapsible=icon]:justify-center"
           >
-            <Logo collapsible />
+            {kind === "student" ? <ShellLogo /> : <Logo collapsible />}
           </Link>
         </SidebarHeader>
         {kind === "student" && <SubjectSwitcher />}
-        <SidebarContent className="py-2">
+        <SidebarContent className="pt-3 pb-2">
           <nav
             aria-label={
               kind === "admin" ? "Admin navigation" : "Main navigation"
             }
           >
             {nav[kind].map((group) => (
-              <SidebarGroup key={group.label}>
-                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-                <SidebarMenu>
+              <SidebarGroup key={group.label} className="mb-2">
+                <SidebarGroupLabel className="mt-0">
+                  {group.label}
+                </SidebarGroupLabel>
+                <SidebarMenu className="gap-0.5">
                   {group.items.map((item) => {
                     const isActive = item === active;
                     const badge = badges[item.href];
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
+                          className="data-active:before:bg-brand h-9 overflow-visible rounded-xl font-medium data-active:font-semibold data-active:before:absolute data-active:before:-left-3 data-active:before:h-5 data-active:before:w-[3px] data-active:before:rounded-r"
                           isActive={isActive}
                           tooltip={item.label}
                           render={
@@ -196,7 +220,11 @@ export function AppShell({
                             />
                           }
                         >
-                          <item.icon strokeWidth={1.75} />
+                          {kind === "student" ? (
+                            <PortalIcon name={studentIcons[item.label]} />
+                          ) : (
+                            <item.icon strokeWidth={1.75} />
+                          )}
                           <span>{item.label}</span>
                         </SidebarMenuButton>
                         {!!badge && (
@@ -214,7 +242,16 @@ export function AppShell({
             ))}
           </nav>
         </SidebarContent>
-        <SidebarFooter className="border-sidebar-border border-t px-3 py-3">
+        <SidebarFooter className="border-sidebar-border gap-2 border-t px-3 pt-3 pb-4">
+          {kind === "student" && examDays !== null && (
+            <div className="group-data-[collapsible=icon]:hidden">
+              <ExamCountdown
+                name={HSC_EXAM.name}
+                days={examDays}
+                when={HSC_EXAM.when}
+              />
+            </div>
+          )}
           {kind === "admin" && (
             <SidebarMenu>
               <SidebarMenuItem>
@@ -231,14 +268,15 @@ export function AppShell({
             </SidebarMenu>
           )}
           <SidebarMenu>
-            <SidebarMenuItem>
+            <SidebarMenuItem className="flex items-center">
               <SidebarMenuButton
+                className="min-w-0 flex-1 gap-3 px-2"
                 size="lg"
                 tooltip={name ?? "Profile"}
                 render={<Link href="/student/profile" aria-label="Profile" />}
               >
-                <Avatar>
-                  <AvatarFallback className="bg-brand-soft text-brand-text font-semibold">
+                <Avatar className="after:border-0">
+                  <AvatarFallback className="bg-brand-soft text-brand-text text-xs font-medium">
                     {initials(name)}
                   </AvatarFallback>
                 </Avatar>
@@ -251,41 +289,92 @@ export function AppShell({
                   </span>
                 </span>
               </SidebarMenuButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  aria-label="User menu"
+                  className="text-muted-foreground hover:bg-muted grid size-7 shrink-0 place-items-center rounded-full group-data-[collapsible=icon]:hidden"
+                >
+                  <span aria-hidden className="text-lg leading-none">
+                    ⋯
+                  </span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent side="top" align="end" className="w-48">
+                  <DropdownMenuItem render={<Link href="/student/profile" />}>
+                    <User />
+                    Profile
+                  </DropdownMenuItem>
+                  {kind === "student" && (
+                    <DropdownMenuItem onClick={() => feedback()}>
+                      <Message />
+                      Feedback
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem
+                    onClick={() =>
+                      setTheme(
+                        document.documentElement.classList.contains("dark")
+                          ? "light"
+                          : "dark",
+                      )
+                    }
+                  >
+                    <PortalIcon name="moon" />
+                    Toggle theme
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => signOutForm.current?.requestSubmit()}
+                  >
+                    <SignOut />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset
-        className={
-          kind === "student" ? "min-w-0 pb-24 lg:pr-20 lg:pb-28" : "min-w-0"
-        }
-      >
+      <SidebarInset className="min-w-0">
         <TopBar>
-          <SidebarTrigger className="-ml-1" />
+          <SidebarTrigger className="max-sm:size-9" />
           <Link
             href={home}
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
-            className="md:hidden"
+            className="mr-auto md:hidden"
           >
-            <Logo height={22} />
+            {kind === "student" ? <ShellLogo mobile /> : <Logo height={22} />}
           </Link>
           <CommandPalette routes={commands} />
-          <div className="ml-auto flex shrink-0 items-center gap-1">
-            {kind === "student" && <HeaderFeedback />}
-            <ThemeToggle />
+          <div className="flex shrink-0 items-center gap-1 sm:ml-auto">
+            <span className="relative grid place-items-center [&_button>svg]:hidden">
+              <ThemeToggle />
+              <PortalIcon
+                name="moon"
+                className="pointer-events-none absolute size-4 dark:hidden"
+              />
+              <PortalIcon
+                name="sun"
+                className="pointer-events-none absolute hidden size-4 dark:block"
+              />
+            </span>
             <form ref={signOutForm} action={signOut} className="hidden" />
             <DropdownMenu>
               <DropdownMenuTrigger
                 className={`ml-auto rounded-full ${kind === "student" ? "max-lg:ml-0" : ""}`}
                 aria-label="Account menu"
               >
-                <Avatar className="size-9">
-                  <AvatarFallback className="bg-brand-soft text-brand-text font-semibold">
+                <Avatar className="size-8 after:border-0">
+                  <AvatarFallback className="bg-brand-soft text-brand-text text-xs font-medium">
                     {initials(name)}
                   </AvatarFallback>
                 </Avatar>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-44">
+                {kind === "student" && (
+                  <DropdownMenuItem onClick={() => feedback()}>
+                    <Message />
+                    Feedback
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onClick={() => setTheme("system")}>
                   Use system theme
                 </DropdownMenuItem>
@@ -305,12 +394,40 @@ export function AppShell({
         </TopBar>
         <div
           id="main"
-          className="mx-auto w-full max-w-[1464px] min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8"
+          className="mx-auto w-full max-w-[1400px] min-w-0 flex-1 px-4 pt-6 pb-24 sm:px-8 sm:pt-8"
         >
           {children}
         </div>
       </SidebarInset>
       {kind === "student" && <AskClaro />}
     </SidebarProvider>
+  );
+}
+
+/** Reuse the approved wordmark without the marketing tile in the portal chrome. */
+function ShellLogo({ mobile = false }: { mobile?: boolean }) {
+  return (
+    <span
+      role="img"
+      aria-label="Claro"
+      className="inline-flex shrink-0 group-data-[collapsible=icon]:scale-75"
+    >
+      {/* eslint-disable @next/next/no-img-element -- approved static brand assets */}
+      <img
+        src="/logos/claro-lockup.svg"
+        alt=""
+        width={mobile ? 64 : 70}
+        height={mobile ? 20 : 24}
+        className="dark:hidden"
+      />
+      <img
+        src="/logos/claro-lockup-white.svg"
+        alt=""
+        width={mobile ? 64 : 70}
+        height={mobile ? 20 : 24}
+        className="hidden dark:block"
+      />
+      {/* eslint-enable @next/next/no-img-element */}
+    </span>
   );
 }

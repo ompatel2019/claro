@@ -2,7 +2,9 @@
 import { expect, it, vi } from "vitest";
 
 vi.mock("@/app/(auth)/actions", () => ({ signOut: vi.fn() }));
-vi.mock("@/components/feedback-widget", () => ({ HeaderFeedback: () => null }));
+vi.mock("@/components/feedback-widget", () => ({
+  useFeedback: () => () => {},
+}));
 import { activeItem, nav } from "./app-shell";
 
 const pages = import.meta.glob("../app/**/page.tsx", {

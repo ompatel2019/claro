@@ -188,11 +188,12 @@ test.describe("annotated written feedback", () => {
     expect(data!.screenshots).toHaveLength(1);
   });
 
-  test("the floating button opens general feedback on any student page", async ({
+  test("the account menu opens general feedback on any student page", async ({
     page,
   }) => {
     await signIn(page);
-    await page.getByRole("button", { name: "Feedback", exact: true }).click();
+    await page.getByRole("button", { name: "Account menu" }).click();
+    await page.getByRole("menuitem", { name: "Feedback", exact: true }).click();
     const dialog = page.getByRole("dialog");
     await expect(
       dialog.getByRole("button", { name: "General" }),
