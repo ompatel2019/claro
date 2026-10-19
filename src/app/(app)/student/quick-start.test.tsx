@@ -4,10 +4,10 @@ import { resolve } from "@/test/resolve-server-components";
 import Home from "./page";
 
 const mocks = vi.hoisted(() => ({
-  unfinished: [] as object[],
-  due: 0,
-  dueError: false,
-  sessionError: false,
+  due: 0 as number | null,
+  failActivity: false,
+  failTopics: false,
+  calls: [] as unknown[][],
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth", () => ({
@@ -20,132 +20,158 @@ vi.mock("@/lib/auth", () => ({
 }));
 vi.mock("@/components/welcome-dialog", () => ({ WelcomeDialog: () => null }));
 vi.mock("@/components/shortcut", () => ({ Shortcut: () => null }));
+vi.mock("@/components/flashcard-start", () => ({
+  FlashcardStart: ({ label }: { label: string }) => (
+    <button type="submit">{label}</button>
+  ),
+}));
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh: vi.fn() }),
 }));
+vi.mock("@/lib/flashcards", () => ({ sydneyToday: () => "2026-10-19" }));
+const topics = [
+  { id: "t1", parent_id: null, name: "The Global Economy", sort: 1 },
+  { id: "t1-trade", parent_id: "t1", name: "Trade", sort: 2 },
+  { id: "t2", parent_id: null, name: "Economic Issues", sort: 3 },
+];
 vi.mock("@/utils/supabase/server", () => ({
   createClient: async () => ({
-    rpc: (name: string) => ({
-      data: [],
-      error: null,
-      single: async () => ({
-        data:
-          name === "activity_streaks"
-            ? { current_streak: 0, longest_streak: 0 }
-            : null,
-        error: null,
-      }),
-    }),
+    rpc: (name: string, args?: unknown) => {
+      mocks.calls.push([name, args]);
+      const error = mocks.failActivity ? new Error(name) : null;
+      return Object.assign(
+        Promise.resolve({
+          data: [{ day: "2026-10-19", questions: 4, cards: 2 }],
+          error,
+        }),
+        {
+          single: async () => ({
+            data: { current_streak: 2, longest_streak: 5 },
+            error,
+          }),
+        },
+      );
+    },
     from: (table: string) => {
+      const result =
+        table === "topics"
+          ? { data: mocks.failTopics ? null : topics, error: mocks.failTopics }
+          : { count: mocks.due, error: mocks.due === null };
       const query = {
-        data: [] as object[],
-        count: table === "flashcard_progress" ? mocks.due : 0,
-        error:
-          table === "flashcard_progress" && mocks.dueError
-            ? new Error("due")
-            : null,
         select: () => query,
         eq: () => query,
-        in: () => query,
-        order: () => query,
-        limit: () => query,
         lte: () => query,
-        gt: () => {
-          query.count = 0;
-          return query;
-        },
-        not: () => query,
-        is: () => {
-          query.data = mocks.unfinished;
-          query.error = mocks.sessionError ? new Error("sessions") : null;
-          return query;
-        },
+        order: () => query,
+        then: (done: (r: unknown) => unknown) =>
+          Promise.resolve(result).then(done),
       };
       return query;
     },
   }),
 }));
 
-beforeEach(() => {
-  mocks.unfinished = [];
-  mocks.due = 0;
-  mocks.dueError = false;
-  mocks.sessionError = false;
-});
-afterEach(() => {
-  cleanup();
-});
-
-it.each([false, true])(
-  "keeps the four tiles between the banner and streak with unfinished history: %s",
-  async (unfinished) => {
-    if (unfinished)
-      mocks.unfinished = [
-        {
-          id: "resume",
-          kind: "sprint",
-          config: { mode: "mcq" },
-          elapsed_s: 0,
-          started_at: new Date().toISOString(),
-          attempts: [],
-          flashcard_reviews: [],
-        },
-      ];
-    render(await resolve(await Home()));
-    const banner = screen.getByRole("region", { name: "Your study week" });
-    const launches = screen.getByRole("region", { name: "Quick start" });
-    expect(banner.nextElementSibling).toBe(launches);
-    expect(
-      within(launches)
-        .getAllByRole("heading", { level: 2 })
-        .map((h) => h.textContent),
-    ).toEqual(["Topic Sprint", "Flashcards", "Mark my answer", "Activity"]);
-    expect(within(launches).getAllByRole("link")).toHaveLength(4);
-    expect(
-      within(launches).getByRole("link", { name: /Topic Sprint/ }),
-    ).toHaveAttribute("href", "/student/sprint");
-    expect(
-      within(launches).getByRole("link", { name: /Flashcards 0 due/ }),
-    ).toHaveAttribute("href", "/student/flashcards");
-    const streak = screen.getByText("Longest 0 days");
-    expect(
-      launches.compareDocumentPosition(streak) &
-        Node.DOCUMENT_POSITION_FOLLOWING,
-    ).toBeTruthy();
-    for (const name of [
-      "Score trend",
-      "Recent activity",
-      "Weak topics",
-      "Questions this week",
-    ])
-      expect(screen.queryByText(name, { exact: true })).toBeNull();
-    const resume = screen.queryByRole("link", { name: "Continue" });
-    if (unfinished)
-      expect(resume).toHaveAttribute("href", "/student/sprint/resume");
-    else expect(resume).toBeNull();
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    disconnect() {}
   },
 );
-it("shows the due count inside the linked flashcards tile", async () => {
+beforeEach(() => {
+  mocks.due = 0;
+  mocks.failActivity = false;
+  mocks.failTopics = false;
+  mocks.calls = [];
+});
+afterEach(cleanup);
+
+it("orders hero, launch tiles, study days and study hub with no resume card", async () => {
+  render(await resolve(await Home()));
+  const hero = screen.getByRole("region", { name: "Your study week" });
+  expect(within(hero).getByRole("heading", { name: "Week 2" })).toBeVisible();
+  expect(within(hero).getByText("Term 4")).toBeVisible();
+  const dots = within(hero).getByRole("list", { name: "Week 2 of 10" });
+  expect(within(dots).getAllByRole("listitem")).toHaveLength(10);
+  const launches = screen.getByRole("region", { name: "Quick start" });
+  expect(
+    within(launches)
+      .getAllByRole("heading", { level: 2 })
+      .map((h) => h.textContent),
+  ).toEqual(["Topic Sprint", "Flashcards", "Mark my answer", "Activity"]);
+  for (const [name, href] of [
+    ["Topic Sprint", "/student/sprint"],
+    ["Flashcards 0 due", "/student/flashcards"],
+    ["Mark my answer", "/student/mark"],
+    ["Activity", "/student/activity"],
+  ])
+    expect(
+      within(launches).getByRole("link", { name: new RegExp(`^${name}`) }),
+    ).toHaveAttribute("href", href);
+  expect(
+    hero.compareDocumentPosition(launches) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    screen.getByRole("heading", { name: "Your study days" }),
+  ).toBeVisible();
+  expect(screen.queryByText(/Continue where you left off/)).toBeNull();
+  expect(screen.queryByRole("link", { name: "Continue" })).toBeNull();
+});
+
+it("shows streak numbers, a heatmap with today marked and reads a year of activity", async () => {
+  render(await resolve(await Home()));
+  for (const [label, value] of [
+    ["Day streak", "2"],
+    ["Longest streak", "5"],
+    ["Days studied", "1"],
+  ])
+    expect(screen.getByText(label).nextElementSibling).toHaveTextContent(value);
+  expect(mocks.calls).toContainEqual([
+    "activity_days",
+    { p_from: "2025-10-13", p_to: "2026-10-19" },
+  ]);
+  const today = screen.getByRole("link", { name: /^Mon 19 Oct 2026/ });
+  expect(today).toHaveAttribute("aria-current", "date");
+  expect(today).toHaveAttribute("href", "/student/activity?date=2026-10-19");
+  expect(screen.getByText("Today")).toBeInTheDocument();
+});
+
+it("lights up today with a sprint, or due flashcards in one click", async () => {
+  render(await resolve(await Home()));
+  expect(screen.getByRole("link", { name: "Light up today" })).toHaveAttribute(
+    "href",
+    "/student/sprint",
+  );
+  cleanup();
   mocks.due = 7;
   render(await resolve(await Home()));
-  const launches = screen.getByRole("region", { name: "Quick start" });
-  expect(
-    within(launches).getByRole("link", { name: /Flashcards 7 due/ }),
-  ).toHaveAttribute("href", "/student/flashcards");
+  expect(screen.getByRole("button", { name: "Light up today" })).toBeVisible();
+  expect(screen.getByRole("link", { name: /^Flashcards 7 due/ })).toBeVisible();
 });
-it("keeps launches available when due counts and unfinished sessions fail", async () => {
-  mocks.dueError = true;
-  mocks.sessionError = true;
+
+it("lists only top-level topics in the study hub, each opening its sprint", async () => {
   render(await resolve(await Home()));
-  const launches = screen.getByRole("region", { name: "Quick start" });
+  const hub = screen.getByRole("region", { name: "Study hub" });
+  const links = within(hub)
+    .getAllByRole("listitem")
+    .map((li) => li.firstChild);
+  expect(links.map((l) => l?.textContent)).toEqual([
+    "1The Global Economy",
+    "2Economic Issues",
+  ]);
+  expect(links[0]).toHaveAttribute("href", "/student/sprint?topics=t1");
+  expect(links[1]).toHaveAttribute("href", "/student/sprint?topics=t2");
+});
+
+it("keeps launches usable when due, activity and topic reads fail", async () => {
+  mocks.due = null;
+  mocks.failActivity = true;
+  mocks.failTopics = true;
+  render(await resolve(await Home()));
   expect(
-    within(launches).getByRole("link", { name: /Topic Sprint/ }),
-  ).toBeVisible();
-  expect(
-    within(launches).getByRole("link", { name: /Flashcards Choose a deck/ }),
+    screen.getByRole("link", { name: /^Flashcards Choose a deck/ }),
   ).toHaveAttribute("href", "/student/flashcards");
-  expect(within(launches).queryByText("0 due")).toBeNull();
-  expect(screen.getByRole("alert")).toHaveTextContent(
-    "Couldn't load your unfinished sessions.",
-  );
+  expect(screen.getAllByRole("alert").map((a) => a.textContent)).toEqual([
+    "Couldn't load your study days.Try again",
+    "Couldn't load your topics.Try again",
+  ]);
 });

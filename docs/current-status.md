@@ -1,3 +1,19 @@
+## 19 Oct 2026 — Student Home v2, brand assets, Progress fix
+
+- Home rebuilt like the A1 layout reference in Claro's own design: greeting/date, bold
+  term/week hero with a daily line and week-of-term dots, 2×2 launch tiles beside
+  "Your study days" (streaks, days studied, heatmap with today marker, Light up today),
+  and a Study hub tile per topic opening a prefilled Topic Sprint. "Continue where you
+  left off" was removed from Home; unfinished sessions stay in Activity. No migration.
+- Real Claro lockup/mark replace the placeholder logo everywhere (sidebar, mobile
+  header, auth, marking screen); favicon, app icon, apple icon and OG image come
+  from the marketing brand files. Next.js starter SVGs were removed.
+- Progress: `student_progress` failed with "field name must not be null" when a
+  finished session had an answer to a non-live question (its type reads as null).
+  Fixed with a null-type filter in `history.by_type`
+  (`supabase/migrations/0051_progress_null_type.sql`), applied to production
+  19 Oct 2026 ~10:16pm (Sydney).
+
 - S8: sprint expiry keeps answers editable and shows overtime until manual finish; the automatic finish setting is removed.
 
 - S7: editable multi/short pace replaces flat custom minutes; `start_sprint` computes time from the actual selection. Legacy saved setup pace is reset to the new defaults.

@@ -1,4 +1,3 @@
-import Image from "next/image";
 import { cn } from "@/lib/utils";
 
 // Brand SVGs in public/logos (from the marketing site). White variants for dark theme.
@@ -7,33 +6,25 @@ const ART = {
   mark: { file: "claro-mark", ratio: 90 / 100 },
 };
 
-function Art({
-  kind,
-  height,
-  className,
-}: {
-  kind: keyof typeof ART;
-  height: number;
-  className?: string;
-}) {
+function Art({ kind, height }: { kind: keyof typeof ART; height: number }) {
   const { file, ratio } = ART[kind];
   const size = { width: Math.round(height * ratio), height };
   return (
     <>
-      <Image
+      {/* eslint-disable @next/next/no-img-element -- static SVGs need no optimiser */}
+      <img
         src={`/logos/${file}.svg`}
         alt=""
         {...size}
-        unoptimized
-        className={cn("dark:hidden", className)}
+        className="dark:hidden"
       />
-      <Image
+      <img
         src={`/logos/${file}-white.svg`}
         alt=""
         {...size}
-        unoptimized
-        className={cn("hidden dark:block", className)}
+        className="hidden dark:block"
       />
+      {/* eslint-enable @next/next/no-img-element */}
     </>
   );
 }

@@ -12,6 +12,7 @@ import {
   type ActivityDay,
 } from "@/lib/activity";
 import { plural } from "@/lib/practice";
+import { cn } from "@/lib/utils";
 import { Card, CardContent } from "./ui/card";
 
 const CELL = 14; // 11 px cell + 3 px gap
@@ -112,9 +113,13 @@ export function ActivityHeatmap({
       ]
     : [0, 0];
 
+  const caption =
+    active === 0 && !error
+      ? "Answer a question or review a flashcard to start your streak."
+      : null;
   return (
-    <Card className={home && "h-full"}>
-      <CardContent className="space-y-3">
+    <Card className={cn(home && "h-full")}>
+      <CardContent className={cn("space-y-3", home && "flex h-full flex-col")}>
         {home ? (
           <div className="space-y-3">
             <div>
@@ -140,6 +145,9 @@ export function ActivityHeatmap({
                   </div>
                 ))}
               </dl>
+            )}
+            {caption && (
+              <p className="text-muted-foreground text-xs">{caption}</p>
             )}
           </div>
         ) : (
@@ -259,12 +267,13 @@ export function ActivityHeatmap({
             </button>
           </div>
         )}
-        <div className="text-muted-foreground flex flex-col-reverse items-start gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            {active === 0 &&
-              !error &&
-              "Answer a question or review a flashcard to start your streak."}
-          </span>
+        <div
+          className={cn(
+            "text-muted-foreground flex flex-col-reverse items-start gap-2 text-xs sm:flex-row sm:items-center sm:justify-between",
+            home && "mt-auto flex-row flex-wrap items-center justify-between",
+          )}
+        >
+          {!home && <span>{caption}</span>}
           <span className="flex items-center gap-1" aria-hidden>
             Less
             {SHADES.map((c) => (
@@ -276,10 +285,10 @@ export function ActivityHeatmap({
             ))}
             More
             {home && (
-              <>
-                <span className="ring-ink ring-offset-card ml-3 size-[11px] rounded-[2px] ring-1 ring-offset-1" />
+              <span className="ml-3 flex items-center gap-1">
+                <span className="ring-ink ring-offset-card size-[11px] rounded-[2px] ring-1 ring-offset-1" />
                 Today
-              </>
+              </span>
             )}
           </span>
           {home?.action}

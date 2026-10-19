@@ -117,16 +117,25 @@ Apply `0046_sprints_mixed_buckets.sql`. Coverage adds `e2e/sprint-mixed.spec.ts`
 
 ## Progress
 
-Student Home always shows the Topic Sprint presets and Flashcards launch boxes
-immediately below the header, including the due count (zero when none are due).
-Summary stats, activity heatmap, score trend/recent activity and unfinished
-sessions/weak topics follow. Continue appears only when there are unfinished
-sessions; loading failures keep the launch boxes available with a retry for the
-unavailable due count. No migration is needed for this layout.
-Coverage: `src/app/(app)/student/quick-start.test.tsx` and `e2e/student-home.spec.ts`
-(empty history, unfinished sessions and due cards at 360px and 1280px).
+Student Home (`src/app/(app)/student/page.tsx`): greeting/date; a navy hero with the
+NSW term, large week number, a daily Claro line and one dot per week of term
+(`schoolWeek`/`dailyQuote` in `src/lib/home.ts`); four large launch tiles (Topic Sprint,
+Flashcards with due count, Mark my answer, Activity) beside "Your study days"
+(`ActivityHeatmap` `home` variant: day streak, longest streak, days studied, today
+marker, Less/More legend, "Light up today" starts due flashcards in one click, else
+opens Topic Sprint); then a Study hub tile per top-level topic linking to
+`/student/sprint?topics=<id>`. Data comes from the existing `activity_days` and
+`activity_streaks` RPCs; no migration. Unfinished sessions are listed in Activity, not
+Home. Coverage: `src/app/(app)/student/quick-start.test.tsx`, `src/lib/home.test.ts`,
+`e2e/pages.offline.spec.ts` (offline, synthetic reads) and `e2e/student-home.spec.ts`.
 
-Home owns the summary stats and yearly activity heatmap. Progress leads with topic,
+Brand: `public/logos/` holds the marketing-site lockup and mark SVGs (white variants
+in dark theme via `src/components/logo.tsx`); the lockup is used in the sidebar,
+mobile header, auth pages and marking screen, the mark in the collapsed sidebar,
+`src/app/icon.svg` (dark-scheme aware), `favicon.ico` and `apple-icon.png`.
+`public/og/claro-og.png` is the Open Graph/Twitter image (`src/app/layout.tsx`).
+
+Progress leads with topic,
 question-type and directive-verb breakdowns, then score history and flashcard mastery.
 Question weak spots require 3 marked answers across 2 distinct sessions per subtopic;
 apply migration 0047 before using the new history counts. Missing counts keep spots locked.

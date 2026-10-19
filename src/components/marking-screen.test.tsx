@@ -12,7 +12,7 @@ it("announces a branded full-page pending screen without invented progress", () 
   render(<MarkingScreen />);
   const status = screen.getByRole("status");
   expect(status).toHaveAttribute("aria-live", "polite");
-  expect(status).toHaveTextContent("claro.");
+  expect(screen.getByRole("img", { name: "Claro" })).toBeInTheDocument();
   expect(screen.getByRole("heading")).toHaveTextContent("Marking your answers");
   expect(status.className).toContain("fixed inset-0");
   expect(screen.queryByRole("progressbar")).toBeNull();
