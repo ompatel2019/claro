@@ -17,6 +17,11 @@ const replies: Record<string, string> = {
   "What should I study before my exam?":
     "Start with one topic you find difficult, attempt a short answer under timed conditions, then compare your reasoning with your notes. Finish with a quick flashcard review and leave time to rest.",
 };
+const ASK_EVENT = "claro:ask";
+/** Open the Ask Claro panel from anywhere, optionally sending a first message. */
+export function askClaro(text?: string) {
+  window.dispatchEvent(new CustomEvent(ASK_EVENT, { detail: { text } }));
+}
 export function AskClaro() {
   const [open, setOpen] = useState(false),
     [input, setInput] = useState(""),
@@ -27,6 +32,15 @@ export function AskClaro() {
   useEffect(() => {
     log.current?.scrollTo?.({ top: log.current.scrollHeight });
   }, [messages, open]);
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      setOpen(true);
+      const text = (e as CustomEvent<{ text?: string }>).detail?.text;
+      if (text) send(text);
+    };
+    window.addEventListener(ASK_EVENT, onAsk);
+    return () => window.removeEventListener(ASK_EVENT, onAsk);
+  });
   function send(text: string) {
     if (!text.trim()) return;
     const q = text.trim();
