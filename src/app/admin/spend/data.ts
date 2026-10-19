@@ -278,7 +278,6 @@ export function computeSpend(
     today,
     month: finiteCost(totals.month),
     all: finiteCost(totals.all),
-    markedWritten: writtenAttempts.length,
     byMarkValue,
     unattributedWrittenUsd: Math.max(0, writtenUsd - attributedWrittenUsd),
     perDay: [...days.values()],
