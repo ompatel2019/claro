@@ -64,6 +64,7 @@ The offline Playwright suite exercises real page/component code with synthetic d
 
 - Migration 0050 (Mixed sprint minimum 5) is applied to production.
 - The S9 criteria data fix is applied to production: 6 questions repaired, backup in `public.questions_criteria_backup_20261019`.
+- Migration 0051 (`0051_progress_null_type.sql`) is applied to production (19 Oct 2026, about 10:16pm AEDT). The Progress page's `student_progress` function failed with "field name must not be null" when a finished session contained an answer to a non-live question; it is fixed with a filter on null type in `history.by_type`.
 
 ## Iteration 3 — small fixes
 

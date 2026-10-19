@@ -7,6 +7,10 @@ minimum in `start_sprint` from 20 to 5 marks, S3) **is applied to production**
 (applied 19 Oct 2026, Mixed minimum 5). The S9 criteria data fix is also **applied
 to production**: 6 questions were repaired on 19 Oct 2026, with the original rows
 backed up in table `public.questions_criteria_backup_20261019`.
+Migration `0051_progress_null_type.sql` **is applied to production** (19 Oct 2026,
+about 10:16pm AEDT): the Progress page's `student_progress` function failed with
+"field name must not be null" when a finished session contained an answer to a
+non-live question; `history.by_type` now filters out null types.
 
 Student portal for Claro: NSW HSC Economics practice with instant AI marking.
 Next.js 16 (App Router, `src/proxy.ts`), Supabase (auth, Postgres with RLS, storage), OpenAI.
