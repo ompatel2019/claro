@@ -116,29 +116,11 @@ const TYPES: Record<string, string> = {
   "Short answer": "short",
   Mixed: "mixed",
 };
-/** Wait for hydration and each transition so rapid clicks cannot skip a step. */
-export async function goToSprintStep(page: Page, target: number) {
-  const status = page.getByText(/^Step [1-4] of 4$/);
-  let step = Number((await status.textContent())!.match(/Step (\d)/)![1]);
-  const next = page.getByRole("button", { name: "Next", exact: true });
-  if (step < target) {
-    await expect
-      .poll(() =>
-        next.evaluate((element) =>
-          Object.keys(element).some((key) => key.startsWith("__reactProps$")),
-        ),
-      )
-      .toBe(true);
-  }
-  while (step < target) {
-    await next.click();
-    step++;
-    await expect(status).toHaveText(`Step ${step} of 4`);
-  }
-}
-/** Reviews every setup step, preserving URL-prefilled settings. */
+/** Reveal custom sizing and filters on the single-page setup. */
 export async function reviewSprintSetup(page: Page) {
-  await goToSprintStep(page, 4);
+  const custom = page.getByRole("button", { name: "Custom", exact: true });
+  if ((await custom.getAttribute("aria-pressed")) !== "true")
+    await custom.click();
 }
 /** Starts a sprint of one type on Inflation through the §3.2 setup page. */
 export async function start(
@@ -153,11 +135,8 @@ export async function start(
     const each = page.getByRole("radio", {
       name: "Check as I go",
     });
-    for (let step = 0; step < 4 && !(await each.isVisible()); step++)
-      await page.getByRole("button", { name: "Next", exact: true }).click();
     await each.click();
   }
-  await reviewSprintSetup(page);
   await page.getByRole("button", { name: /^Start (sprint|with)/ }).click();
   await expect(page).toHaveURL(/\/student\/sprint\/[^/]+$/);
   const id = page.url().split("/").at(-1)!;

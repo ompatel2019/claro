@@ -1,16 +1,11 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 import {
   cleanupSessions,
   expectNoOverlap,
   expectStackedBelow,
+  reviewSprintSetup,
   signIn,
 } from "./helpers";
-
-async function reviewSprintSetup(page: Page) {
-  const custom = page.getByRole("button", { name: "Custom", exact: true });
-  if ((await custom.getAttribute("aria-pressed")) !== "true")
-    await custom.click();
-}
 
 test.describe("Topic Sprint setup", () => {
   test.skip(!process.env.STUDENT_EMAIL, "Needs a student account");

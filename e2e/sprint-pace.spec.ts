@@ -1,12 +1,15 @@
 import { expect, test } from "@playwright/test";
-import { adminClient, cleanupSessions, signIn } from "./helpers";
+import {
+  adminClient,
+  cleanupSessions,
+  reviewSprintSetup,
+  signIn,
+} from "./helpers";
 
-// Also works when the setup wizard is present after lane2's changes.
 async function timerStep(page: import("@playwright/test").Page) {
-  const pace = page.getByLabel("Multis: minutes per question");
-  for (let step = 0; step < 4 && !(await pace.isVisible()); step++)
-    await page.getByRole("button", { name: "Next", exact: true }).click();
-  await expect(pace).toBeVisible();
+  await reviewSprintSetup(page);
+  await page.getByText("Adjust exam pace", { exact: true }).click();
+  await expect(page.getByLabel("Multis: minutes per question")).toBeVisible();
 }
 for (const width of [390, 1280]) {
   test.describe(`Sprint pace ${width}px`, () => {
@@ -118,10 +121,11 @@ for (const width of [390, 1280]) {
       await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
       await timerStep(page);
       await page.getByLabel("Shorts: minutes per mark").fill("");
-      await page.getByRole("switch", { name: "Timed", exact: true }).click();
+      await page.getByRole("switch", { name: /^Timed at exam pace/ }).click();
       await expect(page.getByLabel("Shorts: minutes per mark")).toBeHidden();
       await expect(page.getByText(/Untimed · Whole course/)).toBeVisible();
-      await page.getByRole("switch", { name: "Timed", exact: true }).click();
+      await page.getByRole("switch", { name: /^Timed at exam pace/ }).click();
+      await page.getByText("Adjust exam pace", { exact: true }).click();
       await page.getByLabel("Shorts: minutes per mark").fill("2.25");
       await page.getByRole("button", { name: /^Start (sprint|with)/ }).click();
       await expect(page).toHaveURL(/\/student\/sprint\/[^/]+$/);
