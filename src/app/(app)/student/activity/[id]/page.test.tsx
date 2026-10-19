@@ -1,7 +1,14 @@
-import { expect, it, vi, beforeEach } from "vitest";
-const mocks = vi.hoisted(() => ({ kind: "paper", from: vi.fn() }));
+import { cleanup, render, screen } from "@testing-library/react";
+import { resolve } from "@/test/resolve-server-components";
+import { expect, it, vi, beforeEach, afterEach } from "vitest";
+const mocks = vi.hoisted(() => ({
+  kind: "paper",
+  from: vi.fn(),
+  rpc: vi.fn(),
+}));
 vi.mock("server-only", () => ({}));
 vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: vi.fn() }),
   notFound: () => {
     throw new Error("404");
   },
@@ -13,6 +20,7 @@ vi.mock("@/utils/supabase/server", () => ({
   createClient: async () => ({
     auth: { getUser: async () => ({ data: { user: { id: "u" } } }) },
     from: mocks.from,
+    rpc: mocks.rpc,
   }),
 }));
 vi.mock("@/lib/single-check-data", () => ({
@@ -20,6 +28,18 @@ vi.mock("@/lib/single-check-data", () => ({
   remainingChecks: vi.fn(),
 }));
 vi.mock("@/components/mark-my-answer", () => ({ MarkMyAnswer: () => null }));
+vi.mock("@/components/results-report", () => ({
+  ResultsAnswers: ({ singleResult }: { singleResult?: boolean }) => (
+    <div data-testid="results" data-single={String(singleResult)} />
+  ),
+}));
+vi.mock("@/components/marking-progress", () => ({
+  MarkingProgress: () => null,
+}));
+vi.mock("@/components/feedback-widget", () => ({
+  ReportProblem: () => <button>Report a problem</button>,
+}));
+afterEach(cleanup);
 import Page from "./page";
 const id = "00000000-0000-4000-8000-000000000001";
 beforeEach(() => {
@@ -50,3 +70,83 @@ it.each([
     `redirect:${url}`,
   );
 });
+
+it.each([
+  [1, "marked"],
+  [1, "marking"],
+  [1, "pending"],
+  [2, "marked"],
+])(
+  "uses the standalone question header only for one written answer (%s rows)",
+  async (count, status) => {
+    const row = {
+      attempt_id: "attempt",
+      type: "short",
+      marks: 4,
+      max_marks: 4,
+      mark: 3,
+      status,
+      check_status: "agreed",
+      stem: "Explain low wage growth.\n\n| Year | Wages |\n| --- | --- |\n| 2025 | 3% |",
+      topic_id: "growth",
+      question_id: "q1",
+      feedback: null,
+      image_paths: [],
+      source: "HSC",
+    };
+    mocks.rpc.mockResolvedValue({
+      data: Array.from({ length: count }, () => row),
+      error: null,
+    });
+    mocks.from.mockImplementation((table: string) => ({
+      select() {
+        return this;
+      },
+      eq() {
+        return this;
+      },
+      maybeSingle: async () => ({
+        data: {
+          kind: "single",
+          config: {},
+          started_at: "2026-10-18T00:00:00Z",
+          finished_at: "2026-10-19T00:00:00Z",
+        },
+        error: null,
+      }),
+      order: async () => ({
+        data:
+          table === "attempts"
+            ? [row]
+            : [{ id: "growth", name: "Economic growth" }],
+        error: null,
+      }),
+    }));
+    render(await resolve(await Page({ params: Promise.resolve({ id }) })));
+    expect(screen.getByTestId("results")).toHaveAttribute(
+      "data-single",
+      String(count === 1),
+    );
+    if (count === 1) {
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Answer results" }),
+      ).toBeVisible();
+      expect(screen.getByText(/Economic growth · 4 marks/)).toHaveTextContent(
+        /^Submitted /,
+      );
+      expect(screen.queryByText(/^Marked /)).not.toBeInTheDocument();
+      expect(screen.getByRole("table")).toHaveTextContent("YearWages20253%");
+      expect(screen.getByText("Explain low wage growth.")).toBeVisible();
+      expect(
+        screen.getByRole("button", { name: "Report a problem" }),
+      ).toBeVisible();
+      expect(
+        screen.getByRole("link", { name: "Practise similar" }),
+      ).toHaveAttribute("href", "/student/sprint?type=short&sub=growth");
+    } else {
+      expect(
+        screen.getByRole("heading", { level: 1, name: "Mark my answer" }),
+      ).toBeVisible();
+    }
+  },
+);

@@ -9,9 +9,9 @@ export function TryAgain({ what }: { what: string }) {
   return (
     <div
       role="alert"
-      className="text-destructive flex flex-wrap items-center gap-3 text-sm"
+      className="bg-destructive-soft text-destructive border-destructive/20 flex flex-wrap items-center gap-3 rounded-lg border p-3 text-sm"
     >
-      <Alert className="size-4" aria-hidden />
+      <Alert className="size-4 shrink-0" aria-hidden />
       {"Couldn't load "}
       {what}.
       <Button variant="outline" size="sm" onClick={() => router.refresh()}>

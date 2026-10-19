@@ -141,6 +141,9 @@ it.each([
     render(<OverallFeedback summary={summary} pending={false} />);
     for (const label of ["Strengths", "Top fixes", "Next steps"])
       expect(screen.getByRole("heading", { name: label })).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Top fixes" })).toHaveClass(
+      "text-warning-text",
+    );
     for (const line of Object.values(summary).flat())
       expect(screen.getByText(line)).toBeVisible();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
@@ -230,7 +233,9 @@ it("puts next steps first and links factual question chips without attributing A
   );
   expect(screen.getAllByRole("heading").map((h) => h.textContent)).toEqual([
     "Overall feedback",
+    "Your next step",
     "Next steps",
+    "Strengths and fixes",
     "Strengths",
     "Top fixes",
   ]);

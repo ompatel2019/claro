@@ -1,5 +1,6 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
+import { PortalIcon } from "@/components/icons";
 import { redirect } from "next/navigation";
 import { loadSprint } from "@/lib/practice-data";
 import { createClient } from "@/utils/supabase/server";
@@ -17,12 +18,12 @@ import {
   timeMeta,
   visibleResults,
 } from "@/lib/results";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/claro/layout";
 import { MarkingProgress } from "@/components/marking-progress";
 import { RetryAnswer } from "@/components/retry-answer";
 import { ResultsAnswers, OverallFeedback } from "@/components/results-report";
 import { SameSetup } from "@/components/sprint-setup";
-import { StatCard } from "@/components/stat-card";
+import { ResultStat } from "@/components/student/sprint/result-stat";
 import { StatusPill } from "@/components/status-pill";
 import { buttonVariants } from "@/components/ui/button";
 
@@ -54,7 +55,7 @@ export default async function Results({
       redirect(`/student/sprint/${id}`);
     const counted = attempts.filter((a) => a.status !== "skipped");
     return (
-      <div className="space-y-4">
+      <div className="space-y-5">
         <PageHeader
           eyebrow="Marking in progress"
           title={`${modeLabel(s.config.mode)} sprint`}
@@ -146,11 +147,17 @@ export default async function Results({
     : s.config.topics;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <Link
+        href="/student/activity"
+        className="text-muted-foreground inline-flex items-center gap-1.5 text-[13px]"
+      >
+        <PortalIcon name="arrow-left" className="size-3.5" />
+        Back to activity
+      </Link>
       <PageHeader
-        eyebrow="Every answer gives you a next step"
+        eyebrow={`${when(s.started_at)} · ${timeMeta(elapsed, limit)}`}
         title={`${modeLabel(s.config.mode)} sprint · ${places?.length ? places.map(name).join(", ") : "All topics"}`}
-        description={`${when(s.started_at)} · ${timeMeta(elapsed, limit)}`}
         actions={
           <>
             {failed.length > 0 && (
@@ -168,46 +175,41 @@ export default async function Results({
               </Link>
             )}
             <SameSetup config={s.config} />
-            <Link
-              href="/student/activity"
-              className={buttonVariants({ variant: "ghost" })}
-            >
-              Back to activity
-            </Link>
           </>
         }
       />
       <MarkingProgress {...progress} />
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatCard
-          className="col-span-2 whitespace-nowrap sm:col-span-1"
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <ResultStat
           label={
             <span className="flex items-center gap-2">
               Score {provisional && <StatusPill pill="Provisional" />}
             </span>
           }
-          value={`${provisional ? "≈ " : ""}${k.score.mark} / ${total}${scorePct == null ? "" : ` · ${Math.round(scorePct)}%`}`}
-          caption={delta(scorePct, scoreAvg, " pts")}
+          value={`${provisional ? "≈ " : ""}${scorePct == null ? "–" : `${Math.round(scorePct)}%`}`}
+          score={{ mark: k.score.mark, max: total }}
+          comparison={delta(scorePct, scoreAvg, " pts")}
         />
-        <StatCard
+        <ResultStat
+          neutral
           label="Time"
           value={timeMeta(elapsed, null)}
-          caption={delta(minutes(elapsed), minutes(timeAvg), " min")}
+          comparison={delta(minutes(elapsed), minutes(timeAvg), " min")}
         />
         {k.mcCount > 0 && (
-          <StatCard
+          <ResultStat
             label="Multiple choice"
             value={`${k.mc.mark} / ${k.mc.max}`}
-            caption={delta(pct(k.mc), typeAvg(true), " pts")}
+            comparison={delta(pct(k.mc), typeAvg(true), " pts")}
           />
         )}
         {k.writtenCount > 0 && (
-          <StatCard
+          <ResultStat
             label="Written average"
             value={
               pct(k.written) == null ? "–" : `${Math.round(pct(k.written)!)}%`
             }
-            caption={delta(pct(k.written), typeAvg(false), " pts")}
+            comparison={delta(pct(k.written), typeAvg(false), " pts")}
           />
         )}
       </div>

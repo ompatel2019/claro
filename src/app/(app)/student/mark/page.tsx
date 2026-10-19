@@ -13,9 +13,16 @@ import { createClient } from "@/utils/supabase/server";
 import { bankQuestions, remainingChecks } from "@/lib/single-check-data";
 import { dateLabel, type Topic } from "@/lib/practice";
 import { type OwnQuestion } from "@/lib/single-check";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/claro/layout";
 import { MarkMyAnswer } from "@/components/mark-my-answer";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardAction,
+} from "@/components/ui/card";
 
 export const metadata = pageMetadata("Mark my answer");
 
@@ -43,7 +50,7 @@ export default async function Page() {
   if (topics.error || recent.error)
     throw new Error("Couldn't load your checks.");
   return (
-    <div className="mx-auto max-w-3xl space-y-5">
+    <div className="min-w-0 space-y-5">
       <PageHeader
         title="Mark my answer"
         description={
@@ -66,10 +73,19 @@ export default async function Page() {
       {recent.data.length ? (
         <Card>
           <CardHeader>
-            <CardTitle>Recent checks</CardTitle>
+            <CardTitle>Recently marked</CardTitle>
+            <CardDescription>Your last answers, with feedback</CardDescription>
+            <CardAction>
+              <Link
+                href="/student/activity"
+                className="text-muted-foreground text-[13px]"
+              >
+                All activity ↗
+              </Link>
+            </CardAction>
           </CardHeader>
           <CardContent>
-            <ul className="divide-y">
+            <ul className="grid gap-1">
               {recent.data.map((s) => {
                 const config = s.config as { question?: OwnQuestion };
                 const attempts = s.attempts as unknown as {
@@ -101,9 +117,12 @@ export default async function Page() {
                   <li key={s.id}>
                     <Link
                       href={`/student/activity/${s.id}`}
-                      className="hover:bg-muted flex flex-wrap items-center gap-2 rounded-lg py-3 focus-visible:outline-2"
+                      className="hover:bg-accent flex items-center gap-3 rounded-lg py-3 focus-visible:outline-2"
                     >
-                      <span className="line-clamp-2 min-w-0 basis-full text-sm font-medium sm:flex-1 sm:basis-auto">
+                      <span className="bg-muted text-muted-foreground grid size-8 shrink-0 place-items-center rounded-lg">
+                        <Pen className="size-4" aria-hidden />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
                         {title}
                       </span>
                       <span className="text-muted-foreground shrink-0 text-xs tabular-nums">

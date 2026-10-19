@@ -14,12 +14,14 @@ import {
   type Topic,
 } from "@/lib/practice";
 import { studentMarking, type ReviewRow, markingState } from "@/lib/feedback";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/claro/layout";
 import { ResultsAnswers } from "@/components/results-report";
 import { RetryAnswer } from "@/components/retry-answer";
 import { MarkingProgress } from "@/components/marking-progress";
 import { MarkMyAnswer } from "@/components/mark-my-answer";
 import { RichText } from "@/components/rich-text";
+import { ReportProblem } from "@/components/feedback-widget";
+import { QuestionMark } from "@/components/question-mark";
 import { Card } from "@/components/ui/card";
 
 export const metadata = pageMetadata("Answer results");
@@ -77,7 +79,7 @@ export default async function Page({
       if (question) bank.push(question as (typeof bank)[number]);
     }
     return (
-      <div className="mx-auto max-w-3xl space-y-5">
+      <div className="mx-auto max-w-3xl min-w-0 space-y-5">
         <PageHeader
           title="Continue your check"
           description="Your question is saved. Finish your answer when you're ready."
@@ -140,13 +142,50 @@ export default async function Page({
   const photos = new Map(
     (signed ?? []).map((p) => [p.path ?? null, p.signedUrl ?? null]),
   );
+  const single = rows.length === 1 && rows[0].type !== "mcq" ? rows[0] : null;
   const pending = rows.some((r) => markingState(r) === "marking");
   return (
-    <div className="space-y-4">
-      <PageHeader
-        title="Mark my answer"
-        description={`${dateLabel(s.started_at, true)} · One question, one clear next step.`}
-      />
+    <div className="min-w-0 space-y-5">
+      {single ? (
+        <>
+          <Link
+            href="/student/mark"
+            className="text-muted-foreground inline-flex text-[13px]"
+          >
+            ← Mark my answer
+          </Link>
+          <PageHeader
+            eyebrow={`Submitted ${dateLabel(s.finished_at, true)}${single.topic_id ? ` · ${topics.data.find((t) => t.id === single.topic_id)?.name ?? ""}` : ""} · ${single.marks} marks`}
+            title="Answer results"
+            actions={
+              <>
+                {single.question_id && (
+                  <ReportProblem
+                    questionId={single.question_id}
+                    sessionId={id}
+                    label={`Linked: ${single.source}`}
+                  />
+                )}
+                {single.topic_id && (
+                  <Link
+                    href={`/student/sprint?type=${single.type}&sub=${encodeURIComponent(single.topic_id)}`}
+                    className={buttonVariants({ variant: "outline" })}
+                  >
+                    Practise similar
+                  </Link>
+                )}
+              </>
+            }
+          />
+          <RichText text={single.stem} />
+          {single.stimulus && <RichText text={single.stimulus} />}
+        </>
+      ) : (
+        <PageHeader
+          title="Mark my answer"
+          description={`${dateLabel(s.started_at, true)} · One question, one clear next step.`}
+        />
+      )}
       <MarkingProgress
         done={
           rows.filter((r) =>
@@ -201,6 +240,15 @@ export default async function Page({
         />
       )}
       <ResultsAnswers
+        singleResult={!!single}
+        writtenAction={
+          single
+            ? (row) =>
+                ["marked", "reviewed"].includes(markingState(row)) ? (
+                  <QuestionMark attemptId={row.attempt_id} />
+                ) : null
+            : undefined
+        }
         rows={rows}
         id={id}
         name={(tid) => topics.data.find((t) => t.id === tid)?.name ?? ""}

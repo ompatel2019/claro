@@ -1,14 +1,13 @@
 import Link from "next/link";
-import { SearchOff } from "@/components/icons";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/claro/layout";
+import { Card } from "@/components/claro/data-display";
 import { buttonVariants } from "@/components/ui/button";
 
 export default function NotFound() {
   return (
     <main className="mx-auto flex w-full max-w-md flex-1 items-center px-4 py-16">
-      <div className="w-full">
+      <Card className="w-full p-5">
         <EmptyState
-          icon={SearchOff}
           title="Page not found"
           description="This page doesn’t exist or has moved."
           action={
@@ -17,7 +16,7 @@ export default function NotFound() {
             </Link>
           }
         />
-      </div>
+      </Card>
     </main>
   );
 }

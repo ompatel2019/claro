@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import {
+  PortalIcon,
   Book,
   Calculator as CalculatorIcon,
   Message,
@@ -66,7 +67,7 @@ function Timer({ mode, seconds }: { mode: "down" | "up"; seconds: number }) {
             : `Time used ${timer(seconds)}`
       }
       className={cn(
-        "rounded-full px-2.5 py-1 font-sans text-sm tabular-nums",
+        "bg-card inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-sans text-[13px] tabular-nums",
         mode === "up" && "text-muted-foreground",
         mode === "down" && seconds <= 300 && "bg-warning-soft text-warning",
         mode === "down" &&
@@ -74,6 +75,7 @@ function Timer({ mode, seconds }: { mode: "down" | "up"; seconds: number }) {
           "bg-destructive-soft text-destructive",
       )}
     >
+      <PortalIcon name="timer" className="size-3.5" aria-hidden />
       {hidden
         ? "Show timer"
         : over
@@ -128,7 +130,7 @@ export function SessionShell(props: SessionProps) {
     move.current = onMove;
   });
   function toggleBooklet() {
-    if (window.matchMedia("(min-width: 1024px)").matches) setRail((r) => !r);
+    if (window.matchMedia("(min-width: 768px)").matches) setRail((r) => !r);
     else setSheet((s) => !s);
   }
   const toggleRef = useRef(toggleBooklet);
@@ -162,7 +164,7 @@ export function SessionShell(props: SessionProps) {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <FocusBar className="bg-card/90 sticky top-0 z-30 flex h-14 items-center gap-1.5 border-b px-2 backdrop-blur sm:gap-3 sm:px-4">
+      <FocusBar className="bg-card/90 sticky top-0 z-30 flex h-[68px] items-center gap-1.5 border-b px-2 backdrop-blur sm:gap-4 sm:px-8">
         <Button
           variant="ghost"
           size="sm"
@@ -170,53 +172,62 @@ export function SessionShell(props: SessionProps) {
           disabled={busy}
           onClick={onExit}
         >
+          <PortalIcon name="arrow-left" aria-hidden className="size-4" />
           <span className="sm:hidden">Exit</span>
           <span className="hidden sm:inline">Save and exit</span>
         </Button>
-        <p className="hidden min-w-0 truncate text-sm font-semibold md:block">
-          {title}
-        </p>
-        <div className="flex min-w-14 flex-col gap-1 sm:min-w-24">
-          <p className="text-xs font-medium tabular-nums">
-            {flashcards ? "Card" : "Q"} {position} of {total}
+        <div className="min-w-0 flex-1 sm:border-l sm:pl-4">
+          <p className="hidden truncate text-sm font-semibold md:block">
+            {title}
           </p>
-          <div
-            role="progressbar"
-            aria-label="Answered"
-            aria-valuemin={0}
-            aria-valuemax={total}
-            aria-valuenow={answered}
-            className="bg-muted h-1 overflow-hidden rounded-full"
-          >
-            <div
-              className="bg-ink h-full transition-[width]"
-              style={{ width: `${(answered / Math.max(total, 1)) * 100}%` }}
-            />
+          <div className="flex items-center gap-2">
+            <div className="flex min-w-14 flex-col gap-1 sm:min-w-24">
+              <p className="text-muted-foreground text-xs font-medium tabular-nums">
+                {flashcards ? "Card" : "Q"} {position} of {total}
+              </p>
+              <div
+                role="progressbar"
+                aria-label="Answered"
+                aria-valuemin={0}
+                aria-valuemax={total}
+                aria-valuenow={answered}
+                className={
+                  flashcards
+                    ? "bg-muted h-1 overflow-hidden rounded-full"
+                    : "sr-only"
+                }
+              >
+                <div
+                  className="bg-ink h-full transition-[width]"
+                  style={{ width: `${(answered / Math.max(total, 1)) * 100}%` }}
+                />
+              </div>
+            </div>
+            {flashcards && (
+              <p className="text-xs tabular-nums">Knew {flashcards.known}</p>
+            )}
+            <p
+              role="status"
+              className={cn(
+                "hidden items-center gap-1 text-xs sm:flex",
+                saveState === "error"
+                  ? "text-destructive"
+                  : "text-muted-foreground",
+              )}
+            >
+              {saveState === "saved"
+                ? "Saved"
+                : saveState === "saving"
+                  ? "Saving…"
+                  : "Not saved. Retrying"}
+              {saveState === "error" && (
+                <button type="button" className="underline" onClick={onRetry}>
+                  Retry
+                </button>
+              )}
+            </p>
           </div>
         </div>
-        {flashcards && (
-          <p className="text-xs tabular-nums">Knew {flashcards.known}</p>
-        )}
-        <p
-          role="status"
-          className={cn(
-            "hidden items-center gap-1 text-xs sm:flex",
-            saveState === "error"
-              ? "text-destructive"
-              : "text-muted-foreground",
-          )}
-        >
-          {saveState === "saved"
-            ? "Saved"
-            : saveState === "saving"
-              ? "Saving…"
-              : "Not saved. Retrying"}
-          {saveState === "error" && (
-            <button type="button" className="underline" onClick={onRetry}>
-              Retry
-            </button>
-          )}
-        </p>
         <div className="ml-auto flex shrink-0 items-center gap-1">
           {!flashcards && (
             <>
@@ -288,7 +299,7 @@ export function SessionShell(props: SessionProps) {
       </FocusBar>
       <div className="flex flex-1">
         {!flashcards && rail && (
-          <aside className="bg-card sticky top-14 hidden h-[calc(100svh-3.5rem)] w-60 shrink-0 overflow-y-auto border-r p-3 lg:block">
+          <aside className="bg-card sticky top-[68px] hidden h-[calc(100svh-68px)] w-[272px] shrink-0 overflow-y-auto border-r p-5 md:block">
             <div className="mb-2 flex items-center justify-between">
               <h2 className="text-sm font-semibold">Booklet</h2>
               <Button
@@ -306,7 +317,7 @@ export function SessionShell(props: SessionProps) {
         <main
           id="main"
           className={cn(
-            "mx-auto w-full max-w-3xl min-w-0 flex-1 space-y-4 p-4 sm:p-6",
+            "mx-auto w-full max-w-[824px] min-w-0 flex-1 space-y-5 px-4 py-6 sm:px-8 sm:py-10",
             wide && "max-w-7xl",
           )}
         >

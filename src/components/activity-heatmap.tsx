@@ -10,6 +10,7 @@ import {
   SHADE_LABELS,
   type ActivityDay,
 } from "@/lib/activity";
+import { Flame } from "@/components/icons";
 import { plural } from "@/lib/practice";
 import { cn } from "@/lib/utils";
 import {
@@ -43,7 +44,7 @@ export function ActivityHeatmap({
   error?: boolean;
   errorContent?: React.ReactNode;
   /** Home's "Your study days" card: big streak numbers, today marker and a call to action. */
-  home?: { action: React.ReactNode };
+  home?: { action: React.ReactNode; template?: boolean };
 }) {
   const allWeeks = heatmapWeeks(today);
   const [weekCount, setWeekCount] = useState(53);
@@ -137,13 +138,21 @@ export function ActivityHeatmap({
         {home ? (
           <div className="space-y-3">
             <div>
-              <h2 className="text-base">Your study days</h2>
+              <h2 className="text-base">
+                {home.template ? "Study days" : "Your study days"}
+              </h2>
               <p className="text-muted-foreground text-xs">
-                Every day you study lights up a square.
+                {home.template
+                  ? "Consistency is the cheat code."
+                  : "Every day you study lights up a square."}
               </p>
             </div>
             {!error && (
-              <dl className="flex gap-6">
+              <dl
+                className={
+                  home.template ? "grid grid-cols-3 gap-3 py-2" : "flex gap-6"
+                }
+              >
                 {(
                   [
                     [current, "Day streak"],
@@ -153,8 +162,16 @@ export function ActivityHeatmap({
                 ).map(([value, label]) => (
                   <div key={label} className="flex flex-col-reverse">
                     <dt className="text-muted-foreground text-xs">{label}</dt>
-                    <dd className="text-2xl leading-tight font-bold">
+                    <dd
+                      className={cn(
+                        "text-2xl leading-tight font-bold",
+                        home.template && "flex items-center gap-1 text-[22px]",
+                      )}
+                    >
                       {value}
+                      {home.template && label === "Day streak" && (
+                        <Flame aria-hidden className="text-brand size-4" />
+                      )}
                     </dd>
                   </div>
                 ))}

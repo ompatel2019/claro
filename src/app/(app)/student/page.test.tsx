@@ -27,6 +27,7 @@ import { Shortcut } from "@/components/shortcut";
 
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.progress.mockResolvedValue(null);
   mocks.requireProfile.mockResolvedValue({
     id: "own-student",
     role: "student",
@@ -65,7 +66,10 @@ it.each([
 ])("skips the session query for %o", async (profile) => {
   mocks.requireProfile.mockResolvedValue({ id: "own-user", ...profile });
   await Home();
-  expect(mocks.from).not.toHaveBeenCalledWith("sessions");
+  expect(mocks.select).not.toHaveBeenCalledWith("id", {
+    count: "exact",
+    head: true,
+  });
 });
 
 it("does not treat a failed session lookup as a first visit", async () => {

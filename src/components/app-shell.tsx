@@ -255,7 +255,11 @@ export function AppShell({
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="min-w-0">
+      <SidebarInset
+        className={
+          kind === "student" ? "min-w-0 pb-24 lg:pr-20 lg:pb-28" : "min-w-0"
+        }
+      >
         <TopBar>
           <SidebarTrigger className="-ml-1" />
           <Link

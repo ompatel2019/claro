@@ -3,10 +3,11 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { DataTable, type Column } from "./data-table";
 import { StatusPill, STATUS_PILL } from "./status-pill";
-import { Card } from "./ui/card";
+import { Card } from "./claro/data-display";
+import { SectionHeading } from "./student/account/section-heading";
 import { Button } from "./ui/button";
-import { Alert, Pending, CheckCircle, Message, Help } from "@/components/icons";
-import { EmptyState } from "./empty-state";
+import { Alert, Pending, CheckCircle } from "@/components/icons";
+import { EmptyState } from "./claro/layout";
 import { dateLabel } from "@/lib/practice";
 import { reviewOutcome } from "@/lib/profile";
 import type { Pager } from "@/lib/admin";
@@ -132,7 +133,7 @@ const reviewColumns: Column<ReviewRow>[] = [
       const Icon = outcome === "Being checked" ? Pending : CheckCircle;
       return (
         <span
-          className={`inline-flex items-center gap-1 rounded-full border px-2 text-xs ${outcome === "Being checked" ? "bg-warning-soft text-warning" : "bg-success-soft text-success"}`}
+          className={`inline-flex items-center gap-1 rounded-full border px-2 text-xs ${outcome === "Being checked" ? "bg-warning-soft text-warning-text" : "bg-success-soft text-success-text"}`}
         >
           <Icon className="size-3" aria-hidden />
           {outcome}
@@ -144,7 +145,7 @@ const reviewColumns: Column<ReviewRow>[] = [
 export function ProfileLoadError() {
   const router = useRouter();
   return (
-    <div className="grid justify-items-start gap-3">
+    <div className="bg-destructive-soft border-destructive/20 grid justify-items-start gap-3 rounded-lg border p-4">
       <p role="alert" className="flex items-center gap-2">
         <Alert className="size-4" />
         {"Couldn't load this. Try again"}
@@ -172,7 +173,7 @@ function HistorySort({
     <label className="flex min-w-0 flex-wrap items-center gap-2 @min-[640px]:hidden">
       <span>Sort {title.toLowerCase()}</span>
       <select
-        className="bg-background min-h-11 max-w-full min-w-0 rounded-md border px-3 text-sm"
+        className="bg-card border-input min-h-11 max-w-full min-w-0 rounded-md border px-3 text-sm shadow-xs"
         value={`${pager.sort.id}:${pager.sort.dir}`}
         onChange={(event) => {
           const [id, dir] = event.target.value.split(":");
@@ -216,13 +217,19 @@ export function ProfileHistory({
 }) {
   const title = kind === "feedback" ? "Your feedback" : "Marks you questioned";
   return (
-    <Card className="@container min-w-0 p-5">
-      <h2 className="text-base font-semibold">{title}</h2>
+    <Card className="@container min-w-0 p-5 xl:col-span-2">
+      <SectionHeading
+        title={title}
+        description={
+          kind === "feedback"
+            ? "Messages you’ve sent and replies from the team."
+            : "Track the outcome of your marking reviews."
+        }
+      />
       {error ? (
         <ProfileLoadError />
       ) : pager.total === 0 ? (
         <EmptyState
-          icon={kind === "feedback" ? Message : Help}
           title={
             kind === "feedback"
               ? "Nothing sent yet."

@@ -79,7 +79,7 @@ export function ResultsBrowser({
   const label = (it: ResultItem, i: number) =>
     `Question ${it.position ?? i + 1}${it.mark ? `, ${it.mark} marks` : ""}${it.pill ? `, ${it.pill}` : ""}`;
   return (
-    <section className="space-y-4">
+    <section className="bg-card shadow-card space-y-5 rounded-xl border p-5">
       {mcGrid && mcGrid.length > 0 && (
         <Card>
           <CardHeader>
@@ -166,7 +166,25 @@ export function ResultsBrowser({
         id="results-questions"
         className="flex scroll-mt-20 flex-wrap items-center justify-between gap-3"
       >
-        <h2>Your answers</h2>
+        <div>
+          <h2 className="text-sm font-semibold">Your answers</h2>
+          <ul
+            aria-label="Answer key"
+            className="text-muted-foreground mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs"
+          >
+            {[
+              ["Correct", "bg-success-soft"],
+              ["Part marks", "bg-warning-soft"],
+              ["Incorrect", "bg-destructive-soft"],
+              ["Not answered", "border border-dashed"],
+            ].map(([label, tone]) => (
+              <li key={label} className="flex items-center gap-1.5">
+                <span aria-hidden className={cn("size-3 rounded", tone)} />
+                {label}
+              </li>
+            ))}
+          </ul>
+        </div>
         <Toggle
           variant="outline"
           size="sm"
@@ -216,23 +234,39 @@ export function ResultsBrowser({
           </TableBody>
         </Table>
       ) : (
-        <nav aria-label="Questions" className="flex flex-wrap gap-2">
-          {items.map((it, i) => (
-            <button
-              key={i}
-              type="button"
-              title={it.pill ?? undefined}
-              aria-label={label(it, i)}
-              aria-current={i === index ? "true" : undefined}
-              onClick={() => setIndex(i)}
-              className={cn(
-                "bg-card size-9 rounded-full border text-sm font-medium tabular-nums",
-                it.tone,
-                i === index && "ring-primary ring-2 ring-offset-2",
-              )}
-            >
-              {it.position ?? i + 1}
-            </button>
+        <nav aria-label="Questions" className="flex flex-wrap gap-x-8 gap-y-5">
+          {[...new Set(items.map((it) => it.type))].map((type) => (
+            <div key={type} className="min-w-0">
+              <p className="text-muted-foreground mb-2 text-xs">{type}</p>
+              <div className="flex flex-wrap gap-2">
+                {items.map(
+                  (it, i) =>
+                    it.type === type && (
+                      <button
+                        key={i}
+                        type="button"
+                        title={it.pill ?? undefined}
+                        aria-label={label(it, i)}
+                        aria-current={i === index ? "true" : undefined}
+                        onClick={() => setIndex(i)}
+                        className={cn(
+                          "grid size-12 content-center rounded-xl border border-transparent text-sm font-medium tabular-nums",
+                          it.tone,
+                          !it.mark && "border-border border-dashed",
+                          i === index && "ring-primary ring-2 ring-offset-2",
+                        )}
+                      >
+                        {it.position ?? i + 1}
+                        {type !== "Multiple choice" && it.mark && (
+                          <span className="mt-0.5 text-[10px] font-normal">
+                            {it.mark}
+                          </span>
+                        )}
+                      </button>
+                    ),
+                )}
+              </div>
+            </div>
           ))}
         </nav>
       )}

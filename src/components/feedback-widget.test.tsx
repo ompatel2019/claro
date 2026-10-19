@@ -165,10 +165,16 @@ it("keeps Send disabled until there is a message or a screenshot", async () => {
   });
 });
 
-it("pins desktop feedback bottom-right out of page flow and opens the same dialog", async () => {
+it("pins desktop feedback above Ask Claro out of page flow and opens the same dialog", async () => {
   setup();
   const button = screen.getByRole("button", { name: "Feedback" });
-  expect(button).toHaveClass("fixed", "right-6", "bottom-6");
+  expect(button).toHaveClass(
+    "fixed",
+    "right-6",
+    "bottom-20",
+    "hidden",
+    "lg:flex",
+  );
   fireEvent.click(button);
   expect(
     await screen.findByRole("dialog", { name: "Send feedback" }),

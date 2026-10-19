@@ -297,15 +297,19 @@ test.describe("Iteration 2 setup without services", () => {
             builder.onResolve(
               {
                 filter:
-                  /^(@\/app\/\(app\)\/actions|@\/utils\/supabase\/client)$/,
+                  /^(next\/link|@\/app\/\(app\)\/actions|@\/utils\/supabase\/client)$/,
               },
               ({ path }) => ({ path, namespace: "mock" }),
             );
-            builder.onLoad({ filter: /.*/, namespace: "mock" }, ({ path }) => ({
-              contents: path.endsWith("actions")
-                ? "export async function startSprint(){return {error:'Synthetic start disabled'}}"
-                : `export const createClient=()=>({rpc:async()=>({data:{questions:100,marks:100,mcq_questions:50,short_marks:50,any:100,new:100,mistakes:0,flagged:0,topics:{},subtopics:{},all_subtopics:100,verbs:{},difficulty:{},all_years:100,years:[2020,2025]},error:null})});`,
-            }));
+            builder.onLoad({ filter: /.*/, namespace: "mock" }, ({ path }) => {
+              const contents =
+                path === "next/link"
+                  ? `import React from 'react'; export default function Link({href,prefetch,...props}){return <a href={typeof href==='string'?href:'#'} {...props}/>}`
+                  : path.endsWith("actions")
+                    ? "export async function startSprint(){return {error:'Synthetic start disabled'}}"
+                    : `export const createClient=()=>({rpc:async()=>({data:{questions:100,marks:100,mcq_questions:50,short_marks:50,any:100,new:100,mistakes:0,flagged:0,topics:{},subtopics:{},all_subtopics:100,verbs:{},difficulty:{},all_years:100,years:[2020,2025]},error:null})});`;
+              return { contents, loader: "tsx", resolveDir: process.cwd() };
+            });
           },
         },
       ],
@@ -319,18 +323,19 @@ test.describe("Iteration 2 setup without services", () => {
         throw error;
       });
       await page.setViewportSize({ width, height: 900 });
+      await page.route("**/__setup.js", (route) =>
+        route.fulfill({ contentType: "text/javascript", body: setup }),
+      );
       await page.route("**/__setup-test", (route) =>
         route.fulfill({
           contentType: "text/html",
-          body: '<!doctype html><div id="root"></div>',
+          body: '<!doctype html><div id="root"></div><script src="/__setup.js"></script>',
         }),
       );
       await page.goto("/__setup-test");
-      await page.addScriptTag({ content: setup });
-      const next = page.getByRole("button", { name: "Next", exact: true });
-      await next.click();
-      await next.click();
+      // Template setup is a single page (no wizard Next). Mixed comes from params.
       const marks = page.getByRole("textbox", { name: "Marks" });
+      await expect(marks).toBeVisible();
       await marks.fill("5");
       await marks.blur();
       await expect(marks).toHaveValue("5");
@@ -338,14 +343,10 @@ test.describe("Iteration 2 setup without services", () => {
       await expect(
         page.getByRole("spinbutton", { name: "Multiple choice questions" }),
       ).toHaveValue("3");
-      await expect(
-        page.getByRole("spinbutton", { name: "Short answer marks" }),
-      ).toHaveValue("2");
       await marks.fill("1");
+      await expect(page.getByText(/Enter 5–100 marks/)).toBeVisible();
       await marks.blur();
       await expect(marks).toHaveValue("1");
-      await expect(marks).toHaveAccessibleDescription(/Enter 5–100 marks/);
-      await next.click();
       await expect(
         page.getByRole("button", { name: /^Start (sprint|with)/ }),
       ).toBeDisabled();

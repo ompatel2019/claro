@@ -1,5 +1,6 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
+import { Sprint } from "@/components/icons";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import {
@@ -11,7 +12,7 @@ import { studentActivity } from "@/lib/activity-data";
 import { sessionLabels } from "@/lib/session-summary";
 import { sydneyToday } from "@/lib/flashcards";
 import { type Topic } from "@/lib/practice";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/claro/layout";
 import { ActivityBrowser } from "@/components/activity-browser";
 import { buttonVariants } from "@/components/ui/button";
 export const metadata = pageMetadata("Activity");
@@ -49,13 +50,13 @@ export default async function Activity({
     total.count,
   );
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="min-w-0 space-y-5">
       <PageHeader
-        title="Your activity"
+        title="Activity"
         description="Everything you've done, all in one place."
         actions={
           <Link href="/student/sprint" className={buttonVariants()}>
-            Start sprint
+            <Sprint aria-hidden /> Start sprint
           </Link>
         }
       />

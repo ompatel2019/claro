@@ -1,7 +1,7 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { continueTime } from "@/lib/home";
-import { Sprint } from "@/components/icons";
+import { Alert } from "@/components/icons";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import {
@@ -11,8 +11,8 @@ import {
   type Session,
   type Topic,
 } from "@/lib/practice";
-import { PageHeader } from "@/components/page-header";
-import { SprintSetup } from "@/components/sprint-setup";
+import { PageHeader } from "@/components/claro/layout";
+import { SprintSetup, QuickStarts } from "@/components/sprint-setup";
 import { FinishSprint } from "@/components/finish-sprint";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,19 +53,18 @@ export default async function SprintPage({
     unfinished.attempts.every((a) => a.status === "marked");
   const limit = unfinished && timeLimit(unfinished.config);
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <PageHeader
         title="Topic Sprint"
-        description="Build exactly the practice you need. The bar below shows what you'll get."
+        description="Build exactly the practice you need. The summary shows what you’ll get."
       />
       {unfinished && (
-        <Card className="mx-auto max-w-[720px]">
+        <Card>
           <CardContent className="flex flex-col items-start gap-3 text-sm sm:flex-row sm:items-center sm:justify-between">
             <div className="flex min-w-0 items-center gap-3 sm:flex-1">
-              <Sprint
-                aria-hidden
-                className="text-muted-foreground size-5 shrink-0"
-              />
+              <span className="bg-warning-soft text-warning grid size-9 shrink-0 place-items-center rounded-xl">
+                <Alert aria-hidden className="size-4" />
+              </span>
               <p>
                 You have an unfinished {modeLabel(unfinished.config.mode)}{" "}
                 sprint · {unfinished.attempts.filter(answered).length}/
@@ -75,7 +74,7 @@ export default async function SprintPage({
             </div>
             <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:max-w-xs">
               <Link
-                className={buttonVariants({ size: "sm" })}
+                className={buttonVariants({ variant: "ghost", size: "sm" })}
                 href={`/student/sprint/${unfinished.id}${allMarked ? "/results" : ""}`}
               >
                 {allMarked ? "View results" : "Continue"}
@@ -85,6 +84,9 @@ export default async function SprintPage({
           </CardContent>
         </Card>
       )}
+      <div className="grid gap-3 md:grid-cols-2">
+        <QuickStarts />
+      </div>
       <SprintSetup topics={(topics.data ?? []) as Topic[]} params={params} />
     </div>
   );

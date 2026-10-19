@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   act,
   cleanup,
@@ -172,5 +173,45 @@ it("keeps every year day reachable in compact views and preserves custom links",
   expect(screen.getByRole("link", { name: /^Thu 8 Oct 2026/ })).toHaveAttribute(
     "tabindex",
     "0",
+  );
+});
+
+it("keeps legacy home copy unless the template presentation is requested", () => {
+  const view = render(
+    <ActivityHeatmap
+      days={days}
+      today="2026-10-08"
+      current={2}
+      longest={5}
+      home={{ action: <Link href="/student/sprint">Study</Link> }}
+    />,
+  );
+  expect(
+    screen.getByRole("heading", { name: "Your study days" }),
+  ).toBeVisible();
+  expect(
+    screen.getByText("Every day you study lights up a square."),
+  ).toBeVisible();
+  view.rerender(
+    <ActivityHeatmap
+      days={days}
+      today="2026-10-08"
+      current={2}
+      longest={5}
+      home={{
+        template: true,
+        action: <Link href="/student/sprint">Study</Link>,
+      }}
+    />,
+  );
+  expect(screen.getByRole("heading", { name: "Study days" })).toBeVisible();
+  expect(screen.getByText("Consistency is the cheat code.")).toBeVisible();
+  expect(screen.getByRole("link", { name: "Study" })).toHaveAttribute(
+    "href",
+    "/student/sprint",
+  );
+  expect(screen.getByRole("link", { name: /^Thu 8 Oct 2026/ })).toHaveAttribute(
+    "aria-current",
+    "date",
   );
 });
