@@ -12,30 +12,13 @@ try {
   const page = await browser.newPage({ deviceScaleFactor: 1 });
   const sizes = [16, 32, 48];
   const images = [];
-  for (const size of [...sizes, 180]) {
+  // favicon.ico only; apple-icon.png is the marketing site's file, copied as-is.
+  for (const size of sizes) {
     await page.setViewportSize({ width: size, height: size });
     await page.setContent(`<!doctype html>
       <style>body { margin: 0; } svg { display: block; width: ${size}px; height: ${size}px; }</style>
       ${svg}`);
-    const png = await page.screenshot({ omitBackground: true });
-    if (size === 180) {
-      // Flatten the full-size transparent render onto the warm white iOS tile.
-      await page.setContent(
-        '<style>body { margin: 0; } canvas { display: block; }</style><canvas width="180" height="180"></canvas>',
-      );
-      await page.evaluate(async (data) => {
-        const image = new Image();
-        image.src = `data:image/png;base64,${data}`;
-        await image.decode();
-        const context = document.querySelector("canvas").getContext("2d");
-        context.fillStyle = "#fffdfb";
-        context.fillRect(0, 0, 180, 180);
-        context.drawImage(image, 0, 0);
-      }, png.toString("base64"));
-      await page.screenshot({ path: appFile("apple-icon.png").pathname });
-    } else {
-      images.push(png);
-    }
+    images.push(await page.screenshot({ omitBackground: true }));
   }
 
   // ICONDIR followed by one ICONDIRENTRY per embedded PNG.
