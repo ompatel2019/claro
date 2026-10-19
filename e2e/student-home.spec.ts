@@ -5,7 +5,7 @@ import { sydneyToday } from "../src/lib/flashcards";
 test.describe("Student Home quick launches", () => {
   test.skip(!adminClient(), "Needs Supabase test credentials");
   for (const width of [360, 1366]) {
-    test(`four tiles fit one screen with empty and unfinished history at ${width}px`, async ({
+    test(`four tiles fit the width with empty and unfinished history at ${width}px`, async ({
       page,
       historyStudent,
     }) => {
@@ -23,22 +23,20 @@ test.describe("Student Home quick launches", () => {
           await expect(
             launches.getByRole("link", { name: new RegExp(`^${name}`) }),
           ).toHaveAttribute("href", href);
-        await expect(page.getByText(/^Longest \d+ days?$/)).toBeVisible();
+        await expect(page.getByText("Day streak")).toBeVisible();
         await expect
           .poll(() =>
             page.evaluate(
-              () =>
-                document.documentElement.scrollWidth <= window.innerWidth &&
-                document.documentElement.scrollHeight <= window.innerHeight,
+              () => document.documentElement.scrollWidth <= window.innerWidth,
             ),
           )
           .toBe(true);
       };
       await checkLaunches();
       await expect(launches.getByText("0 due", { exact: true })).toBeVisible();
-      await expect(
-        page.getByRole("heading", { name: "Continue where you left off" }),
-      ).toHaveCount(0);
+      await expect(page.getByText("Continue where you left off")).toHaveCount(
+        0,
+      );
 
       await historyStudent.addAnswers(1);
       const db = adminClient()!;
@@ -64,12 +62,12 @@ test.describe("Student Home quick launches", () => {
       await expect(
         launches.getByRole("link", { name: /Flashcards 1 due/ }),
       ).toBeVisible();
+      await expect(page.getByText("Continue where you left off")).toHaveCount(
+        0,
+      );
       await expect(
-        page.getByRole("heading", { name: "Continue where you left off" }),
+        page.getByRole("button", { name: "Light up today" }),
       ).toBeVisible();
-      await expect(
-        page.getByRole("link", { name: "Continue", exact: true }),
-      ).toHaveAttribute("href", /\/student\/activity\//);
       await launches.getByRole("link", { name: /Flashcards/ }).click();
       await expect(page).toHaveURL(/\/student\/flashcards$/);
     });
