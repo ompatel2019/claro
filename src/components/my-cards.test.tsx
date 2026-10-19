@@ -27,6 +27,7 @@ vi.mock("@/app/(app)/flashcards/actions", () => ({
   startFlashcards: vi.fn(async () => ({})),
 }));
 vi.mock("sonner", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+import { NewCard } from "./student/flashcards/new-card";
 import { MyCards } from "./my-cards";
 import { CardEditor } from "./card-editor";
 import { CardImportDialog } from "./card-import-dialog";
@@ -203,7 +204,9 @@ it("shows the cap and blocks add and import", () => {
 });
 it("hides pagination for empty and single-page lists", () => {
   const view = table(0, [], 1);
-  expect(screen.getByText("No cards yet")).toBeInTheDocument();
+  expect(
+    screen.getByText("You haven’t made any cards yet"),
+  ).toBeInTheDocument();
   expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
   view.unmount();
   table(1, rows, 1);
@@ -253,4 +256,40 @@ it("requires a separate Back mapping for a one-column paste", () => {
     "Map separate Front and Back columns.",
   );
   expect(screen.getByRole("heading")).toHaveTextContent("Step 2 of 3");
+});
+
+it("opens the real card editor from the deck page and saves a personal card", async () => {
+  render(
+    <NewCard
+      topics={[
+        { id: "t3", parent_id: null, name: "Economic Issues", sort: 3 },
+        ...topics,
+      ]}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "New card" }));
+  const dialog = screen.getByRole("dialog");
+  expect(
+    within(dialog).getByRole("heading", { name: "Add card" }),
+  ).toBeInTheDocument();
+  await choose("Topic", "Inflation");
+  fireEvent.change(screen.getByRole("textbox", { name: "Front" }), {
+    target: { value: "Inflation" },
+  });
+  fireEvent.change(screen.getByRole("textbox", { name: "Back" }), {
+    target: { value: "A sustained rise in the general price level." },
+  });
+  fireEvent.click(within(dialog).getByRole("button", { name: /^Save$/ }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  expect(mocks.save).toHaveBeenCalledWith(
+    {
+      front: "Inflation",
+      back: "A sustained rise in the general price level.",
+      topic_id: "t3-inflation",
+      kind: "term",
+    },
+    undefined,
+  );
 });

@@ -90,7 +90,7 @@ test.beforeAll(async () => {
                                         : path === "@/utils/supabase/client"
                                           ? `export const createClient=()=>({});`
                                           : path === "@/utils/supabase/server"
-                                            ? `const query={select(){return this},eq(){return this},in(){return this},is(){return this},order(){return this},lte(){return this},limit:async()=>({data:[{id:'resume',kind:'single',config:{},elapsed_s:0,started_at:'2026-10-19T00:00:00Z',attempts:[],flashcard_reviews:[]}],error:null}),then(done){return Promise.resolve(done({data:${JSON.stringify(topics)},count:7,error:null}))}};export const createClient=async()=>({from:()=>query,rpc:()=>Object.assign(Promise.resolve({data:[{day:'2026-10-19',questions:4,cards:2},{day:'2026-10-16',questions:20,cards:0},{day:'2026-10-15',questions:0,cards:40},{day:'2026-09-01',questions:8,cards:8}],error:null}),{single:async()=>({data:{current_streak:3,longest_streak:8},error:null})})});`
+                                            ? `const topicsData=${JSON.stringify(topics)};const progress={topics:topicsData.map((t,i)=>({...t,answered:i+1,earned:i,possible:i+2,pct:50+i*10,last_answered:'2026-10-18T00:00:00Z'})),types:[],verbs:[],history:[],mastery:[],missed:[],due:[]};const days=[{day:'2026-10-19',questions:4,cards:2},{day:'2026-10-16',questions:20,cards:0},{day:'2026-10-15',questions:0,cards:40},{day:'2026-09-01',questions:8,cards:8}];const query={select(){return this},eq(){return this},in(){return this},is(){return this},order(){return this},lte(){return this},limit:async()=>({data:[{id:'resume',kind:'single',config:{},elapsed_s:0,started_at:'2026-10-19T00:00:00Z',attempts:[],flashcard_reviews:[]}],error:null}),then(done){return Promise.resolve(done({data:topicsData,count:7,error:null}))}};export const createClient=async()=>({from:()=>query,rpc:(name)=>name==='student_progress'?Promise.resolve({data:progress,error:null}):Object.assign(Promise.resolve({data:days,error:null}),{single:async()=>({data:{current_streak:3,longest_streak:8},error:null})})});`
                                             : "";
               return { contents, loader: "tsx", resolveDir: process.cwd() };
             },
@@ -167,21 +167,23 @@ for (const [width, height] of [
     await page.clock.setFixedTime(new Date("2026-10-19T01:00:00Z"));
     await page.setViewportSize({ width, height });
     await page.goto("http://claro.test/student");
-    const hero = page.getByRole("region", { name: "Your study week" });
-    await expect(hero.getByRole("heading", { name: "Week 2" })).toBeVisible();
-    await expect(hero.getByRole("listitem")).toHaveCount(10);
+    // STEP2 template hero: TermProgress pill (md+), not the old Week heading card.
+    if (width >= 768) {
+      const hero = page.getByRole("region", { name: "Your study week" });
+      await expect(hero.getByText("Term 4 · Week 2")).toBeVisible();
+    }
     const quick = page.getByRole("region", { name: "Quick start" });
     await expect(quick.getByRole("link")).toHaveCount(4);
-    await expect(quick.getByText("7 due")).toBeVisible();
     for (const [name, href] of [
-      ["Topic Sprint", "/student/sprint"],
-      ["Flashcards", "/student/flashcards"],
-      ["Mark my answer", "/student/mark"],
-      ["Activity", "/student/activity"],
+      ["Marks earned", "/student/progress"],
+      ["Questions answered", "/student/sprint"],
+      ["Study time", "/student/activity"],
+      ["Cards due", "/student/flashcards"],
     ])
-      await expect(
-        quick.getByRole("link", { name: new RegExp(`^${name}`) }),
-      ).toHaveAttribute("href", href);
+      await expect(quick.getByRole("link", { name: name })).toHaveAttribute(
+        "href",
+        href,
+      );
     await expect(page.getByTestId("activity-heatmap")).toBeVisible();
     await expect(page.locator('[aria-current="date"]')).toHaveAttribute(
       "data-day",
@@ -200,36 +202,33 @@ for (const [width, height] of [
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBe(width);
-    if (width === 1440)
-      expect(
-        await page.evaluate(() => document.documentElement.scrollHeight),
-      ).toBe(height);
     await page.screenshot({
       path: test.info().outputPath(`home-v2-${width}.png`),
       fullPage: true,
     });
   });
 }
-test("S11: score shares title cell, date only, compact and clickable", async ({
+test("S11: activity row shows result, date, and opens the session", async ({
   page,
 }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("http://claro.test/student/activity");
   const table = page.getByRole("table", { name: "Your activity" });
-  await expect(table.getByRole("columnheader")).toHaveCount(2);
-  const row = table.locator("tbody tr");
-  await expect(row.locator("td").first()).toContainText("75%");
-  await expect(row).not.toContainText("2:05");
+  // Template table: Session, Topic, Result, Time, When, Open (some hidden by breakpoint).
+  await expect(table.getByRole("columnheader")).toHaveCount(6);
+  const row = table.locator("tbody tr").filter({ has: page.locator("td") });
+  await expect(row).toHaveCount(1);
+  await expect(row).toContainText("75%");
   await expect(row).not.toContainText("Finished");
-  await expect(row.locator("td").last()).toHaveText("Mon 19 Oct");
-  expect((await row.boundingBox())!.height).toBeLessThanOrEqual(48);
+  await expect(row.getByText(/Mon,? 19 Oct/)).toBeVisible();
   await capture(
     page,
     table,
     "11",
-    "Score by title; date only",
+    "Activity result + date",
     "s11-activity.png",
   );
-  await row.locator("td").last().click();
+  await row.click();
   await expect(page).toHaveURL("http://claro.test/student/sprint/s/results");
 });
 test("A1: attention precedes charts, mini-list has three working report links", async ({

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Alert, CheckCircle, Clock, ChevronDown, ChevronUp } from "./icons";
 import { DataTable, type Column, type TableSorting } from "./data-table";
-import { Badge } from "./ui/badge";
+import { Meter } from "./claro/data-display";
 import { buttonVariants } from "./ui/button";
 import { dateLabel, scoreTone } from "@/lib/practice";
 import {
@@ -56,22 +56,19 @@ export function ProgressScore({
         ? "Building"
         : "Needs practice";
   return (
-    <div className="flex flex-col gap-1.5">
-      <Badge variant={tone}>
-        <Icon aria-hidden />
-        {Math.round(pct)}%<span className="sr-only"> · {word}</span>
-      </Badge>
+    <div className="flex items-center gap-3">
       {bar && (
-        <div
-          className="bg-muted h-1.5 w-16 overflow-hidden rounded-full max-sm:w-10"
-          aria-hidden
-        >
-          <div
-            className={`h-full rounded-full ${tone === "success" ? "bg-success" : tone === "warning" ? "bg-warning" : "bg-destructive"}`}
-            style={{ width: `${Math.min(100, Math.max(0, pct))}%` }}
-          />
-        </div>
+        <Meter
+          value={pct}
+          label={`${Math.round(pct)}% average`}
+          tone={pct < 50 ? "brand" : "default"}
+          className="min-w-20 flex-1"
+        />
       )}
+      <span className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold tabular-nums">
+        <Icon aria-hidden className="sr-only" />
+        {Math.round(pct)}%<span className="sr-only"> · {word}</span>
+      </span>
     </div>
   );
 }
@@ -119,7 +116,7 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
               {r.name}
             </button>
           )}
-          <p className="text-muted-foreground text-xs sm:hidden">
+          <p className="sr-only">
             {r.answered} answered · {r.earned} / {r.possible} marks · Last
             practised{" "}
             {r.last_answered ? dateLabel(r.last_answered, true) : "Not started"}
@@ -130,7 +127,7 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
     {
       id: "answered",
       header: "Answered",
-      className: "hidden sm:table-cell",
+      className: "whitespace-nowrap",
       sort: (r) => r.answered,
 
       cell: (r) => r.answered,
@@ -138,15 +135,15 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
     {
       id: "marks",
       header: "Marks",
-      className: "hidden sm:table-cell",
+      className: "whitespace-nowrap",
       sort: (r) => r.earned,
 
       cell: (r) => `${r.earned} / ${r.possible}`,
     },
     {
       id: "pct",
-      header: "%",
-      className: "max-sm:px-2",
+      header: "Average",
+      className: "min-w-44",
       sort: (r) => r.pct,
       cell: (r) =>
         r.possible ? (
@@ -160,7 +157,7 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
     {
       id: "last",
       header: "Last practised",
-      className: "hidden sm:table-cell",
+      className: "whitespace-nowrap",
       sort: (r) => r.last_answered,
 
       cell: (r) =>
@@ -186,30 +183,32 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
     },
   ];
   return (
-    <DataTable
-      student
-      {...sort}
-      label="Marks by topic"
-      columns={columns}
-      rows={parents}
-      // Nested table widths must not contribute to the parent's intrinsic width.
-      renderDetail={(r) =>
-        open.has(r.id) ? (
-          <div
-            id={`topic-${r.id}`}
-            className="bg-surface p-2 [contain:inline-size] max-sm:px-1"
-          >
-            <DataTable
-              student
-              {...sort}
-              label={`${r.name} subtopics`}
-              columns={columns}
-              rows={rows.filter((t) => t.parent_id === r.id)}
-            />
-          </div>
-        ) : null
-      }
-    />
+    <div className="overflow-x-auto [&_th]:normal-case [&_th_button]:normal-case [&_tr]:border-solid [&>div]:min-w-[720px]">
+      <DataTable
+        student
+        {...sort}
+        label="Marks by topic"
+        columns={columns}
+        rows={parents}
+        // Nested table widths must not contribute to the parent's intrinsic width.
+        renderDetail={(r) =>
+          open.has(r.id) ? (
+            <div
+              id={`topic-${r.id}`}
+              className="bg-surface p-2 [contain:inline-size] max-sm:px-1"
+            >
+              <DataTable
+                student
+                {...sort}
+                label={`${r.name} subtopics`}
+                columns={columns}
+                rows={rows.filter((t) => t.parent_id === r.id)}
+              />
+            </div>
+          ) : null
+        }
+      />
+    </div>
   );
 }
 
@@ -241,7 +240,7 @@ export function VerbProgressTable({ rows }: { rows: Breakdown[] }) {
           id: "pct",
           header: "Avg %",
           sort: (r) => r.pct,
-          cell: (r) => <ProgressScore pct={r.pct} />,
+          cell: (r) => <ProgressScore pct={r.pct} bar />,
         },
         {
           id: "action",

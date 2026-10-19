@@ -33,7 +33,15 @@ import {
   LONG_PHOTO_PAGE_LIMIT,
 } from "@/lib/limits";
 import { Button } from "./ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+  CardAction,
+} from "./ui/card";
+import { PortalIcon } from "./icons";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
 import {
@@ -60,7 +68,15 @@ function Choice({
 }) {
   return (
     <div className="space-y-1.5">
-      <p className="text-sm font-medium">{label}</p>
+      <p
+        className={
+          label === "Type" || label === "Topic" || label === "Year"
+            ? "sr-only"
+            : "text-sm font-medium"
+        }
+      >
+        {label}
+      </p>
       <Select
         value={value}
         onValueChange={(v) => v !== null && onChange(v)}
@@ -515,7 +531,7 @@ export function MarkMyAnswer({
       <form
         hidden={busy}
         inert={busy}
-        className="space-y-4"
+        className="grid items-start gap-5 xl:grid-cols-2"
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
@@ -530,34 +546,46 @@ export function MarkMyAnswer({
         <Card>
           <CardHeader>
             <CardTitle>Question</CardTitle>
+            <CardDescription>
+              {source === "bank"
+                ? "Pick one from the Claro bank"
+                : "Bring a question from anywhere"}
+            </CardDescription>
+            <CardAction>
+              {allowOwnQuestion ? (
+                <ToggleGroup
+                  value={[source]}
+                  onValueChange={(v) => {
+                    if (v[0]) setSource(v[0]);
+                  }}
+                  aria-label="Question source"
+                  className="max-w-full"
+                  disabled={questionLocked}
+                >
+                  <ToggleGroupItem
+                    value="bank"
+                    aria-label="From the Claro bank"
+                  >
+                    Claro bank
+                  </ToggleGroupItem>
+                  <ToggleGroupItem value="own" aria-label="My own question">
+                    My own
+                  </ToggleGroupItem>
+                </ToggleGroup>
+              ) : (
+                <p className="text-sm font-medium">
+                  {initial?.question
+                    ? "Your saved question"
+                    : "From the Claro bank"}
+                </p>
+              )}
+            </CardAction>
           </CardHeader>
-          <CardContent className="space-y-5">
-            {allowOwnQuestion ? (
-              <ToggleGroup
-                value={[source]}
-                onValueChange={(v) => {
-                  if (v[0]) setSource(v[0]);
-                }}
-                aria-label="Question source"
-                className="w-full flex-wrap"
-                disabled={questionLocked}
-              >
-                <ToggleGroupItem value="bank">
-                  From the Claro bank
-                </ToggleGroupItem>
-                <ToggleGroupItem value="own">My own question</ToggleGroupItem>
-              </ToggleGroup>
-            ) : (
-              <p className="text-sm font-medium">
-                {initial?.question
-                  ? "Your saved question"
-                  : "From the Claro bank"}
-              </p>
-            )}
+          <CardContent className="space-y-3">
             {source === "bank" ? (
               <>
                 <label className="grid gap-1.5 text-sm font-medium">
-                  Search questions
+                  <span className="sr-only">Search questions</span>
                   <Input
                     value={search}
                     role="combobox"
@@ -604,7 +632,7 @@ export function MarkMyAnswer({
                         setBankOpen(false);
                       }
                     }}
-                    placeholder="Question text or 2023 HSC Q22"
+                    placeholder="Search by question text or paper, e.g. 2023 HSC Q22"
                     disabled={questionLocked}
                   />
                 </label>
@@ -615,7 +643,7 @@ export function MarkMyAnswer({
                     onChange={setType}
                     disabled={questionLocked}
                     items={[
-                      { value: "all", label: "All written questions" },
+                      { value: "all", label: "All types" },
                       { value: "short", label: "Short" },
                       { value: "extended", label: "Extended" },
                     ]}
@@ -649,12 +677,12 @@ export function MarkMyAnswer({
                 </div>
                 {!questionLocked && (
                   <div
-                    className="max-h-[min(16rem,40svh)] overflow-y-auto rounded-xl border"
+                    className="max-h-[480px] overflow-y-auto xl:max-h-[464px]"
                     hidden={!bankOpen}
                   >
                     <p
                       role="status"
-                      className="text-muted-foreground px-3 py-2 text-xs"
+                      className="text-muted-foreground pt-1 pb-2 text-xs"
                     >
                       {results.length
                         ? `${results.length} matching questions${results.length === 30 ? " · refine your search for more" : ""}`
@@ -666,6 +694,7 @@ export function MarkMyAnswer({
                       id={bankListId}
                       role="listbox"
                       aria-label="Matching questions"
+                      className="grid gap-1.5"
                     >
                       {results.map((q) => (
                         <li key={q.id}>
@@ -678,26 +707,30 @@ export function MarkMyAnswer({
                               setSelected(q.id);
                               setBankOpen(false);
                             }}
-                            className={`hover:bg-muted w-full border-t p-3 text-left focus-visible:outline-2 ${selected === q.id ? "bg-muted" : ""}`}
+                            className={`hover:bg-accent flex w-full items-start gap-3 rounded-xl border px-3.5 py-3 text-left focus-visible:outline-2 ${selected === q.id ? "border-primary bg-primary/[0.035] ring-primary ring-1" : ""}`}
                           >
-                            <span className="line-clamp-2 block text-sm font-medium">
-                              {q.stem}
+                            <span
+                              aria-hidden
+                              className={`mt-0.5 grid size-4 shrink-0 place-items-center rounded-full border ${selected === q.id ? "border-primary" : ""}`}
+                            >
+                              {selected === q.id && (
+                                <span className="bg-primary size-2 rounded-full" />
+                              )}
                             </span>
-                            <span className="text-muted-foreground text-xs">
-                              {q.source} · {q.marks} marks
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm leading-snug font-medium">
+                                {q.stem}
+                              </span>
+                              <span className="text-muted-foreground text-xs">
+                                {q.source} ·{" "}
+                                {topics.find((t) => t.id === q.topic_id)?.name}{" "}
+                                · {q.marks} marks
+                              </span>
                             </span>
                           </button>
                         </li>
                       ))}
                     </ul>
-                  </div>
-                )}
-                {question && (
-                  <div className="bg-muted/40 space-y-3 rounded-xl border p-4">
-                    <p className="text-muted-foreground text-xs">
-                      Selected question · {question.marks} marks
-                    </p>
-                    <QuestionView question={question} />
                   </div>
                 )}
               </>
@@ -831,22 +864,39 @@ export function MarkMyAnswer({
             )}
           </CardContent>
         </Card>
-        <Card>
+        <Card className="xl:sticky xl:top-20">
           <CardHeader>
             <CardTitle>Your answer</CardTitle>
+            <CardDescription>Write it as you would in the exam</CardDescription>
+            <CardAction>
+              <ToggleGroup
+                value={[mode]}
+                onValueChange={(v) => {
+                  if (v[0]) void changeMode(v[0] as "type" | "photo");
+                }}
+                aria-label="Answer format"
+                disabled={locked}
+              >
+                <ToggleGroupItem value="type">
+                  <PortalIcon name="keyboard" />
+                  Type
+                </ToggleGroupItem>
+                <ToggleGroupItem value="photo">
+                  <PortalIcon name="camera" />
+                  Photo
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </CardAction>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <ToggleGroup
-              value={[mode]}
-              onValueChange={(v) => {
-                if (v[0]) void changeMode(v[0] as "type" | "photo");
-              }}
-              aria-label="Answer format"
-              disabled={locked}
-            >
-              <ToggleGroupItem value="type">Type</ToggleGroupItem>
-              <ToggleGroupItem value="photo">Photo</ToggleGroupItem>
-            </ToggleGroup>
+          <CardContent className="space-y-3 [&_textarea]:min-h-[240px] [&_textarea]:text-[15px] [&_textarea]:leading-7">
+            {question && (
+              <div className="bg-muted space-y-1 rounded-xl px-3.5 py-3">
+                <p className="text-muted-foreground text-xs">
+                  Selected question · {question.marks} marks
+                </p>
+                <QuestionView question={question} />
+              </div>
+            )}
             {mode === "photo" && (
               <p className="text-muted-foreground text-sm">
                 Upload up to {LONG_PHOTO_PAGE_LIMIT} pages, then read and
@@ -891,24 +941,31 @@ export function MarkMyAnswer({
               onError={setError}
             />
           </CardContent>
-        </Card>
-        <Card className="flex flex-row flex-wrap items-center justify-between gap-3 p-4">
-          <p className="text-sm tabular-nums" role="status">
-            {remaining} of {MARK_MY_ANSWER_DAILY_LIMIT} checks left today
-          </p>
-          <Button type="submit" disabled={!valid || locked || filling}>
-            {busy ? "Marking…" : error ? "Retry" : "Mark my answer"}
-          </Button>
-          {remaining === 0 && answer.id === "draft" && (
-            <p role="alert" className="w-full text-sm">
-              {"You've used today's 20 checks. More at midnight."}
+          <div className="flex flex-wrap items-center justify-between gap-3 px-5">
+            <p className="text-muted-foreground text-xs">
+              Marked against the question’s marking criteria
             </p>
-          )}
-          {error && (
-            <p role="alert" className="text-destructive w-full text-sm">
-              {error}
+            <p
+              className="text-muted-foreground text-xs tabular-nums"
+              role="status"
+            >
+              {remaining} of {MARK_MY_ANSWER_DAILY_LIMIT} checks left today
             </p>
-          )}
+            <Button type="submit" disabled={!valid || locked || filling}>
+              <PortalIcon name="sparkles" />
+              {busy ? "Marking…" : error ? "Retry" : "Mark my answer"}
+            </Button>
+            {remaining === 0 && answer.id === "draft" && (
+              <p role="alert" className="w-full text-sm">
+                {"You've used today's 20 checks. More at midnight."}
+              </p>
+            )}
+            {error && (
+              <p role="alert" className="text-destructive w-full text-sm">
+                {error}
+              </p>
+            )}
+          </div>
         </Card>
       </form>
       <Dialog

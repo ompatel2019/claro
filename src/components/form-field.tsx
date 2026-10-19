@@ -15,10 +15,10 @@ export function FormField({
 }) {
   const id = useId();
   return (
-    <label className="grid min-w-0 gap-1 text-sm">
+    <label className="grid min-w-0 gap-1.5 text-sm">
       <span className="font-medium">{label}</span>
       {hint && (
-        <span id={`${id}-hint`} className="text-muted-foreground text-xs">
+        <span id={`${id}-hint`} className="text-muted-foreground text-[13px]">
           {hint}
         </span>
       )}

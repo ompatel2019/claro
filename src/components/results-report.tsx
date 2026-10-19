@@ -11,6 +11,8 @@ import {
   type NextAction,
 } from "@/lib/results";
 import { QuestionView } from "./question-view";
+import { Badge } from "./claro/controls";
+import { PenTick, PenCaret } from "./claro/markup-answer";
 import { AnnotatedFeedback } from "./annotated-feedback";
 import { ReportProblem } from "./feedback-widget";
 import { QuestionMark } from "./question-mark";
@@ -29,6 +31,7 @@ export function ResultsAnswers({
   mcGrid,
   readOnly = false,
   writtenAction,
+  singleResult = false,
 }: {
   rows: ReviewRow[];
   id: string;
@@ -37,6 +40,7 @@ export function ResultsAnswers({
   mcGrid?: McGridRow[];
   readOnly?: boolean;
   writtenAction?: (row: ReviewRow) => React.ReactNode;
+  singleResult?: boolean;
 }) {
   const report = (r: ReviewRow) =>
     !readOnly &&
@@ -47,16 +51,39 @@ export function ResultsAnswers({
         label={`Linked: ${r.source}`}
       />
     );
+  if (singleResult && rows.length === 1 && rows[0].type !== "mcq") {
+    const r = rows[0];
+    return (
+      <AnnotatedFeedback
+        singleResult
+        row={r}
+        readOnly={readOnly}
+        photos={(r.image_paths ?? []).flatMap((p) => photos.get(p) ?? [])}
+        actions={
+          writtenAction ? (
+            writtenAction(r)
+          ) : (
+            <>
+              {!readOnly &&
+                ["marked", "reviewed"].includes(markingState(r)) && (
+                  <QuestionMark attemptId={r.attempt_id} />
+                )}
+              {report(r)}
+            </>
+          )
+        }
+      />
+    );
+  }
   const views = rows.map((r) => {
     const state = markingState(r);
     return (
       <Card key={r.attempt_id} id={`q-${r.position}`}>
         <CardHeader className="space-y-2">
           <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
-            <span className="text-ink font-semibold">
-              Question {r.position}
-            </span>
-            · {TYPE_LABEL[r.type]} · {r.source}
+            <Badge variant="outline">Question {r.position}</Badge>
+            <Badge variant="secondary">{TYPE_LABEL[r.type]}</Badge>
+            <span>{r.source}</span>
             {r.topic_id && ` · ${name(r.topic_id)}`}
             {r.type === "mcq" && scored(r) && (
               <span className="text-ink font-semibold tabular-nums">
@@ -202,63 +229,100 @@ export function OverallFeedback({
     );
   };
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>
-          <h2>Overall feedback</h2>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-6">
-        <section
-          className="bg-accent space-y-3 rounded-xl border p-4"
-          aria-label="Next steps"
-        >
-          <h3 className="font-semibold">Next steps</h3>
-          {!!summary?.next_steps?.length && (
-            <ul className="list-disc space-y-2 pl-5">
-              {summary.next_steps.map((text, i) => (
-                <li key={i}>{text}</li>
-              ))}
-            </ul>
-          )}
-          {actionLinks}
-        </section>
-        {summary ? (
-          <div className="grid gap-6 md:grid-cols-2">
-            {(
-              [
-                ["Strengths", summary.strengths, false],
-                ["Top fixes", summary.top_fixes ?? summary.improvements, true],
-              ] as const
-            ).map(([label, lines, lost]) => (
-              <section key={label} className="space-y-3">
-                <h3 className="font-semibold">{label}</h3>
-                <ul className="list-disc space-y-2 pl-5">
-                  {(lines ?? []).map((text, i) => (
-                    <li key={i}>{text}</li>
-                  ))}
-                </ul>
-                {references(lost)}
-              </section>
-            ))}
-          </div>
-        ) : (
-          <div className="space-y-3">
-            <p role="status" className="text-muted-foreground">
-              {pending
-                ? "Your overall feedback will appear here once marking finishes."
-                : "An overall summary isn’t available for this sprint. Each answer’s feedback is below."}
-            </p>
-            {references(true)}
-            {pending && (
-              <div
-                aria-hidden="true"
-                className="bg-muted h-4 w-2/3 animate-pulse rounded"
-              />
+    <section
+      aria-label="Overall feedback"
+      className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
+    >
+      <h2 className="sr-only">Overall feedback</h2>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2>Your next step</h2>
+          </CardTitle>
+          <p className="text-muted-foreground text-[13px]">
+            Fix the marks you dropped while they’re fresh
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <section
+            className="bg-brand-soft/60 border-brand/30 space-y-3 rounded-xl border p-4"
+            aria-label="Next steps"
+          >
+            <h3 className="text-sm font-semibold">Next steps</h3>
+            {!!summary?.next_steps?.length && (
+              <ul className="space-y-2 text-[13px]">
+                {summary.next_steps.map((text, i) => (
+                  <li key={i}>{text}</li>
+                ))}
+              </ul>
             )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+            {actionLinks}
+          </section>
+          {references(true)}
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            <h2>Strengths and fixes</h2>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          {summary ? (
+            <div className="grid gap-5">
+              {(
+                [
+                  ["Strengths", summary.strengths, false],
+                  [
+                    "Top fixes",
+                    summary.top_fixes ?? summary.improvements,
+                    true,
+                  ],
+                ] as const
+              ).map(([label, lines, lost]) => (
+                <section key={label} className="space-y-2">
+                  <h3
+                    className={
+                      lost
+                        ? "text-warning-text text-xs font-semibold"
+                        : "text-success text-xs font-semibold"
+                    }
+                  >
+                    {label}
+                  </h3>
+                  <ul className="space-y-2 text-[13px]">
+                    {(lines ?? []).map((text, i) => (
+                      <li key={i} className="flex items-start gap-2">
+                        {lost ? (
+                          <PenCaret className="mt-0.5 shrink-0" />
+                        ) : (
+                          <PenTick className="mt-0.5 shrink-0" />
+                        )}
+                        <span>{text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ))}
+              {references(false)}
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <p role="status" className="text-muted-foreground text-[13px]">
+                {pending
+                  ? "Your overall feedback will appear here once marking finishes."
+                  : "An overall summary isn’t available for this sprint. Each answer’s feedback is below."}
+              </p>
+              {pending && (
+                <div
+                  aria-hidden="true"
+                  className="bg-muted h-4 w-2/3 animate-pulse rounded"
+                />
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </section>
   );
 }

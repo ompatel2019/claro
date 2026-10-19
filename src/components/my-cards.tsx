@@ -14,9 +14,8 @@ import { DECK_DEFAULTS } from "@/lib/deck";
 import type { MyCardRow } from "@/lib/my-card-data";
 import { OWN_FLASHCARD_LIMIT } from "@/lib/limits";
 import { dateLabel, plural, type Topic } from "@/lib/practice";
-import { PageHeader } from "./page-header";
-import { EmptyState } from "./empty-state";
-import { Cards, More } from "./icons";
+import { PageHeader, EmptyState } from "./claro/layout";
+import { More, PortalIcon } from "./icons";
 import { Button, buttonVariants } from "./ui/button";
 import {
   Table,
@@ -171,8 +170,13 @@ export function MyCards({
       <Button variant="outline" onClick={openImport} disabled={pending || full}>
         Import
       </Button>
-      <Button onClick={() => setEditor("new")} disabled={pending || full}>
-        Add card
+      <Button
+        aria-label="Add card"
+        onClick={() => setEditor("new")}
+        disabled={pending || full}
+      >
+        <PortalIcon name="plus" />
+        New card
       </Button>
     </>
   );
@@ -180,7 +184,7 @@ export function MyCards({
     <div className="min-w-0 space-y-4">
       <PageHeader
         title="My cards"
-        description="Make, import and manage your own flashcards."
+        description="Cards you write join every deck you build."
         actions={
           <>
             {actions}
@@ -254,18 +258,27 @@ export function MyCards({
         </p>
       )}
       {!rows.length ? (
-        <EmptyState
-          icon={Cards}
-          title={total ? "No cards match" : "No cards yet"}
-          description={
-            total
-              ? "Try a different search or clear your filters."
-              : "Make one, or import from Anki or Quizlet."
-          }
-          action={
-            !total && <div className="flex flex-wrap gap-2">{actions}</div>
-          }
-        />
+        <div className="bg-card shadow-card rounded-xl border p-5">
+          <EmptyState
+            title={total ? "No cards match" : "You haven’t made any cards yet"}
+            description={
+              total
+                ? "Try a different search or clear your filters."
+                : "Make a card for any term you keep forgetting. Writing it yourself is half the learning."
+            }
+            action={
+              !total && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setEditor("new")}
+                >
+                  Make your first card
+                </Button>
+              )
+            }
+          />
+        </div>
       ) : (
         <div className="bg-card min-w-0 overflow-hidden rounded-2xl border">
           <Table aria-label="My cards" className="table-fixed sm:table-auto">

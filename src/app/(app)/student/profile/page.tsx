@@ -16,12 +16,19 @@ import {
 import { signOut } from "@/app/(auth)/actions";
 import { signOutEverywhere } from "@/app/(app)/actions";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card } from "@/components/claro/data-display";
+import { SectionHeading } from "@/components/student/account/section-heading";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageHeader } from "@/components/page-header";
-function ProfileSkeleton({ height = "h-48" }: { height?: string }) {
+import { PageHeader } from "@/components/claro/layout";
+function ProfileSkeleton({
+  height = "h-48",
+  wide = false,
+}: {
+  height?: string;
+  wide?: boolean;
+}) {
   return (
-    <Card className="p-5" aria-busy="true">
+    <Card className={`p-5 ${wide ? "xl:col-span-2" : ""}`} aria-busy="true">
       <Skeleton className="h-6 w-36" />
       <Skeleton className={`${height} w-full`} />
     </Card>
@@ -155,33 +162,45 @@ export default async function Profile({
 }) {
   const params = singleParams(await searchParams);
   return (
-    <div className="mx-auto w-full max-w-[720px] min-w-0 space-y-4">
-      <PageHeader title="Profile" />
-      <Suspense fallback={<ProfileSkeleton height="h-80" />}>
-        <Details />
-      </Suspense>
-      <PasswordForm />
-      <Suspense fallback={<ProfileSkeleton />}>
-        <History kind="feedback" params={params} />
-      </Suspense>
-      <Suspense fallback={<ProfileSkeleton />}>
-        <History kind="reviews" params={params} />
-      </Suspense>
-      <Card className="p-5">
-        <h2 className="text-base font-semibold">Sessions</h2>
-        <div className="flex flex-wrap gap-3">
-          <form action={signOut}>
-            <Button variant="outline" type="submit">
-              Sign out
-            </Button>
-          </form>
-          <form action={signOutEverywhere}>
-            <Button variant="outline" type="submit">
-              Sign out everywhere
-            </Button>
-          </form>
+    <div className="w-full max-w-[1400px] min-w-0">
+      <PageHeader
+        title="Profile"
+        description="Your details, account security and messages to the team."
+      />
+      <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-2 xl:gap-5">
+        <div className="flex min-w-0 flex-col gap-4">
+          <Suspense fallback={<ProfileSkeleton height="h-80" />}>
+            <Details />
+          </Suspense>
         </div>
-      </Card>
+        <div className="flex min-w-0 flex-col gap-4">
+          <PasswordForm />
+        </div>
+        <Suspense fallback={<ProfileSkeleton wide />}>
+          <History kind="feedback" params={params} />
+        </Suspense>
+        <Suspense fallback={<ProfileSkeleton wide />}>
+          <History kind="reviews" params={params} />
+        </Suspense>
+        <Card className="p-5 xl:col-span-2">
+          <SectionHeading
+            title="Sessions"
+            description="Manage where you’re signed in to Claro."
+          />
+          <div className="flex flex-wrap gap-3">
+            <form action={signOut}>
+              <Button variant="outline" type="submit">
+                Sign out
+              </Button>
+            </form>
+            <form action={signOutEverywhere}>
+              <Button variant="outline" type="submit">
+                Sign out everywhere
+              </Button>
+            </form>
+          </div>
+        </Card>
+      </div>
     </div>
   );
 }

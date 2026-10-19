@@ -7,9 +7,9 @@ export default function Loading() {
       role="status"
       aria-busy="true"
       aria-label="Loading Mark my answer"
-      className="mx-auto max-w-3xl space-y-4"
+      className="grid gap-5 xl:grid-cols-2"
     >
-      <Skeleton className="bg-muted h-16 animate-pulse rounded-lg" />
+      <Skeleton className="bg-muted h-16 animate-pulse rounded-lg xl:col-span-2" />
 
       {["Question", "Your answer"].map((label) => (
         <Card key={label} className="p-5">
@@ -17,10 +17,7 @@ export default function Loading() {
           <Skeleton className="bg-muted mt-4 h-56 animate-pulse rounded-lg" />
         </Card>
       ))}
-      <Card className="p-5">
-        <Skeleton className="bg-muted h-9 animate-pulse rounded-lg" />
-      </Card>
-      <Card className="p-5">
+      <Card className="p-5 xl:col-span-2">
         <Skeleton className="bg-muted h-6 w-32 animate-pulse rounded-lg" />
         <Skeleton className="bg-muted mt-4 h-24 animate-pulse rounded-lg" />
       </Card>

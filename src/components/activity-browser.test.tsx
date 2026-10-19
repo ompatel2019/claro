@@ -173,13 +173,98 @@ it("ignores a legacy paper session alongside supported activity", () => {
   );
 });
 
-it("puts the score beside the title, uses dates and omits finished status and duration", () => {
+it("separates sessions and results, groups newest history and shows duration", () => {
   show();
-  const link = screen.getByRole("link", { name: row.title });
-  expect(link.parentElement).toHaveTextContent("75%");
-  for (const name of ["Kind", "Items", "Time", "Status", "Action", "Score"])
-    expect(screen.queryByRole("columnheader", { name })).toBeNull();
-  expect(screen.queryByText("1:05")).toBeNull();
+  expect(screen.getByRole("link", { name: row.title })).toHaveTextContent(
+    "Short answer sprint",
+  );
+  expect(
+    screen.getByRole("columnheader", { name: "Session" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("columnheader", { name: "Result" }),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("columnheader", { name: "Time" }),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("rowheader", { name: "Today" })).toBeInTheDocument();
+  expect(
+    screen.getByRole("meter", { name: `${row.title} result` }),
+  ).toHaveAttribute("aria-valuenow", "75");
+  expect(screen.getByText("2 min")).toBeInTheDocument();
   expect(screen.getByRole("table")).not.toHaveTextContent("Finished");
   expect(screen.getAllByText("Fri 9 Oct").length).toBeGreaterThan(0);
+});
+
+it("does not group score-sorted history into misleading day buckets", () => {
+  show(data, { ...filters, sort: "highest" });
+  expect(screen.queryByRole("rowheader", { name: "Today" })).toBeNull();
+  expect(screen.getByRole("link", { name: row.title })).toBeVisible();
+});
+
+it("preserves every GET field when search or another filter is submitted", () => {
+  show(data, {
+    ...filters,
+    kind: "sprint",
+    status: "finished",
+    topic: "t1",
+    q: "Inflation",
+    sort: "highest",
+    range: "custom",
+    from: "2026-10-01",
+    to: "2026-10-09",
+  });
+  const form = screen.getByRole("textbox", { name: "Search" }).closest("form")!;
+  const submit = vi.spyOn(form, "requestSubmit").mockImplementation(() => {});
+  fireEvent.change(screen.getByRole("textbox", { name: "Search" }), {
+    target: { value: "Trade" },
+  });
+  fireEvent.change(screen.getByRole("combobox", { name: "Status" }), {
+    target: { value: "progress" },
+  });
+  expect(submit).toHaveBeenCalledOnce();
+  const fields = new FormData(form);
+  expect(Object.fromEntries(fields)).toMatchObject({
+    kind: "sprint",
+    status: "progress",
+    q: "Trade",
+    sort: "highest",
+    range: "custom",
+    from: "2026-10-01",
+    to: "2026-10-09",
+  });
+  expect(fields.has("page")).toBe(false);
+  submit.mockRestore();
+});
+
+it("clears an exact day when choosing a relative date range", () => {
+  show(
+    data,
+    parseActivityFilters({ date: "2026-10-08", kind: "sprint" }, "2026-10-09"),
+  );
+  const form = screen.getByRole("textbox", { name: "Search" }).closest("form")!;
+  const submit = vi.spyOn(form, "requestSubmit").mockImplementation(() => {});
+  fireEvent.change(screen.getByRole("combobox", { name: "Date" }), {
+    target: { value: "30" },
+  });
+  expect(submit).toHaveBeenCalledOnce();
+  const fields = new FormData(form);
+  expect(fields.has("date")).toBe(false);
+  expect(fields.get("range")).toBe("30");
+  expect(fields.get("kind")).toBe("sprint");
+  submit.mockRestore();
+});
+
+it("groups sessions by Sydney dates including sessions across midnight UTC", () => {
+  show({
+    ...data,
+    rows: [
+      { ...row, id: "today", started_at: "2026-10-08T14:00:00Z" },
+      { ...row, id: "yesterday", started_at: "2026-10-08T00:00:00Z" },
+      { ...row, id: "week", started_at: "2026-10-06T00:00:00Z" },
+      { ...row, id: "earlier", started_at: "2026-10-01T00:00:00Z" },
+    ],
+  });
+  for (const label of ["Today", "Yesterday", "Earlier this week", "Earlier"])
+    expect(screen.getByRole("rowheader", { name: label })).toBeInTheDocument();
 });

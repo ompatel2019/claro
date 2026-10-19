@@ -16,11 +16,10 @@ import { weakTopicUnlock } from "@/lib/weak-topics";
 import { sessionTitle } from "@/lib/home";
 import { sydneyToday } from "@/lib/flashcards";
 import { dateLabel, timer, plural } from "@/lib/practice";
-import { PageHeader } from "@/components/page-header";
+import { PageHeader } from "@/components/claro/layout";
 import { SessionScoreTrend } from "@/components/score-trend";
 import { ProgressControls } from "@/components/progress-controls";
 import {
-  ProgressScore,
   TopicProgressTable,
   VerbProgressTable,
 } from "@/components/progress-tables";
@@ -38,6 +37,7 @@ import {
 } from "@/components/icons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
+import { Meter, ScoreRing } from "@/components/claro/data-display";
 import { Skeleton } from "@/components/ui/skeleton";
 
 function Section({
@@ -73,6 +73,28 @@ function CardSkeleton() {
 }
 
 type Scope = { range: ProgressRange; today: string };
+async function MarkSummary({ range, today }: Scope) {
+  const d = await loadProgress(range, today).catch(() => null);
+  if (!d) return null;
+  const parents = d.topics.filter((t) => !t.parent_id);
+  const earned = parents.reduce((sum, t) => sum + t.earned, 0);
+  const possible = parents.reduce((sum, t) => sum + t.possible, 0);
+  const answered = parents.reduce((sum, t) => sum + t.answered, 0);
+  if (!possible) return null;
+  return (
+    <Section
+      title="Practice average"
+      caption={`${plural(answered, "marked answer")} in this range`}
+    >
+      <div className="flex justify-center py-4">
+        <ScoreRing score={earned} of={possible} size={160} />
+      </div>
+      <p className="text-muted-foreground border-t pt-4 text-[13px]">
+        Your marks across topics in the selected range.
+      </p>
+    </Section>
+  );
+}
 async function HistoryCard({
   range,
   today,
@@ -94,7 +116,9 @@ async function HistoryCard({
   );
   const points = sessions.flatMap((s) => {
     const pct = type ? s.by_type[type] : s.pct;
-    return pct === null
+    return pct == null ||
+      !s.finished_at ||
+      !Number.isFinite(Date.parse(s.finished_at))
       ? []
       : [
           {
@@ -117,7 +141,7 @@ async function HistoryCard({
         <div className="mt-4">
           <SessionScoreTrend
             points={points}
-            from={rangeFrom(range, today) ?? points[0].day}
+            from={rangeFrom(range, today) ?? points.map((p) => p.day).sort()[0]}
             today={today}
             range={range}
           />
@@ -191,7 +215,10 @@ async function Types({ range, today }: Scope) {
   const d = await loadProgress(range, today).catch(() => null);
   if (!d)
     return (
-      <Section title="By question type">
+      <Section
+        title="By question type"
+        caption="Average mark for each kind of question"
+      >
         <TryAgain what="marks by question type" />
       </Section>
     );
@@ -204,23 +231,43 @@ async function Types({ range, today }: Scope) {
       />
     );
   return (
-    <Section title="By question type">
-      <dl className="grid grid-cols-3 gap-3">
+    <Section
+      title="By question type"
+      caption="Average mark for each kind of question"
+    >
+      <dl className="grid gap-4">
         {[
-          ["mcq", "MC"],
-          ["short", "Short"],
-          ["extended", "Extended"],
+          ["mcq", "Multiple choice"],
+          ["short", "Short answer"],
+          ["extended", "Extended response"],
         ].map(([id, label]) => {
           const t = d.types.find((t) => t.id === id);
           return (
-            <div key={id} className="min-w-0">
-              <dt className="text-muted-foreground text-[13px]">{label}</dt>
-              <dd className="mt-2">
-                <ProgressScore pct={t?.pct ?? null} />
-              </dd>
-              <dd className="text-muted-foreground mt-2 text-xs">
-                {plural(t?.answered ?? 0, "answer")}
-              </dd>
+            <div key={id} className="grid min-w-0 gap-2">
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-sm font-medium">{label}</dt>
+                <dd className="text-muted-foreground text-[13px]">
+                  {t?.pct != null ? (
+                    <>
+                      <span className="text-foreground font-semibold">
+                        {Math.round(t.pct)}%
+                      </span>{" "}
+                      · {plural(t.answered, "answer")}
+                    </>
+                  ) : (
+                    "Not started"
+                  )}
+                </dd>
+              </div>
+              {t?.pct != null && (
+                <dd>
+                  <Meter
+                    value={t.pct}
+                    label={`${label} average`}
+                    className="h-2"
+                  />
+                </dd>
+              )}
             </div>
           );
         })}
@@ -281,33 +328,64 @@ async function Weak({ range, today }: Scope) {
           description="Practise questions or review flashcards to find where to focus next."
         />
       )}
-      <ul className="divide-y divide-dashed">
+      <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {locked.map((t) => (
           <li
             key={`locked-${t.id}`}
-            className="text-muted-foreground py-3 text-sm"
+            className="text-muted-foreground rounded-xl border border-dashed p-4 text-sm"
           >
+            <p className="text-foreground mb-2 font-semibold">{t.name}</p>
             {weakTopicUnlock(t)}
+            {t.sessions != null && (
+              <div className="mt-4 grid gap-1.5">
+                <p className="flex justify-between text-xs">
+                  <span>Sessions</span>
+                  <span>{t.sessions} of 2</span>
+                </p>
+                <Meter
+                  value={(t.sessions / 2) * 100}
+                  label={`${t.name} sessions toward unlocking`}
+                />
+              </div>
+            )}
           </li>
         ))}
-        {rows.map((r) => (
-          <li key={r.id} className="flex items-center gap-3 py-3">
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">{r.name}</p>
-              <p className="text-muted-foreground mt-1 text-xs">{r.caption}</p>
-            </div>
-            <Link
-              href={r.href}
-              className={buttonVariants({
-                variant: "outline",
-                size: "sm",
-                className: "shrink-0",
-              })}
+        {rows.map((r) => {
+          const topic = r.id.startsWith("q-")
+            ? d.topics.find((t) => t.id === r.id.slice(2))
+            : undefined;
+          return (
+            <li
+              key={r.id}
+              className="flex flex-col items-start gap-3 rounded-xl border p-4"
             >
-              {r.action}
-            </Link>
-          </li>
-        ))}
+              <div className="min-w-0 flex-1">
+                <p className="font-medium">{r.name}</p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {r.caption}
+                </p>
+                {topic?.pct != null && (
+                  <Meter
+                    value={topic.pct}
+                    tone="brand"
+                    label={`${r.name} average`}
+                    className="mt-3"
+                  />
+                )}
+              </div>
+              <Link
+                href={r.href}
+                className={buttonVariants({
+                  variant: "outline",
+                  size: "sm",
+                  className: "mt-auto shrink-0",
+                })}
+              >
+                {r.action}
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </Section>
   );
@@ -431,32 +509,36 @@ export default async function Progress({
       data-range={range}
     >
       <PageHeader
-        eyebrow="Your long view"
         title="Progress"
         description="See where your marks come from and make your next session count."
         actions={<ProgressControls range={range} />}
       />
+      <div className="grid min-w-0 gap-5 xl:grid-cols-3">
+        <Suspense key={`summary-${range}`} fallback={<CardSkeleton />}>
+          <MarkSummary {...scope} />
+        </Suspense>
+        <div className="min-w-0 xl:col-span-2">
+          <Suspense
+            key={`history-${range}-${kind}-${type}`}
+            fallback={<CardSkeleton />}
+          >
+            <HistoryCard {...scope} kind={kind} type={type} />
+          </Suspense>
+        </div>
+      </div>
       <Suspense key={`topics-${range}`} fallback={<CardSkeleton />}>
         <Topics {...scope} />
       </Suspense>
-      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
-        <div className="min-w-0 space-y-4">
-          <Suspense key={`types-${range}`} fallback={<CardSkeleton />}>
-            <Types {...scope} />
-          </Suspense>
-          <Suspense key={`verbs-${range}`} fallback={<CardSkeleton />}>
-            <Verbs {...scope} />
-          </Suspense>
-        </div>
-        <Suspense key={`weak-${range}`} fallback={<CardSkeleton />}>
-          <Weak {...scope} />
+      <div className="grid min-w-0 gap-5 md:grid-cols-2">
+        <Suspense key={`types-${range}`} fallback={<CardSkeleton />}>
+          <Types {...scope} />
+        </Suspense>
+        <Suspense key={`verbs-${range}`} fallback={<CardSkeleton />}>
+          <Verbs {...scope} />
         </Suspense>
       </div>
-      <Suspense
-        key={`history-${range}-${kind}-${type}`}
-        fallback={<CardSkeleton />}
-      >
-        <HistoryCard {...scope} kind={kind} type={type} />
+      <Suspense key={`weak-${range}`} fallback={<CardSkeleton />}>
+        <Weak {...scope} />
       </Suspense>
       <Suspense key={`mastery-${range}`} fallback={<CardSkeleton />}>
         <Mastery {...scope} />

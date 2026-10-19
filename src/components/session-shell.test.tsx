@@ -16,7 +16,7 @@ afterEach(() => {
 });
 beforeAll(() => {
   window.matchMedia = ((q: string) => ({
-    matches: q.includes("1024"),
+    matches: q.includes("768"),
   })) as unknown as typeof window.matchMedia;
 });
 

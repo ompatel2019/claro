@@ -291,7 +291,10 @@ export function WrittenAnswer({
                 <Textarea
                   key={a.id}
                   rows={6}
-                  className="min-h-36 text-base font-normal"
+                  className={cn(
+                    "text-base font-normal",
+                    inputOnly ? "min-h-60 text-[15px] leading-7" : "min-h-36",
+                  )}
                   aria-describedby={`answer-guide-${a.id}`}
                   value={text}
                   disabled={busy || disabled}

@@ -1,7 +1,8 @@
 "use client";
 import { useActionState } from "react";
 import { startFlashcards } from "@/app/(app)/flashcards/actions";
-import { Button } from "./ui/button";
+import { Button } from "./claro/controls";
+import { PortalIcon } from "./icons";
 export function FlashcardStart({
   due = false,
   disabled = false,
@@ -33,6 +34,7 @@ export function FlashcardStart({
         className={className}
         disabled={pending || disabled}
       >
+        <PortalIcon name="play" />
         {pending ? "Starting…" : label}
       </Button>
       {state.error && (

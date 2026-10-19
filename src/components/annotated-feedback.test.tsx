@@ -442,12 +442,14 @@ it("keeps original line breaks in quotes selected for editing", async () => {
   );
 });
 
-it("uses green and destructive soft cards with matching pills in the narrow list and popover", () => {
+it("uses neutral examiner note cards with semantic pills in the narrow list and popover", () => {
   const { container } = render(<AnnotatedFeedback row={row} />);
   const strength = container.querySelector('[data-card="0"]')!;
   const fix = container.querySelector('[data-card="1"]')!;
-  expect(strength).toHaveClass("bg-success-soft", "border-success/25");
-  expect(fix).toHaveClass("bg-destructive-soft", "border-destructive/25");
+  expect(strength).toHaveClass("bg-card", "border");
+  expect(strength.querySelector(".pen")).toBeTruthy();
+  expect(fix).toHaveClass("bg-card", "border");
+  expect(fix.querySelector(".pen")).toBeTruthy();
   expect(screen.getByText("Strength")).toHaveClass(
     "text-success",
     "rounded-full",
@@ -458,7 +460,7 @@ it("uses green and destructive soft cards with matching pills in the narrow list
   );
   fireEvent.click(screen.getByRole("button", { name: /^Fix 1/ }));
   expect(screen.getByRole("dialog").querySelector("[data-card]")).toHaveClass(
-    "bg-destructive-soft",
+    "bg-card",
   );
 });
 
@@ -543,5 +545,91 @@ it.each(["short", "extended"] as const)(
     expect(screen.getByText("Full marks. Nothing missing.")).toBeVisible();
     rerender(<AnnotatedFeedback row={{ ...row, type, mark: 5, feedback }} />);
     expect(screen.getByText("How to reach full marks")).toBeVisible();
+  },
+);
+
+it("opts into standalone score, criteria, next steps and annotated-answer cards", () => {
+  render(<AnnotatedFeedback row={row} singleResult />);
+  for (const name of [
+    "Marking criteria",
+    "Your next mark",
+    "Your answer, marked",
+  ]) {
+    expect(screen.getByRole("heading", { name })).toBeVisible();
+  }
+  expect(screen.getByRole("img", { name: "3 out of 6" })).toBeVisible();
+  expect(screen.getByText("Your band")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Fix 1, Evidence: Give a CPI figure." }),
+  ).toBeVisible();
+  expect(screen.getByText("3 marks from full marks")).toBeVisible();
+  expect(screen.queryByText("What gets you the next mark")).toBeNull();
+});
+
+it("keeps low-confidence states honest in standalone results", () => {
+  render(
+    <AnnotatedFeedback
+      singleResult
+      row={{
+        ...row,
+        feedback: { confidence: "low", note: "Needs a clearer answer." },
+      }}
+    />,
+  );
+  expect(screen.getByText("Needs a clearer answer.")).toBeVisible();
+  expect(screen.queryByRole("img", { name: "3 out of 6" })).toBeNull();
+  expect(
+    screen.queryByRole("heading", { name: "Marking criteria" }),
+  ).toBeNull();
+});
+
+it.each([
+  [false, false, 900, false],
+  [false, true, 1099, false],
+  [false, false, 1100, true],
+  [false, true, 1100, true],
+  [true, false, 899, false],
+  [true, false, 900, true],
+] as const)(
+  "preserves default/admin layout and gates student styling (single=%s edit=%s width=%s)",
+  (singleResult, editing, width, wide) => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        constructor(private callback: ResizeObserverCallback) {}
+        observe(target: Element) {
+          if (target.hasAttribute("data-comment-navigation")) {
+            this.callback(
+              [{ contentRect: { width } } as ResizeObserverEntry],
+              this as unknown as ResizeObserver,
+            );
+          }
+        }
+        disconnect() {}
+      },
+    );
+    const edit = editing
+      ? { comments: [], nextMark: "", onChange: vi.fn(), onUndo: vi.fn() }
+      : undefined;
+    const { container } = render(
+      <AnnotatedFeedback row={row} singleResult={singleResult} edit={edit} />,
+    );
+    expect(container.querySelector(".whitespace-pre-wrap")).toHaveClass(
+      "relative",
+    );
+    expect(container.querySelector(".whitespace-pre-wrap")?.className).toBe(
+      singleResult
+        ? "booklet relative min-h-28 text-[15px] leading-8 whitespace-pre-wrap"
+        : "relative max-w-[70ch] text-base leading-[26px] whitespace-pre-wrap",
+    );
+    expect(!!container.querySelector(".booklet")).toBe(singleResult);
+    const grid = container.querySelector(".grid.gap-6")!;
+    expect(grid).toBeTruthy();
+    expect(grid.classList.contains("grid-cols-[minmax(0,1fr)_300px]")).toBe(
+      wide && singleResult,
+    );
+    expect(grid.classList.contains("grid-cols-[minmax(0,1fr)_320px]")).toBe(
+      wide && !singleResult,
+    );
   },
 );

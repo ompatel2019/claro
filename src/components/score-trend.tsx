@@ -1,12 +1,7 @@
 "use client";
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { dateLabel } from "@/lib/practice";
-const W = 600,
-  H = 180,
-  PAD = 8,
-  LEFT = 60,
-  BOTTOM = H - 28;
 export type ScorePoint = {
   id: string;
   day: string;
@@ -18,27 +13,59 @@ export type ScorePoint = {
 
 /** Score history for individual sessions on Progress. */
 function ScorePlot({
-  points,
+  points: suppliedPoints,
   from,
   to,
   title,
   range,
+  compact = false,
 }: {
   points: ScorePoint[];
   from: string;
   to: string;
   title: string;
   range: string;
+  compact?: boolean;
 }) {
   const id = useId();
+  const plot = useRef<SVGSVGElement>(null);
+  const [width, setWidth] = useState(600);
+  useEffect(() => {
+    if (!plot.current || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width > 0)
+        setWidth(Math.max(240, Math.round(entry.contentRect.width)));
+    });
+    observer.observe(plot.current);
+    return () => observer.disconnect();
+  }, []);
+  // Match SVG coordinates to CSS pixels, so mobile labels keep their readable size.
+  const W = width,
+    H = width < 400 ? 180 : 230,
+    PAD = 8,
+    LEFT = 38,
+    BOTTOM = H - 28;
+  // RPC rows need not be chronological. Missing timestamps must never become epoch dates.
+  const timestamp = (p: ScorePoint) => Date.parse(p.at || p.day);
+  const points = suppliedPoints
+    .filter(
+      (p) =>
+        typeof p.day === "string" &&
+        Number.isFinite(timestamp(p)) &&
+        Number.isFinite(p.pct) &&
+        p.day >= from &&
+        p.day <= to,
+    )
+    .slice()
+    .sort((a, b) => timestamp(a) - timestamp(b));
   const [selected, setSelected] = useState<string | null>(null);
   const current = points.find((p) => p.id === selected) ?? points.at(-1);
-  const start = Date.parse(points[0]?.at ?? points[0]?.day ?? from);
-  const end = Date.parse(points.at(-1)?.at ?? points.at(-1)?.day ?? to);
+  const start = Date.parse(points[0]?.at || points[0]?.day || from);
+  const end = Date.parse(points.at(-1)?.at || points.at(-1)?.day || to);
   const span = Math.max(1, end - start);
   const x = (p: { day: string; at?: string }) =>
     LEFT +
-    (start === end ? 0.5 : (Date.parse(p.at ?? p.day) - start) / span) *
+    (start === end ? 0.5 : (Date.parse(p.at || p.day) - start) / span) *
       (W - LEFT - PAD);
   const y = (pct: number) => PAD + (1 - pct / 100) * (BOTTOM - PAD);
   const line = (ps: { day: string; at?: string; pct: number }[]) =>
@@ -58,7 +85,7 @@ function ScorePlot({
   );
   return (
     <div className="space-y-3">
-      {current && (
+      {!compact && current && (
         <div>
           <p className="text-3xl font-semibold tabular-nums">
             {Math.round(current.pct)}%
@@ -69,8 +96,9 @@ function ScorePlot({
         </div>
       )}
       <svg
+        ref={plot}
         viewBox={`0 0 ${W} ${H}`}
-        className="h-44 w-full"
+        className="block h-auto w-full min-w-0"
         aria-labelledby={`${id}-title`}
         aria-describedby={`${id}-desc`}
         data-range={range}
@@ -86,7 +114,7 @@ function ScorePlot({
               y={y(g)}
               textAnchor="end"
               dominantBaseline="middle"
-              fontSize={20}
+              fontSize={10}
               className="fill-chart-axis"
             >
               {g}%
@@ -100,14 +128,14 @@ function ScorePlot({
             />
           </g>
         ))}
-        <text x={LEFT} y={H - 4} fontSize={20} className="fill-chart-axis">
+        <text x={LEFT} y={H - 4} fontSize={10} className="fill-chart-axis">
           {dateLabel(points[0]?.day ?? from)}
         </text>
         <text
           x={W - PAD}
           y={H - 4}
           textAnchor="end"
-          fontSize={20}
+          fontSize={10}
           className="fill-chart-axis"
         >
           {dateLabel(points.at(-1)?.day ?? to)}
@@ -156,7 +184,7 @@ function ScorePlot({
           ),
         )}
       </svg>
-      {current && (
+      {!compact && current && (
         <p
           role="tooltip"
           className="bg-muted rounded-lg px-3 py-2 text-xs leading-5"
@@ -174,14 +202,17 @@ export function SessionScoreTrend({
   from,
   today,
   range,
+  compact,
 }: {
   points: ScorePoint[];
   from: string;
   today: string;
   range: string;
+  compact?: boolean;
 }) {
   return (
     <ScorePlot
+      compact={compact}
       points={points}
       from={from}
       to={today}
