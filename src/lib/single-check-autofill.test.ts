@@ -2,11 +2,18 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("./ai/openai", () => ({ callJson: vi.fn() }));
-vi.mock("./ai/rate-limit", () => ({ assertStudentAiRateLimit: vi.fn() }));
+vi.mock("./ai/rate-limit", async (original) => ({
+  ...(await original<typeof import("./ai/rate-limit")>()),
+  assertStudentAiRateLimit: vi.fn(),
+}));
 vi.mock("@/utils/supabase/admin", () => ({ admin: vi.fn() }));
 import { zodResponseFormat } from "openai/helpers/zod";
 import { callJson } from "./ai/openai";
-import { assertStudentAiRateLimit } from "./ai/rate-limit";
+import {
+  aiUsageReservationIds,
+  assertStudentAiRateLimit,
+  withAiUsageReservation,
+} from "./ai/rate-limit";
 import { admin } from "@/utils/supabase/admin";
 import { generateOwnQuestion } from "./single-check-autofill";
 const input = { stem: "Explain monetary policy.", marks: 4 };
@@ -17,26 +24,22 @@ const output = {
   criteria_text:
     "1-2: Identifies relevant monetary policy tools.\n3-4: Explains policy mechanisms and economic effects.",
 };
-let count = 0;
+
 beforeEach(() => {
   vi.resetAllMocks();
-  count = 0;
   vi.stubEnv("ENABLE_OWN_QUESTION_MARKING", "true");
   vi.stubEnv("ENABLE_OWN_QUESTION_AUTOFILL", "true");
   vi.mocked(assertStudentAiRateLimit).mockResolvedValue({ ok: true });
   const query = {
     select: vi.fn(),
-    eq: vi.fn(),
-    gte: vi.fn(),
     not: vi.fn(),
     then: (resolve: (value: unknown) => unknown) =>
       Promise.resolve({
-        count,
         data: [{ id: "policy", name: "Monetary policy" }],
         error: null,
       }).then(resolve),
   };
-  for (const key of ["select", "eq", "gte", "not"] as const)
+  for (const key of ["select", "not"] as const)
     query[key].mockReturnValue(query);
   vi.mocked(admin).mockReturnValue({ from: () => query } as never);
   vi.mocked(callJson).mockResolvedValue(output);
@@ -82,7 +85,16 @@ it.each(["false", "TRUE", ""])("refuses disabled flag %s", async (flag) => {
   expect(callJson).not.toHaveBeenCalled();
 });
 it("enforces the daily cap before model invocation", async () => {
-  count = 10;
+  vi.mocked(assertStudentAiRateLimit).mockImplementation(async ({ scope }) =>
+    scope === "autofill"
+      ? {
+          ok: false,
+          error:
+            "You've used today's 10 autofill calls. Paste your own guidelines or try tomorrow.",
+          retryAfterSec: 86400,
+        }
+      : { ok: true },
+  );
   await expect(generateOwnQuestion("u", input)).rejects.toThrow("today's 10");
   expect(callJson).not.toHaveBeenCalled();
 });
@@ -108,3 +120,66 @@ it("supplies a schema supported by strict JSON output", async () => {
   const schema = vi.mocked(callJson).mock.calls[0][0].schema;
   expect(() => zodResponseFormat(schema, "autofill")).not.toThrow();
 });
+
+it("reserves daily capacity for each invalid-output retry", async () => {
+  vi.mocked(callJson).mockResolvedValueOnce({ ...output, criteria_text: null });
+  await generateOwnQuestion("u", input);
+  expect(
+    vi.mocked(assertStudentAiRateLimit).mock.calls.map(([opts]) => opts.scope),
+  ).toEqual([undefined, "autofill", "autofill"]);
+});
+it("does not call the provider again when a retry has no daily capacity", async () => {
+  vi.mocked(callJson).mockResolvedValueOnce({ ...output, criteria_text: null });
+  vi.mocked(assertStudentAiRateLimit)
+    .mockResolvedValueOnce({ ok: true })
+    .mockResolvedValueOnce({ ok: true })
+    .mockResolvedValueOnce({
+      ok: false,
+      error: "You've used today's 10 autofill calls.",
+      retryAfterSec: 86400,
+    });
+  await expect(generateOwnQuestion("u", input)).rejects.toThrow("today's 10");
+  expect(callJson).toHaveBeenCalledTimes(1);
+});
+
+it.each([60, 3600])(
+  "reuses the enclosing marking slot at the final student allowance (retry %i)",
+  async (retryAfterSec) => {
+    const release = vi.fn().mockResolvedValue({ error: null });
+    const topics = {
+      select: () => ({
+        not: async () => ({
+          data: [{ id: "policy", name: "Monetary policy" }],
+        }),
+      }),
+    };
+    vi.mocked(admin).mockReturnValue({
+      from: (table: string) =>
+        table === "topics" ? topics : { delete: () => ({ eq: release }) },
+    } as never);
+    // The mark route already reserved the 20th minute / 200th hourly slot.
+    vi.mocked(assertStudentAiRateLimit).mockImplementation(async ({ scope }) =>
+      scope === "autofill"
+        ? { ok: true, reservationId: "daily-slot" }
+        : { ok: false, error: "Slow down", retryAfterSec },
+    );
+    vi.mocked(callJson).mockImplementationOnce(async () => {
+      expect(aiUsageReservationIds()).toEqual(["mark-slot", "daily-slot"]);
+      return output;
+    });
+    await expect(
+      withAiUsageReservation({ ok: true, reservationId: "mark-slot" }, () =>
+        generateOwnQuestion("u", input),
+      ),
+    ).resolves.toEqual({ ...output, stem: input.stem });
+    expect(assertStudentAiRateLimit).toHaveBeenCalledExactlyOnceWith({
+      userId: "u",
+      scope: "autofill",
+    });
+    expect(callJson).toHaveBeenCalledTimes(1);
+    expect(release.mock.calls).toEqual([
+      ["id", "daily-slot"],
+      ["id", "mark-slot"],
+    ]);
+  },
+);

@@ -1,0 +1,49 @@
+Parsed test spec with 3 sessions
+
+starting permutation: begin_first reserve_first reserve_second commit_first check_minute seed_daily begin_daily reserve_daily reserve_second_daily commit_daily check_daily
+step begin_first: begin; set local role service_role;
+step reserve_first: select public.reserve_ai_usage('d4000000-0000-4000-8000-000000000003', 'student')->>'ok' as allowed;
+allowed
+-------
+true   
+(1 row)
+
+step reserve_second: select public.reserve_ai_usage('d4000000-0000-4000-8000-000000000003', 'student') as refused; <waiting ...>
+step commit_first: commit;
+step reserve_second: <... completed>
+refused                           
+----------------------------------
+{"ok": false, "retryAfterSec": 60}
+(1 row)
+
+step check_minute: 
+  do $$ begin
+    if (select count(*) from public.ai_usage_reservations where user_id = 'd4000000-0000-4000-8000-000000000003' and scope = 'student') <> 1
+    then raise exception 'Concurrent reservations exceeded the minute limit'; end if;
+  end $$;
+
+step seed_daily: 
+  insert into public.ai_usage(user_id,task,model,input_tokens,output_tokens,usd)
+    select 'd4000000-0000-4000-8000-000000000003','own-question-autofill','synthetic',0,0,0 from generate_series(1,9);
+
+step begin_daily: begin; set local role service_role;
+step reserve_daily: select public.reserve_ai_usage('d4000000-0000-4000-8000-000000000003', 'autofill')->>'ok' as allowed;
+allowed
+-------
+true   
+(1 row)
+
+step reserve_second_daily: select public.reserve_ai_usage('d4000000-0000-4000-8000-000000000003', 'autofill') as refused; <waiting ...>
+step commit_daily: commit;
+step reserve_second_daily: <... completed>
+refused                              
+-------------------------------------
+{"ok": false, "retryAfterSec": 86400}
+(1 row)
+
+step check_daily: 
+  do $$ begin
+    if (select count(*) from public.ai_usage_reservations where user_id = 'd4000000-0000-4000-8000-000000000003' and scope = 'autofill') <> 1
+    then raise exception 'Concurrent reservations exceeded the daily limit'; end if;
+  end $$;
+

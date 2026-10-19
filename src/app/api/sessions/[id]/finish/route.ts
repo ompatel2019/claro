@@ -2,7 +2,9 @@ import { createClient } from "@/utils/supabase/server";
 
 import { finishSession } from "@/lib/marking/engine";
 import {
+  AiRateLimitError,
   assertStudentAiRateLimit,
+  withDeferredAiUsageReservation,
   rateLimitedResponse,
 } from "@/lib/ai/rate-limit";
 import { sydneyDayStart } from "@/lib/single-check";
@@ -40,41 +42,50 @@ export async function POST(
       { status: 409 },
     );
   try {
-    // Inspect actual attempts: even mixed sessions can finish without paid work.
-    if (
-      session.kind === "sprint" &&
-      !session.finished_at &&
-      (await sessionNeedsAi(id, user.id))
-    ) {
-      const { data: profile, error: roleError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .maybeSingle();
-      if (roleError) throw roleError;
-      const limited = await assertStudentAiRateLimit({
-        userId: user.id,
-        role: profile?.role ?? "student",
-      });
-      if (!limited.ok) return rateLimitedResponse(limited);
-      if (profile?.role !== "admin") {
-        const count = await dailyAiSprintCount(user.id, sydneyDayStart());
-        if (count >= DAILY_WRITTEN_SPRINT_LIMIT)
-          return rateLimitedResponse({
-            ok: false,
-            error: "You've reached today's sprint limit. Try again tomorrow.",
-            retryAfterSec: 86400,
-          });
-      }
-    }
-    const finished = await finishSession(id);
-    return Response.json({
-      score: finished.score,
-      max_score: finished.max_score,
-      summary: finished.summary,
-      finished: true,
-    });
+    let role = "student";
+    return await withDeferredAiUsageReservation(
+      async () => {
+        const { data: profile, error: roleError } = await supabase
+          .from("profiles")
+          .select("role")
+          .eq("id", user.id)
+          .maybeSingle();
+        if (roleError) throw roleError;
+        role = profile?.role ?? "student";
+        return assertStudentAiRateLimit({ userId: user.id, role });
+      },
+      async () => {
+        if (role !== "admin") {
+          const count = await dailyAiSprintCount(user.id, sydneyDayStart());
+          if (count >= DAILY_WRITTEN_SPRINT_LIMIT)
+            throw new AiRateLimitError({
+              ok: false,
+              error: "You've reached today's sprint limit. Try again tomorrow.",
+              retryAfterSec: 86400,
+            });
+        }
+      },
+      async (ensure) => {
+        // Deterministic finishes need no allowance. The provider guard also
+        // covers answers saved after this snapshot and the engine's reloads.
+        if (
+          session.kind === "sprint" &&
+          !session.finished_at &&
+          (await sessionNeedsAi(id, user.id))
+        )
+          await ensure();
+        const finished = await finishSession(id);
+        return Response.json({
+          score: finished.score,
+          max_score: finished.max_score,
+          summary: finished.summary,
+          finished: true,
+        });
+      },
+    );
   } catch (error) {
+    if (error instanceof AiRateLimitError)
+      return rateLimitedResponse(error.result);
     console.error(error);
     return Response.json(
       {

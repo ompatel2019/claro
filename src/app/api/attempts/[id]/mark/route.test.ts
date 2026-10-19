@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({
   user: vi.fn(),
   ownAttempt: vi.fn(),
@@ -40,7 +41,8 @@ vi.mock("@/lib/single-check-marking", () => ({
   markOwnCheck: vi.fn(),
   markBankCheck: vi.fn(),
 }));
-vi.mock("@/lib/ai/rate-limit", () => ({
+vi.mock("@/lib/ai/rate-limit", async (original) => ({
+  ...(await original<typeof import("@/lib/ai/rate-limit")>()),
   assertStudentAiRateLimit: mocks.rate,
   rateLimitedResponse: vi.fn(),
 }));

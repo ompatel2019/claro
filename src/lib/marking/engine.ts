@@ -3,6 +3,7 @@ import "server-only";
 import { ZodError, type z } from "zod";
 
 import { callJson, type Message } from "@/lib/ai/openai";
+import { AiUsageGuardError } from "@/lib/ai/rate-limit";
 import { MODELS, type Model } from "@/lib/ai/prices";
 import { admin } from "@/utils/supabase/admin";
 import { studentMarking } from "@/lib/feedback";
@@ -544,6 +545,7 @@ export async function finishSession(
         })),
         session.user_id,
       ).catch((error) => {
+        if (error instanceof AiUsageGuardError) throw error;
         console.error(error);
         return null;
       });
@@ -611,7 +613,10 @@ async function markRemaining(sessionId: string, userId: string) {
         todo.slice(offset, offset + 2).map((a) => markAttempt(a.id)),
       );
       results.forEach((result) => {
-        if (result.status === "rejected") console.error(result.reason);
+        if (result.status === "rejected") {
+          if (result.reason instanceof AiUsageGuardError) throw result.reason;
+          console.error(result.reason);
+        }
       });
     }
     rows = await sessionAttempts(sessionId, userId);

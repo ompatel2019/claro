@@ -12,11 +12,15 @@ const mocks = vi.hoisted(() => ({
   missing: false,
   finish: vi.fn(),
   rate: vi.fn(),
+  release: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/ai/rate-limit", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/ai/rate-limit")>()),
   assertStudentAiRateLimit: mocks.rate,
+}));
+vi.mock("@/utils/supabase/admin", () => ({
+  admin: () => ({ from: () => ({ delete: () => ({ eq: mocks.release }) }) }),
 }));
 vi.mock("@/utils/supabase/server", () => ({
   createClient: async () => ({
@@ -49,6 +53,10 @@ vi.mock("@/lib/marking/finish-limits", () => ({
 }));
 vi.mock("@/lib/marking/engine", () => ({ finishSession: mocks.finish }));
 import { POST } from "./route";
+import {
+  aiUsageReservationIds,
+  ensureAiUsageReservation,
+} from "@/lib/ai/rate-limit";
 const finish = () =>
   POST(new Request("http://localhost/api", { method: "POST" }), {
     params: Promise.resolve({ id: "s" }),
@@ -68,6 +76,7 @@ beforeEach(() => {
   mocks.signedIn = true;
   mocks.missing = false;
   mocks.rate.mockResolvedValue({ ok: true });
+  mocks.release.mockResolvedValue({ error: null });
   mocks.finish.mockResolvedValue({ score: 2, max_score: 4, summary: null });
 });
 it.each(["sprint", "flashcards"])(
@@ -212,3 +221,76 @@ it("does not mark when the actual-attempt lookup fails", async () => {
     log.mockRestore();
   }
 });
+
+it("carries one atomic reservation through engine marking and releases it", async () => {
+  mocks.rate.mockResolvedValue({ ok: true, reservationId: "finish-slot" });
+  mocks.finish.mockImplementationOnce(async () => {
+    await Promise.all([ensureAiUsageReservation(), ensureAiUsageReservation()]);
+    expect(aiUsageReservationIds()).toEqual(["finish-slot"]);
+    expect(mocks.release).not.toHaveBeenCalled();
+    return { score: 2, max_score: 4, summary: null };
+  });
+  expect((await finish()).status).toBe(200);
+  expect(mocks.rate).toHaveBeenCalledTimes(1);
+  expect(mocks.dailyCount).toHaveBeenCalledTimes(1);
+  expect(mocks.release).toHaveBeenCalledWith("id", "finish-slot");
+});
+
+it.each(["allowed", "minute", "daily", "database"])(
+  "guards an answer saved after the AI-need snapshot: %s",
+  async (limit) => {
+    mocks.needsAi.mockResolvedValue(false);
+    mocks.rate.mockResolvedValue(
+      limit === "minute"
+        ? { ok: false, error: "Slow down", retryAfterSec: 60 }
+        : { ok: true, reservationId: "late-slot" },
+    );
+    if (limit === "daily") mocks.count = 200;
+    if (limit === "database") mocks.countError = new Error("Count unavailable");
+    const paid = vi.fn();
+    mocks.finish.mockImplementationOnce(async () => {
+      // The engine reloaded a written answer after the route saw a blank.
+      await ensureAiUsageReservation();
+      paid();
+      return { score: 2, max_score: 4, summary: null };
+    });
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      const response = await finish();
+      expect(response.status).toBe(
+        limit === "allowed" ? 200 : limit === "database" ? 500 : 429,
+      );
+      expect(paid).toHaveBeenCalledTimes(limit === "allowed" ? 1 : 0);
+      expect(mocks.rate).toHaveBeenCalledTimes(1);
+      if (limit !== "minute")
+        expect(mocks.release).toHaveBeenCalledWith("id", "late-slot");
+      if (limit === "minute")
+        expect(response.headers.get("Retry-After")).toBe("60");
+      if (limit === "daily")
+        expect(response.headers.get("Retry-After")).toBe("86400");
+    } finally {
+      log.mockRestore();
+    }
+  },
+);
+
+it.each(["daily denial", "daily error", "engine error"])(
+  "releases the Finish reservation on %s",
+  async (failure) => {
+    mocks.rate.mockResolvedValue({ ok: true, reservationId: "finish-slot" });
+    if (failure === "daily denial") mocks.count = 200;
+    if (failure === "daily error")
+      mocks.countError = new Error("Count unavailable");
+    if (failure === "engine error")
+      mocks.finish.mockRejectedValueOnce(new Error("Engine unavailable"));
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      expect((await finish()).status).toBe(
+        failure === "daily denial" ? 429 : 500,
+      );
+      expect(mocks.release).toHaveBeenCalledWith("id", "finish-slot");
+    } finally {
+      log.mockRestore();
+    }
+  },
+);
