@@ -12,5 +12,5 @@ src/lib/ai/eval/sets/final-ids.json
 # Compact saved pass fixture; preserve the supplied research snapshot.
 src/lib/ai/eval/sets/past-passes.json
 
-# Source template is preserved byte-for-byte.
-design/claro-portal-template.html
+# Design token blocks are copied verbatim from the archived prototype.
+src/test/fixtures/claro-tokens.css

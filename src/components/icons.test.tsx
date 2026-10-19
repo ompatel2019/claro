@@ -66,9 +66,8 @@ it("uses the same glyph contract for all Home tiles and the streak", () => {
 });
 
 it("covers the entire template glyph vocabulary", () => {
-  const template = readFileSync("design/claro-portal-template.html", "utf8");
-  const names = Object.keys(
-    JSON.parse(template.match(/const ICONS = (\{[^\n]+\});/)![1]),
+  const names: string[] = JSON.parse(
+    readFileSync("src/test/fixtures/claro-icon-names.json", "utf8"),
   );
   for (const name of names) {
     const { container, unmount } = render(
