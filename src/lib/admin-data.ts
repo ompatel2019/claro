@@ -3,6 +3,10 @@ import { cache } from "react";
 import { admin } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/auth";
+import {
+  selectFeedbackRow,
+  signFeedbackScreenshots,
+} from "@/lib/admin-feedback-detail";
 import { sydneyDay } from "@/lib/admin";
 import {
   computeSpend,
@@ -429,19 +433,16 @@ export async function loadStudentFeedback(id: string, userId: string) {
   if (!z.uuid().safeParse(id).success || !z.uuid().safeParse(userId).success)
     return null;
   const db = await createClient();
-  const { data } = await db
-    .from("feedback")
-    .select(
-      "id,user_id,message,status,admin_note,page_path,user_agent,question_id,session_id,screenshots",
-    )
-    .eq("id", id)
+  const { data } = await selectFeedbackRow(
+    db,
+    id,
+    "id,user_id,message,status,admin_note,page_path,user_agent,question_id,session_id,screenshots",
+  )
     .eq("user_id", userId)
     .maybeSingle()
     .throwOnError();
   if (!data) return null;
-  const signed = data.screenshots.length
-    ? await db.storage.from("reports").createSignedUrls(data.screenshots, 3600)
-    : null;
+  const signed = await signFeedbackScreenshots(db, data.screenshots);
   if (signed?.error) throw signed.error;
   return {
     row: data as import("@/components/feedback-detail").FeedbackDetailRow,
