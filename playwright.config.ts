@@ -4,6 +4,8 @@ const port = process.env.PORT ?? "3000";
 
 export default defineConfig({
   testDir: "./e2e",
+  // Local screenshot harness; run via e2e/admin-revamp.config.ts
+  testIgnore: ["**/admin-revamp.offline.spec.ts"],
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
