@@ -74,9 +74,8 @@ test.describe("Admin student detail", () => {
         await expect(page.getByText(/^\d+ of 200$/)).toBeVisible();
     }
     await expect(async () => {
-      await page
-        .getByRole("combobox", { name: "Kind", exact: true })
-        .selectOption("sprint");
+      await page.getByRole("combobox", { name: "Kind", exact: true }).click();
+      await page.getByRole("option", { name: "Sprints", exact: true }).click();
       await expect(page).toHaveURL(/kind=sprint/);
     }).toPass();
     await expect(async () => {

@@ -70,11 +70,13 @@ test.describe("Admin students list", () => {
       ).toHaveAttribute("aria-sort", "ascending");
     }).toPass();
     await expect(async () => {
-      await page.getByLabel("Year", { exact: true }).selectOption("11");
+      await page.getByRole("combobox", { name: "Year", exact: true }).click();
+      await page.getByRole("option", { name: "Year 11", exact: true }).click();
       await expect(page).toHaveURL(/[?&]year=11/);
     }).toPass();
     await expect(async () => {
-      await page.getByLabel("Year", { exact: true }).selectOption("");
+      await page.getByRole("combobox", { name: "Year", exact: true }).click();
+      await page.getByRole("option", { name: "Any", exact: true }).click();
       await expect(table.getByRole("row")).toHaveCount(2);
     }).toPass();
     await expect(async () => {
@@ -85,7 +87,12 @@ test.describe("Admin students list", () => {
       await expect(page).toHaveURL(/[?&]disputes=1/);
     }).toPass();
     await expect(async () => {
-      await page.getByLabel("Activity", { exact: true }).selectOption("never");
+      await page
+        .getByRole("combobox", { name: "Activity", exact: true })
+        .click();
+      await page
+        .getByRole("option", { name: "Never started", exact: true })
+        .click();
       await expect(page).toHaveURL(/[?&]activity=never/);
     }).toPass();
     const query = new URL(page.url()).search;
@@ -167,8 +174,8 @@ test.describe("Admin students list", () => {
         ),
       )
       .toBe(true);
-    const details = table.locator("details").first();
-    await details.locator("summary").click();
+    const details = table.locator('[data-slot="collapsible"]').first();
+    await details.getByRole("button", { name: "More details" }).click();
     await expect(details.getByText("School", { exact: true })).toBeVisible();
     await expect(
       details.getByText("Sessions total", { exact: true }),
@@ -195,11 +202,10 @@ test.describe("Admin students list", () => {
       await page.goto(
         `/admin/students?q=${encodeURIComponent(process.env.STUDENT_EMAIL!)}`,
       );
-      const table = page.getByRole("table", { name: "Students" });
-      await expect(table).toBeVisible();
-      await expect(
-        table.getByRole("columnheader", { name: "Email", includeHidden: true }),
-      ).toBeHidden();
+      const list = page.getByRole("list", { name: "Students" });
+      await expect(list).toBeVisible();
+      await expect(list.getByRole("link")).toHaveCount(1);
+      await expect(page.getByRole("checkbox")).toHaveCount(0);
       await expect(async () => {
         expect(
           await page.evaluate(
@@ -207,22 +213,9 @@ test.describe("Admin students list", () => {
           ),
         ).toBe(true);
       }).toPass();
-      const details = table.locator("details").first();
-      await details.locator("summary").click();
-      await expect(
-        details.getByText(process.env.STUDENT_EMAIL!, { exact: true }),
-      ).toBeVisible();
-      await expect
-        .poll(() =>
-          table.evaluate((el) => {
-            const container = el.closest('[data-slot="table-container"]')!;
-            return container.scrollWidth <= container.clientWidth;
-          }),
-        )
-        .toBe(true);
     }
     await page
-      .getByRole("table", { name: "Students" })
+      .getByRole("list", { name: "Students" })
       .getByRole("link")
       .focus();
     await page.keyboard.press("Enter");

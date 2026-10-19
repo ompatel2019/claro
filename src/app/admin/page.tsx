@@ -1,21 +1,15 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Alert, CheckCircle } from "@/components/icons";
+import { Alert, CheckCircle, PortalIcon } from "@/components/icons";
 import { requireAdmin } from "@/lib/auth";
 import { loadDashboard } from "@/lib/admin-data";
 import { ago } from "@/lib/admin";
 import { modeLabel, percentage, plural, scoreTone } from "@/lib/practice";
 import { DailyChart } from "@/components/daily-chart";
 import { LatestSessions } from "@/components/latest-sessions";
-import {
-  DeltaPill,
-  EmptyState,
-  Meter,
-  PageHeader,
-  Skeleton,
-} from "@/components/claro";
-import { StatCard } from "@/components/stat-card";
+import { EmptyState, Meter, PageHeader, Skeleton } from "@/components/claro";
+import { StatCard } from "@/components/claro/data-display";
 import { TryAgain } from "@/components/try-again";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,7 +25,7 @@ async function Dashboard() {
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             "Active students, 7 days",
-            "Sessions, 7 days",
+            "Sessions, last 7 days",
             "Open reviews",
             "Spend this month",
           ].map((title) => (
@@ -50,7 +44,7 @@ async function Dashboard() {
         <div className="grid gap-4 xl:grid-cols-2">
           {[
             "Sessions per day",
-            "AI spend per day",
+            "AI spend, last 7 days",
             "Recent sessions",
             "Needs attention",
           ].map((title) => (
@@ -68,6 +62,10 @@ async function Dashboard() {
         </div>
       </>
     );
+  const sessions = d.sessionsPerDay.slice(-7);
+  const spend = d.spendPerDay.slice(-7);
+  const sessionTotal = sessions.reduce((sum, point) => sum + point.value, 0);
+  const spendTotal = spend.reduce((sum, point) => sum + point.value, 0);
   const pct = Math.round((100 * d.spend.all) / d.spend.cap);
   const attention = [
     [
@@ -107,37 +105,45 @@ async function Dashboard() {
     <>
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
-          label="Active students, 7 days"
+          title="Active students, 7 days"
           value={d.active.now}
-          caption={
-            <span className="inline-flex items-center gap-1.5">
-              <DeltaPill delta={d.active.now - d.active.prev} />
-              <span>vs {d.active.prev} previous 7</span>
-            </span>
-          }
+          delta={d.active.now - d.active.prev}
+          description={`vs ${d.active.prev} previous 7`}
+          icon={<PortalIcon name="user" />}
         />
-        <StatCard label="Sessions, 7 days" value={d.sessionsWeek} />
         <StatCard
-          label="Open reviews"
+          title="Sessions, last 7 days"
+          value={sessionTotal}
+          description="Finished sessions · last 7 Sydney days"
+          values={sessions.map((point) => point.value)}
+          icon={<PortalIcon name="chart-line" />}
+        />
+        <StatCard
+          title="Open reviews"
           value={d.openReviews.count}
-          caption={
+          description={
             d.openReviews.oldestDays == null
               ? "Nothing waiting"
               : `oldest ${plural(d.openReviews.oldestDays, "day")}`
           }
+          icon={<PortalIcon name="pen-line" />}
         />
-        <StatCard
-          label="Spend this month"
-          value={`${usd(d.spend.month)} of $${d.spend.cap}`}
-          caption={
-            <span
+        <Card data-component="StatCard" className="h-full gap-3">
+          <CardHeader>
+            <p className="text-muted-foreground text-xs">Spend this month</p>
+          </CardHeader>
+          <CardContent>
+            <p className="text-[30px] leading-none font-bold tracking-[-0.035em] tabular-nums">
+              {usd(d.spend.month)} of ${d.spend.cap}
+            </p>
+            <div
               role="progressbar"
               aria-label="All-time spend against cap"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={Math.min(100, pct)}
               aria-valuetext={`${usd(d.spend.all)} of $${d.spend.cap} (${pct}%)`}
-              className="mt-2 block"
+              className="mt-3"
             >
               <span aria-hidden="true">
                 <Meter
@@ -146,9 +152,12 @@ async function Dashboard() {
                   label="All-time spend against cap"
                 />
               </span>
-            </span>
-          }
-        />
+            </div>
+            <p className="text-muted-foreground mt-2 text-xs">
+              Month to date · meter shows all-time cap usage
+            </p>
+          </CardContent>
+        </Card>
       </div>
       <Card className="border-brand/30">
         <CardHeader>
@@ -185,14 +194,14 @@ async function Dashboard() {
       <div className="grid gap-4 xl:grid-cols-2">
         <DailyChart
           title="Sessions per day"
-          hero={plural(d.sessionsTotal, "session")}
-          points={d.sessionsPerDay}
+          hero={plural(sessionTotal, "session")}
+          points={sessions}
           kind="area"
         />
         <DailyChart
-          title="AI spend per day"
-          hero={usd(d.spendTotal)}
-          points={d.spendPerDay}
+          title="AI spend, last 7 days"
+          hero={usd(spendTotal)}
+          points={spend}
           kind="bars"
         />
       </div>
@@ -243,6 +252,48 @@ async function Dashboard() {
                 }))}
               />
             )}
+          </CardContent>
+        </Card>
+        <Card className="min-w-0">
+          <CardHeader className="grid-cols-[1fr_auto]">
+            <CardTitle role="heading" aria-level={2}>
+              Review queue
+            </CardTitle>
+            <Link
+              href="/admin/marking/review"
+              className="text-sm font-semibold underline underline-offset-4"
+            >
+              View queue
+            </Link>
+          </CardHeader>
+          <CardContent className="space-y-5">
+            <div className="flex items-center gap-3">
+              <span className="bg-brand-soft text-brand-text grid size-12 place-items-center rounded-xl">
+                <PortalIcon name="pen-line" />
+              </span>
+              <div>
+                <p className="text-[30px] leading-none font-bold tabular-nums">
+                  {d.openReviews.count}
+                </p>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  Open mark reviews
+                </p>
+              </div>
+            </div>
+            <p className="text-muted-foreground text-sm">
+              {d.openReviews.oldestDays == null
+                ? "Nothing waiting for a second look."
+                : `Oldest review has been waiting ${plural(d.openReviews.oldestDays, "day")}.`}
+            </p>
+            <Link
+              href="/admin/marking/review?tab=failed"
+              className="hover:bg-accent flex items-center justify-between gap-3 rounded-xl border p-4 text-sm"
+            >
+              <span>Failed or unreadable · last 7 days</span>
+              <Badge variant={d.attention.failed ? "warning" : "muted"}>
+                {d.attention.failed}
+              </Badge>
+            </Link>
           </CardContent>
         </Card>
       </div>

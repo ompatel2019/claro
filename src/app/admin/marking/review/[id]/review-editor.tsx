@@ -1,4 +1,10 @@
 "use client";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
+import { PortalIcon } from "@/components/icons";
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
@@ -396,38 +402,50 @@ export function ReviewEditor({
                 <p className="whitespace-pre-wrap">{review.student_note}</p>
               </section>
             )}
-            <details className="rounded-xl border text-sm">
-              <summary className="cursor-pointer px-4 py-3 font-semibold">
+            <Collapsible className="rounded-xl border text-sm">
+              <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left font-semibold [&[aria-expanded=true]>svg]:rotate-90">
                 Marking guidelines
-              </summary>
-              <div className="px-4 pb-4">
-                {row.criteria?.map((c) => (
-                  <p
-                    key={c.descriptor}
-                    className={`mt-2 ${c === criterion ? "bg-accent rounded p-2" : ""}`}
-                  >
-                    <strong>
-                      {c.min}–{c.max}:
-                    </strong>{" "}
-                    {c.descriptor}
-                  </p>
-                ))}
-                {guidelineNotes && (
-                  <p className="mt-2 whitespace-pre-wrap">{guidelineNotes}</p>
-                )}
-                {!row.criteria?.length && !guidelineNotes && (
-                  <p>No guidelines recorded.</p>
-                )}
-              </div>
-            </details>
-            <details className="rounded-xl border text-sm">
-              <summary className="cursor-pointer px-4 py-3 font-semibold">
+                <PortalIcon
+                  name="chevron-right"
+                  className="size-4 transition-transform"
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <div className="px-4 pb-4">
+                  {row.criteria?.map((c) => (
+                    <p
+                      key={c.descriptor}
+                      className={`mt-2 ${c === criterion ? "bg-accent rounded p-2" : ""}`}
+                    >
+                      <strong>
+                        {c.min}–{c.max}:
+                      </strong>{" "}
+                      {c.descriptor}
+                    </p>
+                  ))}
+                  {guidelineNotes && (
+                    <p className="mt-2 whitespace-pre-wrap">{guidelineNotes}</p>
+                  )}
+                  {!row.criteria?.length && !guidelineNotes && (
+                    <p>No guidelines recorded.</p>
+                  )}
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
+            <Collapsible className="rounded-xl border text-sm">
+              <CollapsibleTrigger className="flex w-full items-center justify-between gap-2 px-4 py-3 text-left font-semibold [&[aria-expanded=true]>svg]:rotate-90">
                 Sample answer
-              </summary>
-              <p className="px-4 pb-4 whitespace-pre-wrap">
-                {row.sample_answer || "No sample answer recorded."}
-              </p>
-            </details>
+                <PortalIcon
+                  name="chevron-right"
+                  className="size-4 transition-transform"
+                />
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <p className="px-4 pb-4 whitespace-pre-wrap">
+                  {row.sample_answer || "No sample answer recorded."}
+                </p>
+              </CollapsibleContent>
+            </Collapsible>
             <label className="grid gap-2 text-sm font-medium">
               Admin note
               <Textarea

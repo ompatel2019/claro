@@ -42,7 +42,7 @@ beforeEach(() => {
   mocks.loadDashboard.mockResolvedValue(data);
 });
 afterEach(cleanup);
-it("keeps A1's dashboard KPIs and both daily charts with their SQL totals", async () => {
+it("keeps A1's dashboard KPIs and both daily charts with totals derived from the plotted range", async () => {
   mocks.loadDashboard.mockResolvedValue({
     ...data,
     active: { now: 12, prev: 9 },
@@ -57,23 +57,27 @@ it("keeps A1's dashboard KPIs and both daily charts with their SQL totals", asyn
   render(await dashboard());
   for (const [label, value] of [
     ["Active students, 7 days", "12"],
-    ["Sessions, 7 days", "27"],
+    ["Sessions, last 7 days", "3"],
     ["Open reviews", "4"],
     ["Spend this month", "$14.25 of $100"],
   ]) {
-    const card = within(screen.getByText(label).closest("dl")!);
+    const card = within(
+      screen
+        .getByText(label)
+        .closest<HTMLElement>('[data-component="StatCard"]')!,
+    );
     expect(card.getByText(value, { exact: true })).toBeInTheDocument();
   }
   expect(screen.getByText("+3")).toBeInTheDocument();
   expect(screen.getByText("vs 9 previous 7")).toBeInTheDocument();
   expect(screen.getByText("oldest 2 days")).toBeInTheDocument();
-  expect(screen.getByText("63 sessions")).toBeInTheDocument();
-  expect(screen.getByText("$19.75")).toBeInTheDocument();
+  expect(screen.getByText("3 sessions")).toBeInTheDocument();
+  expect(screen.getAllByText("$1.25")[0]).toBeInTheDocument();
   expect(
-    screen.getByRole("img", { name: "Sessions per day, last 30 days" }),
+    screen.getByRole("img", { name: "Sessions per day, 1 Sydney days" }),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("img", { name: "AI spend per day, last 30 days" }),
+    screen.getByRole("img", { name: "AI spend, last 7 days, 1 Sydney days" }),
   ).toBeInTheDocument();
   expect(screen.getAllByRole("status").map((s) => s.textContent)).toEqual([
     "3",
@@ -106,7 +110,7 @@ it("retains zero spend and both charts on an empty install", async () => {
   render(await dashboard());
   expect(screen.getByText("$0.00 of $100")).toBeInTheDocument();
   expect(screen.getByText("0 sessions")).toBeInTheDocument();
-  expect(screen.getAllByRole("img")).toHaveLength(2);
+  expect(screen.getAllByRole("img")).toHaveLength(3);
   expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
   expect(screen.getAllByRole("status").map((s) => s.textContent)).toEqual([
     "0",
@@ -196,7 +200,7 @@ it("promotes attention above charts and caps the recent mini-list at three", asy
   render(await dashboard());
   const attention = screen.getByRole("heading", { name: "Needs attention" });
   const chart = screen.getByRole("img", {
-    name: "Sessions per day, last 30 days",
+    name: "Sessions per day, 1 Sydney days",
   });
   expect(
     attention.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -208,4 +212,32 @@ it("promotes attention above charts and caps the recent mini-list at three", asy
     "/admin/students/student?tab=sessions&session=s0",
   );
   expect(screen.queryByRole("table")).toBeNull();
+});
+
+it("uses the same seven plotted Sydney days for the session KPI and chart total", async () => {
+  mocks.loadDashboard.mockResolvedValue({
+    ...data,
+    sessionsWeek: 999,
+    sessionsTotal: 999,
+    spendTotal: 999,
+    sessionsPerDay: Array.from({ length: 30 }, (_, i) => ({
+      day: `2026-09-${String(i + 1).padStart(2, "0")}`,
+      value: i < 23 ? 100 : 1,
+    })),
+    spendPerDay: Array.from({ length: 30 }, (_, i) => ({
+      day: `2026-09-${String(i + 1).padStart(2, "0")}`,
+      value: i < 23 ? 100 : 0.25,
+    })),
+  });
+  render(await dashboard());
+  const kpi = screen
+    .getByText("Sessions, last 7 days")
+    .closest<HTMLElement>('[data-component="StatCard"]')!;
+  expect(within(kpi).getByText("7", { exact: true })).toBeInTheDocument();
+  expect(screen.getByText("7 sessions")).toBeInTheDocument();
+  expect(screen.getByText("$1.75")).toBeInTheDocument();
+  const chart = screen.getByRole("img", {
+    name: "Sessions per day, 7 Sydney days",
+  });
+  expect(chart.querySelectorAll("circle")).toHaveLength(7);
 });

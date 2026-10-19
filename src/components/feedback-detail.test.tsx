@@ -73,7 +73,10 @@ it("keeps reply B and its status when undo A is rejected", async () => {
   await waitFor(() => expect(mocks.toast).toHaveBeenCalledTimes(1));
   const undoA = mocks.toast.mock.calls[0][1].action.onClick;
   fireEvent.change(reply, { target: { value: "Reply B" } });
-  fireEvent.change(status, { target: { value: "triaged" } });
+  fireEvent.click(status);
+  const triaged = await screen.findByRole("option", { name: "Triaged" });
+  fireEvent.pointerDown(triaged);
+  fireEvent.click(triaged);
   fireEvent.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(mocks.toast).toHaveBeenCalledTimes(2));
   await act(async () => undoA());
@@ -81,7 +84,7 @@ it("keeps reply B and its status when undo A is rejected", async () => {
     "Changed since — nothing was undone.",
   );
   expect(reply).toHaveValue("Reply B");
-  expect(status).toHaveValue("triaged");
+  expect(status).toHaveTextContent("Triaged");
   expect(mocks.undo).toHaveBeenCalledWith("A");
   expect(mocks.toast).toHaveBeenCalledTimes(2);
 });
@@ -109,6 +112,6 @@ it("uses the server's restored snapshot after successful undo", async () => {
   await waitFor(() =>
     expect(screen.getByLabelText("Reply to student")).toHaveValue("Reply A"),
   );
-  expect(screen.getByLabelText("Status")).toHaveValue("triaged");
+  expect(screen.getByLabelText("Status")).toHaveTextContent("Triaged");
   expect(mocks.toast).toHaveBeenLastCalledWith("Feedback change undone");
 });

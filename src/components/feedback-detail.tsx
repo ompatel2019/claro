@@ -1,4 +1,5 @@
 "use client";
+import { FormSelect } from "@/components/ui/form-select";
 import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -199,17 +200,17 @@ export function FeedbackDetail({
         <CardContent className="space-y-4">
           <label className="grid gap-1 text-sm font-medium">
             Status
-            <select
+            <FormSelect
               aria-label="Status"
-              className="field h-9"
               value={status}
-              onChange={(e) => setStatus(e.target.value as typeof status)}
               disabled={pending}
-            >
-              <option value="new">New</option>
-              <option value="triaged">Triaged</option>
-              <option value="resolved">Resolved</option>
-            </select>
+              onValueChange={(value) => setStatus(value as typeof status)}
+              options={[
+                { value: "new", label: "New" },
+                { value: "triaged", label: "Triaged" },
+                { value: "resolved", label: "Resolved" },
+              ]}
+            />
           </label>
           <label className="grid gap-1 text-sm font-medium">
             Reply to student

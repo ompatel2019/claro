@@ -43,7 +43,9 @@ const page = async (range?: string) =>
     </TooltipProvider>,
   );
 const verifiedCard = () =>
-  screen.getByText("Admin-verified accuracy").closest("dl")!;
+  screen
+    .getByText("Admin-verified accuracy")
+    .closest<HTMLElement>('[data-component="StatCard"]')!;
 
 it("shows the honest empty verified sample, independent of the eval empty state", async () => {
   await page();

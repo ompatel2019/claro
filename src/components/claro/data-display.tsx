@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { monotonePath } from "@/lib/chart-path";
 import { cn } from "@/lib/utils";
 import { PortalIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +55,7 @@ export function Sparkline({
   height?: number;
 }) {
   const max = Math.max(...values, 1);
-  const pts = values.map((v, i) => [
+  const pts = values.map((v, i): [number, number] => [
     3 + (i / Math.max(1, values.length - 1)) * (width - 6),
     height - 4 - (v / max) * (height - 8),
   ]);
@@ -70,7 +71,7 @@ export function Sparkline({
       className="shrink-0 overflow-visible"
     >
       <path
-        d={pts.map(([x, y], i) => `${i ? "L" : "M"}${x} ${y}`).join(" ")}
+        d={monotonePath(pts)}
         fill="none"
         stroke="var(--muted-foreground)"
         strokeOpacity=".45"
@@ -99,14 +100,16 @@ export function StatCard({
   unit,
   values,
   icon,
+  empty = false,
 }: {
-  title: string;
+  title: ReactNode;
   value: ReactNode;
-  description?: string;
+  description?: ReactNode;
   delta?: number;
   unit?: string;
   values?: number[];
   icon?: ReactNode;
+  empty?: boolean;
 }) {
   return (
     <Card data-component="StatCard" className="h-full gap-3">
@@ -120,10 +123,21 @@ export function StatCard({
       </CardHeader>
       <CardContent>
         <div className="flex items-end justify-between gap-3">
-          <p className="text-[30px] leading-none font-bold tracking-[-0.035em] tabular-nums">
+          <p
+            className={cn(
+              "text-[30px] leading-none font-bold tracking-[-0.035em] tabular-nums",
+              empty &&
+                "text-muted-foreground text-sm leading-6 font-normal tracking-normal",
+            )}
+          >
             {value}
           </p>
-          {values && <Sparkline values={values} label={`${title} trend`} />}
+          {!!values?.length && (
+            <Sparkline
+              values={values}
+              label={typeof title === "string" ? `${title} trend` : "Trend"}
+            />
+          )}
         </div>
         <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-1.5 text-xs">
           {delta !== undefined && <DeltaPill delta={delta} unit={unit} />}

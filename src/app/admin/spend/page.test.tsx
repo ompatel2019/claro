@@ -51,7 +51,9 @@ it("renders KPIs and mark-value bands, labelled budget markers, empty sections a
       "1 Oct 2026 to 9 Oct 2026 (Sydney, through now) · 0 calls",
     ),
   ).toBeInTheDocument();
-  expect(container.querySelectorAll('[data-slot="card"] > dl')).toHaveLength(9);
+  expect(
+    container.querySelectorAll('[data-component="StatCard"]'),
+  ).toHaveLength(9);
   expect(screen.getByText("$0.00 of $100")).toBeInTheDocument();
   expect(screen.getAllByText("No tracked costs")).toHaveLength(6);
   for (const text of [

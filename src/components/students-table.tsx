@@ -1,13 +1,21 @@
 "use client";
 import Link from "next/link";
-import { Close } from "@/components/icons";
+import { Close, PortalIcon } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/data-table";
 import type { Pager } from "@/lib/admin";
-import { dateLabel } from "@/lib/practice";
+import { dateLabel, plural } from "@/lib/practice";
 import type { StudentRow } from "@/lib/students";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+} from "@/components/ui/collapsible";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { TablePagination } from "@/components/table-pagination";
 
 // Sorting is server-side by column id (STUDENT_KEYS); `sort: true` marks the header.
 const columns: Column<StudentRow>[] = [
@@ -120,41 +128,49 @@ export function StudentsTable({
         ? (s: StudentRow) => (
             <>
               {c.cell(s)}
-              <details
+              <Collapsible
                 className="mt-1 text-xs 2xl:hidden"
                 onClick={(event) => event.stopPropagation()}
               >
-                <summary className="cursor-pointer">More details</summary>
-                <dl className="space-y-1 py-2">
-                  {columns
-                    .filter((column) => !["name", "last"].includes(column.id))
-                    .map((column) => (
-                      <div
-                        key={column.id}
-                        className={
-                          [
-                            "email",
-                            "year",
-                            "sessions7",
-                            "avg",
-                            "blocked",
-                          ].includes(column.id)
-                            ? "sm:hidden"
-                            : undefined
-                        }
-                      >
-                        <dt className="text-muted-foreground">
-                          {column.header}
-                        </dt>
-                        <dd className="wrap-anywhere">
-                          {column.id === "blocked" && !s.blocked
-                            ? "No"
-                            : column.cell(s)}
-                        </dd>
-                      </div>
-                    ))}
-                </dl>
-              </details>
+                <CollapsibleTrigger className="text-muted-foreground hover:text-foreground flex items-center gap-1 py-1 [&[aria-expanded=true]>svg]:rotate-90">
+                  <PortalIcon
+                    name="chevron-right"
+                    className="size-3 transition-transform"
+                  />
+                  More details
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <dl className="space-y-1 py-2">
+                    {columns
+                      .filter((column) => !["name", "last"].includes(column.id))
+                      .map((column) => (
+                        <div
+                          key={column.id}
+                          className={
+                            [
+                              "email",
+                              "year",
+                              "sessions7",
+                              "avg",
+                              "blocked",
+                            ].includes(column.id)
+                              ? "sm:hidden"
+                              : undefined
+                          }
+                        >
+                          <dt className="text-muted-foreground">
+                            {column.header}
+                          </dt>
+                          <dd className="wrap-anywhere">
+                            {column.id === "blocked" && !s.blocked
+                              ? "No"
+                              : column.cell(s)}
+                          </dd>
+                        </div>
+                      ))}
+                  </dl>
+                </CollapsibleContent>
+              </Collapsible>
             </>
           )
         : c.cell,
@@ -182,13 +198,83 @@ export function StudentsTable({
     ),
   }));
   return (
-    <DataTable
-      label="Students"
-      columns={responsive}
-      rows={students}
-      pager={pager}
-      selectable
-      onRow={(s) => router.push(`/admin/students/${s.id}`)}
-    />
+    <>
+      <div className="space-y-3 md:hidden">
+        <ul
+          aria-label="Students"
+          className="bg-card divide-y overflow-hidden rounded-2xl border"
+        >
+          {students.map((student) => (
+            <li key={student.id}>
+              <Link
+                href={`/admin/students/${student.id}`}
+                className="hover:bg-accent flex items-center gap-3 px-4 py-4"
+              >
+                <Avatar className="size-10 shrink-0">
+                  <AvatarFallback className="bg-brand-soft text-brand-text text-sm font-semibold">
+                    {(student.full_name || "Unnamed")
+                      .trim()
+                      .split(/\s+/)
+                      .slice(0, 2)
+                      .map((word) => word[0])
+                      .join("")
+                      .toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold">
+                    {student.full_name || "Unnamed"}
+                  </span>
+                  <span className="text-muted-foreground mt-1 block text-xs">
+                    {student.year_level
+                      ? `Year ${student.year_level}`
+                      : "Year not set"}{" "}
+                    ·{" "}
+                    {student.last_active
+                      ? `Active ${dateLabel(student.last_active)}`
+                      : "Never active"}
+                  </span>
+                  <Badge
+                    className="mt-2"
+                    variant={
+                      student.blocked
+                        ? "destructive"
+                        : student.open_disputes
+                          ? "warning"
+                          : student.sessions_7d
+                            ? "success"
+                            : "muted"
+                    }
+                  >
+                    {student.blocked
+                      ? "Blocked"
+                      : student.open_disputes
+                        ? plural(student.open_disputes, "open dispute")
+                        : student.sessions_7d
+                          ? "Active"
+                          : "Inactive"}
+                  </Badge>
+                </span>
+                <PortalIcon
+                  name="chevron-right"
+                  className="text-muted-foreground size-4 shrink-0"
+                />
+              </Link>
+            </li>
+          ))}
+        </ul>
+        <TablePagination pager={pager} label="Students" />
+      </div>
+      <div className="hidden md:block">
+        <DataTable
+          label="Students"
+          columns={responsive}
+          rows={students}
+          pager={pager}
+          selectable
+          onRow={(s) => router.push(`/admin/students/${s.id}`)}
+        />
+      </div>
+    </>
   );
 }

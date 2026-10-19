@@ -169,7 +169,10 @@ test.describe("Admin feedback inbox", () => {
     const reply = `${tag} Thanks, fixed in the next release.`;
     await expect(async () => {
       await sheet.getByLabel("Reply to student", { exact: true }).fill(reply);
-      await sheet.getByLabel("Status", { exact: true }).selectOption("triaged");
+      await sheet
+        .getByRole("combobox", { name: "Status", exact: true })
+        .click();
+      await page.getByRole("option", { name: "Triaged", exact: true }).click();
       await sheet.getByRole("button", { name: "Save", exact: true }).click();
       const { data, error } = await adminClient()!
         .from("feedback")

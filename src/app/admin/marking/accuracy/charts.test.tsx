@@ -28,7 +28,7 @@ it("agreement chart names every week in the image label and an sr-only table", (
   expect(document.querySelectorAll("circle")).toHaveLength(2);
   expect(
     document.querySelector('path[class~="stroke-chart-1"]')!.getAttribute("d"),
-  ).toMatch(/^M[\d.]+,[\d.]+ L[\d.]+,[\d.]+ $/);
+  ).toMatch(/^M[\d.]+,[\d.]+C/);
   fireEvent.click(screen.getByRole("button", { name: "Show as table" }));
   const table = screen.getByRole("table", { name: "Agreement per week" });
   const rows = within(table)

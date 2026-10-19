@@ -358,6 +358,7 @@ export default async function StudentDetail({
         }))}
       />
       <FilterBar
+        customSelect
         values={sp}
         hidden={{ tab, date: date ?? undefined }}
         primary={tab === "sessions" ? "kind" : undefined}

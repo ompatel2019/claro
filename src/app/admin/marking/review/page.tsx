@@ -73,6 +73,7 @@ export default async function ReviewQueue({
         }))}
       />
       <FilterBar
+        customSelect
         hidden={{ tab }}
         primary="reason"
         filters={[

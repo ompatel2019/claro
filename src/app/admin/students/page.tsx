@@ -71,6 +71,7 @@ export default async function StudentsPage({
       ) : (
         <>
           <FilterBar
+            customSelect
             values={f}
             hidden={{ sort: pager.sort.id, dir: pager.sort.dir }}
             primary="year"
