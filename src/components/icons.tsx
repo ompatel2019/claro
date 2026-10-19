@@ -234,3 +234,96 @@ export const Flame = icon(
   "flame",
   <path d="M13 2.5c1 4-3 5-3 8 0 1.5 1 2.5 2 3 0-2 1-3 2-4 2 2 4.5 4.5 4.5 7A6.5 6.5 0 0 1 5.5 16c0-4 3-6 3-9 1 1 1.5 2 1.5 3 0-3 3-4 3-7.5Z" />,
 );
+
+// Template glyph vocabulary, redrawn in Claro’s 24px stroke style.
+const portalPaths = {
+  activity: "M3 12h4l3-8 4 16 3-8h4",
+  "arrow-down-right": "M5 5l14 14M9 19h10V9",
+  "arrow-left": "M20 12H4m6-6-6 6 6 6",
+  "arrow-right": "M4 12h16m-6-6 6 6-6 6",
+  "arrow-up": "M12 20V4m-6 6 6-6 6 6",
+  "arrow-up-right": "M5 19 19 5M9 5h10v10",
+  badge: "m12 3 3 2 4 1 1 4-1 4-3 2-4 3-3-2-4-1-1-4 1-4 3-2Z",
+  "book-open":
+    "M12 5v16M3 4c4-1 6-1 9 1 3-2 5-2 9-1v15c-4-1-6-1-9 2-3-3-5-3-9-2Z",
+  calculator: "M5 3h14v18H5ZM8 7h8M8 12h1m6 0h1m-8 5h1m6 0h1",
+  camera: "M3 7h4l2-3h6l2 3h4v13H3ZM16 13a4 4 0 1 0-8 0 4 4 0 0 0 8 0",
+  "chart-line": "M3 3v18h18M6 15l5-6 4 3 6-7",
+  check: "m5 12 4 4L19 6",
+  "chevron-down": "m6 9 6 6 6-6",
+  "chevron-left": "m15 5-7 7 7 7",
+  "chevron-right": "m9 5 7 7-7 7",
+  "chevrons-up-down": "m8 8 4-4 4 4m-8 8 4 4 4-4",
+  circle: "M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0",
+  "circle-alert": "M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0M12 7v6m0 4h.01",
+  "circle-check": "M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0m-14 0 3 3 7-7",
+  "circle-dashed":
+    "M12 3h1m5 2 1 1m2 5v2m-2 5-1 1m-5 2h-2m-5-2-1-1m-2-5v-2m2-5 1-1",
+  "circle-dot":
+    "M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0m-7 0a2 2 0 1 0-4 0 2 2 0 0 0 4 0",
+  clock: "M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0M12 7v5l3 2",
+  copy: "M8 8h13v13H8ZM16 4V3H3v13h1",
+  "corner-down-left": "M20 4v9H4m5-5-5 5 5 5",
+  ellipsis: "M5 12h.01M12 12h.01M19 12h.01",
+  flag: "M5 21V3h14l-3 5 3 5H5",
+  flame:
+    "M13 3c1 5-4 5-3 10 2-1 3-3 3-5 4 3 6 6 5 10-2 6-12 5-13-1-1-4 3-7 3-10 2 1 2 3 2 4 0-4 2-5 3-8Z",
+  ghost: "M4 21V10a8 8 0 0 1 16 0v11l-4-3-4 3-4-3ZM9 10h.01M15 10h.01",
+  "graduation-cap": "m2 9 10-5 10 5-10 5Zm4 3v5q6 5 12 0v-5m4-3v8",
+  grid: "M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z",
+  history: "M3 4v5h5M3 9a9 9 0 1 1 0 5M12 7v5l4 2",
+  home: "m3 11 9-8 9 8M5 10v11h5v-7h4v7h5V10",
+  hourglass: "M6 3h12M6 21h12M7 3v4l10 10v4M17 3v4L7 17v4",
+  keyboard:
+    "M2 5h20v14H2ZM5 9h1m3 0h1m3 0h1m3 0h1M5 12h1m3 0h1m3 0h1m3 0h1M7 16h10",
+  layers: "m3 7 9-5 9 5-9 5Zm0 5 9 5 9-5M3 17l9 5 9-5",
+  "layout-grid": "M3 3h7v7H3ZM14 3h7v7h-7ZM3 14h7v7H3ZM14 14h7v7h-7Z",
+  link: "m9 15 6-6M8 16l-1 1a3 3 0 0 1-4-4l5-5a3 3 0 0 1 4 0m0 8a3 3 0 0 0 4 0l5-5a3 3 0 0 0-4-4l-1 1",
+  list: "M3 5h.01M3 12h.01M3 19h.01M8 5h13M8 12h13M8 19h13",
+  "list-checks": "m3 6 2 2 4-4m-6 13 2 2 4-4M13 6h8M13 12h8M13 18h8",
+  lock: "M4 10h16v11H4ZM8 10V6a4 4 0 0 1 8 0v4",
+  "log-out": "M10 3H4v18h6M9 12h12m-5-5 5 5-5 5",
+  menu: "M4 5h16M4 12h16M4 19h16",
+  "message-circle": "M5 18 3 21l5-1a9 9 0 1 0-3-2Z",
+  mic: "M9 4a3 3 0 0 1 6 0v8a3 3 0 0 1-6 0ZM5 11v1a7 7 0 0 0 14 0v-1M12 19v3",
+  minus: "M5 12h14",
+  moon: "M20 15A9 9 0 0 1 9 4a9 9 0 1 0 11 11Z",
+  "panel-left": "M3 4h18v16H3ZM9 4v16",
+  "pen-line": "m4 16 12-12a3 3 0 0 1 4 4L8 20l-5 1Zm10-10 4 4M13 21h8",
+  play: "m6 3 15 9-15 9Z",
+  plus: "M5 12h14M12 5v14",
+  "refresh-cw":
+    "M3 10a9 9 0 0 1 15-5l3 3m0-5v5h-5M21 14a9 9 0 0 1-15 5l-3-3m0 5v-5h5",
+  "rotate-ccw": "M3 3v5h5M3 8a9 9 0 1 1 0 7",
+  search: "M17 10a7 7 0 1 0-14 0 7 7 0 0 0 14 0m-2 5 6 6",
+  sparkles: "m12 3 2 7 7 2-7 2-2 7-2-7-7-2 7-2ZM20 2v4m-2-2h4",
+  sun: "M16 12a4 4 0 1 0-8 0 4 4 0 0 0 8 0M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1 1m12 12 1 1M5 19l1-1M18 6l1-1",
+  "swatch-book":
+    "M3 3h7v14a4 4 0 0 1-8 0V3Zm7 5 4-4 6 6-11 11m5-8h7v8H7M6 17h.01",
+  table: "M3 3h18v18H3ZM3 9h18M3 15h18M12 3v18",
+  "table-2": "M3 3h18v18H3ZM3 9h18M9 3v18",
+  target:
+    "M22 12a10 10 0 1 0-20 0 10 10 0 0 0 20 0m-4 0a6 6 0 1 0-12 0 6 6 0 0 0 12 0m-4 0a2 2 0 1 0-4 0 2 2 0 0 0 4 0",
+  timer: "M9 2h6M12 6a8 8 0 1 0 0 16 8 8 0 0 0 0-16m0 8 3-3",
+  "trending-up": "m3 17 6-6 5 4 7-9m-6 0h6v6",
+  type: "M3 7V3h18v4M12 3v18M8 21h8",
+  user: "M16 7a4 4 0 1 0-8 0 4 4 0 0 0 8 0M4 21v-2a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v2",
+  volume: "M3 8h4l5-5v18l-5-5H3ZM16 8a6 6 0 0 1 0 8m3-11a10 10 0 0 1 0 14",
+  x: "m6 6 12 12M6 18 18 6",
+  zap: "m13 2-9 12h7l-1 8 10-12h-7Z",
+} as const;
+
+const portalGlyphs = Object.fromEntries(
+  Object.entries(portalPaths).map(([name, path]) => [
+    name,
+    icon(name, <path d={path} />),
+  ]),
+);
+
+export function PortalIcon({
+  name = "sparkles",
+  ...props
+}: IconProps & { name?: keyof typeof portalPaths }) {
+  const Glyph = portalGlyphs[name];
+  return <Glyph {...props} />;
+}

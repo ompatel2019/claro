@@ -225,7 +225,7 @@ export function ActivityHeatmap({
                       onBlur={() => setTip(null)}
                       onMouseEnter={() => setTip(day)}
                       aria-current={home && day === today ? "date" : undefined}
-                      className="focus-visible:outline-ink aria-[current=date]:ring-ink aria-[current=date]:ring-offset-card size-[11px] rounded-[2px] focus-visible:outline-2 aria-[current=date]:ring-1 aria-[current=date]:ring-offset-1"
+                      className="focus-visible:outline-ink aria-[current=date]:ring-ink aria-[current=date]:ring-offset-card size-[11px] rounded-[3px] focus-visible:outline-2 aria-[current=date]:ring-1 aria-[current=date]:ring-offset-1"
                       style={{ background: SHADES[shade(count)] }}
                     />
                   );
@@ -279,14 +279,14 @@ export function ActivityHeatmap({
             {SHADES.map((c) => (
               <span
                 key={c}
-                className="size-[11px] rounded-[2px]"
+                className="size-[11px] rounded-[3px]"
                 style={{ background: c }}
               />
             ))}
             More
             {home && (
               <span className="ml-3 flex items-center gap-1">
-                <span className="ring-ink ring-offset-card size-[11px] rounded-[2px] ring-1 ring-offset-1" />
+                <span className="ring-ink ring-offset-card size-[11px] rounded-[3px] ring-1 ring-offset-1" />
                 Today
               </span>
             )}

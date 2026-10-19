@@ -26,22 +26,22 @@ test.describe("App shell", () => {
       "aria-current",
       "page",
     );
-    await expect.poll(() => sidebarWidth(page)).toBe(260);
+    await expect.poll(() => sidebarWidth(page)).toBe(248);
     await expect(async () => {
-      if ((await sidebarWidth(page)) !== 64)
+      if ((await sidebarWidth(page)) !== 72)
         await page.getByRole("button", { name: "Toggle Sidebar" }).click();
-      await expect.poll(() => sidebarWidth(page), { timeout: 1500 }).toBe(64);
+      await expect.poll(() => sidebarWidth(page), { timeout: 1500 }).toBe(72);
     }).toPass({ timeout: 15000 });
     await nav.getByRole("link", { name: "Flashcards" }).hover();
     await expect(
       page.locator('[data-slot="tooltip-content"]', { hasText: "Flashcards" }),
     ).toBeVisible();
     await page.reload();
-    await expect.poll(() => sidebarWidth(page)).toBe(64);
+    await expect.poll(() => sidebarWidth(page)).toBe(72);
     await expect(async () => {
-      if ((await sidebarWidth(page)) !== 260)
+      if ((await sidebarWidth(page)) !== 248)
         await page.locator("body").press("ControlOrMeta+b");
-      await expect.poll(() => sidebarWidth(page), { timeout: 1500 }).toBe(260);
+      await expect.poll(() => sidebarWidth(page), { timeout: 1500 }).toBe(248);
     }).toPass({ timeout: 15000 });
     await nav.getByRole("link", { name: "Activity" }).click();
     await expect(page).toHaveURL(/\/student\/activity$/);

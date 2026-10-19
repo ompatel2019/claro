@@ -51,7 +51,7 @@ function ScorePlot({
         cx={x(p)}
         cy={y(p.pct)}
         r={4}
-        className="fill-primary group-focus-visible:stroke-ink stroke-card"
+        className={`${p.id === current?.id ? "fill-chart-2" : "fill-chart-1"} group-focus-visible:stroke-ink stroke-card`}
         strokeWidth={2}
       />
     </>
@@ -78,8 +78,8 @@ function ScorePlot({
         <title id={`${id}-title`}>{title}</title>
         <desc
           id={`${id}-desc`}
-        >{`Percentage axis: 0%, 50%, 100%. Date axis: ${from} to ${to}.`}</desc>
-        {[0, 50, 100].map((g) => (
+        >{`Percentage axis: 0%, 25%, 50%, 75%, 100%. Date axis: ${from} to ${to}.`}</desc>
+        {[0, 25, 50, 75, 100].map((g) => (
           <g key={g}>
             <text
               x={LEFT - 8}
@@ -87,7 +87,7 @@ function ScorePlot({
               textAnchor="end"
               dominantBaseline="middle"
               fontSize={20}
-              className="fill-muted-foreground"
+              className="fill-chart-axis"
             >
               {g}%
             </text>
@@ -96,16 +96,11 @@ function ScorePlot({
               x2={W - PAD}
               y1={y(g)}
               y2={y(g)}
-              className="stroke-border"
+              className="stroke-chart-grid"
             />
           </g>
         ))}
-        <text
-          x={LEFT}
-          y={H - 4}
-          fontSize={20}
-          className="fill-muted-foreground"
-        >
+        <text x={LEFT} y={H - 4} fontSize={20} className="fill-chart-axis">
           {dateLabel(points[0]?.day ?? from)}
         </text>
         <text
@@ -113,14 +108,26 @@ function ScorePlot({
           y={H - 4}
           textAnchor="end"
           fontSize={20}
-          className="fill-muted-foreground"
+          className="fill-chart-axis"
         >
           {dateLabel(points.at(-1)?.day ?? to)}
         </text>
+        <defs>
+          <linearGradient id={`${id}-wash`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--chart-1)" stopOpacity=".12" />
+            <stop offset="100%" stopColor="var(--chart-1)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {points.length > 1 && (
+          <path
+            d={`${line(points)}L${x(points.at(-1)!)},${BOTTOM}L${x(points[0])},${BOTTOM}Z`}
+            fill={`url(#${id}-wash)`}
+          />
+        )}
         <path
           d={line(points)}
           fill="none"
-          className="stroke-primary"
+          className="stroke-chart-1"
           strokeWidth={2}
         />
         {points.map((p) =>

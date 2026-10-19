@@ -42,14 +42,17 @@ describe("theme preference and pre-paint script", () => {
 
 // Verify the actual theme tokens, including small status text and chart labels.
 
-const css = readFileSync("src/app/globals.css", "utf8");
+const css = readFileSync("src/app/globals.css", "utf8").replace(
+  /:root,\s*\.dark/g,
+  ":root, .dark",
+);
 const tokens = (selector: string) =>
   Object.fromEntries(
     [
       ...css
         .split(`${selector} {`)[1]
         .split("}")[0]
-        .matchAll(/--([\w-]+): (#[\da-f]{6});/g),
+        .matchAll(/--([\w-]+): ([^;]+);/g),
     ].map((match) => [match[1], match[2]]),
   );
 function luminance(hex: string) {
@@ -60,21 +63,51 @@ function luminance(hex: string) {
 }
 for (const selector of [":root", ".dark"]) {
   it(`${selector} text tokens meet WCAG AA contrast`, () => {
-    const theme = { ...tokens(":root"), ...tokens(selector) };
+    const theme = {
+      ...tokens(":root"),
+      ...tokens(selector),
+      ...tokens(":root, .dark"),
+    };
+    function colour(name: string): string {
+      const value = theme[name];
+      const alias = value.match(/^var\(--([\w-]+)\)$/);
+      if (alias) return colour(alias[1]);
+      const mix = value.match(
+        /^color-mix\(in srgb, var\(--([\w-]+)\) (\d+)%.*, var\(--([\w-]+)\)\)$/,
+      );
+      if (!mix) return value;
+      const a = colour(mix[1]),
+        b = colour(mix[3]),
+        weight = Number(mix[2]) / 100;
+      return (
+        "#" +
+        [1, 3, 5]
+          .map((i) =>
+            Math.round(
+              parseInt(a.slice(i, i + 2), 16) * weight +
+                parseInt(b.slice(i, i + 2), 16) * (1 - weight),
+            )
+              .toString(16)
+              .padStart(2, "0"),
+          )
+          .join("")
+      );
+    }
     for (const [ink, background] of [
       ["foreground", "background"],
       ["foreground", "card"],
       ["muted-foreground", "background"],
       ["muted-foreground", "card"],
       ["destructive", "destructive-soft"],
-      ["success", "success-soft"],
-      ["warning", "warning-soft"],
+      ["success-text", "success-soft"],
+      ["warning-text", "warning-soft"],
       ["foreground", "surface"],
+      ["brand-text", "brand-soft"],
       ["sidebar-foreground", "sidebar"],
       ...(selector === ".dark" ? [["primary-foreground", "primary"]] : []),
     ]) {
-      const a = luminance(theme[ink]),
-        b = luminance(theme[background]);
+      const a = luminance(colour(ink)),
+        b = luminance(colour(background));
       expect(
         (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05),
         `${ink} on ${background}`,

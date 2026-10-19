@@ -1,4 +1,7 @@
 "use client";
+import { AskClaro } from "@/components/claro/ask-claro";
+import { CommandPalette } from "@/components/claro/command-palette";
+import { SubjectSwitcher, TopBar } from "@/components/claro/layout";
 import { ThemeToggle, setTheme } from "./theme-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -143,8 +146,11 @@ export function AppShell({
   const active = activeItem(kind, path);
   const signOutForm = useRef<HTMLFormElement>(null);
   const home = nav[kind][0].items[0].href;
-  const pageLabel =
-    active?.label ?? (path.startsWith("/student/profile") ? "Profile" : "");
+  const commands = [
+    ...nav.student.flatMap((g) => g.items),
+    { label: "Profile", href: "/student/profile", icon: User },
+    ...(kind === "admin" ? nav.admin.flatMap((g) => g.items) : []),
+  ];
   return (
     <SidebarProvider defaultOpen={defaultOpen}>
       <a
@@ -154,7 +160,7 @@ export function AppShell({
         Skip to content
       </a>
       <Sidebar collapsible="icon">
-        <SidebarHeader className="border-sidebar-border h-16 justify-center border-b px-5 group-data-[collapsible=icon]:px-0">
+        <SidebarHeader className="h-16 justify-center px-5 group-data-[collapsible=icon]:px-0">
           <Link
             href={home}
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
@@ -163,6 +169,7 @@ export function AppShell({
             <Logo collapsible />
           </Link>
         </SidebarHeader>
+        {kind === "student" && <SubjectSwitcher />}
         <SidebarContent className="py-2">
           <nav
             aria-label={
@@ -178,12 +185,6 @@ export function AppShell({
                     const badge = badges[item.href];
                     return (
                       <SidebarMenuItem key={item.href}>
-                        {isActive && (
-                          <span
-                            aria-hidden
-                            className="bg-sidebar-primary absolute top-2 -left-3 h-6 w-[3px] rounded-full group-data-[collapsible=icon]:hidden"
-                          />
-                        )}
                         <SidebarMenuButton
                           isActive={isActive}
                           tooltip={item.label}
@@ -237,7 +238,7 @@ export function AppShell({
                 render={<Link href="/student/profile" aria-label="Profile" />}
               >
                 <Avatar>
-                  <AvatarFallback className="bg-accent text-ink font-semibold">
+                  <AvatarFallback className="bg-brand-soft text-brand-text font-semibold">
                     {initials(name)}
                   </AvatarFallback>
                 </Avatar>
@@ -255,7 +256,7 @@ export function AppShell({
         </SidebarFooter>
       </Sidebar>
       <SidebarInset className="min-w-0">
-        <header className="bg-card sticky top-0 z-10 flex h-16 items-center gap-3 border-b px-4 md:px-6">
+        <TopBar>
           <SidebarTrigger className="-ml-1" />
           <Link
             href={home}
@@ -264,7 +265,7 @@ export function AppShell({
           >
             <Logo height={22} />
           </Link>
-          <p className="min-w-0 truncate text-sm font-semibold">{pageLabel}</p>
+          <CommandPalette routes={commands} />
           <div className="ml-auto flex shrink-0 items-center gap-1">
             {kind === "student" && <HeaderFeedback />}
             <ThemeToggle />
@@ -275,7 +276,7 @@ export function AppShell({
                 aria-label="Account menu"
               >
                 <Avatar className="size-9">
-                  <AvatarFallback className="bg-accent text-ink font-semibold">
+                  <AvatarFallback className="bg-brand-soft text-brand-text font-semibold">
                     {initials(name)}
                   </AvatarFallback>
                 </Avatar>
@@ -297,14 +298,15 @@ export function AppShell({
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
-        </header>
+        </TopBar>
         <div
           id="main"
-          className="mx-auto w-full max-w-[1280px] min-w-0 flex-1 px-4 py-6 md:px-6"
+          className="mx-auto w-full max-w-[1464px] min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8"
         >
           {children}
         </div>
       </SidebarInset>
+      <AskClaro />
     </SidebarProvider>
   );
 }
