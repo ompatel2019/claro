@@ -1,3 +1,4 @@
+import { PRACTICE_TARGET } from "@/lib/progress";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { ReactNode, ComponentProps } from "react";
@@ -379,7 +380,9 @@ export async function HomeAverage({
             <p className="text-muted-foreground ml-auto flex items-center gap-2 pb-1 text-[13px]">
               <span className="border-muted-foreground inline-block w-5 border-t-[1.5px] border-dashed" />
               Your target{" "}
-              <span className="text-foreground font-semibold">80%</span>
+              <span className="text-foreground font-semibold">
+                {PRACTICE_TARGET}%
+              </span>
             </p>
           </div>
           <div className="mt-1">

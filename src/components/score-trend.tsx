@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
+import { PRACTICE_TARGET } from "@/lib/progress";
 import { dateLabel } from "@/lib/practice";
 export type ScorePoint = {
   id: string;
@@ -225,8 +226,10 @@ export function SessionScoreTrend({
 /** Home/Progress weekly marked-session means, with a fixed 80% target. */
 export function WeeklyAverageTrend({
   points,
+  height = 196,
 }: {
   points: { day: string; pct: number }[];
+  height?: number;
 }) {
   const id = useId();
   const ref = useRef<SVGSVGElement>(null);
@@ -239,11 +242,11 @@ export function WeeklyAverageTrend({
     observer.observe(ref.current);
     return () => observer.disconnect();
   }, []);
-  const h = 196,
+  const h = height,
     left = 34,
     right = width - 40,
     top = 9,
-    bottom = 169;
+    bottom = h - 27;
   const x = (i: number) =>
     left + (i / Math.max(1, points.length - 1)) * (right - left);
   const y = (pct: number) => bottom - (pct / 100) * (bottom - top);
@@ -261,9 +264,10 @@ export function WeeklyAverageTrend({
     <svg
       ref={ref}
       viewBox={`0 0 ${width} ${h}`}
-      className="block h-[196px] w-full overflow-visible"
+      className="block w-full overflow-visible"
+      style={{ height }}
       role="img"
-      aria-label="Weekly practice average with 80% target"
+      aria-label={`Weekly practice average with ${PRACTICE_TARGET}% target`}
     >
       <defs>
         <linearGradient id={`${id}-weekly`} x1="0" y1="0" x2="0" y2="1">
@@ -294,18 +298,18 @@ export function WeeklyAverageTrend({
       <line
         x1={left}
         x2={right}
-        y1={y(80)}
-        y2={y(80)}
+        y1={y(PRACTICE_TARGET)}
+        y2={y(PRACTICE_TARGET)}
         stroke="var(--muted-foreground)"
         strokeDasharray="4 4"
       />
       <text
         x={right + 8}
-        y={y(80) + 4}
+        y={y(PRACTICE_TARGET) + 4}
         fontSize={10}
         fill="var(--muted-foreground)"
       >
-        80%
+        {PRACTICE_TARGET}%
       </text>
       {last && (
         <>
@@ -338,6 +342,7 @@ export function WeeklyAverageTrend({
           (_, i) =>
             i === 0 ||
             i === points.length - 1 ||
+            (width <= 450 && i === Math.floor((points.length - 1) / 2)) ||
             (width > 450 &&
               i % Math.max(1, Math.ceil(points.length / 6)) === 0),
         )
@@ -345,7 +350,7 @@ export function WeeklyAverageTrend({
           <text
             key={p.day}
             x={x(points.indexOf(p))}
-            y={190}
+            y={h - 6}
             textAnchor="middle"
             fontSize={10}
             fill="var(--muted-foreground)"
