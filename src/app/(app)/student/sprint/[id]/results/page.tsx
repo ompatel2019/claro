@@ -152,7 +152,7 @@ export default async function Results({
       <Link
         href="/student/activity"
         aria-label="Back to activity"
-        className="text-muted-foreground inline-flex items-center gap-1.5 text-[13px]"
+        className="text-muted-foreground flex w-fit items-center gap-1.5 text-[13px]"
       >
         <PortalIcon name="arrow-left" className="size-3.5" />
         Activity
@@ -175,6 +175,7 @@ export default async function Results({
                   href={sprintHref(s.config, { history: "mistakes" })}
                   className={buttonVariants()}
                 >
+                  <PortalIcon name="target" className="size-4" />
                   Practise mistakes ({mistakes})
                 </Link>
               )}
@@ -183,7 +184,7 @@ export default async function Results({
         />
       </div>
       <MarkingProgress {...progress} />
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">
         <ResultStat
           label={
             <span className="flex items-center gap-2">

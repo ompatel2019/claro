@@ -16,6 +16,7 @@ import {
 import { createSprintMarkQueue } from "@/lib/sprint-mark-queue";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
+import { Kbd } from "./claro/layout";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -33,7 +34,7 @@ import { WrittenAnswer } from "./written-answer";
 import { AnnotatedFeedback } from "./annotated-feedback";
 import { inlineSprintFeedback } from "@/lib/feedback";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
-import { markTone, TYPE_LABEL } from "@/lib/results";
+import { TYPE_LABEL } from "@/lib/results";
 
 import { SprintFocusShell } from "./student/sprint/focus-shell";
 import { BookletFilter, BookletLegend } from "./booklet-controls";
@@ -513,15 +514,13 @@ export function SprintRunner({
                         ? "bg-ink border-ink text-surface"
                         : "bg-card",
                       index === i && "ring-brand ring-2 ring-offset-2",
-                      row.status === "marked" &&
-                        markTone(row.mark, row.max_marks),
                     )}
                   >
                     {i + 1}
                     {row.flagged && (
-                      <Flag
+                      <span
                         aria-hidden
-                        className="text-brand fill-brand absolute -top-1 -right-1 size-3.5"
+                        className="bg-brand absolute -top-0.5 -right-0.5 size-2 rounded-full"
                       />
                     )}
                   </button>
@@ -721,9 +720,18 @@ export function SprintRunner({
               <Flag className={cn(a.flagged && "fill-brand text-brand")} />
               Flag for review
             </Button>
-            <p className="text-muted-foreground ml-auto hidden text-xs sm:block">
-              {a.question.type === "mcq" && "A – D to answer · "}← → to move · F
-              to flag
+            <p className="text-muted-foreground ml-auto hidden items-center gap-1.5 text-xs sm:flex">
+              {a.question.type === "mcq" ? (
+                <>
+                  <Kbd>A</Kbd>–<Kbd>D</Kbd> to answer · <Kbd>←</Kbd>
+                  <Kbd>→</Kbd> to move · <Kbd>F</Kbd> to flag
+                </>
+              ) : (
+                <>
+                  <Kbd>Ctrl</Kbd>
+                  <Kbd>↵</Kbd> next question
+                </>
+              )}
             </p>
           </div>
         </article>

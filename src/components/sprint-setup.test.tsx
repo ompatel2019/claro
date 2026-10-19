@@ -68,7 +68,8 @@ it("keeps the live summary after the builder with warnings and controls", async 
   );
   expect(form).toContainElement(screen.getByRole("alert"));
   expect(form).toHaveTextContent("30 marks · 45 min");
-  expect(form).toHaveTextContent("4 questions match · 4 new");
+  expect(form).toHaveTextContent("4 questions match");
+  expect(form).toHaveTextContent("4 new to you");
   expect(form).toContainElement(screen.getByRole("button", { name: "Reset" }));
   expect(start()).toBeEnabled();
 });
@@ -384,4 +385,35 @@ it("summarises a whole topic alongside the other topic's selected subtopic", () 
     within(summary).getByText("Dot point A", { exact: true }),
   ).toBeVisible();
   expect(within(summary).getByText("Topic 2", { exact: true })).toBeVisible();
+});
+
+it("clears a unit's UUID dot points when its checkbox is deselected", async () => {
+  const unit = "ec97138a-01a1-4eae-8ced-45959c9d2e5b";
+  const dot = "35d131d5-a6d3-4878-80ed-889551a93b4d";
+  mocks.rpc.mockResolvedValue({
+    data: { ...pool, subtopics: { [dot]: 7 } },
+    error: null,
+  });
+  rtlRender(
+    <SprintSetup
+      topics={[
+        { id: unit, name: "Unit", parent_id: null, sort: 1 },
+        { id: dot, name: "Dot point", parent_id: unit, sort: 1 },
+      ]}
+      params={{}}
+    />,
+  );
+  fireEvent.click(await screen.findByRole("button", { name: "Dot point 7" }));
+  const group = screen.getByRole("button", { name: /^Unit/ });
+  expect(group).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(group);
+  const config = JSON.parse(
+    (document.querySelector('input[name="config"]') as HTMLInputElement).value,
+  );
+  expect(config.topics).toEqual([]);
+  expect(config.subtopics).toEqual([]);
+  expect(screen.getByRole("button", { name: "Dot point 7" })).toHaveAttribute(
+    "aria-pressed",
+    "false",
+  );
 });
