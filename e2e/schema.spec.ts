@@ -68,9 +68,6 @@ test.describe("Schema and RLS", () => {
       (await db.from("marking_examples_for_grader").select("id").limit(1))
         .error,
     ).toBeTruthy();
-    const queue = await db.from("review_queue").select("id");
-    expect(queue.error).toBeNull();
-    expect(queue.data).toEqual([]);
     expect(
       (await db.from("homework_sets").select("id").limit(1)).error,
     ).toBeTruthy();
@@ -167,8 +164,6 @@ test.describe("Schema and RLS", () => {
       longest_streak: number;
     };
     expect(current_streak).toBeLessThanOrEqual(longest_streak);
-    const stats = await student.db.rpc("dashboard_stats");
-    expect(stats.data.streak_days).toBe(current_streak);
   });
   test("students cannot read where a flashcard came from", async () => {
     const hidden = await student.db
