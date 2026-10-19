@@ -1,3 +1,4 @@
+import { SingleResult } from "@/components/student/mark/single-result";
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { z } from "zod";
@@ -144,6 +145,23 @@ export default async function Page({
   );
   const single = rows.length === 1 && rows[0].type !== "mcq" ? rows[0] : null;
   const pending = rows.some((r) => markingState(r) === "marking");
+  if (
+    single &&
+    single.mark !== null &&
+    Number.isFinite(single.mark) &&
+    ["marked", "reviewed", "in_review"].includes(markingState(single)) &&
+    !config.question &&
+    !paths.length
+  ) {
+    return (
+      <SingleResult
+        row={single}
+        sessionId={id}
+        when={s.finished_at}
+        topic={topics.data.find((t) => t.id === single.topic_id)?.name ?? ""}
+      />
+    );
+  }
   return (
     <div className="min-w-0 space-y-5">
       {single ? (

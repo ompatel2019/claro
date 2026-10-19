@@ -1,7 +1,8 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { EmptyState } from "@/components/empty-state";
-import { Pen } from "@/components/icons";
+import { Badge } from "@/components/ui/badge";
+import { Pen, PortalIcon } from "@/components/icons";
 import {
   studentMarking,
   markingState,
@@ -26,7 +27,12 @@ import {
 
 export const metadata = pageMetadata("Mark my answer");
 
-export default async function Page() {
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ question?: string }>;
+}) {
+  const { question } = await searchParams;
   const allowOwnQuestion = process.env.ENABLE_OWN_QUESTION_MARKING === "true";
   const db = await createClient();
   const {
@@ -40,7 +46,7 @@ export default async function Page() {
     db
       .from("sessions")
       .select(
-        "id,config,score,max_score,started_at,finished_at,attempts(status,check_status,mark,max_marks,feedback,question:questions(stem))",
+        "id,config,score,max_score,started_at,finished_at,attempts(status,check_status,mark,max_marks,feedback,question:questions(stem,topic_id))",
       )
       .eq("user_id", user.id)
       .eq("kind", "single")
@@ -53,14 +59,12 @@ export default async function Page() {
     <div className="min-w-0 space-y-5">
       <PageHeader
         title="Mark my answer"
-        description={
-          allowOwnQuestion
-            ? "Bring a question and your answer. Find out what earns your next mark."
-            : "Choose a question from the Claro bank and bring your answer. Find out what earns your next mark."
-        }
+        description="Bring a question and your answer. Find out what earns your next mark."
       />
       <MarkMyAnswer
         questions={questions}
+        initialQuestionId={question}
+        defaultQuestionId={questions.find((q) => q.type !== "mcq")?.id}
         topics={topics.data as Topic[]}
         userId={user.id}
         left={left}
@@ -91,16 +95,17 @@ export default async function Page() {
                 const attempts = s.attempts as unknown as {
                   status: string;
                   check_status: string;
-                  question: { stem: string } | null;
+                  question: { stem: string; topic_id: string | null } | null;
                   mark: number | null;
                   max_marks: number | null;
                   feedback: ReviewRow["feedback"];
                 }[];
                 const a = attempts[0] ? studentMarking(attempts[0]) : undefined;
-                const title =
-                  config.question?.stem ??
-                  a?.question?.stem ??
-                  "Mark my answer";
+                const title = !s.finished_at
+                  ? "Unsubmitted answer"
+                  : (config.question?.stem ??
+                    a?.question?.stem ??
+                    "Mark my answer");
                 const state = a ? markingState(a) : "marking";
                 const score = !s.finished_at
                   ? "In progress"
@@ -111,22 +116,49 @@ export default async function Page() {
                       : state === "unreadable"
                         ? "Couldn't read photo"
                         : a
-                          ? `${markLabel({ ...a, marks: a.max_marks ?? config.question?.marks ?? 0 })}${state === "in_review" ? " · Provisional" : ""}`
+                          ? `${markLabel({ ...a, marks: a.max_marks ?? config.question?.marks ?? 0 })}`
                           : "In progress";
                 return (
                   <li key={s.id}>
                     <Link
                       href={`/student/activity/${s.id}`}
-                      className="hover:bg-accent flex items-center gap-3 rounded-lg py-3 focus-visible:outline-2"
+                      className="hover:bg-accent flex items-center gap-3 rounded-lg py-2.5 focus-visible:outline-2"
                     >
                       <span className="bg-muted text-muted-foreground grid size-8 shrink-0 place-items-center rounded-lg">
                         <Pen className="size-4" aria-hidden />
                       </span>
-                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
-                        {title}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium">
+                          {title}
+                        </span>
+                        <span className="text-muted-foreground block truncate text-xs">
+                          {dateLabel(s.started_at, true)}
+                          {!s.finished_at
+                            ? " · Draft · not submitted"
+                            : topics.data.find(
+                                  (t) =>
+                                    t.id ===
+                                    (a?.question?.topic_id ??
+                                      config.question?.topic_id),
+                                )
+                              ? ` · ${topics.data.find((t) => t.id === (a?.question?.topic_id ?? config.question?.topic_id))?.name}`
+                              : ""}
+                        </span>
                       </span>
-                      <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                        {score} · {dateLabel(s.started_at, true)}
+                      <span className="flex shrink-0 items-center gap-2 text-[13px]">
+                        {!s.finished_at ? (
+                          <Badge variant="secondary">Draft</Badge>
+                        ) : (
+                          <>
+                            {score}
+                            {a && ["marked", "in_review"].includes(state) && (
+                              <Badge variant="outline">
+                                <PortalIcon name="hourglass" />
+                                Provisional
+                              </Badge>
+                            )}
+                          </>
+                        )}
                       </span>
                     </Link>
                   </li>

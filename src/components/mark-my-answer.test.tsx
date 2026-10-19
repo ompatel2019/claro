@@ -68,7 +68,7 @@ it("searches stems and source, selects the question and enables only a valid ans
     target: { value: "2023 HSC Q22" },
   });
   fireEvent.click(screen.getByRole("option", { name: /Explain the causes/ }));
-  expect(screen.getByText("Selected question · 4 marks")).toBeVisible();
+  expect(screen.getByText("Answering")).toBeVisible();
   fireEvent.change(screen.getByRole("textbox", { name: "Your answer" }), {
     target: { value: "Inflation rises as aggregate demand increases." },
   });
@@ -271,7 +271,7 @@ it("selects a bank question from the search combobox using the keyboard", () => 
     screen.getByRole("option", { name: /Explain the causes/ }).id,
   );
   fireEvent.keyDown(search, { key: "Enter" });
-  expect(screen.getByText("Selected question · 4 marks")).toBeVisible();
+  expect(screen.getByText("Answering")).toBeVisible();
   expect(search).toHaveAttribute("aria-expanded", "false");
   expect(createCheck).not.toHaveBeenCalled();
 });
@@ -347,8 +347,8 @@ it("restores unsaved text without replacing a saved session's immutable question
 it("defaults to bank-only with useful filtered-empty copy", () => {
   setup();
   expect(
-    screen.queryByRole("button", { name: "My own question" }),
-  ).not.toBeInTheDocument();
+    screen.getByRole("button", { name: "My own question" }),
+  ).toBeDisabled();
   fireEvent.change(screen.getByLabelText("Search questions"), {
     target: { value: "synthetic missing question" },
   });
@@ -403,8 +403,8 @@ it("an empty bank cannot start a check or expose own-question fields", () => {
   ).toBeVisible();
   expect(screen.getByRole("button", { name: "Mark my answer" })).toBeDisabled();
   expect(
-    screen.queryByRole("button", { name: "My own question" }),
-  ).not.toBeInTheDocument();
+    screen.getByRole("button", { name: "My own question" }),
+  ).toBeDisabled();
   expect(createCheck).not.toHaveBeenCalled();
 });
 
