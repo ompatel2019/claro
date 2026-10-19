@@ -100,14 +100,32 @@ describe("assertSafeE2ETarget", () => {
 
   it("checks the app and base URLs for a service-key-only run", () => {
     expect(() =>
-      assertSafeE2ETarget(local(prod), env({ SUPABASE_SECRET_KEY: "x" })),
+      assertSafeE2ETarget(
+        local(prod),
+        env({ SUPABASE_SECRET_KEY: "x", NEXT_PUBLIC_SUPABASE_URL: test }),
+      ),
     ).toThrow("refusing to run against prodref.supabase.co");
     expect(() =>
       assertSafeE2ETarget(
         { appSupabaseUrl: test, baseUrls: ["https://claro.example"] },
-        env({ SUPABASE_SECRET_KEY: "x" }),
+        env({ SUPABASE_SECRET_KEY: "x", NEXT_PUBLIC_SUPABASE_URL: test }),
       ),
     ).toThrow("refusing to sign in against claro.example");
+  });
+
+  it("checks the runner URL separately when the service key is set", () => {
+    expect(() =>
+      assertSafeE2ETarget(
+        local("http://127.0.0.1:54328"),
+        env({ SUPABASE_SECRET_KEY: "x", NEXT_PUBLIC_SUPABASE_URL: prod }),
+      ),
+    ).toThrow("refusing to run against prodref.supabase.co");
+    expect(() =>
+      assertSafeE2ETarget(
+        local("http://127.0.0.1:54328"),
+        env({ STUDENT_EMAIL: "x", NEXT_PUBLIC_SUPABASE_URL: prod }),
+      ),
+    ).not.toThrow();
   });
 
   it("refuses an unlisted unmanaged app, even on localhost", () => {

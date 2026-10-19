@@ -51,14 +51,19 @@ export type E2ETarget = {
  * Playwright globalSetup check, run before any spec can sign in or write.
  * Credential-free runs (CI, offline mocks) pass untouched. With any credential
  * set (sign-in or service key):
- * - the app's Supabase URL must pass assertTestSupabaseUrl;
+ * - the app's Supabase URL must pass assertTestSupabaseUrl, and so must the
+ *   runner's when the service key is set;
  * - an unmanaged app (E2E_BASE_URL, even on localhost) must be an origin
  *   listed in E2E_TEST_BASE_URLS, since its env can't be checked from here;
  * - any other remote project baseURL must be listed too.
  */
 export function assertSafeE2ETarget(target: E2ETarget, env: Env = process.env) {
   if (!hasE2ECredentials(env)) return;
-  assertTestSupabaseUrl(target.appSupabaseUrl, env.E2E_TEST_SUPABASE_REFS);
+  const refs = env.E2E_TEST_SUPABASE_REFS;
+  // Service-key fixtures run in the runner, whatever the app is pointed at.
+  if (env.SUPABASE_SECRET_KEY)
+    assertTestSupabaseUrl(env.NEXT_PUBLIC_SUPABASE_URL, refs);
+  assertTestSupabaseUrl(target.appSupabaseUrl, refs);
   const allowed = list(env.E2E_TEST_BASE_URLS).flatMap((item) => {
     try {
       return [new URL(item).origin];
