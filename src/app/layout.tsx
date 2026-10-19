@@ -1,14 +1,7 @@
 import type { Metadata } from "next";
-import { Bricolage_Grotesque } from "next/font/google";
 import "./globals.css";
 import { themeScript } from "@/lib/theme";
-
-const sans = Bricolage_Grotesque({
-  variable: "--font-bricolage",
-  subsets: ["latin"],
-  display: "swap",
-  axes: ["opsz"],
-});
+import { claroSans } from "./fonts/claro-sans/claro-sans";
 
 const description = "HSC Economics practice with instant AI marking.";
 export const metadata: Metadata = {
@@ -50,7 +43,7 @@ export default function RootLayout({
     <html
       lang="en-AU"
       suppressHydrationWarning
-      className={`${sans.variable} h-full antialiased`}
+      className={`${claroSans.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />

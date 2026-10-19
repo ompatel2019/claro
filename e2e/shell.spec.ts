@@ -51,7 +51,7 @@ test.describe("App shell", () => {
     );
   });
 
-  test("Bricolage Grotesque is the only font", async ({ page }) => {
+  test("Claro Sans is the only font", async ({ page }) => {
     const families = await page.evaluate(() => [
       ...new Set(
         [...document.querySelectorAll("body, body *")]
@@ -60,7 +60,7 @@ test.describe("App shell", () => {
       ),
     ]);
     expect(families.length).toBeGreaterThan(0);
-    for (const family of families) expect(family).toMatch(/Bricolage/);
+    for (const family of families) expect(family).toMatch(/claroSans/);
     const italic = await page.evaluate(
       () =>
         [...document.querySelectorAll("body *")].filter(
