@@ -200,6 +200,47 @@ test.describe("Local results feedback", () => {
     ).toBeVisible();
     await expect(page.getByRole("progressbar")).toBeVisible();
   });
+  const control = (what: "reset" | "finish", n: number) =>
+    fetch(`http://127.0.0.1:54328/__${what}/${sessionId(n)}`);
+  test("in-progress results fill in by themselves once all answers are marked and the session finishes", async ({
+    page,
+  }) => {
+    await control("reset", 7);
+    await page.goto(`/student/sprint/${sessionId(7)}/results`);
+    await expect(page.getByText("Marking in progress")).toBeVisible();
+    // All marked but not finished: still the card, never a blank page.
+    await expect(page.getByText("Finishing your results…")).toBeVisible({
+      timeout: 10_000,
+    });
+    // No reload: the interval refresh renders the finished results.
+    await expect(
+      page.getByText("Overall feedback", { exact: true }),
+    ).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText("Marking in progress")).toHaveCount(0);
+  });
+  test("results fill in when the marking tab was closed: the page finishes the session itself after 15 s", async ({
+    page,
+  }) => {
+    test.setTimeout(120_000);
+    await control("reset", 8);
+    let finishCalls = 0;
+    await page.route("**/api/sessions/*/finish", async (route) => {
+      finishCalls++;
+      await control("finish", 8);
+      await route.fulfill({ json: { finished: true } });
+    });
+    const start = Date.now();
+    await page.goto(`/student/sprint/${sessionId(8)}/results`);
+    await expect(page.getByText("Finishing your results…")).toBeVisible({
+      timeout: 10_000,
+    });
+    expect(finishCalls).toBe(0);
+    await expect(
+      page.getByText("Overall feedback", { exact: true }),
+    ).toBeVisible({ timeout: 40_000 });
+    expect(finishCalls).toBe(1);
+    expect(Date.now() - start).toBeGreaterThan(14_000);
+  });
   for (const width of [390, 1280]) {
     test(`next steps, question links and honest guidelines at ${width}px`, async ({
       page,
