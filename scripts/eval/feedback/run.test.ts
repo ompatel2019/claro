@@ -5,7 +5,7 @@ import { afterEach, expect, it, vi } from "vitest";
 vi.mock("@/utils/supabase/admin", () => {
   throw new Error("Unexpected admin import");
 });
-vi.mock("../../openai", () => {
+vi.mock("@/lib/ai/openai", () => {
   throw new Error("Unexpected model import");
 });
 const main = async () =>

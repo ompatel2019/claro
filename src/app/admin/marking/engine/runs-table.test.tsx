@@ -109,7 +109,7 @@ it("renders unrecorded thinking and sorts it last in both directions", () => {
 });
 
 it("summarises every real result file without throwing and renders every run", () => {
-  const directory = path.join(process.cwd(), "src/lib/ai/eval/results");
+  const directory = path.join(process.cwd(), "data/eval/results");
   const files = readdirSync(directory)
     .filter((file) => file.endsWith(".json"))
     .sort();

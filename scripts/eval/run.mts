@@ -1,27 +1,27 @@
 // Offline marking eval against the current engine; --dry-run only reads the DB.
-// Run: npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts [--dry-run] [--limit=N | --items=0,1,...] [--label=text] [--set=dev|final]
+// Run: npx tsx --conditions=react-server --env-file=.env.local scripts/eval/run.mts [--dry-run] [--limit=N | --items=0,1,...] [--label=text] [--set=dev|final]
 // --set replaces Held-out with frozen Dev/Final rows; --limit applies per section.
 // --items uses 0-based positions: A1, then Held-out (or Dev/Final), then Claro.
 // Every eval pool excludes both frozen sets and the current answer identity/text.
-// Results: src/lib/ai/eval/results/ and /workspace/claro/eval-runs/.
+// Results: data/eval/results/ and /workspace/claro/eval-runs/.
 import { execFileSync } from "node:child_process";
 import { mkdirSync, writeFileSync } from "node:fs";
 import { admin } from "@/utils/supabase/admin";
 import { MARKER } from "@/lib/marking/engine";
 import { pickBandExamples } from "@/lib/marking/example-selection";
-import { evalExamplePool } from "./examples";
+import { evalExamplePool } from "@/lib/ai/eval/examples";
 import type { MarkableQuestion } from "@/lib/marking/grade";
 import { gradeMessages } from "@/lib/marking/prompts";
-import { callJson } from "../openai";
-import { openRouterSpend } from "../spend";
+import { callJson } from "@/lib/ai/openai";
+import { openRouterSpend } from "@/lib/ai/spend";
 import { parseArgs } from "./args";
-import { evalSets, evalRows, retrievalExclusions } from "./sets";
-import { evalBlocked } from "./metrics";
+import { evalSets, evalRows, retrievalExclusions } from "@/lib/ai/eval/sets";
+import { evalBlocked } from "@/lib/ai/eval/metrics";
 import { JUDGE, JudgeSchema, judgeMessages } from "./judge";
-import { emptyRow, markEvalItem } from "./item";
-import a1 from "./a1-eval-set.json";
-import a1QuestionsJson from "./a1-questions.json";
-import claro from "./claro-set.json";
+import { emptyRow, markEvalItem } from "@/lib/ai/eval/item";
+import a1 from "@/lib/ai/eval/a1-eval-set.json";
+import a1QuestionsJson from "@/lib/ai/eval/a1-questions.json";
+import claro from "@/lib/ai/eval/claro-set.json";
 import { writeResults, type Row } from "./report";
 
 const { dry, limit, label, selectedItems, set } = parseArgs(

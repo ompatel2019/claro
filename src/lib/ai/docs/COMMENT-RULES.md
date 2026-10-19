@@ -47,6 +47,6 @@ Admin edits in `src/app/admin/marking/review/actions.ts` have separate limits: u
 
 ## Offline tone report
 
-`src/lib/ai/eval/tone.ts` reports the share of non-empty comments containing a stock phrase, second-person address (`you`/`your` or a recognised sentence-start imperative), and third-person references (“the student”/“the response”). Phrase and imperative lists are editable. Matching ignores case and repeated whitespace, uses word boundaries, and counts each comment once per metric; rates can overlap. Empty samples return null rates.
+`scripts/eval/tone.ts` reports the share of non-empty comments containing a stock phrase, second-person address (`you`/`your` or a recognised sentence-start imperative), and third-person references (“the student”/“the response”). Phrase and imperative lists are editable. Matching ignores case and repeated whitespace, uses word boundaries, and counts each comment once per metric; rates can overlap. Empty samples return null rates.
 
 The eval report includes a pooled run summary in JSON, Markdown and console output, excluding fixture exclusions. It prefers structured comment bodies plus `next_mark`, never quotes. For older text feedback, it extracts numbered rendered comments; unstructured feedback counts as one comment. These are free lexical indicators, not a judgement of feedback quality; the imperative list is deliberately finite.

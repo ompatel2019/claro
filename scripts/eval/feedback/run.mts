@@ -1,5 +1,5 @@
 // --live requires explicit authorisation via AIRO5_FEEDBACK_LIVE_OK=1.
-// npx tsx --conditions=react-server src/lib/ai/eval/feedback/run.mts [--dry-run | --live] [--limit=200] [--seed=20261014]
+// npx tsx --conditions=react-server scripts/eval/feedback/run.mts [--dry-run | --live] [--limit=200] [--seed=20261014]
 // Default dry-run reads Claro only and prints aggregate counts/cost; it never calls a model.
 // No answer IDs, comment text or student data are written to disk.
 import { pathToFileURL } from "node:url";
@@ -51,7 +51,7 @@ async function spend() {
 }
 
 const model: ModelFunction = async (messages) => {
-  const { callJson } = await import("../../openai");
+  const { callJson } = await import("@/lib/ai/openai");
   return callJson({
     task: "eval",
     model: FEEDBACK_MODEL,

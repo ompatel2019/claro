@@ -1,6 +1,6 @@
 # Marking engine
 
-How a written answer is marked. Code: `src/lib/marking/` (engine, examples, grade, prompts, schemas) and `src/lib/ai/` (OpenAI call, prices). Eval: `src/lib/ai/eval/`.
+How a written answer is marked. Code: `src/lib/marking/` (engine, examples, grade, prompts, schemas) and `src/lib/ai/` (OpenAI call, prices). Eval: shared modules in `src/lib/ai/eval/`, CLI tools in `scripts/eval/`.
 
 See also: [AIRO-5](/admin/marking/engine?tab=docs&doc=AIRO-5), [MARKING-PRINCIPLES](/admin/marking/engine?tab=docs&doc=MARKING-PRINCIPLES), [VERB-GUIDE](/admin/marking/engine?tab=docs&doc=VERB-GUIDE), [COMMENT-RULES](/admin/marking/engine?tab=docs&doc=COMMENT-RULES), [CHECK-AND-AGREEMENT](/admin/marking/engine?tab=docs&doc=CHECK-AND-AGREEMENT), [TRANSCRIPTION](/admin/marking/engine?tab=docs&doc=TRANSCRIPTION).
 
@@ -77,14 +77,14 @@ Strengths and Top fixes use a five-criterion writing rubric and actual marked wr
 
 ## Eval
 
-`npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/run.mts [--dry-run] [--limit=N | --items=i,j] [--label=x]`
+`npx tsx --conditions=react-server --env-file=.env.local scripts/eval/run.mts [--dry-run] [--limit=N | --items=i,j] [--label=x]`
 
 - Runs A1's 20 answers with Karan's marks and critiques. Headline numbers exclude fm-1 (its answer duplicates fm-5) and ei-4 (3.5 is an invented midpoint), which are reported separately. It also runs our 10-answer Claro check.
 - **Held-out set**: the 196 `marking_examples` rows with `split = 'test'` on the `a1-m*` mock questions (up to 6 whole-mark answers per question spread across marks, fixed seed in `split.ts`). Reported as its own section with the same mark metrics. It has no judge, because there is no Karan critique for these answers. These questions were never used to tune the prompt.
 - Items run 6 at a time; `--limit=N` applies per section.
 - For small targeted runs, `--items=i,j` selects 0-based positions in the full array: A1, then Held-out, then Claro. It cannot be combined with `--limit`. The `ai_usage` task index `eval:<stamp>:<n>` is the position in the selected list, not the full-array index.
 - Feedback is judged by a pinned **gpt-6-astra** (low thinking), separate from the marker so runs stay comparable. The judge reports Pros kept and Cons fixed, the way A1's judge does.
-- Results: JSON in `src/lib/ai/eval/results/` (the `evals` bucket doesn't exist yet), plus a markdown summary in `/workspace/claro/eval-runs/`.
+- Results: JSON in `data/eval/results/` (the `evals` bucket doesn't exist yet), plus a markdown summary in `/workspace/claro/eval-runs/`.
 - Stamps have minute resolution: two runs started in the same minute overwrite each other.
 
 When the two initial written passes return unequal marks, `feedback.flags` stores
@@ -105,7 +105,7 @@ A1 remains read-only. The existing anonymising SELECT is `/workspace/claro/a1-ex
 Validate a new anonymised export without credentials or database access:
 
 ```bash
-npx tsx --conditions=react-server src/lib/ai/eval/import-a1-examples.mts /path/to/snapshot.json --dry-run
+npx tsx --conditions=react-server scripts/eval/import-a1-examples.mts /path/to/snapshot.json --dry-run
 ```
 
 The importer rejects unknown questions, empty scripts, out-of-range/non-numeric marks, duplicate source hashes and normalised duplicate or benchmark answer text before database access. This prevents a repeated script with different source hashes leaking between calibration and held-out evaluation. Fractional human marks can be stored as examples but are never selected as whole-mark held-out tests or band anchors.

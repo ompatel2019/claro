@@ -1,4 +1,4 @@
-// Offline only. Node 22: npx --no-install tsx src/lib/ai/eval/rescore.mts
+// Offline only. Node 22: npx --no-install tsx scripts/eval/rescore.mts
 // Optional --file=path accepts compact runs, rows, or an eval results JSON file.
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
@@ -13,7 +13,8 @@ export function rescoreCli(
   if (args.length > 1 || args.some((arg) => !/^--file=.+$/.test(arg)))
     throw new Error("Usage: rescore.mts [--file=path]");
   const file =
-    args[0]?.slice(7) ?? new URL("./sets/past-passes.json", import.meta.url);
+    args[0]?.slice(7) ??
+    new URL("../../src/lib/ai/eval/sets/past-passes.json", import.meta.url);
   // Hash raw example ids from other results files in memory only.
   const input: unknown = JSON.parse(read(file), (_key, value) => {
     if (
@@ -29,7 +30,12 @@ export function rescoreCli(
     return value;
   });
   const flags: { exampleIdSha256: string }[] = JSON.parse(
-    read(new URL("./sets/flagged-tutor-marks.json", import.meta.url)),
+    read(
+      new URL(
+        "../../src/lib/ai/eval/sets/flagged-tutor-marks.json",
+        import.meta.url,
+      ),
+    ),
   );
   write(
     JSON.stringify(

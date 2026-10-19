@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { expect, it } from "vitest";
 import { prepareA1Snapshot } from "./a1-snapshot";
-import questionsJson from "./a1-mock-questions.json";
+import questionsJson from "@/lib/ai/eval/a1-mock-questions.json";
 import type { MarkableQuestion } from "@/lib/marking/grade";
 
 const questions = questionsJson as MarkableQuestion[];

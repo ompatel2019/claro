@@ -190,7 +190,7 @@ Engine → Eval runs shows exact human marks and human-mark agreement for the la
 Validate an anonymised export locally before importing into Claro:
 
 ```bash
-npx tsx --conditions=react-server src/lib/ai/eval/import-a1-examples.mts /path/to/snapshot.json --dry-run
+npx tsx --conditions=react-server scripts/eval/import-a1-examples.mts /path/to/snapshot.json --dry-run
 ```
 
 Dry-run needs no credentials and makes no database calls. It rejects invalid marks, unknown questions, duplicate hashes, repeated answer text and overlap with the separate `a1-eval-set.json` benchmark. The seeded split and existing grader view keep held-out scripts out of prompts. See [ENGINE](src/lib/ai/docs/ENGINE.md) for offline evaluation and import details. No new migration is required for A5.
