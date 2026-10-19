@@ -1,5 +1,9 @@
 # Claro portal
 
+Migration `0051_progress_null_type.sql` (Progress no longer fails with "field name
+must not be null" when history includes a non-live question) **is applied to
+production** (19 Oct 2026, ~10:16pm Sydney).
+
 Migration `0049_answer_version.sql` (atomic answer versions, guarded auto reviews,
 transactional sprint answer saves/finalization) **is applied to production** and has
 been live since 16 Oct. Migration `0050_mixed_min_5.sql` (lowers the Mixed sprint

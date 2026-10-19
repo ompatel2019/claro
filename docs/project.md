@@ -22,22 +22,30 @@ Apply migration 0042 before serving these changes. Use Node 22 and export local/
 
 ## Home and progress
 
-Student Home always shows the Topic Sprint presets and Flashcards launch boxes
-immediately below the header, including the due count (zero when none are due).
-Summary stats, activity heatmap, score trend/recent activity and unfinished
-sessions/weak topics follow. Continue appears only when there are unfinished
-sessions; loading failures keep the launch boxes available with a retry for the
-unavailable due count. No migration is needed for this layout.
-Coverage: `src/app/(app)/student/quick-start.test.tsx` and `e2e/student-home.spec.ts`
-(empty history, unfinished sessions and due cards at 360px and 1280px).
+Student Home (v2, 19 Oct 2026): greeting/date, a term/week hero with a daily line
+and week-of-term dots, four large launch tiles (Topic Sprint, Flashcards with due
+count, Mark my answer, Activity) beside "Your study days" (day/longest streak, days
+studied, yearly heatmap with today marker, Light up today), then a Study hub tile per
+topic opening a prefilled Topic Sprint. There is no Continue card on Home; unfinished
+sessions are listed in Activity. Read failures keep the launch tiles usable. No
+migration (existing `activity_days`/`activity_streaks`).
+Coverage: `src/app/(app)/student/quick-start.test.tsx`, `e2e/pages.offline.spec.ts`
+and `e2e/student-home.spec.ts`.
 
-Home and Progress use the same weak-topic helper and SQL history counts. Home
-uses all-time history; Progress uses its selected range. Topics below 60% qualify.
-Home supplies summary stats and the yearly activity heatmap. Progress focuses on
+Progress weak topics use SQL history counts over its selected range. Topics below 60% qualify.
+Progress focuses on
 topic, question-type and directive-verb marks, followed by score history, weak spots
 and flashcard mastery. Question weaknesses unlock after 3 marked answers across
 2 distinct sessions in the selected range; skipped and unanswered attempts do not
 count. Flashcard weaknesses retain their separate review history.
+Migration 0051 (applied to production 19 Oct 2026) stops `student_progress` failing
+with "field name must not be null" when history includes a non-live question.
+
+## Brand
+
+Real Claro lockup/mark SVGs live in `public/logos/` (white variants in dark theme);
+favicon, `icon.svg` and `apple-icon.png` use the mark. The link preview is the student
+card `public/og/claro-student-og.png` (`scripts/og-student-card.mjs`).
 
 Migration 0047 adds distinct session counts to `student_progress`, including
 parent topics without counting the same session twice across subtopics. The RPC
