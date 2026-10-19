@@ -37,7 +37,7 @@ export default async function FeedbackPage({
   if (f.id && !item) notFound();
   const filtered = ["kind", "q", "shots", "from", "to"].some((k) => f[k]);
   return (
-    <div className="min-w-0 space-y-4">
+    <div className="min-w-0 space-y-6">
       <PageHeader
         title="Feedback"
         description="One inbox for feedback, bugs, content errors and marking complaints."
@@ -67,6 +67,7 @@ export default async function FeedbackPage({
       <FilterBar
         values={f}
         hidden={{ status: list.status }}
+        primary="kind"
         filters={[
           {
             name: "kind",

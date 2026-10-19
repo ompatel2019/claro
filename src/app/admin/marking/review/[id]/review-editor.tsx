@@ -9,6 +9,7 @@ import {
   type EditableComment,
 } from "@/components/annotated-feedback";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -227,7 +228,10 @@ export function ReviewEditor({
       }}
     >
       {guidelinesUnavailable && !readonly && (
-        <p role="status" className="rounded-lg border p-3 text-sm">
+        <p
+          role="status"
+          className="bg-warning-soft text-warning-text rounded-xl p-4 text-sm"
+        >
           Marking guidelines are available after this session is finished. Keep
           this review open until then.
         </p>
@@ -252,7 +256,16 @@ export function ReviewEditor({
       </nav>
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="min-w-0 space-y-4">
-          <p className="text-sm whitespace-pre-wrap">{row.stem}</p>
+          <Card size="sm">
+            <CardHeader>
+              <CardTitle>Question</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                {row.stem}
+              </p>
+            </CardContent>
+          </Card>
           <AnnotatedFeedback
             row={editedRow}
             photos={photos}
@@ -284,10 +297,10 @@ export function ReviewEditor({
             </Button>
           )}
         </div>
-        <div className="panel min-w-0 lg:sticky lg:top-16 lg:flex lg:max-h-[calc(100dvh-5rem)] lg:flex-col lg:gap-4">
-          <div className="space-y-4 lg:min-h-0 lg:overflow-y-auto">
+        <Card className="min-w-0 gap-0 py-0 lg:sticky lg:top-16 lg:flex lg:max-h-[calc(100dvh-5rem)] lg:flex-col">
+          <div className="space-y-5 p-5 lg:min-h-0 lg:overflow-y-auto">
             <fieldset disabled={readonly || pending} className="space-y-3">
-              <legend className="mb-2 font-semibold">Mark</legend>
+              <legend className="mb-2 text-[15px] font-semibold">Mark</legend>
               <div className="flex items-center gap-2">
                 <Button
                   type="button"
@@ -321,7 +334,10 @@ export function ReviewEditor({
                 </Button>
                 <span>/ {max}</span>
               </div>
-              <p className="text-sm" title={criterion?.descriptor}>
+              <p
+                className="text-muted-foreground text-sm"
+                title={criterion?.descriptor}
+              >
                 {band?.label ?? "No band satisfied"}
                 {criterion && (
                   <span className="sr-only">: {criterion.descriptor}</span>
@@ -350,7 +366,7 @@ export function ReviewEditor({
                 )}
               </div>
             </fieldset>
-            <section className="space-y-2">
+            <section className="space-y-3 border-t pt-5">
               <h2 className="text-base font-semibold">Why the models differ</h2>
               <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 <div>
@@ -375,38 +391,40 @@ export function ReviewEditor({
               </div>
             </section>
             {review.student_note && (
-              <section className="text-sm">
+              <section className="bg-brand-soft text-brand-text rounded-xl p-4 text-sm">
                 <h2 className="text-base font-semibold">Student note</h2>
                 <p className="whitespace-pre-wrap">{review.student_note}</p>
               </section>
             )}
-            <details className="text-sm">
-              <summary className="cursor-pointer font-semibold">
+            <details className="rounded-xl border text-sm">
+              <summary className="cursor-pointer px-4 py-3 font-semibold">
                 Marking guidelines
               </summary>
-              {row.criteria?.map((c) => (
-                <p
-                  key={c.descriptor}
-                  className={`mt-2 ${c === criterion ? "bg-accent rounded p-2" : ""}`}
-                >
-                  <strong>
-                    {c.min}–{c.max}:
-                  </strong>{" "}
-                  {c.descriptor}
-                </p>
-              ))}
-              {guidelineNotes && (
-                <p className="mt-2 whitespace-pre-wrap">{guidelineNotes}</p>
-              )}
-              {!row.criteria?.length && !guidelineNotes && (
-                <p>No guidelines recorded.</p>
-              )}
+              <div className="px-4 pb-4">
+                {row.criteria?.map((c) => (
+                  <p
+                    key={c.descriptor}
+                    className={`mt-2 ${c === criterion ? "bg-accent rounded p-2" : ""}`}
+                  >
+                    <strong>
+                      {c.min}–{c.max}:
+                    </strong>{" "}
+                    {c.descriptor}
+                  </p>
+                ))}
+                {guidelineNotes && (
+                  <p className="mt-2 whitespace-pre-wrap">{guidelineNotes}</p>
+                )}
+                {!row.criteria?.length && !guidelineNotes && (
+                  <p>No guidelines recorded.</p>
+                )}
+              </div>
             </details>
-            <details className="text-sm">
-              <summary className="cursor-pointer font-semibold">
+            <details className="rounded-xl border text-sm">
+              <summary className="cursor-pointer px-4 py-3 font-semibold">
                 Sample answer
               </summary>
-              <p className="mt-2 whitespace-pre-wrap">
+              <p className="px-4 pb-4 whitespace-pre-wrap">
                 {row.sample_answer || "No sample answer recorded."}
               </p>
             </details>
@@ -425,7 +443,7 @@ export function ReviewEditor({
             </label>
           </div>
           {!readonly && (
-            <div className="bg-card fixed inset-x-0 bottom-0 z-20 space-y-2 border-t px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:static lg:shrink-0 lg:px-0 lg:pt-4 lg:pb-0">
+            <div className="bg-card fixed inset-x-0 bottom-0 z-20 space-y-2 border-t px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))] lg:static lg:shrink-0 lg:px-5 lg:py-4">
               <input
                 type="hidden"
                 name="comments"
@@ -466,10 +484,13 @@ export function ReviewEditor({
               </div>
             </div>
           )}
-        </div>
+        </Card>
       </div>
       {message && (
-        <p role="alert" className="rounded-lg border p-3 text-sm">
+        <p
+          role="alert"
+          className="bg-destructive-soft text-destructive rounded-xl p-4 text-sm"
+        >
           {message}{" "}
           <Button
             type="button"

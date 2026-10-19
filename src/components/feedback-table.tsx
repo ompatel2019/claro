@@ -196,7 +196,10 @@ export function FeedbackTable({
   return (
     <>
       {error && (
-        <p role="alert" className="bg-card rounded-2xl border p-5 text-sm">
+        <p
+          role="alert"
+          className="bg-destructive-soft text-destructive rounded-xl p-4 text-sm"
+        >
           {error}
         </p>
       )}
@@ -234,17 +237,17 @@ export function FeedbackTable({
         <SheetContent className="w-full overflow-y-auto sm:max-w-xl">
           {item && (
             <>
-              <SheetHeader>
+              <SheetHeader className="border-b">
                 <SheetTitle className="flex flex-wrap items-center gap-2 break-words">
                   <Message aria-hidden className="size-4" />
                   {kind(item.kind)} from {item.name}
                   <StatusPill pill={STATUS_PILL[item.status]} />
                 </SheetTitle>
-                <p className="text-muted-foreground text-xs">
-                  {ago(item.created_at, new Date(now))}
+                <p className="text-muted-foreground text-xs tabular-nums">
+                  Received {ago(item.created_at, new Date(now))}
                 </p>
               </SheetHeader>
-              <div className="space-y-4 px-4 pb-6 text-sm">
+              <div className="space-y-5 px-4 pb-6 text-sm">
                 <FeedbackDetail
                   key={item.id}
                   draftKey={`claro.feedback.${adminId}.${item.id}`}

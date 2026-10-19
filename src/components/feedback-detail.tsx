@@ -9,6 +9,7 @@ import { SpotCheck } from "./student-actions";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
 import { Dialog, DialogContent, DialogTitle } from "./ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 export type FeedbackDetailRow = {
   id: string;
@@ -102,14 +103,38 @@ export function FeedbackDetail({
   }
   return (
     <>
-      <p className="break-words whitespace-pre-wrap">{row.message}</p>
-      <div className="flex flex-wrap gap-2">
-        {photos.map((url, i) => (
-          <Button key={url} variant="outline" onClick={() => setPhoto(url)}>
-            Screenshot {i + 1}
-          </Button>
-        ))}
-      </div>
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle>Student message</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="break-words whitespace-pre-wrap">{row.message}</p>
+        </CardContent>
+      </Card>
+      {!!photos.length && (
+        <section className="space-y-2" aria-labelledby="feedback-screenshots">
+          <h3 id="feedback-screenshots" className="text-sm font-semibold">
+            Screenshots
+          </h3>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {photos.map((url, i) => (
+              <button
+                key={url}
+                type="button"
+                className="bg-muted hover:border-foreground/30 relative aspect-[4/3] overflow-hidden rounded-xl border transition-colors"
+                onClick={() => setPhoto(url)}
+                aria-label={`Screenshot ${i + 1}`}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- Signed private screenshots are not image-optimiser inputs. */}
+                <img src={url} alt="" className="size-full object-cover" />
+                <span className="bg-card/90 absolute right-2 bottom-2 rounded-full px-2 py-0.5 text-xs font-medium">
+                  {i + 1}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
       {missingScreenshots > 0 && (
         <p className="text-muted-foreground text-sm">
           {missingScreenshots}{" "}
@@ -131,80 +156,108 @@ export function FeedbackDetail({
           )}
         </DialogContent>
       </Dialog>
-      {page && (
-        <Link href={page} className="block break-all underline">
-          Page: {page}
-        </Link>
-      )}
-      <p className="text-muted-foreground text-sm break-all">
-        User agent: {row.user_agent || "Not supplied"}
-      </p>
-      {row.question_id && (
-        <Link
-          href={`/admin/content/questions/${encodeURIComponent(row.question_id)}`}
-          className="block break-all underline"
-        >
-          Open in editor
-        </Link>
-      )}
-      {row.session_id && (
-        <Link
-          href={`/admin/students/${row.user_id}?tab=sessions&session=${row.session_id}`}
-          className="block break-all underline"
-        >
-          Open report
-        </Link>
-      )}
-      {attempt?.status === "marked" && <SpotCheck attemptId={attempt.id} />}
-      <label className="grid gap-1">
-        Status
-        <select
-          aria-label="Status"
-          className="field h-9"
-          value={status}
-          onChange={(e) => setStatus(e.target.value as typeof status)}
-          disabled={pending}
-        >
-          <option value="new">New</option>
-          <option value="triaged">Triaged</option>
-          <option value="resolved">Resolved</option>
-        </select>
-      </label>
-      <label className="grid gap-1">
-        Reply to student
-        <span className="text-muted-foreground text-xs">
-          Shown on their profile. Maximum 2,000 characters.
-        </span>
-        <Textarea
-          aria-label="Reply to student"
-          maxLength={2000}
-          value={reply}
-          onChange={(e) => {
-            setReply(e.target.value);
-            if (draftKey) {
-              try {
-                localStorage.setItem(draftKey, e.target.value);
-              } catch {
-                /* Storage is optional. */
-              }
-            }
-          }}
-          disabled={pending}
-        />
-      </label>
-      {error && <p role="alert">{error}</p>}
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          disabled={pending}
-          onClick={() => save(false)}
-        >
-          Save
-        </Button>
-        <Button disabled={pending} onClick={() => save(true)}>
-          Resolve
-        </Button>
-      </div>
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle>Context</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {page && (
+            <Link href={page} className="block break-all underline">
+              Page: {page}
+            </Link>
+          )}
+          <p className="text-muted-foreground text-xs break-all">
+            User agent: {row.user_agent || "Not supplied"}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {row.question_id && (
+              <Link
+                href={`/admin/content/questions/${encodeURIComponent(row.question_id)}`}
+                className="underline"
+              >
+                Open in editor
+              </Link>
+            )}
+            {row.session_id && (
+              <Link
+                href={`/admin/students/${row.user_id}?tab=sessions&session=${row.session_id}`}
+                className="underline"
+              >
+                Open report
+              </Link>
+            )}
+            {attempt?.status === "marked" && (
+              <SpotCheck attemptId={attempt.id} />
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      <Card size="sm">
+        <CardHeader>
+          <CardTitle>Triage and reply</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <label className="grid gap-1 text-sm font-medium">
+            Status
+            <select
+              aria-label="Status"
+              className="field h-9"
+              value={status}
+              onChange={(e) => setStatus(e.target.value as typeof status)}
+              disabled={pending}
+            >
+              <option value="new">New</option>
+              <option value="triaged">Triaged</option>
+              <option value="resolved">Resolved</option>
+            </select>
+          </label>
+          <label className="grid gap-1 text-sm font-medium">
+            Reply to student
+            <span className="text-muted-foreground text-xs font-normal">
+              Shown on their profile. Maximum 2,000 characters.
+            </span>
+            <Textarea
+              aria-label="Reply to student"
+              maxLength={2000}
+              value={reply}
+              onChange={(e) => {
+                setReply(e.target.value);
+                if (draftKey) {
+                  try {
+                    localStorage.setItem(draftKey, e.target.value);
+                  } catch {
+                    /* Storage is optional. */
+                  }
+                }
+              }}
+              disabled={pending}
+            />
+            <span className="text-muted-foreground text-right text-xs font-normal tabular-nums">
+              {reply.length}/2,000
+            </span>
+          </label>
+          {error && (
+            <p
+              role="alert"
+              className="bg-destructive-soft text-destructive rounded-lg p-3 text-sm"
+            >
+              {error}
+            </p>
+          )}
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={() => save(false)}
+            >
+              {pending ? "Saving…" : "Save"}
+            </Button>
+            <Button disabled={pending} onClick={() => save(true)}>
+              Resolve
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </>
   );
 }
