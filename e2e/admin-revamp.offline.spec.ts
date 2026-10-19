@@ -3,6 +3,7 @@ import { build, type Plugin } from "esbuild";
 import postcss from "postcss";
 import tailwind from "@tailwindcss/postcss";
 import { readFile } from "node:fs/promises";
+import fs from "node:fs";
 import path from "node:path";
 import { statSync } from "node:fs";
 import {
@@ -14,7 +15,8 @@ import {
 } from "./admin-revamp-mocks.mjs";
 
 const OUT =
-  process.env.ADMIN_REVAMP_OUT ?? "/workspace/claro/revamp/after-admin";
+  process.env.ADMIN_REVAMP_OUT ??
+  (process.env.CI ? "/tmp/admin-revamp-after" : "/workspace/claro/revamp/after-admin");
 
 let bundle = "";
 let css = "";
@@ -369,6 +371,7 @@ async function shoot(
     expect(sw).toBeLessThanOrEqual(width);
   }
   const suffix = dark ? `-${width}-dark` : `-${width}`;
+  fs.mkdirSync(OUT, { recursive: true });
   await page.screenshot({
     path: `${OUT}/${route.file}${suffix}.png`,
     fullPage: true,
