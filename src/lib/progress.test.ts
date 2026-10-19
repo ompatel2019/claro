@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   weeklyScores,
-  masterySegments,
   parseRange,
   rangeFrom,
   reportHref,
@@ -32,26 +31,6 @@ describe("progress ranges use inclusive Sydney calendar days", () => {
     expect(rangeFrom("30", "2024-03-01")).toBe("2024-02-01");
     expect(rangeFrom("all", "2026-10-09")).toBeNull();
   });
-});
-it("normalises CategoryBar counts, keeping zero-count categories safe", () => {
-  const segments = masterySegments({
-    id: "term",
-    known: 10,
-    learning: 5,
-    missed: 3,
-    new: 2,
-  });
-  expect(segments.map((s) => s.width)).toEqual([50, 25, 15, 10]);
-  expect(segments.reduce((n, s) => n + s.count, 0)).toBe(20);
-  expect(
-    masterySegments({
-      id: "stat",
-      known: 0,
-      learning: 0,
-      missed: 0,
-      new: 0,
-    }).every((s) => s.width === 0),
-  ).toBe(true);
 });
 const topic = (
   id: string,

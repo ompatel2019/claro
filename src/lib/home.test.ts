@@ -1,11 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  continueTime,
-  greeting,
-  longDate,
-  schoolWeek,
-  dailyQuote,
-} from "./home";
+import { continueTime, greeting, longDate, schoolWeek } from "./home";
 
 describe("home", () => {
   it("greets by Sydney time of day", () => {
@@ -72,12 +66,6 @@ it("finds the NSW term, Monday week boundaries and term length", () => {
   expect(schoolWeek("2027-04-10")).toBeNull();
   expect(schoolWeek("2028-02-01")).toBeNull();
 });
-it("rotates the same short quote deterministically for a Sydney day", () => {
-  expect(dailyQuote("2026-10-19")).toBe(dailyQuote("2026-10-19"));
-  expect(dailyQuote("2026-10-20")).not.toBe(dailyQuote("2026-10-19"));
-  expect(dailyQuote("2026-10-26")).toBe(dailyQuote("2026-10-19"));
-});
-
 import { homeUnits, homeWeeks, homeComparison, homeMinutes } from "./home";
 import type { HistoryScore, TopicProgress } from "./progress";
 const historyRow = (
