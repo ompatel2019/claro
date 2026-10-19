@@ -47,3 +47,6 @@ next-env.d.ts
 
 # local logs
 logs/
+
+# generated S16 eval reports
+scripts/s16-eval/results-*.json
