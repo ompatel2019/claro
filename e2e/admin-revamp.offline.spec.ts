@@ -16,7 +16,9 @@ import {
 
 const OUT =
   process.env.ADMIN_REVAMP_OUT ??
-  (process.env.CI ? "/tmp/admin-revamp-after" : "/workspace/claro/revamp/after-admin");
+  (process.env.CI
+    ? "/tmp/admin-revamp-after"
+    : "/workspace/claro/revamp/after-admin");
 
 let bundle = "";
 let css = "";
