@@ -86,9 +86,12 @@ begin
   values ('00000000-0000-4000-8000-000000000711', 'd7-own', 0.5, 'self');
 
   perform pg_temp.expect_review_denied('00000000-0000-4000-8000-000000000711', 'd7-outside');
-  perform pg_temp.expect_review_denied('00000000-0000-4000-8000-000000000711', 'd7-private');
-  perform pg_temp.expect_review_denied('00000000-0000-4000-8000-000000000711', 'd7-draft');
-  perform pg_temp.expect_review_denied('00000000-0000-4000-8000-000000000711', 'd7-retired');
+  -- Snapshot members stay ratable even when hidden by flashcards RLS (e.g. a
+  -- shared card retired mid-session), exactly as before this guard.
+  insert into public.flashcard_reviews (session_id, flashcard_id, mark, source) values
+    ('00000000-0000-4000-8000-000000000711', 'd7-private', 1, 'self'),
+    ('00000000-0000-4000-8000-000000000711', 'd7-draft', 1, 'self'),
+    ('00000000-0000-4000-8000-000000000711', 'd7-retired', 1, 'self');
   perform pg_temp.expect_review_denied('00000000-0000-4000-8000-000000000711', 'd7-shared', 'ai');
   perform pg_temp.expect_review_denied(null, 'd7-shared');
   perform pg_temp.expect_review_denied('00000000-0000-4000-8000-000000000799', 'd7-shared');
@@ -107,14 +110,15 @@ begin
   perform pg_temp.expect_review_denied('00000000-0000-4000-8000-000000000711', 'd7-shared');
 end $$;
 
--- Admin read access must not bypass the explicit session/card ownership checks.
+-- Admin read access must not bypass the session ownership check.
 select set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-000000000703', true);
 do $$
 begin
   insert into public.flashcard_reviews (session_id, flashcard_id, mark, source)
   values ('00000000-0000-4000-8000-000000000722', 'd7-shared', 1, 'self');
   perform pg_temp.expect_review_denied('00000000-0000-4000-8000-000000000711', 'd7-shared');
-  perform pg_temp.expect_review_denied('00000000-0000-4000-8000-000000000722', 'd7-private');
+  insert into public.flashcard_reviews (session_id, flashcard_id, mark, source)
+  values ('00000000-0000-4000-8000-000000000722', 'd7-private', 1, 'self');
 end $$;
 
 -- Mark route writes use service_role, including standalone self/AI matches and overrides.
