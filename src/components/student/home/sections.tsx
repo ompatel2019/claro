@@ -112,11 +112,11 @@ export async function HomeStats({
   due: Promise<number | null>;
 }) {
   const [d, count] = await Promise.all([progress, due]);
-  const parents = d?.topics.filter((t) => !t.parent_id);
+  const parents = d?.topics?.filter((t) => !t.parent_id);
   const earned = parents?.reduce((n, t) => n + t.earned, 0);
   const answered = parents?.reduce((n, t) => n + t.answered, 0);
   const seconds = d?.history
-    .filter((s) => s.finished_at && Number.isFinite(Date.parse(s.finished_at)))
+    ?.filter((s) => s.finished_at && Number.isFinite(Date.parse(s.finished_at)))
     .reduce((n, s) => n + (Number.isFinite(s.elapsed_s) ? s.elapsed_s : 0), 0);
   return (
     <section
@@ -184,7 +184,7 @@ export async function HomeAverage({
   today: string;
 }) {
   const d = await progress;
-  const parents = d?.topics.filter((t) => !t.parent_id) ?? [];
+  const parents = d?.topics?.filter((t) => !t.parent_id) ?? [];
   const earned = parents.reduce((n, t) => n + t.earned, 0),
     possible = parents.reduce((n, t) => n + t.possible, 0);
   const points = (d?.history ?? []).flatMap((s) =>
@@ -349,7 +349,9 @@ export async function HomePlan({
           rows?.find((s) => !s.finished_at && s.kind === "sprint") ?? null,
       ),
   ]);
-  const weak = d?.topics.filter(isWeakTopic).sort((a, b) => a.pct! - b.pct!)[0];
+  const weak = d?.topics
+    ?.filter(isWeakTopic)
+    .sort((a, b) => a.pct! - b.pct!)[0];
   const actions = [
     ...(count
       ? [
