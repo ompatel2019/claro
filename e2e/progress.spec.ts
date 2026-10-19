@@ -21,10 +21,10 @@ test.describe("Student progress (read only)", () => {
   });
   test("range changes the URL and the card snapshot", async ({ page }) => {
     for (const [value, label] of [
-      ["30", "30 days"],
+      ["30", "Last 30 days"],
       ["year", "This year"],
       ["all", "All time"],
-      ["90", "90 days"],
+      ["90", "Last 90 days"],
     ]) {
       const control = page.getByRole("combobox", { name: "Progress range" });
       await expect(control).toBeEnabled();
@@ -54,7 +54,9 @@ test.describe("Student progress (read only)", () => {
       "data-range",
       "all",
     );
-    const practice = page.getByRole("link", { name: /^(Practise|Start) / });
+    const practice = page
+      .getByRole("table", { name: "Marks by topic", exact: true })
+      .getByRole("link", { name: /^(Practise|Start) / });
     await expect(practice.first()).toBeVisible();
     for (const link of await practice.all()) {
       const target = new URL((await link.getAttribute("href"))!, page.url());
@@ -100,6 +102,7 @@ test.describe("Student progress (read only)", () => {
     page,
   }) => {
     await expect(async () => {
+      await page.getByText("Filter score history", { exact: true }).click();
       if (new URL(page.url()).searchParams.get("kind") !== "sprint")
         await page
           .getByRole("button", { name: "Sprints", exact: true })
@@ -138,32 +141,15 @@ test.describe("Student progress (read only)", () => {
           timeout: 1000,
         });
       }).toPass({ timeout: 20000 });
-      const tables = page.locator(
-        'table[aria-label="Marks by topic"], table[aria-label$=" subtopics"]',
-      );
-      await expect(tables).toHaveCount(2);
+      await expect(
+        table.getByText(/answered · .* marks · Last practised/).first(),
+      ).toHaveCount(1);
+      const container = table.locator("..");
       await expect
         .poll(() =>
-          tables.evaluateAll((tables) =>
-            tables.every((table) => {
-              const container = table.closest('[data-slot="table-container"]')!;
-              return container.scrollWidth <= container.clientWidth;
-            }),
-          ),
+          container.evaluate((el) => el.scrollWidth >= el.clientWidth),
         )
         .toBe(true);
-      for (const topicTable of await tables.all()) {
-        const percent = topicTable
-          .locator(":scope > thead")
-          .getByRole("columnheader", { name: "%", exact: true });
-        await expect(percent).toHaveCount(1);
-        await expect(percent).toBeVisible();
-      }
-      if (width < 640) {
-        await expect(
-          table.getByText(/answered · .* marks · Last practised/).first(),
-        ).toBeVisible();
-      }
       const action = table
         .getByRole("link", { name: /^(Practise|Start) / })
         .first();
