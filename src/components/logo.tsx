@@ -29,7 +29,15 @@ function Art({ kind, height }: { kind: keyof typeof ART; height: number }) {
   );
 }
 
-/** Claro lockup; `collapsible` swaps to the mark in the icon-only sidebar. */
+/** Marketing-site tile icon (same file as src/app/icon.svg), rounded for UI use. */
+function Tile({ size }: { size: number }) {
+  return (
+    // eslint-disable-next-line @next/next/no-img-element -- static SVG
+    <img src="/logos/claro-tile.svg" alt="" width={size} height={size} className="shrink-0 rounded-[22%]" />
+  );
+}
+
+/** Claro tile + lockup; `collapsible` swaps to the tile alone in the icon-only sidebar. */
 export function Logo({
   height = 28,
   collapsible = false,
@@ -45,11 +53,14 @@ export function Logo({
           collapsible && "group-data-[collapsible=icon]:hidden",
         )}
       >
-        <Art kind="lockup" height={height} />
+        <span className="inline-flex items-center" style={{ gap: Math.round(height * 0.3) }}>
+          <Tile size={Math.round(height * 1.2)} />
+          <Art kind="lockup" height={height} />
+        </span>
       </span>
       {collapsible && (
         <span className="hidden group-data-[collapsible=icon]:contents">
-          <Art kind="mark" height={24} />
+          <Tile size={28} />
         </span>
       )}
     </span>
