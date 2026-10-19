@@ -5,24 +5,51 @@
 --    (23 questions, all also live bank questions that sprints already include), so the
 --    exclusion set is empty; the guard below aborts if any live paper exists at apply time.
 --  * question_import_review's 'paper' filter likewise reduces to: yes = none, no = all.
---  * The single legacy paper session keeps its history title and paper_id: both are
---    copied into its config, and activity_stats / score_history read them from there.
+--  * Legacy paper sessions keep their paper_id and the paper title their owner could see
+--    (papers RLS: live, listed draft preview, or admin) in legacy_paper_sessions, readable
+--    exactly when the session row is readable. sessions.config is not touched, so
+--    student_progress and session reads are byte-identical.
 --  * New 'paper' sessions were only possible with a paper_id; a restrictive policy keeps
 --    students from inserting them once the column and its check constraint go.
+--  * The Papers RPCs (also dropped by 0061) are dropped here too, so this file never
+--    leaves functions pointing at removed tables, whichever order the two are applied.
 -- Exact names, no CASCADE. Live definitions otherwise verbatim (activity_stats includes E7).
+create table if not exists public.legacy_paper_sessions (
+  session_id uuid primary key references public.sessions (id) on delete cascade,
+  paper_id uuid not null,
+  title text
+);
+alter table public.legacy_paper_sessions enable row level security;
+revoke all on public.legacy_paper_sessions from public, anon, authenticated;
+grant select on public.legacy_paper_sessions to authenticated;
+drop policy if exists "readable with its session" on public.legacy_paper_sessions;
+create policy "readable with its session" on public.legacy_paper_sessions for select
+  to authenticated using (exists (select 1 from public.sessions s where s.id = session_id));
+
 do $$
 begin
   if to_regclass('public.papers') is null then return; end if;
   if exists (select 1 from public.papers where status = 'live') then
     raise exception 'A live paper exists; removing Papers would change sprint selection';
   end if;
-  update public.sessions s
-  set config = s.config || jsonb_build_object('paper_id', s.paper_id)
-    || case when p.title is not null then jsonb_build_object('title', p.title) else '{}'::jsonb end
-  from public.papers p
-  where p.id = s.paper_id;
+  insert into public.legacy_paper_sessions (session_id, paper_id, title)
+  select s.id, s.paper_id,
+    case when p.status = 'live'
+      or (p.status = 'draft' and s.user_id = any (p.preview_user_ids))
+      or exists (select 1 from public.profiles pr where pr.id = s.user_id and pr.role = 'admin')
+    then p.title end
+  from public.sessions s
+  left join public.papers p on p.id = s.paper_id
+  where s.paper_id is not null
+  on conflict (session_id) do nothing;
 end
 $$;
+
+drop function if exists public.start_paper(uuid, boolean);
+drop function if exists public.paper_rank(uuid);
+drop function if exists public.admin_paper_rows();
+drop function if exists public.admin_save_paper(uuid, jsonb, text, boolean, timestamptz);
+drop function if exists public.admin_retire_papers(uuid[]);
 
 CREATE OR REPLACE FUNCTION public.activity_stats(p_filters jsonb, p_labels jsonb)
  RETURNS jsonb
@@ -31,7 +58,7 @@ CREATE OR REPLACE FUNCTION public.activity_stats(p_filters jsonb, p_labels jsonb
  SET search_path TO ''
 AS $function$
 with mine as materialized (
-  select s.id, s.kind, case when s.kind = 'paper' then (s.config->>'paper_id')::uuid end as paper_id, s.config, s.started_at, s.finished_at, s.elapsed_s,
+  select s.id, s.kind, lp.paper_id, s.config, s.started_at, s.finished_at, s.elapsed_s,
     (s.started_at at time zone 'Australia/Sydney')::date as day,
     coalesce(s.kind = 'flashcards' and s.config->>'mode' = 'study', false) as study,
     coalesce(a.answered, 0) as answered,
@@ -39,7 +66,7 @@ with mine as materialized (
     case when s.finished_at is null then 'In progress' when a.pending then 'Marking'
       when a.provisional then 'Provisional' else 'Finished' end as status,
     case when a.pending then null else h.pct end as pct,
-    coalesce(case s.kind when 'paper' then coalesce(s.config->>'title', p_labels->>'paper')
+    coalesce(case s.kind when 'paper' then coalesce(lp.title, s.config->>'title', p_labels->>'paper')
       when 'single' then p_labels->>'single'
       when 'flashcards' then p_labels->>case when s.config->>'mode' = 'test' then 'test' else 'study' end
       else coalesce(p_labels->>(s.config->>'mode'), 'Practice sprint') end, 'Practice')
@@ -47,6 +74,7 @@ with mine as materialized (
     case when s.kind = 'flashcards' then coalesce(jsonb_array_length(s.config->'card_ids'), 0)
       else coalesce(a.items, 0) end as items
   from public.sessions s
+  left join public.legacy_paper_sessions lp on lp.session_id = s.id
   left join public.score_history h on h.id = s.id and h.user_id = (select auth.uid())
   left join lateral (
     select count(*) filter (where a.status <> 'skipped') as items,
@@ -217,12 +245,12 @@ end;
 $function$;
 
 create or replace view public.score_history with (security_invoker = true) as
-select user_id, id, kind, config->>'mode' as mode,
-  case when kind = 'paper' then (config->>'paper_id')::uuid end as paper_id,
-  finished_at, score, max_score,
-  round(100::numeric * score / nullif(max_score, 0::numeric), 1) as pct
-from public.sessions
-where finished_at is not null;
+select s.user_id, s.id, s.kind, s.config->>'mode' as mode, lp.paper_id,
+  s.finished_at, s.score, s.max_score,
+  round(100::numeric * s.score / nullif(s.max_score, 0::numeric), 1) as pct
+from public.sessions s
+left join public.legacy_paper_sessions lp on lp.session_id = s.id
+where s.finished_at is not null;
 
 drop policy if exists "no direct paper sessions" on public.sessions;
 create policy "no direct paper sessions" on public.sessions as restrictive for insert
