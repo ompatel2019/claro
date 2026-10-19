@@ -13,12 +13,23 @@ try {
   const sizes = [16, 32, 48];
   const images = [];
   // favicon.ico only; apple-icon.png is the marketing site's file, copied as-is.
+  // Canvas PNGs are always RGBA, which Next's ICO decoder requires.
   for (const size of sizes) {
-    await page.setViewportSize({ width: size, height: size });
-    await page.setContent(`<!doctype html>
-      <style>body { margin: 0; } svg { display: block; width: ${size}px; height: ${size}px; }</style>
-      ${svg}`);
-    images.push(await page.screenshot({ omitBackground: true }));
+    const data = await page.evaluate(
+      async ([svg, size]) => {
+        const image = new Image();
+        image.src = `data:image/svg+xml,${encodeURIComponent(svg)}`;
+        await image.decode();
+        const canvas = Object.assign(document.createElement("canvas"), {
+          width: size,
+          height: size,
+        });
+        canvas.getContext("2d").drawImage(image, 0, 0, size, size);
+        return canvas.toDataURL("image/png").split(",")[1];
+      },
+      [svg, size],
+    );
+    images.push(Buffer.from(data, "base64"));
   }
 
   // ICONDIR followed by one ICONDIRENTRY per embedded PNG.
