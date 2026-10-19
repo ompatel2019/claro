@@ -86,3 +86,25 @@ it("distinguishes a reviewed full mark from provisional feedback", () => {
     "Clear links with evidence.",
   );
 });
+
+it("keeps explanations and disputes inside the final card's More disclosure", () => {
+  render(
+    <SingleResult
+      row={{ ...row, explanation: "Rate changes affect demand." }}
+      sessionId="session"
+      when="2026-10-19T00:00:00Z"
+      topic="Economic growth"
+    />,
+  );
+  const more = screen.getByText("More").closest("details")!;
+  expect(more.closest('[data-slot="card"]')).toHaveTextContent(
+    "Your answer, marked",
+  );
+  expect(more).toHaveTextContent("Explanation");
+  expect(more).toHaveTextContent("Marking review");
+  fireEvent.click(screen.getByText("More"));
+  fireEvent.click(screen.getByText("Marking review"));
+  expect(
+    screen.getByRole("button", { name: "Question this mark" }),
+  ).toBeVisible();
+});

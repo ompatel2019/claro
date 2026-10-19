@@ -5,6 +5,7 @@ import {
   Book,
   Calculator as CalculatorIcon,
   Message,
+  Flag,
   More,
   PanelLeft,
 } from "@/components/icons";
@@ -164,25 +165,58 @@ export function SessionShell(props: SessionProps) {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <FocusBar className="bg-card/90 sticky top-0 z-30 flex h-[68px] items-center gap-1.5 border-b px-2 backdrop-blur sm:gap-4 sm:px-8">
+      <FocusBar
+        className={cn(
+          "bg-card/90 sticky top-0 z-30 flex h-[68px] items-center gap-1.5 border-b px-2 backdrop-blur sm:gap-4 sm:px-8",
+          flashcards &&
+            "gap-3 px-3 sm:gap-3 sm:px-5 [&>[data-component=MobileFocusFeedback]]:hidden",
+        )}
+      >
         <Button
           variant="ghost"
           size="sm"
           aria-label="Save and exit"
+          className={flashcards ? "text-[13px]" : undefined}
           disabled={busy}
           onClick={onExit}
         >
           <PortalIcon name="arrow-left" aria-hidden className="size-4" />
-          <span className="sm:hidden">Exit</span>
-          <span className="hidden sm:inline">Save and exit</span>
+          <span
+            className={flashcards ? "whitespace-nowrap" : "hidden sm:inline"}
+          >
+            Save and exit
+          </span>
+          {!flashcards && <span className="sm:hidden">Exit</span>}
         </Button>
         <div className="min-w-0 flex-1 sm:border-l sm:pl-4">
-          <p className="hidden truncate text-sm font-semibold md:block">
+          <p
+            className={cn(
+              "hidden truncate text-sm font-semibold md:block",
+              flashcards && "block",
+            )}
+          >
             {title}
           </p>
-          <div className="flex items-center gap-2">
-            <div className="flex min-w-14 flex-col gap-1 sm:min-w-24">
-              <p className="text-muted-foreground text-xs font-medium tabular-nums">
+          <div
+            className={cn(
+              "flex items-center gap-2",
+              flashcards &&
+                "text-muted-foreground block truncate text-xs leading-4",
+            )}
+          >
+            <div
+              className={
+                flashcards
+                  ? "inline"
+                  : "flex min-w-14 flex-col gap-1 sm:min-w-24"
+              }
+            >
+              <p
+                className={cn(
+                  "text-muted-foreground text-xs font-medium tabular-nums",
+                  flashcards && "inline",
+                )}
+              >
                 {flashcards ? "Card" : "Q"} {position} of {total}
               </p>
               <div
@@ -191,11 +225,7 @@ export function SessionShell(props: SessionProps) {
                 aria-valuemin={0}
                 aria-valuemax={total}
                 aria-valuenow={answered}
-                className={
-                  flashcards
-                    ? "bg-muted h-1 overflow-hidden rounded-full"
-                    : "sr-only"
-                }
+                className="sr-only"
               >
                 <div
                   className="bg-ink h-full transition-[width]"
@@ -204,22 +234,34 @@ export function SessionShell(props: SessionProps) {
               </div>
             </div>
             {flashcards && (
-              <p className="text-xs tabular-nums">Knew {flashcards.known}</p>
+              <span className="text-xs tabular-nums">
+                {" "}
+                · <span>Knew {flashcards.known}</span> ·{" "}
+              </span>
             )}
             <p
               role="status"
               className={cn(
-                "hidden items-center gap-1 text-xs sm:flex",
+                flashcards
+                  ? "inline-flex items-center gap-1 text-xs"
+                  : "hidden items-center gap-1 text-xs sm:flex",
                 saveState === "error"
                   ? "text-destructive"
                   : "text-muted-foreground",
               )}
             >
-              {saveState === "saved"
-                ? "Saved"
-                : saveState === "saving"
-                  ? "Saving…"
-                  : "Not saved. Retrying"}
+              {saveState === "saved" ? (
+                <>
+                  {flashcards && (
+                    <PortalIcon name="check" className="size-3" aria-hidden />
+                  )}
+                  Saved
+                </>
+              ) : saveState === "saving" ? (
+                "Saving…"
+              ) : (
+                "Not saved. Retrying"
+              )}
               {saveState === "error" && (
                 <button type="button" className="underline" onClick={onRetry}>
                   Retry
@@ -228,7 +270,12 @@ export function SessionShell(props: SessionProps) {
             </p>
           </div>
         </div>
-        <div className="ml-auto flex shrink-0 items-center gap-1">
+        <div
+          className={cn(
+            "ml-auto flex shrink-0 items-center gap-1",
+            flashcards && "gap-2",
+          )}
+        >
           {!flashcards && (
             <>
               <Button
@@ -285,11 +332,11 @@ export function SessionShell(props: SessionProps) {
             aria-label="Send feedback"
             onClick={() => feedback()}
           >
-            <Message />
+            {flashcards ? <Flag /> : <Message />}
           </Button>
           <Button
             size="sm"
-            className="rounded-full"
+            className={cn("rounded-full", flashcards && "text-[13px]")}
             disabled={busy}
             onClick={onFinish}
           >
@@ -319,6 +366,7 @@ export function SessionShell(props: SessionProps) {
           className={cn(
             "mx-auto w-full max-w-[824px] min-w-0 flex-1 space-y-5 px-4 py-6 sm:px-8 sm:py-10",
             wide && "max-w-7xl",
+            flashcards && "max-w-none px-4 py-8 sm:px-4 sm:py-12",
           )}
         >
           {children}

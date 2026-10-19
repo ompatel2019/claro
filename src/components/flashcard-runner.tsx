@@ -667,7 +667,7 @@ export function FlashcardRunner({
             {listening ? "Stop" : "Speak"}
           </Button>
         )}
-        {session.config.mode === "study" && (
+        {session.config.mode !== "test" && (
           <span className="text-muted-foreground text-xs">
             or type, then flip
           </span>
@@ -738,18 +738,19 @@ export function FlashcardRunner({
       }}
       booklet={null}
     >
-      <div className="mx-auto grid max-w-[680px] gap-5 py-2 sm:py-2">
+      <div className="mx-auto grid max-w-[680px] gap-5">
         {offline && (
           <p role="status">{"You're offline. We'll save when you're back."}</p>
         )}
         {welcome && (
-          <p role="status">
+          <p role="status" className="sr-only">
             Welcome back, {left} {left === 1 ? "card" : "cards"} left
           </p>
         )}
         <div className="flex items-center justify-between gap-3">
           <ToggleGroup
             aria-label="View"
+            className="[&_[data-slot=toggle-group-item]]:min-h-7 [&_[data-slot=toggle-group-item]]:py-1"
             value={[list ? "list" : "one"]}
             onValueChange={(values) => {
               if (!values[0]) return;
@@ -767,7 +768,7 @@ export function FlashcardRunner({
           </span>
         </div>
         {recycled > 0 && (
-          <p>
+          <p className="sr-only">
             {recycled} {recycled === 1 ? "card" : "cards"} coming back
           </p>
         )}

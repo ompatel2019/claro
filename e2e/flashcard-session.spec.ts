@@ -186,7 +186,7 @@ test.describe("Flashcard session and results", () => {
     await expect(page).toHaveURL(`/student/flashcards/${id}`);
     await expect(
       page.getByText("Welcome back, 1 card left", { exact: true }),
-    ).toBeVisible();
+    ).toBeAttached();
     // The shortcut can land before the resumed runner hydrates; press again until it counts.
     const results = page.getByRole("heading", {
       name: "Your flashcard results",

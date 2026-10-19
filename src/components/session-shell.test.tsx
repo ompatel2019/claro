@@ -163,3 +163,21 @@ it("opens the sprint calculator from More tools and keeps Finish available", asy
   fireEvent.click(screen.getByRole("button", { name: "Finish" }));
   expect(props.onFinish).toHaveBeenCalled();
 });
+
+it("uses compact flashcard metadata without a visible progress bar", () => {
+  shell({ title: "Due for review", flashcards: { known: 1, shortcuts: [] } });
+  expect(screen.getByText("Due for review")).toBeVisible();
+  expect(screen.getByText("Card 2 of 8")).toBeVisible();
+  expect(screen.getByText(/Knew 1/)).toBeVisible();
+  expect(screen.getByRole("progressbar", { name: "Answered" })).toHaveClass(
+    "sr-only",
+  );
+  expect(
+    screen.getByRole("button", { name: "Save and exit" }),
+  ).toHaveTextContent("Save and exit");
+  expect(
+    screen
+      .getAllByRole("button", { name: "Send feedback" })
+      .some((button) => button.querySelector('[data-icon="flag"]')),
+  ).toBeTruthy();
+});
