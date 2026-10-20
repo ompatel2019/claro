@@ -67,7 +67,7 @@ async function StudyDays({
 }: {
   today: string;
   due: Promise<number | null>;
-  activity: Promise<ActivityDay[]>;
+  activity: Promise<ActivityDay[] | null>;
 }) {
   const db = await createClient();
   const [days, streaks, dueNow] = await Promise.all([
@@ -75,6 +75,7 @@ async function StudyDays({
     db.rpc("activity_streaks").single(),
     due,
   ]);
+  if (days === null) throw new Error("Couldn't load your study days.");
   const streak = streaks.data as {
     current_streak: number;
     longest_streak: number;
@@ -134,14 +135,16 @@ export default async function Home() {
   const today = sydneyToday();
   const due = dueCount(id).catch(() => null);
   const progress = loadProgress("90", today).catch(() => null);
-  const activity = createClient().then(async (db) => {
-    const { data, error } = await db.rpc("activity_days", {
-      p_from: addDays(today, -371),
-      p_to: today,
-    });
-    if (error) throw error;
-    return (data ?? []) as ActivityDay[];
-  });
+  const activity = createClient()
+    .then(async (db) => {
+      const { data, error } = await db.rpc("activity_days", {
+        p_from: addDays(today, -371),
+        p_to: today,
+      });
+      if (error) throw error;
+      return (data ?? []) as ActivityDay[];
+    })
+    .catch(() => null);
   const marks = readHomeMarks(id, today);
   const sessions = readHomeSessions(id);
   const unfinished = readHomeUnfinishedSprint(id);
@@ -176,7 +179,7 @@ export default async function Home() {
           marks={marks}
           due={due}
           today={today}
-          activity={activity.catch(() => [])}
+          activity={activity.then((days) => days ?? [])}
         />
       </Suspense>
       <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,2.06fr)_minmax(0,1fr)]">
