@@ -3,9 +3,10 @@
 -- so the student who attempted them (the paper's preview student: 1 paper session, 12 sprint
 -- sessions) lost read access to those attempts' questions and their sprint review pages, which
 -- embed attempts -> questions, would no longer render. This keeps history exactly as before:
---  * unpublished_paper_questions lists the 23; a student may read one only if they attempted it
---    (RLS on the list via their own attempts). Nobody else can read them (strictly narrower than
---    before 0077, when every signed-in user could).
+--  * unpublished_paper_questions lists the 23 (definer functions only); _readers pins the users who
+--    had attempted each one when this runs, and only they can read it (own rows via RLS). Nobody
+--    else can read them, and new attempt rows grant nothing (strictly narrower than before 0077,
+--    when every signed-in user could read them).
 --  * They are not import drafts: question_import_review and admin_dashboard's importReview count
 --    skip them, so admin import review stays as before 0077.
 -- Sprints are unaffected (sprint_questions / sprint_pool / student_progress filter status = 'live').
@@ -16,11 +17,20 @@ create table if not exists public.unpublished_paper_questions (
 );
 alter table public.unpublished_paper_questions enable row level security;
 revoke all on public.unpublished_paper_questions from public, anon, authenticated;
-grant select on public.unpublished_paper_questions to authenticated;
-drop policy if exists "attempted by you" on public.unpublished_paper_questions;
-create policy "attempted by you" on public.unpublished_paper_questions for select
-  to authenticated using (exists (select 1 from public.attempts a
-    where a.question_id = unpublished_paper_questions.question_id and a.user_id = (select auth.uid())));
+
+-- Who may still read them: exactly the users with an attempt on them when this runs (pinned, so a
+-- new attempt row inserted later never grants access).
+create table if not exists public.unpublished_paper_question_readers (
+  question_id text not null references public.unpublished_paper_questions (question_id) on delete cascade,
+  user_id uuid not null references public.profiles (id) on delete cascade,
+  primary key (question_id, user_id)
+);
+alter table public.unpublished_paper_question_readers enable row level security;
+revoke all on public.unpublished_paper_question_readers from public, anon, authenticated;
+grant select on public.unpublished_paper_question_readers to authenticated;
+drop policy if exists "own" on public.unpublished_paper_question_readers;
+create policy "own" on public.unpublished_paper_question_readers for select
+  to authenticated using (user_id = (select auth.uid()));
 
 insert into public.unpublished_paper_questions (question_id)
 select q.id from public.questions q
@@ -29,10 +39,14 @@ where q.status = 'draft' and q.id = any (array[
           '2018-q09', '2018-q10', '2018-q11', '2018-q12', '2018-q13', '2018-q14', '2018-q16', '2018-q17',
           '2018-q18', '2018-q19', '2018-q21a', '2018-q21b', '2018-q21c', '2018-q25', '2018-q26'])
 on conflict (question_id) do nothing;
+insert into public.unpublished_paper_question_readers (question_id, user_id)
+select distinct a.question_id, a.user_id from public.attempts a
+join public.unpublished_paper_questions u on u.question_id = a.question_id
+on conflict (question_id, user_id) do nothing;
 
 drop policy if exists "attempted unpublished paper question" on public.questions;
 create policy "attempted unpublished paper question" on public.questions for select
-  to authenticated using (exists (select 1 from public.unpublished_paper_questions u where u.question_id = questions.id));
+  to authenticated using (exists (select 1 from public.unpublished_paper_question_readers r where r.question_id = questions.id));
 
 -- 0077 definition plus the exclusion.
 CREATE OR REPLACE FUNCTION public.question_import_review(p_threshold double precision DEFAULT 0.82, p_filters jsonb DEFAULT '{}'::jsonb)
