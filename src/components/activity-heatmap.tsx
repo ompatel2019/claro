@@ -44,9 +44,9 @@ export function ActivityHeatmap({
   error?: boolean;
   errorContent?: React.ReactNode;
   /** Home's "Your study days" card: big streak numbers, today marker and a call to action. */
-  home?: { action: React.ReactNode; template?: boolean };
+  home?: { action: React.ReactNode };
 }) {
-  const cell = home?.template ? 18 : CELL;
+  const cell = home ? 18 : CELL;
   const allWeeks = heatmapWeeks(today);
   const [weekCount, setWeekCount] = useState(53);
   const [offset, setOffset] = useState(0);
@@ -140,48 +140,36 @@ export function ActivityHeatmap({
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h2 className="text-[15px] font-semibold">
-                  {home.template ? "Study days" : "Your study days"}
-                </h2>
+                <h2 className="text-[15px] font-semibold">Study days</h2>
                 <p className="text-muted-foreground mt-1 text-[13px]">
-                  {home.template
-                    ? "Consistency is the cheat code."
-                    : "Every day you study lights up a square."}
+                  Consistency is the cheat code.
                 </p>
               </div>
-              {home.template && (
-                <div className="flex items-center gap-1">
-                  <button
-                    type="button"
-                    aria-label="Earlier weeks"
-                    disabled={end === weekCount}
-                    onClick={() =>
-                      setOffset(Math.min(53 - weekCount, offset + weekCount))
-                    }
-                    className="hover:bg-accent grid size-7 place-items-center rounded-full disabled:opacity-30"
-                  >
-                    <PortalIcon name="chevron-left" className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    aria-label="Later weeks"
-                    disabled={end === allWeeks.length}
-                    onClick={() => setOffset(Math.max(0, offset - weekCount))}
-                    className="hover:bg-accent grid size-7 place-items-center rounded-full disabled:opacity-30"
-                  >
-                    <PortalIcon name="chevron-right" className="size-4" />
-                  </button>
-                </div>
-              )}
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  aria-label="Earlier weeks"
+                  disabled={end === weekCount}
+                  onClick={() =>
+                    setOffset(Math.min(53 - weekCount, offset + weekCount))
+                  }
+                  className="hover:bg-accent grid size-7 place-items-center rounded-full disabled:opacity-30"
+                >
+                  <PortalIcon name="chevron-left" className="size-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Later weeks"
+                  disabled={end === allWeeks.length}
+                  onClick={() => setOffset(Math.max(0, offset - weekCount))}
+                  className="hover:bg-accent grid size-7 place-items-center rounded-full disabled:opacity-30"
+                >
+                  <PortalIcon name="chevron-right" className="size-4" />
+                </button>
+              </div>
             </div>
             {!error && (
-              <dl
-                className={
-                  home.template
-                    ? "grid grid-cols-3 gap-3 pt-1 pb-2"
-                    : "flex gap-6"
-                }
-              >
+              <dl className="grid grid-cols-3 gap-3 pt-1 pb-2">
                 {(
                   [
                     [current, "Day streak"],
@@ -196,11 +184,11 @@ export function ActivityHeatmap({
                     <dd
                       className={cn(
                         "text-2xl leading-tight font-bold",
-                        home.template && "flex items-center gap-1 text-[22px]",
+                        "flex items-center gap-1 text-[22px]",
                       )}
                     >
                       {value}
-                      {home.template && label === "Day streak" && (
+                      {label === "Day streak" && (
                         <Flame aria-hidden className="text-brand size-4" />
                       )}
                     </dd>
@@ -323,7 +311,7 @@ export function ActivityHeatmap({
             </div>
           </div>
         )}
-        {!error && !home?.template && weekCount < allWeeks.length && (
+        {!error && !home && weekCount < allWeeks.length && (
           <div className="flex justify-between gap-2 text-xs">
             <button
               type="button"
@@ -349,7 +337,6 @@ export function ActivityHeatmap({
           className={cn(
             "text-muted-foreground flex flex-col-reverse items-start gap-2 text-xs sm:flex-row sm:items-center sm:justify-between",
             home && "flex-row flex-wrap items-center justify-between",
-            home && !home.template && "mt-auto",
           )}
         >
           {!home && <span>{caption}</span>}
@@ -363,14 +350,8 @@ export function ActivityHeatmap({
               />
             ))}
             More
-            {home && !home.template && (
-              <span className="ml-3 flex items-center gap-1">
-                <span className="ring-foreground ring-offset-card size-2.5 rounded-[2px] ring-1 ring-offset-1" />
-                Today
-              </span>
-            )}
           </span>
-          {home?.template &&
+          {home &&
           (byDay.get(today)?.questions ?? 0) + (byDay.get(today)?.cards ?? 0) >
             0 ? (
             <span className="flex items-center gap-1.5 text-xs">

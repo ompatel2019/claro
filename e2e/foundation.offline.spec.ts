@@ -43,7 +43,7 @@ test.beforeAll(async () => {
                     ? `export const usePathname=()=>location.pathname;export const useRouter=()=>({push:url=>{history.pushState({},'',url);window.dispatchEvent(new Event('navigated'));}});`
                     : path.includes("actions")
                       ? `export const signOut=()=>{};`
-                      : `export const HeaderFeedback=()=>null;export const useFeedback=()=>()=>{};`,
+                      : `export const useFeedback=()=>()=>{};`,
               loader: "tsx",
               resolveDir: process.cwd(),
             }));
