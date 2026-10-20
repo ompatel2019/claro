@@ -1,4 +1,4 @@
--- Run after 0054 on a disposable local Postgres, with psql -v ON_ERROR_STOP=1.
+-- Runs via supabase/tests/run.sh after all migrations (psql -v ON_ERROR_STOP=1).
 begin;
 insert into auth.users (id, raw_user_meta_data) values
   ('00000000-0000-4000-8000-000000000701', '{}'),
