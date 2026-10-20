@@ -1,67 +1,10 @@
 -- Disposable local Postgres only; psql -v ON_ERROR_STOP=1 -f this-file.sql.
--- Restore the previous definitions inside the transaction, clone them as invokers,
--- then reapply 0081. Full JSONB equality preserves array order and NULLs.
+-- Test current student_progress and sprint_pool behaviour across users, time zones,
+-- date ranges and pool filters, with absolute assertions for edge cases.
 \set ON_ERROR_STOP on
 begin;
-\ir ../migrations/0051_progress_null_type.sql
-create or replace function public.sprint_pool(p_config jsonb)
-returns jsonb
-language sql
-stable
-security invoker
-set search_path = ''
-as $$
-  with pool as (select * from public.sprint_questions(p_config)),
-  hist as (
-    select * from pool where case coalesce(p_config ->> 'history', 'prefer_new')
-      when 'new_only' then not seen when 'mistakes' then mistake when 'flagged' then flagged else true end
-  )
-  select jsonb_build_object(
-    'questions', (select count(*) from hist),
-    'marks', (select coalesce(sum(marks), 0) from hist),
-    'mcq_questions', (select count(*) from hist where type = 'mcq'),
-    'mcq_new', (select count(*) from pool where type = 'mcq' and not seen),
-    'short_marks', (select coalesce(sum(marks), 0) from hist where type = 'short'),
-    'by_type', (select coalesce(jsonb_object_agg(type, n), '{}') from (select type, count(*) n from hist group by type) t),
-    'any', (select count(*) from pool),
-    'new', (select count(*) from pool where not seen),
-    'mistakes', (select count(*) from pool where mistake),
-    'flagged', (select count(*) from pool where flagged),
-    'topics', (select coalesce(jsonb_object_agg(t, n), '{}') from (select split_part(topic_id, '-', 1) t, count(*) n
-      from public.sprint_questions(p_config - 'topics' - 'subtopics') group by 1) x),
-    'subtopics', (select coalesce(jsonb_object_agg(topic_id, n), '{}') from (select topic_id, count(*) n
-      from public.sprint_questions(p_config - 'subtopics') group by 1) x),
-    'all_subtopics', (select count(*) from public.sprint_questions(p_config - 'subtopics')),
-    'verbs', (select coalesce(jsonb_object_agg(verb, n), '{}') from (select verb, count(*) n
-      from public.sprint_questions(p_config - 'verbs') where verb is not null group by 1) x),
-    'difficulty', (select coalesce(jsonb_object_agg(d, n), '{}') from (select
-      case when marks <= 3 then 'foundation' when marks <= 5 then 'standard' else 'challenging' end d, count(*) n
-      from public.sprint_questions(p_config - 'difficulty') where type <> 'mcq' group by 1) x),
-    'all_years', (select count(*) from public.sprint_questions(p_config - 'year_from' - 'year_to')),
-    'years', (select jsonb_build_array(min(q.year), max(q.year)) from public.questions q where q.status = 'live'),
-    'trial', exists (select 1 from public.questions q where q.status = 'live' and q.origin = 'a1')
-  );
-$$;
-
-create temp table e10_function_attributes as
-select oid, to_jsonb(p) - 'prosrc' as attributes from pg_proc p
-where oid in ('public.student_progress(date,date)'::regprocedure, 'public.sprint_pool(jsonb)'::regprocedure);
 do $$
 begin
-  execute replace(pg_get_functiondef('public.student_progress(date,date)'::regprocedure),
-    'public.student_progress(', 'pg_temp.student_progress_before(');
-  execute replace(pg_get_functiondef('public.sprint_pool(jsonb)'::regprocedure),
-    'public.sprint_pool(', 'pg_temp.sprint_pool_before(');
-end $$;
-revoke execute on function pg_temp.student_progress_before(date,date), pg_temp.sprint_pool_before(jsonb) from public, anon;
-grant execute on function pg_temp.student_progress_before(date,date), pg_temp.sprint_pool_before(jsonb) to authenticated;
-\ir ../migrations/0081_progress_pool_aggregate_once.sql
-do $$
-begin
-  if exists (select 1 from e10_function_attributes old join pg_proc p using (oid)
-    where old.attributes is distinct from to_jsonb(p) - 'prosrc') then
-    raise exception 'Function attributes, defaults, ownership or ACL changed';
-  end if;
   if has_function_privilege('anon', 'public.student_progress(date,date)', 'execute')
     or has_function_privilege('anon', 'public.sprint_pool(jsonb)', 'execute') then
     raise exception 'Anonymous EXECUTE must stay revoked';
@@ -166,7 +109,7 @@ insert into public.attempts (session_id, user_id, question_id, position, status,
 values ('e1010000-0000-4000-8000-000000000011', 'e1000000-0000-4000-8000-000000000002',
   'e10-short3', 1, 'marked', 'Other synthetic user', 3, 3);
 
--- Unchanged card branches are included in the full-report comparison.
+-- Include card branches in the report coverage.
 insert into public.flashcards (id, topic_id, kind, front, back, created_at, owner_id, origin) values
   ('e10-card-new', 'e10-a', 'term', 'Synthetic E10 new', 'Synthetic back', '2026-10-03T16:00:00Z', null, 'claro'),
   ('e10-card-known', 'e10-a', 'term', 'Synthetic E10 known', 'Synthetic back', '2026-01-01T00:00:00Z', null, 'claro'),
@@ -180,17 +123,16 @@ insert into public.flashcard_progress (user_id, flashcard_id, due_on, interval_d
 do $$
 begin
   perform set_config('request.jwt.claim.sub', 'e1000000-0000-4000-8000-000000000001', true);
-  if public.student_progress('2026-10-04', '2026-10-04') is distinct from
-      pg_temp.student_progress_before('2026-10-04', '2026-10-04')
-    or public.sprint_pool('{"mode":"mixed"}') is distinct from pg_temp.sprint_pool_before('{"mode":"mixed"}') then
-    raise exception 'Owner-context JSON changed';
+  if public.student_progress('2026-10-04', '2026-10-04') is null
+    or public.sprint_pool('{"mode":"mixed"}') is null then
+    raise exception 'Owner-context functions must return non-null JSON';
   end if;
 end $$;
 set local role authenticated;
 do $$
 declare
   u text; zone text; r record; cfg jsonb; mode_cfg jsonb; facet jsonb; hist text;
-  old_report jsonb; new_report jsonb; comparisons int := 0;
+  report jsonb; calls int := 0;
 begin
   foreach zone in array array['UTC', 'Australia/Sydney', 'America/New_York'] loop
     perform set_config('TimeZone', zone, true);
@@ -207,15 +149,14 @@ begin
         ('2026-10-10'::date, '2026-10-10'::date), ('2027-01-01'::date, '2027-01-02'::date),
         ('2026-10-05'::date, '2026-10-04'::date), (null::date, null::date)
       ) dates(lo, hi) loop
-        old_report := pg_temp.student_progress_before(r.lo, r.hi);
-        new_report := public.student_progress(r.lo, r.hi);
-        if old_report is distinct from new_report then
-          raise exception 'Progress mismatch for %, %, %..%: old %, new %', u, zone, r.lo, r.hi, old_report, new_report;
+        report := public.student_progress(r.lo, r.hi);
+        if report is null then
+          raise exception 'Progress returned NULL for %, %, %..%', u, zone, r.lo, r.hi;
         end if;
-        comparisons := comparisons + 1;
+        calls := calls + 1;
       end loop;
-      if public.student_progress() is distinct from pg_temp.student_progress_before() then
-        raise exception 'Default progress arguments changed';
+      if public.student_progress() is null then
+        raise exception 'Default progress arguments must return non-null JSON';
       end if;
       for mode_cfg in select x from jsonb_array_elements('[{}, {"mode":"mcq"}, {"mode":"short"},
         {"mode":"extended"}, {"mode":"mixed"}, {"mode":"mixed","include_extended":true}]') x loop
@@ -225,25 +166,24 @@ begin
             {"difficulty":["standard"],"verbs":["Explain"],"origins":["a1"],"year_from":2021,"year_to":2025},
             {"topics":["absent"],"subtopics":[],"year_from":2030}]') x loop
             cfg := mode_cfg || facet || jsonb_build_object('history', hist);
-            old_report := pg_temp.sprint_pool_before(cfg);
-            new_report := public.sprint_pool(cfg);
-            if old_report is distinct from new_report then
-              raise exception 'Pool mismatch for %, %, %: old %, new %', u, zone, cfg, old_report, new_report;
+            report := public.sprint_pool(cfg);
+            if report is null then
+              raise exception 'Pool returned NULL for %, %, %', u, zone, cfg;
             end if;
-            comparisons := comparisons + 1;
+            calls := calls + 1;
           end loop;
         end loop;
       end loop;
-      if public.sprint_pool(null) is distinct from pg_temp.sprint_pool_before(null)
-        or public.sprint_pool('{"mode":"mixed"}') is distinct from pg_temp.sprint_pool_before('{"mode":"mixed"}') then
-        raise exception 'NULL/default pool config changed';
+      if public.sprint_pool(null) is null
+        or public.sprint_pool('{"mode":"mixed"}') is null then
+        raise exception 'NULL/default pool config must return non-null JSON';
       end if;
     end loop;
   end loop;
-  raise notice 'E10: % exact full-JSON comparisons passed, plus default/NULL calls', comparisons;
+  raise notice 'E10: % current-function calls passed, plus owner/default/NULL calls', calls;
 end $$;
 
--- Anchor the edge fixtures so an accidentally empty test cannot pass on parity alone.
+-- Assert absolute runtime results for the edge fixtures.
 select set_config('request.jwt.claim.sub', 'e1000000-0000-4000-8000-000000000001', true);
 do $$
 declare report jsonb; row jsonb;

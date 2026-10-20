@@ -18,8 +18,8 @@ npm run dev
 - `src/app/api`: marking route handlers (attempt mark/transcribe, flashcard mark, session finish)
 - `src/lib/marking`: band-first marking engine (pure grading helpers, prompts, schemas, server engine)
 - `src/lib/ai`: OpenAI structured-output calls, per-model prices, cost logging to `ai_usage` and the budget guard
-- `supabase/migrations`: every schema change, applied in order (`scripts/sql.sh <file>` runs one via the Management API)
-  - Numbering: a new migration takes the next free number above the highest file on `origin/main` (pull first) and never reuses one. Two files share 0027 (`0027_evals_bucket.sql`, `0027_single_check_write_guards.sql`); both are applied on the project (there is no `supabase_migrations` tracking table, files are applied by hand), they are independent, and they stay as they are, applied in filename order.
+- `supabase/migrations`: starts with `0000_baseline.sql`, a squash of 0001–0081 already applied on production; do not run the baseline on production.
+  - Numbering: a new migration takes the next free number above the highest file on `origin/main` (pull first), starting at 0082, and never reuses one (`scripts/sql.sh <file>` runs one via the Management API).
 - `scripts`: content seeding (NESA past papers, flashcards), marking eval, AI spend export
 
 Scripts run with `npx tsx --conditions=react-server --env-file=.env.local scripts/<name>.mts`.

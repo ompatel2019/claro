@@ -81,25 +81,4 @@ begin
   end;
 end $$;
 reset role;
--- Reapply the actual migration to legacy feedback, then prove it is idempotent.
--- Runtime checks above run first so this cannot mask a broken policy or RPC.
-\ir ../migrations/0048_student_marking_privacy.sql
-do $$
-begin
-  if (select feedback from public.attempts where id = 'c2000000-0000-0000-0000-000000000021')
-    is distinct from '{"note":"Keep this","flags":{"keep":true},"other":{"marks":4}}'::jsonb
-    or (select feedback from public.attempts where id = 'c2000000-0000-0000-0000-000000000022')
-      is distinct from '{"note":"Unchanged"}'::jsonb
-    or (select feedback from public.attempts where id = 'c2000000-0000-0000-0000-000000000023') is not null then
-    raise exception '0048 cleanup must remove only legacy feedback flags';
-  end if;
-end $$;
-create temporary table c2_feedback_snapshot as select id, feedback from public.attempts;
-\ir ../migrations/0048_student_marking_privacy.sql
-do $$
-begin
-  if exists (select 1 from public.attempts a join c2_feedback_snapshot s using (id) where a.feedback is distinct from s.feedback) then
-    raise exception '0048 feedback cleanup must be idempotent';
-  end if;
-end $$;
 rollback;
