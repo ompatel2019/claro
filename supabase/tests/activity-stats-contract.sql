@@ -1,5 +1,5 @@
 -- C4: disposable local Postgres only. Synthetic fixtures; every change rolls back.
--- psql -h /tmp -p 55481 -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/activity-stats-contract.sql
+-- psql -h /tmp -p 55499 -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/activity-stats-contract.sql
 begin;
 
 -- Previous definition from 0077 (unchanged by 0078), changing only the temporary name.
@@ -320,6 +320,106 @@ begin
     raise exception 'Missing JWT must preserve the empty own-row result';
   end if;
   raise notice 'C4: % exact old-RPC-plus-adapter/new-RPC JSON comparisons passed', cases;
+end $$;
+
+-- Exceptional scores are service-written: student column ACLs forbid both writes.
+do $$
+declare col text;
+begin
+  perform set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-00000000c401', true);
+  foreach col in array array['score', 'max_score'] loop
+    if has_column_privilege('authenticated', 'public.sessions', col, 'INSERT')
+      or has_column_privilege('authenticated', 'public.sessions', col, 'UPDATE') then
+      raise exception 'Student can write sessions.%', col;
+    end if;
+    begin
+      execute format('insert into public.sessions (kind, %I) values (''sprint'', ''NaN'')', col);
+      raise exception 'Student score insert unexpectedly succeeded';
+    exception when insufficient_privilege then null;
+    end;
+    begin
+      execute format('update public.sessions set %I = ''NaN'' where id = ''00000000-0000-4000-8000-000000000025''', col);
+      raise exception 'Student score update unexpectedly succeeded';
+    exception when insufficient_privilege then null;
+    end;
+  end loop;
+end $$;
+reset role;
+
+insert into auth.users (id, raw_user_meta_data) values
+  ('00000000-0000-4000-8000-00000000c405', '{}');
+create temporary table c4_exceptional (name text, scores numeric[]);
+insert into c4_exceptional values
+  ('overflow', array[1e308, 1e308]),
+  ('negative-overflow', array[-1e308, -1e308]),
+  ('nan', array['NaN'::numeric, 50]),
+  ('positive-infinity', array['Infinity'::numeric]),
+  ('negative-infinity', array['-Infinity'::numeric]),
+  ('mixed-infinities', array['Infinity'::numeric, '-Infinity'::numeric]),
+  ('overflow-before-cancellation', array[1e308, 1e308, -1e308]),
+  ('cancellation-before-overflow', array[1e308, -1e308, 1e308]),
+  ('beyond-double', array[1e309, -1e309]),
+  ('nan-last', array[50, 'NaN'::numeric]),
+  ('null-score', array[null::numeric, 1e308, 1e308]),
+  ('across-pages', array[1e308, 1e308] || array_fill(0::numeric, array[20]));
+grant select on c4_exceptional to authenticated;
+-- These inserts also prove unconstrained numeric columns allow NaN and +/-Infinity.
+insert into public.sessions (user_id, kind, config, started_at, finished_at, score, max_score)
+select '00000000-0000-4000-8000-00000000c405', 'sprint',
+  jsonb_build_object('topics', jsonb_build_array('c4-exception-' || name || ':')),
+  '2026-10-04T01:00:00Z'::timestamptz - ord * interval '1 minute',
+  '2026-10-04T02:00:00Z', score, 100
+from c4_exceptional cross join lateral unnest(scores) with ordinality s(score, ord);
+insert into public.sessions (user_id, kind, config, started_at, finished_at, score, max_score)
+select '00000000-0000-4000-8000-00000000c405', 'paper',
+  jsonb_build_object('topics', jsonb_build_array('c4-exception-' || name || ':')),
+  '2026-10-04T01:00:01Z', '2026-10-04T02:00:00Z', 50, 100 from c4_exceptional;
+
+set local role authenticated;
+do $$
+declare c record; sort text; kind text; filters jsonb; actual jsonb; first jsonb;
+  before_pages jsonb; page int; expected_scores jsonb; cases int := 0;
+begin
+  perform set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-00000000c405', true);
+  perform set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-00000000c405","role":"authenticated"}', true);
+  for c in select * from c4_exceptional loop
+    foreach sort in array array['newest', 'oldest', 'highest', 'lowest'] loop
+      foreach kind in array array['', 'sprint'] loop
+        filters := jsonb_build_object('q', 'c4-exception-' || c.name || ':', 'sort', sort, 'kind', kind, 'page', 1);
+        actual := public.activity_stats(filters, '{}');
+        first := pg_temp.activity_stats_before(filters, '{}');
+        before_pages := jsonb_build_object('1', first);
+        for page in 1..greatest(1, ceil((first->>'total')::numeric / 20)::int) loop
+          before_pages := before_pages || jsonb_build_object(page::text,
+            pg_temp.activity_stats_before(filters || jsonb_build_object('page', page), '{}'));
+        end loop;
+        if kind = '' then
+          select jsonb_agg(r->'pct' order by p, ord) into expected_scores
+          from generate_series(1, ceil((first->>'total')::numeric / 20)::int) p
+          cross join lateral jsonb_array_elements(before_pages->p::text->'rows') with ordinality x(r, ord)
+          where r->>'kind' = 'sprint' and r->'pct' <> 'null'::jsonb;
+          if actual->'score_values' is distinct from expected_scores
+            or actual->'stats'->'average' <> 'null'::jsonb or actual->'stats'->'best' <> 'null'::jsonb then
+            raise exception 'Exceptional raw-score fallback changed for %: %', filters, actual;
+          end if;
+        elsif actual ? 'score_values' or actual is distinct from pg_temp.activity_adapter_before(filters, '{}') then
+          raise exception 'Non-adapter scope must retain exact old RPC output: %', filters;
+        end if;
+        -- Exact JS arithmetic (including string concatenation) is checked against
+        -- the original TypeScript adapter/page using these captured old RPC pages.
+        insert into c4_cases values ('00000000-0000-4000-8000-00000000c405', filters, '{}', before_pages, null, actual);
+        cases := cases + 1;
+      end loop;
+    end loop;
+  end loop;
+  -- Another JWT cannot see either the fallback scores or the exceptional rows.
+  perform set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-00000000c402', true);
+  perform set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-00000000c402","role":"authenticated"}', true);
+  if public.activity_stats('{"q":"c4-exception-"}', '{}')
+    is distinct from pg_temp.activity_adapter_before('{"q":"c4-exception-"}', '{}') then
+    raise exception 'Exceptional scores leaked across JWTs';
+  end if;
+  raise notice 'C4: % exceptional-score SQL contract comparisons passed', cases;
 end $$;
 
 -- Optional local evidence consumed by the actual before-adapter TypeScript bundle.

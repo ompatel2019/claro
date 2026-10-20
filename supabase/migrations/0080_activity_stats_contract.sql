@@ -184,15 +184,27 @@ with mine as materialized (
     case when p_filters->>'sort' = 'highest' then case when not study then pct end end desc nulls last,
     case when p_filters->>'sort' = 'lowest' then case when not study then pct end end asc nulls last,
     started_at desc, id desc) as n from filtered f
+), score_fallback as (
+  -- PostgreSQL float sums throw on overflow; JS also treats JSON's non-finite
+  -- numeric strings differently. Return raw scores only when that can matter.
+  select case when coalesce(p_filters->>'kind', '') = '' and exists (select 1 from scoped where kind = 'paper')
+    and max(abs(pct)) filter (where not study and status <> 'Marking')
+      >= 1e308::numeric / greatest(count(pct) filter (where not study and status <> 'Marking'), 1)
+    then jsonb_agg(pct order by n) filter (where not study and status <> 'Marking' and pct is not null)
+    end as values from ordered
 ), totals as (
   select count(*) as total, coalesce(sum(answered) filter (where kind <> 'flashcards'), 0) as questions,
     -- The retired-kind adapter summed JavaScript numbers in display order only
     -- when an unfiltered-kind scope contained paper rows. Preserve that rounding.
-    case when coalesce(p_filters->>'kind', '') = '' and exists (select 1 from scoped where kind = 'paper')
-      then to_jsonb(sum(pct::double precision order by n) filter (where not study and status <> 'Marking')
+    case when (select values is not null from score_fallback) then null
+      when coalesce(p_filters->>'kind', '') = '' and exists (select 1 from scoped where kind = 'paper')
+      then to_jsonb(sum(pct::double precision order by n) filter (where not study and status <> 'Marking'
+          and (select values is null from score_fallback)
+          and coalesce(p_filters->>'kind', '') = '' and exists (select 1 from scoped where kind = 'paper'))
         / nullif(count(pct) filter (where not study and status <> 'Marking'), 0))
       else to_jsonb(avg(pct) filter (where not study and status <> 'Marking')) end as average,
-    max(pct) filter (where not study and status <> 'Marking') as best from ordered
+    case when (select values is not null from score_fallback) then null
+      else max(pct) filter (where not study and status <> 'Marking') end as best from ordered
 ), paging as (
   select greatest(1, least(coalesce((p_filters->>'page')::integer, 1), greatest(1, ceil(total / 20.0)::integer))) as page from totals
 )
@@ -203,5 +215,6 @@ select jsonb_build_object(
   'kind_total', (select count(*) from scoped where kind in ('sprint', 'flashcards', 'single')),
   'kinds', coalesce((select jsonb_object_agg(kind, n) from (select kind, count(*) n from scoped where kind in ('sprint', 'flashcards', 'single') group by kind) k), '{}'::jsonb),
   'stats', jsonb_build_object('sessions', totals.total, 'questions', totals.questions, 'average', totals.average, 'best', totals.best)
-) from totals cross join paging;
+) || coalesce((select jsonb_build_object('score_values', values) from score_fallback where values is not null), '{}'::jsonb)
+from totals cross join paging;
 $function$;

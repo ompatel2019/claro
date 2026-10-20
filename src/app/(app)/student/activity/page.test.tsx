@@ -179,6 +179,55 @@ it("keeps null scores, empty pages and empty kind counts", async () => {
   );
   expect(mocks.browser.mock.calls[0][0].data).toEqual(empty);
 });
+it.each([
+  { scores: [1e308, 1e308], average: Infinity, best: 1e308 },
+  { scores: [-1e308, -1e308], average: -Infinity, best: -1e308 },
+  { scores: ["NaN", 50], average: NaN, best: NaN },
+  { scores: ["Infinity"], average: NaN, best: Infinity },
+  { scores: ["-Infinity"], average: NaN, best: -Infinity },
+  { scores: ["Infinity", "-Infinity"], average: NaN, best: Infinity },
+  { scores: [1e308, 1e308, -1e308], average: Infinity, best: 1e308 },
+  { scores: [1e308, -1e308, 1e308], average: 1e308 / 3, best: 1e308 },
+  { scores: [Infinity, -Infinity], average: NaN, best: Infinity },
+])(
+  "preserves old adapter arithmetic for exceptional scores $scores",
+  async ({ scores, average, best }) => {
+    mocks.rpc.mockResolvedValue({
+      data: {
+        ...data,
+        score_values: scores,
+        stats: { ...data.stats, average: null, best: null },
+      },
+      error: null,
+    });
+    render(
+      await resolve(await Activity({ searchParams: Promise.resolve({}) })),
+    );
+    const actual = mocks.browser.mock.calls[0][0].data;
+    expect(actual.stats).toEqual({ ...data.stats, average, best });
+    expect(actual).not.toHaveProperty("score_values");
+    expect(mocks.rpc).toHaveBeenCalledTimes(1);
+  },
+);
+it.each(["NaN", "Infinity", "-Infinity"])(
+  "preserves the old RPC's %s string when the adapter did not recalculate",
+  async (score) => {
+    mocks.rpc.mockResolvedValue({
+      data: { ...data, stats: { ...data.stats, average: score, best: score } },
+      error: null,
+    });
+    render(
+      await resolve(
+        await Activity({ searchParams: Promise.resolve({ kind: "sprint" }) }),
+      ),
+    );
+    expect(mocks.browser.mock.calls[0][0].data.stats).toEqual({
+      ...data.stats,
+      average: score,
+      best: score,
+    });
+  },
+);
 it("retains RPC ordering for score sorts and the existing newest timestamp ordering", async () => {
   const older = {
     ...row,

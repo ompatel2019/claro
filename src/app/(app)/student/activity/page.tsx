@@ -45,7 +45,20 @@ export default async function Activity({
   });
   if (result.error || !result.data)
     throw new Error("Couldn't load your activity.");
-  const data = { ...(result.data as ActivityData), all_total: total.count };
+  const { score_values: scores, ...activity } = result.data as ActivityData & {
+    score_values?: number[];
+  };
+  const data = { ...activity, all_total: total.count };
+  if (scores) {
+    // Match the old adapter's JS arithmetic, including raw JSON numeric strings.
+    data.stats = {
+      ...data.stats,
+      average: scores.length
+        ? scores.reduce((n, pct) => n + pct, 0) / scores.length
+        : null,
+      best: scores.length ? Math.max(...scores) : null,
+    };
+  }
   const sessions = await db
     .from("sessions")
     .select(
