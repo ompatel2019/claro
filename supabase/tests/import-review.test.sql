@@ -47,6 +47,13 @@ declare
   actual text[];
   expected text[];
 begin
+  if exists (select 1 from pg_proc
+    where oid in ('public.question_import_review(double precision,jsonb)'::regprocedure,
+      'public.admin_dashboard()'::regprocedure)
+      and (provolatile <> 's' or not prosecdef
+        or not coalesce(proconfig @> array['search_path=""'], false))) then
+    raise exception 'review and dashboard must remain stable security definer functions with an empty search_path';
+  end if;
   foreach threshold in array array[null, 0.59, 1.0]::double precision[] loop
     begin
       perform * from public.question_import_review(threshold);
@@ -141,6 +148,35 @@ begin
       raise exception 'import review filter %: expected %, got %', c.filters, expected, actual;
     end if;
   end loop;
+end $$;
+
+-- 0079: unpublished paper questions remain drafts for history, not import review.
+-- First prove both fixtures qualify, so exclusion cannot pass on an unmatched draft.
+select set_config('request.jwt.claim.sub', 'c2000000-0000-0000-0000-000000000001', true);
+do $$
+declare
+  baseline bigint := (public.admin_dashboard() #>> '{attention,importReview}')::bigint;
+  actual text[];
+begin
+  insert into public.questions (id, type, topic_id, marks, stem, criteria, source, year, status, duplicate_of) values
+    ('c2-paper-history', 'short', 'c2-other', 4, 'Unpublished paper history fixture', '[]', 'SQL test', 2026, 'draft', 'c2-0-retired'),
+    ('c2-ordinary-draft', 'short', 'c2-other', 4, 'Ordinary import draft fixture', '[]', 'SQL test', 2026, 'draft', 'c2-0-retired');
+  select array_agg(id order by id) into actual from public.question_import_review()
+    where id in ('c2-paper-history', 'c2-ordinary-draft');
+  if actual is distinct from array['c2-ordinary-draft','c2-paper-history']
+    or (public.admin_dashboard() #>> '{attention,importReview}')::bigint is distinct from baseline + 2 then
+    raise exception 'both ordinary drafts must qualify for import review and the dashboard count';
+  end if;
+
+  insert into public.unpublished_paper_questions (question_id) values ('c2-paper-history');
+  select array_agg(id order by id) into actual from public.question_import_review()
+    where id in ('c2-paper-history', 'c2-ordinary-draft');
+  if actual is distinct from array['c2-ordinary-draft'] then
+    raise exception 'import review must exclude unpublished paper drafts and retain ordinary drafts: %', actual;
+  end if;
+  if (public.admin_dashboard() #>> '{attention,importReview}')::bigint is distinct from baseline + 1 then
+    raise exception 'dashboard importReview must exclude only the unpublished paper draft';
+  end if;
 end $$;
 
 -- Observe the dashboard's threshold inside the real % operator: function-local

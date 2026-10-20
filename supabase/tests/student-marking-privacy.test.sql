@@ -24,6 +24,10 @@ select set_config('request.jwt.claim.sub', 'c2000000-0000-0000-0000-000000000002
 do $$
 declare r record; safe jsonb;
 begin
+  if not (select coalesce(reloptions @> array['security_barrier=true'], false)
+    from pg_class where oid = 'public.student_mark_reviews'::regclass) then
+    raise exception 'student_mark_reviews must retain its security barrier';
+  end if;
   select * into r from public.session_review('c2000000-0000-0000-0000-000000000011');
   if not found or r.feedback is distinct from '{"note":"Keep this","flags":{"keep":true},"other":{"marks":4}}'::jsonb
     or r.review is distinct from '{"status":"resolved","reason":"check_disagreed","final_mark":3}'::jsonb
