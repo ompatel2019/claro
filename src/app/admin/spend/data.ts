@@ -1,3 +1,4 @@
+import { shiftDay } from "@/lib/sydney-day";
 import { singleParams, sydneyDay } from "@/lib/admin";
 import { sydneyMidnight } from "../marking/accuracy/data";
 
@@ -36,10 +37,6 @@ export const MARK_VALUE_BUCKETS = [
   { label: "7–8 marks", min: 7, max: 8 },
   { label: "9+ marks", min: 9, max: Infinity },
 ];
-const DAY = 86_400_000;
-function shiftDay(day: string, days: number) {
-  return new Date(Date.parse(day) + days * DAY).toISOString().slice(0, 10);
-}
 function validDay(day: string | undefined, today: string): day is string {
   return (
     !!day &&

@@ -1,3 +1,4 @@
+import { shiftDay } from "@/lib/sydney-day";
 import { sydneyToday } from "@/lib/flashcards";
 import { evalAgreement, meanDelta, type EvalItem } from "./helpers";
 
@@ -60,10 +61,6 @@ export type Week = {
 
 export function parseRange(value: unknown): Range {
   return value === "7" ? 7 : value === "90" ? 90 : 30;
-}
-const DAY = 86_400_000;
-function shiftDay(day: string, days: number) {
-  return new Date(Date.parse(day) + days * DAY).toISOString().slice(0, 10);
 }
 /** Convert a Sydney wall-clock midnight to UTC, including either side of DST. */
 export function sydneyMidnight(day: string) {
