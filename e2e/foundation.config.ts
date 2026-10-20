@@ -1,15 +1,7 @@
-import { defineConfig, devices } from "@playwright/test";
+import { defineConfig } from "@playwright/test";
+import { offlineConfig } from "./offline-config";
 export default defineConfig({
-  testDir: ".",
+  ...offlineConfig,
   testMatch: "foundation.offline.spec.ts",
   outputDir: "/tmp/claro-foundation-results",
-  workers: 1,
-  reporter: "list",
-  use: {
-    ...devices["Desktop Chrome"],
-    launchOptions: {
-      executablePath: process.env.CI ? undefined : "/usr/bin/google-chrome",
-      args: ["--no-sandbox"],
-    },
-  },
 });

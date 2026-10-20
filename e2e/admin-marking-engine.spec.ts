@@ -1,17 +1,8 @@
-import { assertTargetVerified } from "./guard";
+import { signInAdminRedirect as signInAdmin } from "./helpers";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
-async function signInAdmin(page: Page) {
-  assertTargetVerified();
-  await page.goto("/sign-in");
-  await expect(page.getByLabel("Email")).toBeVisible({ timeout: 60000 });
-  await page.getByLabel("Email").fill(process.env.ADMIN_EMAIL!);
-  await page.getByLabel("Password").fill(process.env.ADMIN_PASSWORD!);
-  await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await page.waitForURL(/\/(admin)?$/, { timeout: 30000 });
-}
 const headers = [
   "Date",
   "Model",

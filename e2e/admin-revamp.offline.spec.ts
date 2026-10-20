@@ -1,7 +1,6 @@
+import { offlineCss, offlineBundle } from "./offline-harness";
 import { expect, test, type Page } from "@playwright/test";
-import { build, type Plugin } from "esbuild";
-import postcss from "postcss";
-import tailwind from "@tailwindcss/postcss";
+import type { Plugin } from "esbuild";
 import { readFile } from "node:fs/promises";
 import fs from "node:fs";
 import path from "node:path";
@@ -138,16 +137,10 @@ function offlinePlugin(): Plugin {
 }
 
 test.beforeAll(async () => {
-  css = (
-    await postcss([tailwind()]).process(
-      await readFile("src/app/globals.css", "utf8"),
-      { from: "src/app/globals.css" },
-    )
-  ).css;
+  css = await offlineCss();
 
-  const result = await build({
-    stdin: {
-      contents: `
+  bundle = await offlineBundle(
+    `
         import React from 'react';
         import {createRoot} from 'react-dom/client';
         import {AppShell} from './src/components/app-shell';
@@ -199,25 +192,16 @@ test.beforeAll(async () => {
           </AppShell>
         );
       `,
-      resolveDir: process.cwd(),
-      loader: "tsx",
+    [offlinePlugin()],
+    {
+      define: {
+        "process.env.NODE_ENV": '"test"',
+        "process.env": '{"NODE_ENV":"test"}',
+        global: "globalThis",
+      },
+      banner: { js: 'var process={env:{NODE_ENV:"test"}};' },
     },
-    bundle: true,
-    write: false,
-    platform: "browser",
-    format: "esm",
-    jsx: "automatic",
-    define: {
-      "process.env.NODE_ENV": '"test"',
-      "process.env": '{"NODE_ENV":"test"}',
-      global: "globalThis",
-    },
-    banner: {
-      js: 'var process={env:{NODE_ENV:"test"}};',
-    },
-    plugins: [offlinePlugin()],
-  });
-  bundle = result.outputFiles[0].text;
+  );
 });
 
 test.beforeEach(async ({ page }) => {

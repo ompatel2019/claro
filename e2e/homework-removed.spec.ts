@@ -1,6 +1,5 @@
-import { assertTargetVerified } from "./guard";
 import { expect, test } from "@playwright/test";
-import { signIn } from "./helpers";
+import { signIn, signInAdminRedirect } from "./helpers";
 
 test.describe("Homework is removed", () => {
   test.skip(
@@ -23,12 +22,7 @@ test.describe("Homework is removed", () => {
     ).toMatch(/claroSans/);
   });
   test("admin homework routes 404", async ({ page }) => {
-    assertTargetVerified();
-    await page.goto("/sign-in");
-    await page.getByLabel("Email").fill(process.env.ADMIN_EMAIL!);
-    await page.getByLabel("Password").fill(process.env.ADMIN_PASSWORD!);
-    await page.getByRole("button", { name: "Sign in", exact: true }).click();
-    await page.waitForURL(/\/(admin)?$/);
+    await signInAdminRedirect(page, false);
     for (const path of ["/admin/homework", "/admin/homework/x"])
       expect((await page.goto(path))?.status()).toBe(404);
   });
