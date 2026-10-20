@@ -98,7 +98,7 @@ async function StudyDays({
       longest={streak?.longest_streak ?? 0}
       error={!!streaks.error || !streak}
       errorContent={<TryAgain what="your study days" />}
-      home={{ action, template: true }}
+      home={{ action }}
     />
   );
 }

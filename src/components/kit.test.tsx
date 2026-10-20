@@ -288,7 +288,7 @@ it("shows the supplied exam countdown only for students and keeps one Ask Claro 
 
 it("opens the existing feedback dialog from both account menus without a feedback FAB", async () => {
   render(
-    <FeedbackWidget userId="student" floating={false}>
+    <FeedbackWidget userId="student">
       <AppShell kind="student" name="Test Student" defaultOpen>
         Content
       </AppShell>

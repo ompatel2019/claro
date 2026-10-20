@@ -987,7 +987,6 @@ export function MarkMyAnswer({
                 flush={async () => {
                   await save({});
                 }}
-                inputOnly
                 mode={mode}
                 disabled={
                   busy ||

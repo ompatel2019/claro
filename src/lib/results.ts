@@ -1,4 +1,4 @@
-import { timer, type SprintConfig, type Topic } from "./practice";
+import { timer, type SprintConfig } from "./practice";
 import {
   studentMarking,
   markingState,
@@ -91,61 +91,6 @@ export function sprintHref(
   return `/student/sprint?${p}`;
 }
 
-const KINDS: Record<string, string> = {
-  mcq: "multiple choice",
-  short: "short answers",
-  extended: "extended responses",
-  mixed: "questions",
-};
-/**
- * Deterministic next-step actions (not AI): practise the weakest subtopics
- * (lowest share of marks, at least one mark lost) and review its flashcards.
- */
-export function nextActions(
-  rows: ReviewRow[],
-  mode: SprintConfig["mode"],
-  topics: Topic[],
-  cards: Record<string, number>,
-): NextAction[] {
-  const by = new Map<string, ReviewRow[]>();
-  for (const r of rows.filter(scored))
-    if (r.topic_id) by.set(r.topic_id, [...(by.get(r.topic_id) ?? []), r]);
-  const weak = [...by]
-    .map(([id, rs]) => ({
-      id,
-      t: tally(rs),
-      questions: rs
-        .filter(below)
-        .map(({ position, type }) => ({ position, type })),
-    }))
-    .filter(({ t }) => t.mark < t.max)
-    .sort((a, b) => pct(a.t)! - pct(b.t)! || a.id.localeCompare(b.id))
-    .slice(0, 2);
-  const name = (id: string) =>
-    topics.find((t) => t.id === id)?.name ?? "this topic";
-  const kind = KINDS[mode] ?? "questions";
-  return [
-    ...weak.flatMap(({ id, questions }) => [
-      {
-        questions,
-        label: `Practise ${name(id)} ${kind}`,
-        href: `/student/sprint?type=${mode}&sub=${id}`,
-      },
-      {
-        label: `Retry mistakes on ${name(id)}`,
-        href: `/student/sprint?type=${mode}&sub=${id}&history=mistakes`,
-      },
-    ]),
-    ...weak
-      .slice(0, 1)
-      .filter(({ id }) => cards[id])
-      .map(({ id }) => ({
-        label: `Review ${cards[id]} flashcard${cards[id] === 1 ? "" : "s"} on ${name(id)}`,
-        href: `/student/flashcards?topic=${id}`,
-      })),
-  ];
-}
-
 /** Exclude skipped rows; a skipped MC check can still have a marked answer. */
 export const visibleResults = (rows: ReviewRow[]) =>
   rows.filter((r) => markingState(r) !== "skipped").map(studentMarking);
@@ -181,12 +126,6 @@ export function resultsState(rows: ReviewRow[], summary: unknown) {
     summaryPending: summary == null && marking > 0,
   };
 }
-
-export type NextAction = {
-  label: string;
-  href: string;
-  questions?: Pick<ReviewRow, "position" | "type">[];
-};
 
 /** Matches STALE_CLAIM_MS in the marking engine: older claims are abandoned, not in flight. */
 const CLAIM_FRESH_MS = 5 * 60_000;

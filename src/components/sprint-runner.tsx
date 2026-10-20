@@ -661,7 +661,6 @@ export function SprintRunner({
             </fieldset>
           ) : checkMode && a.status === "marked" ? null : (
             <WrittenAnswer
-              inputOnly
               disabled={busy || !editable}
               onBusy={setBusy}
               key={a.question_id ?? a.id}

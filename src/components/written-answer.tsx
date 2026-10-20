@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUp, ArrowDown } from "@/components/icons";
 import { createClient } from "@/utils/supabase/client";
-import { ensureSession, withAuthRetry } from "@/lib/auth-client";
+import { withAuthRetry } from "@/lib/auth-client";
 import { plural, type Attempt } from "@/lib/practice";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
@@ -21,7 +21,6 @@ import {
   wordGuide,
   ANSWER_PHOTO_BYTE_LIMIT,
   LONG_PHOTO_PAGE_LIMIT,
-  SHORT_PHOTO_PAGE_LIMIT,
 } from "@/lib/limits";
 const wordCount = (text: string) => text.split(/\s+/).filter(Boolean).length;
 export function WrittenAnswer({
@@ -33,14 +32,12 @@ export function WrittenAnswer({
   local,
   disabled,
   onBusy,
-  inputOnly = false,
   mode,
   onConfirmed,
   onModeChange,
   onError,
 }: {
   disabled: boolean;
-  inputOnly?: boolean;
   mode?: "type" | "photo";
   onError?: (message: string) => void;
   onModeChange?: (mode: "type" | "photo") => void;
@@ -120,10 +117,7 @@ export function WrittenAnswer({
     }
   }
   async function upload(files: File[]) {
-    const pageLimit =
-      inputOnly || a.question.type === "extended"
-        ? LONG_PHOTO_PAGE_LIMIT
-        : SHORT_PHOTO_PAGE_LIMIT;
+    const pageLimit = LONG_PHOTO_PAGE_LIMIT;
     if ((a.image_paths?.length ?? 0) + files.length > pageLimit)
       throw new Error(`Upload up to ${pageLimit} pages per question.`);
     for (const file of files) {
@@ -227,43 +221,6 @@ export function WrittenAnswer({
       onError?.(message);
     }
   }
-  async function submit() {
-    await flush();
-    await save(
-      photo ? { transcript: a.transcript } : { answer_text: a.answer_text },
-    );
-    local({ status: "marking" });
-    await ensureSession(createClient());
-    void fetch(`/api/attempts/${a.id}/mark`, {
-      method: "POST",
-      credentials: "same-origin",
-    })
-      .then(async (response) => {
-        if (response.ok) {
-          const result = await response.json();
-          local({
-            status: result.status ?? "marked",
-            mark: result.mark,
-            max_marks: result.max_marks,
-            band: result.band,
-            feedback: result.feedback,
-          });
-          return;
-        }
-        if (response.status === 409) return; // already marking; poll will pick it up
-        const result = await response.json().catch(() => ({}));
-        local({ status: "failed" });
-        setError(
-          response.status === 429
-            ? (result.error ?? "You're going a bit fast, try again in a minute")
-            : (result.error ??
-                "Could not mark your answer. You can retry on the results page."),
-        );
-      })
-      .catch(() => {
-        // Keep "marking" and let the poll catch up if the request was interrupted.
-      });
-  }
   return (
     <div className="space-y-4">
       {locked ? (
@@ -293,7 +250,7 @@ export function WrittenAnswer({
                   rows={6}
                   className={cn(
                     "text-base font-normal",
-                    inputOnly ? "min-h-60 text-[15px] leading-7" : "min-h-36",
+                    "min-h-60 text-[15px] leading-7",
                   )}
                   aria-describedby={`answer-guide-${a.id}`}
                   value={text}
@@ -471,19 +428,6 @@ export function WrittenAnswer({
                 </Button>
               )}
             </>
-          )}
-          {!inputOnly && (
-            <Button
-              disabled={
-                busy ||
-                disabled ||
-                confirm ||
-                !(a.transcript ?? a.answer_text)?.trim()
-              }
-              onClick={() => void act(submit)}
-            >
-              Submit answer
-            </Button>
           )}
         </>
       )}

@@ -20,7 +20,7 @@ vi.mock("sonner", () => ({ toast: { success: (m: string) => success(m) } }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/student/flashcards/11111111-2222-3333-4444-555555555555",
 }));
-import { FeedbackWidget, ReportProblem } from "./feedback-widget";
+import { FeedbackWidget, ReportProblem, useFeedback } from "./feedback-widget";
 
 afterEach(cleanup);
 beforeEach(() => {
@@ -31,9 +31,14 @@ beforeEach(() => {
 
 const png = (size = 10) =>
   new File([new Uint8Array(size)], "shot.png", { type: "image/png" });
+function FeedbackTrigger() {
+  const open = useFeedback();
+  return <button onClick={() => open()}>Feedback</button>;
+}
 const setup = () =>
   render(
     <FeedbackWidget userId="u1">
+      <FeedbackTrigger />
       <ReportProblem
         questionId="q22"
         sessionId="s1"
@@ -163,20 +168,4 @@ it("keeps Send disabled until there is a message or a screenshot", async () => {
   expect(insert.mock.calls[0][0]).toMatchObject({
     message: "Screenshot attached.",
   });
-});
-
-it("pins desktop feedback above Ask Claro out of page flow and opens the same dialog", async () => {
-  setup();
-  const button = screen.getByRole("button", { name: "Feedback" });
-  expect(button).toHaveClass(
-    "fixed",
-    "right-6",
-    "bottom-20",
-    "hidden",
-    "lg:flex",
-  );
-  fireEvent.click(button);
-  expect(
-    await screen.findByRole("dialog", { name: "Send feedback" }),
-  ).toBeVisible();
 });
