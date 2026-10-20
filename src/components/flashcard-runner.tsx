@@ -736,7 +736,6 @@ export function FlashcardRunner({
         if (delta === 1 && verdict && !list && !busy)
           act(() => advance(verdict.mark));
       }}
-      booklet={null}
     >
       <div className="mx-auto grid max-w-[680px] gap-5">
         {offline && (

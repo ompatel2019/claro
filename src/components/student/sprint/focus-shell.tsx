@@ -19,7 +19,13 @@ import { timer } from "@/lib/practice";
 import { cn } from "@/lib/utils";
 
 /** Sprint chrome is local so other focus tools keep their existing shell API. */
-export function SprintFocusShell(props: ComponentProps<typeof SessionShell>) {
+export function SprintFocusShell(
+  props: Omit<ComponentProps<typeof SessionShell>, "flashcards" | "clock"> & {
+    clock: { mode: "down" | "up"; seconds: number };
+    wide?: boolean;
+    booklet: React.ReactNode;
+  },
+) {
   const {
     title,
     position,
