@@ -1,7 +1,7 @@
 import "server-only";
 import { admin } from "@/utils/supabase/admin";
 
-/** Easy knobs — per student. Admins are exempt. Finish-batch marking bypasses routes. */
+/** Easy knobs — per student. Admins are exempt. */
 export const AI_RATE_LIMIT_PER_MINUTE = 20;
 export const AI_RATE_LIMIT_PER_HOUR = 200;
 
@@ -23,7 +23,7 @@ async function countSince(userId: string, sinceIso: string): Promise<number> {
 
 /**
  * Per-student AI rate limit. Fail-open: any count/role error allows the request.
- * Finish-session batch marking goes through the engine, not these HTTP routes.
+ * Finish checks once before the engine's batch marking.
  */
 export async function assertStudentAiRateLimit(opts: {
   userId: string;
