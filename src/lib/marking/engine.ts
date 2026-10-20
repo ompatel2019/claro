@@ -5,7 +5,7 @@ import { ZodError, type z } from "zod";
 import { callJson, type Message } from "@/lib/ai/openai";
 import { MODELS, type Model } from "@/lib/ai/prices";
 import { admin } from "@/utils/supabase/admin";
-import { studentMarking } from "@/lib/feedback";
+import { markingPayload } from "./payload";
 import { firstReviews, type FlashcardReview } from "@/lib/flashcards";
 import {
   anchorComments,
@@ -403,12 +403,7 @@ export async function markAttempt(attemptId: string) {
             check_notes: `Reconciling pass: ${check.marks[2]}`,
           };
         }
-        result = {
-          ...studentMarking(marked),
-          max_marks: q.marks,
-          check_status: check.status,
-          marked_by_model: MARKER.model,
-        };
+        result = markingPayload(marked, q.marks, check.status, MARKER.model);
       }
     }
     let saving = admin()
