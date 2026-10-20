@@ -91,7 +91,7 @@ The default reads `sets/past-passes.json` and hashed `sets/flagged-tutor-marks.j
 
 ## Checklist question IDs
 
-Real `a1-m…` question IDs are available in the repository: `supabase/migrations/0022_a1_mock_questions.sql` inserts 41 mock questions with those exact IDs. `marking/checklists.test.ts` reads that file locally and fails if any checklist key is absent from its inserted question IDs. All 12 `a1-` checklist question IDs are `status='retired'` in production: these are the A1 mock benchmark questions. Checklists therefore affect evals but never live student marking until checklists exist for live questions. The repository migration also inserts them as retired; no database access was used for this review fix.
+Real `a1-m…` question IDs are available in the repository: migration 0022 (now squashed into `supabase/migrations/0000_baseline.sql`) inserts 41 mock questions with those exact IDs. `marking/checklists.test.ts` reads the baseline locally and fails if any checklist key is absent from its inserted question IDs. All 12 `a1-` checklist question IDs are `status='retired'` in production: these are the A1 mock benchmark questions. Checklists therefore affect evals but never live student marking until checklists exist for live questions. The repository migration also inserts them as retired; no database access was used for this review fix.
 
 ## Leak guards and student boundaries
 

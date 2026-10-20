@@ -82,22 +82,21 @@ it("requires a protection mechanism beyond naming an export incentive", () => {
 
 it("has no checklist key missing from the real question-ID import migration", () => {
   const sql = readFileSync(
-    new URL(
-      "../../../supabase/migrations/0022_a1_mock_questions.sql",
-      import.meta.url,
-    ),
+    new URL("../../../supabase/migrations/0000_baseline.sql", import.meta.url),
     "utf8",
   );
-  // Match only the first column of inserted question rows, not origin_ref or prose.
+  // Match only the id column of inserted question rows (baseline data INSERTs), not origin_ref or prose.
   const ids = new Set(
-    [...sql.matchAll(/^\s*\(\$t\$(a1-m\d+-\d{2}[a-z])\$t\$, 'short',/gm)].map(
-      (match) => match[1],
-    ),
+    [
+      ...sql.matchAll(
+        /^INSERT INTO public\.questions \([^)]*\) VALUES \('(a1-m\d+-\d{2}[a-z])', 'short',/gm,
+      ),
+    ].map((match) => match[1]),
   );
   expect(ids.size).toBe(41);
   const missing = Object.keys(checklists).filter((id) => !ids.has(id));
   expect(
     missing,
-    "Checklist IDs absent from 0022_a1_mock_questions.sql",
+    "Checklist IDs absent from the baseline's A1 question rows (0022)",
   ).toEqual([]);
 });
