@@ -360,3 +360,72 @@ it("lets admins test a study deck using their own student data", async () => {
   // The signed-in client's auth.uid() supplies the owner, rather than a caller-provided ID.
   expect(session.insert.mock.calls[0][0]).not.toHaveProperty("user_id");
 });
+
+it.each([
+  { sessionId: "invalid" },
+  { cardId: "" },
+  { cardId: "c".repeat(201) },
+  { mark: -1 },
+  { mark: 0.25 },
+  { mark: "1" },
+  { mark: null },
+  { answer: null },
+  { answer: 3 },
+  { answer: "x".repeat(1001) },
+  { answerMode: null },
+  { answerMode: "invalid" },
+])(
+  "preserves direct and durable rating validation errors %j",
+  async (invalid) => {
+    const input = { sessionId, cardId: "c", mark: 1, ...invalid };
+    await expect(
+      rateFlashcard(
+        input.sessionId,
+        input.cardId,
+        input.mark as number,
+        input.answer as string | undefined,
+        input.answerMode as "typed" | "spoken" | undefined,
+      ),
+    ).rejects.toThrow(/^Choose a valid card rating\.$/);
+    expect(await drainPersistRating(input as never)).toBe("missing");
+    expect(requireProfile).not.toHaveBeenCalled();
+    expect(createClient).not.toHaveBeenCalled();
+  },
+);
+
+it.each([0, 0.5, 1] as const)(
+  "preserves rating %s, optional drain fields, and untrimmed boundary answers",
+  async (mark) => {
+    const cardId = "c".repeat(200);
+    const answer = " ".repeat(1000);
+    for (const durable of [false, true]) {
+      const owned = () =>
+        query({
+          finished_at: null,
+          config: { mode: "study", card_ids: [cardId] },
+        });
+      const review = query({ id: "repeat" });
+      client(
+        ...(durable ? [owned()] : []),
+        owned(),
+        review,
+        query({ id: "first" }),
+      );
+      if (durable) {
+        expect(await drainPersistRating({ sessionId, cardId, mark })).toBe(
+          "ok",
+        );
+      } else {
+        await rateFlashcard(sessionId, cardId, mark, answer, "spoken");
+      }
+      expect(review.insert).toHaveBeenCalledWith({
+        session_id: sessionId,
+        flashcard_id: cardId,
+        mark,
+        answer: durable ? null : answer,
+        answer_mode: durable ? "typed" : "spoken",
+        source: "self",
+      });
+    }
+  },
+);

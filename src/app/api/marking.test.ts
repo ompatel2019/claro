@@ -179,14 +179,47 @@ it("returns the MCQ answer key after marking an owned attempt", async () => {
 
 it.each([
   { answer: "" },
-  { answer: "a".repeat(2001) },
+  { answer: "   " },
+  { answer: "a".repeat(1001) },
   { answer: "Valid", sessionId: "invalid" },
+  { answer: "Valid", answer_mode: "invalid" },
+  { answer: "Valid", answer_mode: null },
+  { answer: "Valid", extra: true },
   { answer: 1 },
+  ...[-1, 0.25, 2, "1", null].map((mark) => ({
+    sessionId,
+    override: { reviewId: sessionId, mark },
+  })),
+  { sessionId, override: { reviewId: "invalid", mark: 1 } },
+  { sessionId, override: { reviewId: sessionId, mark: 1, extra: true } },
+  { override: { reviewId: sessionId, mark: 1 } },
+  { sessionId, override: { reviewId: sessionId, mark: 1 }, extra: true },
 ])("rejects invalid flashcard body %#", async (body) => {
   const { supabase } = client([]);
-  expect((await flashcard(request(body), ctx)).status).toBe(400);
+  const response = await flashcard(request(body), ctx);
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({ error: "Invalid request body" });
   expect(supabase.from).not.toHaveBeenCalled();
 });
+
+it.each([
+  { answer: "  " + "a".repeat(1000) + "  " },
+  { answer: "Answer", sessionId: null, answer_mode: "spoken" },
+  { answer: "Answer" },
+  ...[0, 0.5, 1].map((mark) => ({
+    sessionId,
+    override: { reviewId: sessionId, mark },
+  })),
+])(
+  "accepts flashcard body boundary %# before looking up the card",
+  async (body) => {
+    const { supabase } = client([null]);
+    const response = await flashcard(request(body), ctx);
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "Flashcard not found" });
+    expect(supabase.from).toHaveBeenCalledWith("flashcards");
+  },
+);
 
 it("rejects malformed JSON", async () => {
   client([]);
