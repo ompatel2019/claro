@@ -5,7 +5,7 @@ import { previewQuotaExamples, quotaPreviewCli } from "./quota-preview.mjs";
 vi.mock("@/utils/supabase/admin", () => {
   throw new Error("Unexpected database import");
 });
-vi.mock("../openai", () => {
+vi.mock("@/lib/ai/openai", () => {
   throw new Error("Unexpected model import");
 });
 

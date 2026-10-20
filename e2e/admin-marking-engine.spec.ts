@@ -132,7 +132,7 @@ test.describe("admin marking engine", () => {
       // Independently derive expected metrics from the shipped human-marked run.
       const run = JSON.parse(
         await readFile(
-          join(process.cwd(), "src/lib/ai/eval/results/2026-10-09-1415.json"),
+          join(process.cwd(), "data/eval/results/2026-10-09-1415.json"),
           "utf8",
         ),
       ) as {

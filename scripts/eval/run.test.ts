@@ -1,9 +1,9 @@
 // @vitest-environment node
 import { beforeEach, afterEach, expect, it, vi } from "vitest";
-import a1 from "./a1-eval-set.json";
-import claro from "./claro-set.json";
-import { evalSets, retrievalExclusions } from "./sets";
-import questions from "./a1-questions.json";
+import a1 from "@/lib/ai/eval/a1-eval-set.json";
+import claro from "@/lib/ai/eval/claro-set.json";
+import { evalSets, retrievalExclusions } from "@/lib/ai/eval/sets";
+import questions from "@/lib/ai/eval/a1-questions.json";
 
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
@@ -21,7 +21,7 @@ vi.mock("node:fs", async (original) => ({
 }));
 vi.mock("node:child_process", () => ({ execFileSync: vi.fn(() => "abc123") }));
 // The OpenRouter-only spend query is unit-tested in spend.test.ts; here it returns the mocked spend.
-vi.mock("../spend", () => ({
+vi.mock("@/lib/ai/spend", () => ({
   openRouterSpend: async () => Number((await mocks.rpc()).data),
 }));
 vi.mock("@/utils/supabase/admin", () => ({
@@ -34,8 +34,8 @@ vi.mock("@/lib/marking/engine", () => ({
   },
   markWritten: mocks.mark,
 }));
-vi.mock("../openai", () => ({ callJson: mocks.judge }));
-vi.mock("./examples", () => ({ evalExamplePool: mocks.examples }));
+vi.mock("@/lib/ai/openai", () => ({ callJson: mocks.judge }));
+vi.mock("@/lib/ai/eval/examples", () => ({ evalExamplePool: mocks.examples }));
 vi.mock("./report", () => ({ writeResults: mocks.report }));
 
 const argv = process.argv;

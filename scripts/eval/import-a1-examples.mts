@@ -1,12 +1,12 @@
 // One-off, re-runnable import of anonymised A1 mock-exam answers into Claro's marking_examples.
 // The snapshot comes from the read-only, anonymising SELECT in /workspace/claro/a1-export/export.sql
 // (run against A1 via the Supabase connector) and stays outside git:
-//   npx tsx --conditions=react-server --env-file=.env.local src/lib/ai/eval/import-a1-examples.mts <snapshot.json> [--dry-run]
+//   npx tsx --conditions=react-server --env-file=.env.local scripts/eval/import-a1-examples.mts <snapshot.json> [--dry-run]
 // Rows upsert on source_hash (md5 of the A1 submission and question ids), so re-runs add nothing new.
 import { readFileSync } from "node:fs";
 import type { MarkableQuestion } from "@/lib/marking/grade";
-import evalSet from "./a1-eval-set.json";
-import questionsJson from "./a1-mock-questions.json";
+import evalSet from "@/lib/ai/eval/a1-eval-set.json";
+import questionsJson from "@/lib/ai/eval/a1-mock-questions.json";
 import { prepareA1Snapshot } from "./a1-snapshot";
 
 const [path, ...flags] = process.argv.slice(2);

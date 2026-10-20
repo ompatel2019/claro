@@ -3,7 +3,7 @@ import { pathToFileURL } from "node:url";
 import { compareRows, type EvalRow } from "./stats";
 
 const usage =
-  "Usage: npx tsx src/lib/ai/eval/compare.mts <baseline.json> <candidate.json> [--section=Held-out|Dev|Final] [--seed=N] [--resamples=2000] [--json=path]";
+  "Usage: npx tsx scripts/eval/compare.mts <baseline.json> <candidate.json> [--section=Held-out|Dev|Final] [--seed=N] [--resamples=2000] [--json=path]";
 
 export function parseArgs(args: string[]) {
   const files: string[] = [];
@@ -144,7 +144,10 @@ export function main(args: string[]) {
   const candidate = readItems(readFileSync(options.candidate, "utf8"));
   const flags = JSON.parse(
     readFileSync(
-      new URL("./sets/flagged-tutor-marks.json", import.meta.url),
+      new URL(
+        "../../src/lib/ai/eval/sets/flagged-tutor-marks.json",
+        import.meta.url,
+      ),
       "utf8",
     ),
   );

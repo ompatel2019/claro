@@ -1,4 +1,4 @@
-import type { EvalSet } from "./sets";
+import type { EvalSet } from "@/lib/ai/eval/sets";
 
 export function parseArgs(args: string[]) {
   const dry = args.includes("--dry-run");

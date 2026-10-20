@@ -2,7 +2,7 @@
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
 import { z } from "zod";
-import { pickQuotaExamples } from "../../marking/example-selection";
+import { pickQuotaExamples } from "@/lib/marking/example-selection";
 
 const Input = z
   .object({

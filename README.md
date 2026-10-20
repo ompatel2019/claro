@@ -47,5 +47,5 @@ Credential-free browser configs are under `e2e/`; run heavy commands through `q-
 The A1 importer can validate an anonymised export without credentials or database calls:
 
 ```bash
-npx tsx --conditions=react-server src/lib/ai/eval/import-a1-examples.mts /path/to/snapshot.json --dry-run
+npx tsx --conditions=react-server scripts/eval/import-a1-examples.mts /path/to/snapshot.json --dry-run
 ```

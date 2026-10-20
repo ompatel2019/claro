@@ -15,7 +15,7 @@ import {
   type CompareItem,
   type CompareDetails,
 } from "./compare";
-const directory = path.join(process.cwd(), "src/lib/ai/eval/results");
+const directory = path.join(process.cwd(), "data/eval/results");
 const legacyClaroFixtures = (row: Pick<CompareItem, "id" | "label">) =>
   claro.filter(
     (item) => item.question_id === row.id && item.label === row.label,

@@ -1,7 +1,7 @@
 import { expect, it } from "vitest";
 import { bootstrap } from "./stats";
-import passes from "./sets/past-passes.json";
-import flags from "./sets/flagged-tutor-marks.json";
+import passes from "@/lib/ai/eval/sets/past-passes.json";
+import flags from "@/lib/ai/eval/sets/flagged-tutor-marks.json";
 import {
   BOOTSTRAP,
   readRescoreRuns,

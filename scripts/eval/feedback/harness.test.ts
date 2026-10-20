@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { expect, it, vi } from "vitest";
-import { costUsd } from "../../prices";
-import { evalSets } from "../sets";
+import { costUsd } from "@/lib/ai/prices";
+import { evalSets } from "@/lib/ai/eval/sets";
 import {
   assertTrials,
   buildItems,

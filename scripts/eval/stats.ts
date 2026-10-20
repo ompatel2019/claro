@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { sameBand } from "./metrics";
+import { sameBand } from "@/lib/ai/eval/metrics";
 
 export type EvalRow = {
   id: string;

@@ -20,7 +20,7 @@ concurrent lock probes). No remote database access or paid calls were used.
 - S16 own-question caps: make rubric restrictions binding outside guideline notes and accept digit-leading cap lines without relaxing band validation.
 - S16 review fixes: gate saved own checks before paid work, retain rubric restrictions, reject malformed/duplicate bands, and restore visibility of admin final marks.
 
-Eval = A1 set, 18 headline items (fm-1 and ei-4 excluded). Signed error: + = lenient. Marker anthropic/claude-sonnet-5.5 (OpenRouter); earlier runs used gpt-6.1-sol (Fast). Judge gpt-6-astra/low. Result files are in `src/lib/ai/eval/results/`. Runs marked dirty were made on an uncommitted change (the eval varied one setting), and the setting is recorded in the file.
+Eval = A1 set, 18 headline items (fm-1 and ei-4 excluded). Signed error: + = lenient. Marker anthropic/claude-sonnet-5.5 (OpenRouter); earlier runs used gpt-6.1-sol (Fast). Judge gpt-6-astra/low. Result files are in `data/eval/results/`. Runs marked dirty were made on an uncommitted change (the eval varied one setting), and the setting is recorded in the file.
 
 ## 14 Oct 2026: Airo 5.0 (built and unit-tested only)
 

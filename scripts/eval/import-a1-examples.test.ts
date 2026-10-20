@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import questions from "./a1-mock-questions.json";
+import questions from "@/lib/ai/eval/a1-mock-questions.json";
 
 const mocks = vi.hoisted(() => ({
   read: vi.fn(),

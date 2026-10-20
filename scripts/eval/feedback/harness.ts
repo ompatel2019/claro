@@ -1,8 +1,8 @@
 import { z } from "zod";
-import { costUsd, MODELS } from "../../prices";
-import type { Message } from "../../openai";
-import { evalBlocked } from "../metrics";
-import { evalSets } from "../sets";
+import { costUsd, MODELS } from "@/lib/ai/prices";
+import type { Message } from "@/lib/ai/openai";
+import { evalBlocked } from "@/lib/ai/eval/metrics";
+import { evalSets } from "@/lib/ai/eval/sets";
 import { feedbackMetrics, type Label } from "./metrics";
 
 const CommentSchema = z.object({
