@@ -4,7 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/utils/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/utils/supabase/admin", () => {
-  const client = { from: vi.fn(), rpc: vi.fn() };
+  const client = { from: vi.fn() };
   return { admin: () => client };
 });
 vi.mock("@/lib/ai/rate-limit", () => ({
@@ -15,11 +15,13 @@ vi.mock("@/lib/ai/rate-limit", () => ({
   rateLimitedResponse: () => Response.json({}, { status: 429 }),
 }));
 vi.mock("@/lib/marking/engine", () => ({ markFlashcard: vi.fn() }));
+vi.mock("@/lib/ai/spend", () => ({ openRouterSpend: vi.fn() }));
 
 import { createClient } from "@/utils/supabase/server";
 import { admin } from "@/utils/supabase/admin";
 import { markFlashcard } from "@/lib/marking/engine";
 import { BUDGET_USD } from "@/lib/ai/prices";
+import { openRouterSpend } from "@/lib/ai/spend";
 import { withAiUsageReservation } from "@/lib/ai/rate-limit";
 import { POST } from "./route";
 
@@ -54,22 +56,16 @@ beforeEach(() => {
 });
 afterEach(() => vi.restoreAllMocks());
 
-it("marks with AI just below the total AI budget", async () => {
-  vi.mocked(admin().rpc).mockResolvedValue({
-    data: BUDGET_USD - 0.0001,
-    error: null,
-  } as never);
+it("marks with AI just below the AI budget", async () => {
+  vi.mocked(openRouterSpend).mockResolvedValue(BUDGET_USD - 0.0001);
   const response = await POST(request("A different answer"), ctx);
   expect(response.status).toBe(200);
-  expect(admin().rpc).toHaveBeenCalledWith("ai_spend");
+  expect(openRouterSpend).toHaveBeenCalledWith(admin());
   expect(markFlashcard).toHaveBeenCalledOnce();
 });
 
-it("refuses AI marking at the total AI budget without calling the model", async () => {
-  vi.mocked(admin().rpc).mockResolvedValue({
-    data: BUDGET_USD,
-    error: null,
-  } as never);
+it("refuses AI marking at the AI budget without calling the model", async () => {
+  vi.mocked(openRouterSpend).mockResolvedValue(BUDGET_USD);
   const response = await POST(request("A different answer"), ctx);
   expect(response.status).toBe(503);
   expect(await response.json()).toEqual({
@@ -80,14 +76,11 @@ it("refuses AI marking at the total AI budget without calling the model", async 
 });
 
 it("checks spend inside the usage reservation when over budget", async () => {
-  vi.mocked(admin().rpc).mockResolvedValue({
-    data: BUDGET_USD + 1,
-    error: null,
-  } as never);
+  vi.mocked(openRouterSpend).mockResolvedValue(BUDGET_USD + 1);
   vi.mocked(withAiUsageReservation).mockImplementationOnce(async (_r, work) => {
-    expect(admin().rpc).not.toHaveBeenCalled();
+    expect(openRouterSpend).not.toHaveBeenCalled();
     const result = await work();
-    expect(admin().rpc).toHaveBeenCalledWith("ai_spend");
+    expect(openRouterSpend).toHaveBeenCalledWith(admin());
     return result;
   });
   const response = await POST(request("A different answer"), ctx);
@@ -97,23 +90,19 @@ it("checks spend inside the usage reservation when over budget", async () => {
   expect(admin().from).not.toHaveBeenCalled();
 });
 
-it("fails closed when the total AI spend cannot be read", async () => {
-  vi.mocked(admin().rpc).mockResolvedValue({
-    data: null,
-    error: { message: "down" },
-  } as never);
+it("fails closed when the AI spend cannot be read", async () => {
+  vi.mocked(openRouterSpend).mockRejectedValue(
+    new Error("ai_spend failed: down"),
+  );
   const response = await POST(request("A different answer"), ctx);
   expect(response.status).toBe(500);
   expect(markFlashcard).not.toHaveBeenCalled();
 });
 
 it("does not check the budget for a local exact match", async () => {
-  vi.mocked(admin().rpc).mockResolvedValue({
-    data: BUDGET_USD,
-    error: null,
-  } as never);
+  vi.mocked(openRouterSpend).mockResolvedValue(BUDGET_USD);
   const response = await POST(request("Back"), ctx);
   expect(response.status).toBe(200);
-  expect(admin().rpc).not.toHaveBeenCalled();
+  expect(openRouterSpend).not.toHaveBeenCalled();
   expect(markFlashcard).not.toHaveBeenCalled();
 });

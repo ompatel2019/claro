@@ -4,12 +4,7 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   createClient: vi.fn<() => Promise<unknown>>(),
   from: vi.fn<(table: string) => unknown>(),
-  rpc: vi.fn<
-    (name: string) => Promise<{
-      data: number | null;
-      error: { message: string } | null;
-    }>
-  >(),
+  openRouterSpend: vi.fn<() => Promise<number>>(),
   delete: vi.fn<(table: string) => void>(),
   eq: vi.fn<
     (table: string, column: string, id: string) => Promise<{ error: null }>
@@ -25,11 +20,14 @@ vi.mock("@/utils/supabase/server", () => ({
   createClient: mocks.createClient,
 }));
 vi.mock("@/utils/supabase/admin", () => ({
-  admin: () => ({ from: mocks.from, rpc: mocks.rpc }),
+  admin: () => ({ from: mocks.from }),
 }));
 vi.mock("@/lib/ai/rate-limit", async (importActual) => ({
   ...(await importActual<typeof import("@/lib/ai/rate-limit")>()),
   assertStudentAiRateLimit: mocks.assertStudentAiRateLimit,
+}));
+vi.mock("@/lib/ai/spend", () => ({
+  openRouterSpend: mocks.openRouterSpend,
 }));
 vi.mock("@/lib/marking/engine", () => ({
   markFlashcard: mocks.markFlashcard,
@@ -85,7 +83,7 @@ beforeEach(() => {
     },
   }));
   mocks.eq.mockResolvedValue({ error: null });
-  mocks.rpc.mockResolvedValue({ data: BUDGET_USD - 1, error: null });
+  mocks.openRouterSpend.mockResolvedValue(BUDGET_USD - 1);
   mocks.assertStudentAiRateLimit.mockResolvedValue({
     ok: true,
     reservationId: "res-1",
@@ -98,7 +96,7 @@ function expectReservationReleased() {
   expect(mocks.assertStudentAiRateLimit).toHaveBeenCalledExactlyOnceWith({
     userId: "user",
   });
-  expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("ai_spend");
+  expect(mocks.openRouterSpend).toHaveBeenCalledOnce();
   expect(mocks.delete).toHaveBeenCalledExactlyOnceWith("ai_usage_reservations");
   expect(mocks.eq).toHaveBeenCalledExactlyOnceWith(
     "ai_usage_reservations",
@@ -109,7 +107,7 @@ function expectReservationReleased() {
 }
 
 it("releases the AI usage reservation when over budget returns 503", async () => {
-  mocks.rpc.mockResolvedValue({ data: BUDGET_USD, error: null });
+  mocks.openRouterSpend.mockResolvedValue(BUDGET_USD);
 
   const response = await POST(request(), ctx);
 
@@ -121,8 +119,8 @@ it("releases the AI usage reservation when over budget returns 503", async () =>
   expectReservationReleased();
 });
 
-it("releases the AI usage reservation when an ai_spend read error returns 500", async () => {
-  mocks.rpc.mockResolvedValue({ data: null, error: { message: "down" } });
+it("releases the AI usage reservation when a spend read error returns 500", async () => {
+  mocks.openRouterSpend.mockRejectedValue(new Error("ai_spend failed: down"));
 
   const response = await POST(request(), ctx);
 
