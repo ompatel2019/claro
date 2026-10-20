@@ -51,7 +51,7 @@ it("shows supported sprint and flashcard sessions while ignoring old paper rows"
     screen.getAllByRole("link").map((link) => link.getAttribute("href")),
   ).toEqual(["/student/sprint/s", "/student/flashcards/c"]);
 });
-it("shows actual fully known review counts on home while preserving the default score display", () => {
+it("shows actual fully known review counts on home", () => {
   const sessions = [
     {
       id: "cards",
@@ -67,11 +67,7 @@ it("shows actual fully known review counts on home while preserving the default 
       recall: { knew: 18, total: 20 },
     },
   ] as unknown as (Session & { recall: { knew: number; total: number } })[];
-  const { rerender } = render(
-    <SessionList home sessions={sessions} topics={[]} />,
-  );
+  render(<SessionList sessions={sessions} topics={[]} />);
   expect(screen.getByText("18/20")).toBeVisible();
   expect(screen.getByText("knew")).toBeVisible();
-  rerender(<SessionList sessions={sessions} topics={[]} />);
-  expect(screen.queryByText("18/20")).toBeNull();
 });

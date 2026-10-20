@@ -133,23 +133,6 @@ export function weakSpots(
     .flat()
     .slice(0, 6);
 }
-/** Normalise the SQL counts for the CategoryBar; empty categories never divide by zero. */
-export function masterySegments(m: Mastery) {
-  const total = m.known + m.learning + m.missed + m.new;
-  return (
-    [
-      ["Known", m.known],
-      ["Learning", m.learning],
-      ["Missed", m.missed],
-      ["New", m.new],
-    ] as const
-  ).map(([label, count]) => ({
-    label,
-    count,
-    width: total ? (count / total) * 100 : 0,
-  }));
-}
-
 export function weeklyScores(
   history: HistoryScore[],
   from: string | null = null,

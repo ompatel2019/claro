@@ -17,35 +17,23 @@ for (const width of [400, 1280]) {
     test.afterAll(async () => {
       await cleanupSessions(ids);
     });
-    test("S3: steps, back, review, advanced and reset preserve a prefill", async ({
+    test("S3: custom sizing, validation, advanced and reset preserve a prefill", async ({
       page,
     }) => {
       await page.goto("/student/sprint?type=short&size=45");
-      const next = page.getByRole("button", { name: "Next", exact: true });
+      await reviewSprintSetup(page);
+      const marks = page.getByRole("textbox", { name: "Marks", exact: true });
       const start = page.getByRole("button", { name: /^Start (sprint|with)/ });
+      await expect(marks).toHaveValue("45");
+      await marks.fill("999");
+      await marks.blur();
+      await expect(marks).toHaveValue("999");
+      await expect(marks).toHaveAttribute("aria-invalid", "true");
       await expect(start).toBeDisabled();
       await page.keyboard.press("Control+Enter");
       await expect(page).toHaveURL(/\/student\/sprint\?/);
-      await expect(page.getByText("Step 1 of 4")).toBeVisible();
-      await next.click();
-      await expect(
-        page.getByRole("region", { name: "Question type", exact: true }),
-      ).toBeHidden();
-      await next.click();
-      await expect(page.getByRole("textbox", { name: "Marks" })).toHaveValue(
-        "45",
-      );
-      await page.getByRole("textbox", { name: "Marks" }).fill("999");
-      await page.getByRole("textbox", { name: "Marks" }).blur();
-      await expect(page.getByRole("textbox", { name: "Marks" })).toHaveValue(
-        "60",
-      );
-      await page.getByRole("button", { name: "Back", exact: true }).click();
-      await next.click();
-      await expect(page.getByRole("textbox", { name: "Marks" })).toHaveValue(
-        "60",
-      );
-      await next.click();
+      await marks.fill("60");
+      await expect(marks).toHaveAttribute("aria-invalid", "false");
       await expect(
         page.getByRole("radiogroup", { name: "Question history" }),
       ).toBeHidden();
@@ -53,19 +41,24 @@ for (const width of [400, 1280]) {
       await expect(
         page.getByRole("radiogroup", { name: "Question history" }),
       ).toBeVisible();
+      await expect(marks).toHaveValue("60");
       await expect(
         page.getByRole("radiogroup", { name: "Order", exact: true }),
       ).toHaveCount(0);
       await page.getByRole("button", { name: "Reset", exact: true }).click();
-      await expect(page.getByText("Step 1 of 4")).toBeVisible();
-      await expect(start).toBeDisabled();
+      await expect(
+        page.getByRole("button", { name: "Multiple choice", exact: true }),
+      ).toHaveAttribute("aria-pressed", "true");
+      await expect(
+        page.getByRole("textbox", { name: "Questions", exact: true }),
+      ).toHaveValue("20");
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= window.innerWidth,
         ),
       ).toBe(true);
     });
-    test("S3: count errors and empty pools remain visible through review", async ({
+    test("S3: count errors and empty pools remain visible with custom controls", async ({
       page,
     }) => {
       await page.route("**/rest/v1/rpc/sprint_pool", (route) =>
@@ -247,24 +240,24 @@ test.describe("Local results feedback", () => {
     }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(`/student/sprint/${sessionId(1)}/results`);
-      const next = page.getByRole("region", { name: "Next steps" });
+      const next = page.locator('[data-slot="card"]').filter({
+        has: page.getByRole("heading", { name: "Your next step", exact: true }),
+      });
       await expect(next).toBeVisible();
       await expect(
-        next.getByRole("link", { name: "Retry mistakes on Inflation" }),
-      ).toHaveAttribute("href", /sub=inflation&history=mistakes/);
+        next.getByRole("link", { name: "Practise", exact: true }),
+      ).toHaveAttribute("href", "/student/sprint?type=mixed&sub=inflation");
       await expect(
-        next.getByRole("link", { name: /Review 1 flashcard/ }),
+        next.getByRole("link", { name: "Review cards", exact: true }),
       ).toHaveAttribute("href", "/student/flashcards?topic=inflation");
       const headings = await page.getByRole("heading").allTextContents();
-      expect(headings.indexOf("Next steps")).toBeLessThan(
+      expect(headings.indexOf("Your next step")).toBeLessThan(
         headings.indexOf("Strengths"),
       );
       await expect(
         page.getByText("Sun 18 Oct · 6:00", { exact: true }),
       ).toBeVisible();
-      await page
-        .getByRole("link", { name: "Q2 · Short answer", exact: true })
-        .click();
+      await page.getByRole("button", { name: /^Question 2,/ }).click();
       await expect(page.getByText("Question 2", { exact: true })).toBeVisible();
       await expect(page.getByText("Next mark:", { exact: true })).toHaveCount(
         0,
@@ -278,9 +271,7 @@ test.describe("Local results feedback", () => {
       await expect(
         page.getByText("How to reach full marks", { exact: true }),
       ).toBeVisible();
-      await page
-        .getByRole("link", { name: "Q3 · Short answer", exact: true })
-        .click();
+      await page.getByRole("button", { name: /^Question 3,/ }).click();
       await expect(page.getByText("Question 3", { exact: true })).toBeVisible();
       await expect(
         page.getByText("How to reach full marks", { exact: true }),
@@ -297,20 +288,39 @@ test.describe("Local results feedback", () => {
       });
     });
   }
-  test("single-answer results hide outlines at full marks and keep them for partial marks", async ({
+  test("single-answer results show full marks and actionable partial-mark feedback", async ({
     page,
   }) => {
     await page.goto(`/student/activity/${sessionId(2)}`);
     await expect(
-      page.getByText("5 / 5", { exact: true }).first(),
+      page.getByRole("img", { name: "5 out of 5", exact: true }),
     ).toBeVisible();
     await expect(
       page.getByText("How to reach full marks", { exact: true }),
     ).toHaveCount(0);
+    await expect(page.getByText("Full marks", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Keep building on these strengths", { exact: true }),
+    ).toBeVisible();
     await page.goto(`/student/activity/${sessionId(3)}`);
     await expect(
-      page.getByText("How to reach full marks", { exact: true }),
+      page.getByRole("img", { name: "3 out of 5", exact: true }),
     ).toBeVisible();
+    await expect(
+      page.getByText("2 marks from full marks", { exact: true }),
+    ).toBeVisible();
+    const next = page.locator('[data-slot="card"]').filter({
+      has: page.getByText("Your next mark", { exact: true }),
+    });
+    await expect(
+      next.getByText("Stored per-comment advice.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      next.getByRole("link", { name: "Rewrite with these fixes" }),
+    ).toHaveAttribute("href", "/student/mark?question=question-2");
+    await expect(
+      page.getByText("How to reach full marks", { exact: true }),
+    ).toHaveCount(0);
     await expect(page.getByText("Next mark:", { exact: true })).toHaveCount(0);
   });
   for (const [suffix, message] of [
@@ -324,8 +334,8 @@ test.describe("Local results feedback", () => {
       await expect(page.getByText(message, { exact: false })).toBeVisible();
       await expect(
         page
-          .getByRole("region", { name: "Next steps" })
-          .getByRole("link", { name: "Retry mistakes on Inflation" }),
+          .getByRole("region", { name: "Overall feedback", exact: true })
+          .getByRole("link", { name: "Practise", exact: true }),
       ).toBeVisible();
     });
   }

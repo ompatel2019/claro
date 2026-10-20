@@ -3,11 +3,11 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 vi.mock("server-only", () => ({}));
 vi.mock("@/utils/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/utils/supabase/admin", () => ({ admin: vi.fn() }));
-vi.mock("@/lib/single-check-data", () => ({ bankQuestions: vi.fn() }));
+vi.mock("@/lib/single-check-data", () => ({ bankQuestionAvailable: vi.fn() }));
 import { createClient } from "@/utils/supabase/server";
 import { admin } from "@/utils/supabase/admin";
 import { singleSlotIds } from "@/lib/single-check";
-import { bankQuestions } from "@/lib/single-check-data";
+import { bankQuestionAvailable } from "@/lib/single-check-data";
 import { createCheck, restoreUnreadableCheck } from "./actions";
 const sessions = new Map<string, Record<string, unknown>>();
 const attempts: Record<string, unknown>[] = [];
@@ -66,7 +66,7 @@ beforeEach(() => {
     auth: { getUser: async () => ({ data: { user: { id: "u" } } }) },
   } as never);
   vi.mocked(admin).mockReturnValue({ from } as never);
-  vi.mocked(bankQuestions).mockResolvedValue([]);
+  vi.mocked(bankQuestionAvailable).mockResolvedValue(false);
 });
 it("stores the exact config and nullable question in one single session", async () => {
   const result = await createCheck({ source: "own", question });
@@ -228,5 +228,31 @@ it.each([undefined, "false", "TRUE"])(
     expect(admin).not.toHaveBeenCalled();
     expect(sessions.size).toBe(0);
     expect(attempts).toHaveLength(0);
+  },
+);
+
+it("stores the bank question unchanged after checking it with the user client", async () => {
+  vi.mocked(bankQuestionAvailable).mockResolvedValue(true);
+  const question_id = "2024-q21b";
+  expect(await createCheck({ source: "bank", question_id })).toMatchObject({
+    sessionId: expect.any(String),
+    attemptId: expect.any(String),
+  });
+  expect(bankQuestionAvailable).toHaveBeenCalledWith(
+    await vi.mocked(createClient).mock.results[0].value,
+    question_id,
+  );
+  expect([...sessions.values()][0].config).toEqual({ question_id });
+  expect(attempts[0].question_id).toBe(question_id);
+});
+
+it.each(["", null, 42])(
+  "rejects malformed bank ID %s before lookup or writes",
+  async (question_id) => {
+    expect(await createCheck({ source: "bank", question_id })).toHaveProperty(
+      "error",
+    );
+    expect(bankQuestionAvailable).not.toHaveBeenCalled();
+    expect(admin).not.toHaveBeenCalled();
   },
 );

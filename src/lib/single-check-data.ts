@@ -32,6 +32,30 @@ export async function bankQuestions(
   }
   return rows;
 }
+export async function bankQuestionAvailable(
+  db: Awaited<ReturnType<typeof createClient>>,
+  id: string,
+) {
+  const { data: pool, error: poolError } = await db
+    .rpc("sprint_questions", {
+      p_config: { mode: "mixed", include_extended: true },
+    })
+    .select("id")
+    .eq("id", id)
+    .neq("type", "mcq")
+    .maybeSingle();
+  if (poolError) throw poolError;
+  if (!pool) return false;
+  // Keep the bank loader's second, live-question read under the same RLS.
+  const { data, error } = await db
+    .from("questions")
+    .select("id")
+    .eq("id", id)
+    .eq("status", "live")
+    .maybeSingle();
+  if (error) throw error;
+  return data !== null;
+}
 export async function remainingChecks(userId: string) {
   const db = await createClient();
   const { count, error } = await db

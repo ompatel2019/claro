@@ -391,12 +391,6 @@
   [data-slot="select-trigger"] {
     @apply h-9 cursor-pointer appearance-none pr-9;
   }
-  [data-slot="select"] {
-    @apply relative inline-flex w-full min-w-0;
-  }
-  [data-slot="select"] > svg {
-    @apply text-muted-foreground pointer-events-none absolute top-1/2 right-3 size-4 -translate-y-1/2;
-  }
   [data-slot="input-group"] {
     @apply relative flex w-full items-center;
   }
@@ -491,12 +485,6 @@
   }
 
   /* --- Progress / Separator / Kbd / Skeleton / Avatar ------------------------ */
-  [data-slot="progress"] {
-    @apply bg-chart-track relative h-1.5 w-full overflow-hidden rounded-full;
-  }
-  [data-slot="progress-indicator"] {
-    @apply bg-primary h-full rounded-full transition-[width] duration-300;
-  }
   [data-slot="separator"] {
     @apply bg-border shrink-0;
   }
@@ -540,9 +528,6 @@
   [data-slot="sidebar"] {
     @apply w-[248px] transition-[width] duration-200;
   }
-  [data-collapsed="true"] [data-slot="sidebar"] {
-    @apply w-[72px];
-  }
   [data-slot="sidebar-group-label"] {
     @apply text-muted-foreground flex h-8 items-center px-3 text-xs font-medium;
   }
@@ -567,10 +552,6 @@
   }
 
   /* --- Overlays: sheet, dialog, popover, toast ------------------------------- */
-  [data-slot="overlay"] {
-    @apply fixed inset-0 z-50 bg-[#10121A]/30 backdrop-blur-[2px];
-    animation: fade-in 160ms ease-out;
-  }
   [data-slot="sheet-content"] {
     @apply bg-popover text-popover-foreground fixed inset-y-0 z-50 flex w-full flex-col border-l sm:max-w-[420px];
     box-shadow: var(--shadow-pop);
@@ -592,14 +573,6 @@
     @apply bg-popover text-popover-foreground z-50 rounded-xl border p-1;
     box-shadow: var(--shadow-pop);
     animation: pop-in 140ms ease-out;
-  }
-  [data-slot="menu-item"] {
-    @apply text-foreground hover:bg-accent [&>svg]:text-muted-foreground flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm [&>svg]:size-4;
-  }
-  [data-slot="toast"] {
-    @apply bg-popover text-popover-foreground pointer-events-auto flex w-[340px] max-w-[calc(100vw-2rem)] items-start gap-3 rounded-xl border px-4 py-3 text-sm;
-    box-shadow: var(--shadow-pop);
-    animation: toast-in 240ms cubic-bezier(0.32, 0.72, 0, 1);
   }
 
   /* --- Empty state (shadcn <Empty>) ---------------------------------------- */
@@ -667,46 +640,8 @@
     text-decoration-thickness: 1.25px;
     text-underline-offset: 5px;
   }
-  .mk.is-hot {
-    background: color-mix(in srgb, var(--brand) 12%, transparent);
-  }
   .mk-tag {
     @apply text-brand-text relative -top-2 mx-0.5 inline-flex items-center gap-0.5 align-baseline font-sans text-[11px] leading-none font-semibold;
-  }
-  .mk-caret {
-    @apply text-brand relative -top-1 mx-0.5 inline-block font-semibold;
-  }
-
-  /* Flashcard flip */
-  .flip {
-    perspective: 1800px;
-  }
-  .flip-inner {
-    display: grid;
-    transform-style: preserve-3d;
-    transition: transform 560ms cubic-bezier(0.3, 0.7, 0.2, 1);
-  }
-  .flip[data-flipped="true"] .flip-inner {
-    transform: rotateY(180deg);
-  }
-  .flip-face {
-    grid-area: 1 / 1;
-    backface-visibility: hidden;
-    -webkit-backface-visibility: hidden;
-  }
-  .flip-back {
-    transform: rotateY(180deg);
-  }
-
-  /* Heatmap cells */
-  .heat {
-    @apply aspect-square w-full rounded-[3px] transition-[outline-color] duration-100;
-    outline: 2px solid transparent;
-    outline-offset: 1px;
-  }
-  .heat:hover,
-  .heat:focus-visible {
-    outline-color: var(--foreground);
   }
 
   /* Thin scrollbars for panels */
@@ -714,51 +649,6 @@
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
-
-  /* Chart tooltip */
-  .chart-tip {
-    @apply bg-popover text-popover-foreground pointer-events-none absolute z-20 min-w-[132px] rounded-lg border px-3 py-2 text-xs opacity-0 transition-opacity duration-100;
-    box-shadow: var(--shadow-pop);
-  }
-  .chart-tip[data-show="true"] {
-    opacity: 1;
-  }
-
-  .route-enter {
-    animation: route-in 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
-  }
-}
-
-/* Collapsed sidebar (icon rail). Unlayered on purpose so it beats utility classes. */
-[data-collapsed="true"] [data-slot="sidebar"] .sb-label,
-[data-collapsed="true"] [data-slot="sidebar"] [data-slot="sidebar-group-label"],
-[data-collapsed="true"] [data-slot="sidebar"] .sb-full {
-  display: none;
-}
-[data-collapsed="true"] [data-slot="sidebar"] .sb-mini {
-  display: flex;
-}
-[data-collapsed="true"] [data-slot="sidebar-menu-button"] {
-  justify-content: center;
-  padding-inline: 0;
-}
-[data-collapsed="true"] [data-slot="sidebar-menu-badge"] {
-  position: absolute;
-  top: 2px;
-  right: 4px;
-  height: 16px;
-  min-width: 16px;
-  padding-inline: 4px;
-  font-size: 10px;
-}
-[data-collapsed="true"] [data-component="SubjectSwitcher"] {
-  justify-content: center;
-  border-color: transparent;
-  box-shadow: none;
-  padding: 4px;
-}
-[data-collapsed="true"] [data-slot="sidebar"] [data-value="user"] {
-  justify-content: center;
 }
 
 @keyframes pen-draw {
@@ -772,16 +662,6 @@
   }
   to {
     opacity: 1;
-  }
-}
-@keyframes route-in {
-  from {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-  to {
-    opacity: 1;
-    transform: none;
   }
 }
 @keyframes sheet-in-right {
@@ -818,26 +698,6 @@
   to {
     opacity: 1;
     transform: none;
-  }
-}
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-@keyframes typing {
-  0%,
-  80%,
-  100% {
-    opacity: 0.25;
-  }
-  40% {
-    opacity: 1;
   }
 }
 

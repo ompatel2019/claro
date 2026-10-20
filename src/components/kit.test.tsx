@@ -17,7 +17,6 @@ import { DataTable, sortRows, type Column } from "./data-table";
 import { EmptyState } from "./empty-state";
 import { FilterBar, type Filter } from "./filter-bar";
 import { PageHeader } from "./page-header";
-import { StatCard } from "./stat-card";
 afterEach(cleanup);
 
 it("groups student and admin navigation without homework", () => {
@@ -92,7 +91,7 @@ it.each([
   expect(screen.getByLabelText(`3 ${label}`)).toHaveTextContent("3");
 });
 
-it("renders the page header, stat card and empty state", () => {
+it("renders the page header and empty state", () => {
   render(
     <>
       <PageHeader
@@ -101,7 +100,6 @@ it("renders the page header, stat card and empty state", () => {
         description="One line"
         actions={<button>Go</button>}
       />
-      <StatCard label="Average" value="74%" caption="Last 7 days" />
       <EmptyState
         icon={Target}
         title="Nothing yet"
@@ -112,8 +110,6 @@ it("renders the page header, stat card and empty state", () => {
   );
   expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Title");
   expect(screen.getByText("One line")).toBeInTheDocument();
-  expect(screen.getByText("74%")).toBeInTheDocument();
-  expect(screen.getByText("Last 7 days")).toBeInTheDocument();
   expect(screen.getByText("Nothing yet")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Start" })).toBeInTheDocument();
 });
@@ -292,7 +288,7 @@ it("shows the supplied exam countdown only for students and keeps one Ask Claro 
 
 it("opens the existing feedback dialog from both account menus without a feedback FAB", async () => {
   render(
-    <FeedbackWidget userId="student" floating={false}>
+    <FeedbackWidget userId="student">
       <AppShell kind="student" name="Test Student" defaultOpen>
         Content
       </AppShell>

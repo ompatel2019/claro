@@ -22,13 +22,14 @@ test.beforeAll(async () => {
         import {ActivityBrowser} from './src/components/activity-browser';
         import Progress from './src/app/(app)/student/progress/page';
         import {resolve} from './src/test/resolve-server-components';
-        import {FeedbackWidget} from './src/components/feedback-widget';
+        import {FeedbackWidget,useFeedback} from './src/components/feedback-widget';
+        function FeedbackTrigger(){const open=useFeedback();return <button onClick={()=>open()}>Feedback</button>;}
         const f=Object.fromEntries(new URLSearchParams(location.search));
         const activity={rows:[{id:'s',kind:'sprint',title:'Mixed sprint · Inflation',status:'Finished',provisional:false,study:false,pct:75,items:8,answered:8,elapsed_s:125,started_at:'2026-10-19T00:00:00Z',finished_at:'2026-10-19T00:02:00Z'}],page:1,total:1,all_total:1,kinds:{sprint:1},kind_total:1,stats:{sessions:1,questions:8,average:75,best:75}};
         const path=location.pathname;
         const page=path.includes('progress') ? await Progress({searchParams:Promise.resolve(f)}) : path.includes('flashcards') ? await Flashcards({searchParams:Promise.resolve(f)}) : path.includes('admin') ? Admin() : path.includes('activity') ? <ActivityBrowser data={activity} filters={{kind:'',status:'',topic:'',range:'',q:'',sort:'newest',date:'',from:'',to:'',page:1}} topics={[]} today="2026-10-19"/> : await Home();
         const resolved=await resolve(page);
-        createRoot(document.getElementById('root')).render(<FeedbackWidget userId="student"><header className="h-16 border-b px-4 py-5">Claro</header><main className="mx-auto max-w-[1280px] px-4 py-6 md:px-6"><div className="pb-0 lg:pb-12">{resolved}</div></main></FeedbackWidget>);`,
+        createRoot(document.getElementById('root')).render(<FeedbackWidget userId="student"><header className="h-16 border-b px-4 py-5">Claro<FeedbackTrigger/></header><main className="mx-auto max-w-[1280px] px-4 py-6 md:px-6"><div className="pb-0 lg:pb-12">{resolved}</div></main></FeedbackWidget>);`,
       resolveDir: process.cwd(),
       loader: "tsx",
     },
@@ -163,16 +164,15 @@ async function capture(
     .evaluateAll((nodes) => nodes.forEach((node) => node.remove()));
 }
 
-test("S1: desktop feedback is fixed and adds no document height", async ({
-  page,
-}) => {
+test("S1: feedback trigger opens the shared dialog", async ({ page }) => {
   await page.setViewportSize({ width: 1366, height: 768 });
   await page.goto("http://claro.test/student");
   const feedback = page.getByRole("button", { name: "Feedback" });
   await expect(feedback).toBeVisible();
-  expect(await feedback.evaluate((el) => getComputedStyle(el).position)).toBe(
-    "fixed",
-  );
+  await feedback.click();
+  await expect(
+    page.getByRole("dialog", { name: "Send feedback" }),
+  ).toBeVisible();
 });
 for (const [width, height] of [
   [1440, 900],

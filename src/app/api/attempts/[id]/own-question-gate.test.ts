@@ -59,7 +59,9 @@ for (const [name, post] of [
         session_id: "session",
         question_id,
         status: "pending",
-        image_paths: ["owner/photo.png"],
+        image_paths: [
+          "owner/75f2a40b-3e20-4a56-9e14-1b237cfc8396-1729000000000-0.png",
+        ],
         question: question_id
           ? { type: "short", stem: "Explain inflation" }
           : null,

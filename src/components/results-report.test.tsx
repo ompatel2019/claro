@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { OverallFeedback, ResultsAnswers } from "./results-report";
@@ -16,7 +17,7 @@ vi.mock("./annotated-feedback", () => ({
 vi.mock("./session-shell", () => ({ isTyping: () => false }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 afterEach(cleanup);
-it("renders stored feedback and deterministic next-step links", () => {
+it("renders stored feedback and next steps", () => {
   render(
     <OverallFeedback
       summary={{
@@ -25,19 +26,11 @@ it("renders stored feedback and deterministic next-step links", () => {
         next_steps: ["Review inflation"],
       }}
       pending={false}
-      actions={[
-        {
-          label: "Practise Inflation questions",
-          href: "/student/sprint?sub=inflation",
-        },
-      ]}
     />,
   );
   expect(screen.getByText("Precise definitions")).toBeVisible();
   expect(screen.getByText("Add a causal link")).toBeVisible();
-  expect(
-    screen.getByRole("link", { name: "Practise Inflation questions" }),
-  ).toHaveAttribute("href", "/student/sprint?sub=inflation");
+  expect(screen.getByText("Review inflation")).toBeVisible();
 });
 it("renders top fixes and pending summary skeletons", () => {
   const { rerender } = render(
@@ -198,35 +191,12 @@ it.each([
   expect(screen.queryByText("Pending")).not.toBeInTheDocument();
 });
 
-it("puts next steps first and links factual question chips without attributing AI text", () => {
-  const row = (
-    position: number,
-    mark: number,
-    type: ReviewRow["type"],
-    status = "marked",
-  ) =>
-    ({
-      position,
-      mark,
-      marks: 4,
-      max_marks: 4,
-      type,
-      status,
-      feedback: {},
-    }) as ReviewRow;
+it("puts stored next steps before strengths and fixes", () => {
   render(
     <>
       <OverallFeedback
         pending={false}
         summary={{ strengths: ["Stored advice"], top_fixes: ["Stored fix"] }}
-        rows={[
-          row(1, 4, "mcq"),
-          row(7, 2, "short"),
-          row(8, 0, "short", "failed"),
-        ]}
-        actions={[
-          { label: "Retry mistakes", href: "/student/sprint?history=mistakes" },
-        ]}
       />
       <ResultsAnswers rows={[]} id="test" name={() => ""} photos={new Map()} />
     </>,
@@ -239,23 +209,19 @@ it("puts next steps first and links factual question chips without attributing A
     "Strengths",
     "Top fixes",
   ]);
-  expect(
-    screen.getByRole("link", { name: "Q1 · Multiple choice" }),
-  ).toHaveAttribute("href", "#q-1");
-  expect(
-    screen.getByRole("link", { name: "Q7 · Short answer" }),
-  ).toHaveAttribute("href", "#q-7");
-  expect(screen.queryByRole("link", { name: /Q8/ })).toBeNull();
 });
-it("keeps next-step actions available while a summary is pending", () => {
+
+it("keeps the supplied next step available while a summary is pending", () => {
   render(
     <OverallFeedback
       summary={null}
       pending
-      actions={[{ label: "Practise", href: "/student/sprint?sub=topic" }]}
+      nextStep={<Link href="/student/sprint?sub=topic">Practise</Link>}
     />,
   );
-  expect(screen.getByRole("region", { name: "Next steps" })).toContainElement(
-    screen.getByRole("link", { name: "Practise" }),
+  expect(screen.getByRole("link", { name: "Practise" })).toHaveAttribute(
+    "href",
+    "/student/sprint?sub=topic",
   );
+  expect(screen.getByRole("status")).toBeVisible();
 });

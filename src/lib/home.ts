@@ -1,4 +1,4 @@
-import { timer, modeLabel, topicNames } from "./practice";
+import { timer } from "./practice";
 
 import { HSC_EXAM, examDaysLeft } from "./hsc-exam";
 import { addDays } from "./activity";
@@ -58,23 +58,6 @@ export function continueTime(
   return `Started ${relative} ago`;
 }
 
-/** One session title for history and resume cards, using the shared mode/topic labels. */
-export function sessionTitle(
-  session: {
-    kind?: string;
-    config: { mode?: string; topics?: string[]; subtopics?: string[] };
-  },
-  topics: import("./practice").Topic[],
-) {
-  if (session.kind === "single") return "Mark my answer";
-  if (session.kind === "flashcards")
-    return `Flashcards · ${session.config.mode === "test" ? "Test" : "Study"}`;
-  const ids = session.config.subtopics?.length
-    ? session.config.subtopics
-    : session.config.topics;
-  return `${modeLabel(session.config.mode)} sprint · ${topicNames(ids, topics)}`;
-}
-
 // NSW Eastern division student dates. Week numbers follow Monday–Sunday school weeks.
 // Sources: https://education.nsw.gov.au/schooling/calendars/2026 and /2027 (19 Oct 2026).
 const TERMS: Record<string, [string, string][]> = {
@@ -107,20 +90,6 @@ export function schoolWeek(today: string) {
     ) + 1;
   return { term: index + 1, week: week(today), weeks: week(end) };
 }
-// Claro's own short lines, one per day.
-const QUOTES = [
-  "Habits beat cramming.",
-  "Show up first. Marks follow.",
-  "Small sessions, big results.",
-  "Practise now, relax in the exam.",
-  "Consistency is the cheat code.",
-  "Done today beats perfect tomorrow.",
-  "Every answer sharpens the next.",
-];
-export function dailyQuote(today: string) {
-  return QUOTES[Math.floor(Date.parse(today) / 86400000) % QUOTES.length];
-}
-
 /** Parent units only, in syllabus order; dot points must not duplicate totals. */
 export function homeUnits(topics: import("./progress").TopicProgress[]) {
   return topics
