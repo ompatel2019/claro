@@ -1,8 +1,10 @@
+import { assertTargetVerified } from "./guard";
 import { expect, test, type Page } from "@playwright/test";
 import { adminClient } from "./helpers";
 import { disputeStudent } from "./fixtures/dispute-student";
 
 async function signInAdmin(page: Page) {
+  assertTargetVerified();
   await page.goto("/sign-in");
   await expect(page.getByLabel("Email")).toBeVisible({ timeout: 60000 });
   await page.getByLabel("Email").fill(process.env.ADMIN_EMAIL!);

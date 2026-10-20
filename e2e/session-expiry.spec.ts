@@ -1,3 +1,4 @@
+import { assertTargetVerified } from "./guard";
 import { test, expect } from "@playwright/test";
 import { signIn, start, cleanupSessions, adminClient, pick } from "./helpers";
 test.describe("Session expiry mid-sprint", () => {
@@ -63,6 +64,7 @@ test.describe("Session expiry mid-sprint", () => {
     });
     await page.getByRole("link", { name: "Sign in again" }).click();
     await expect(page).toHaveURL(/\/sign-in\?next=/);
+    assertTargetVerified();
     await page.getByLabel("Email").fill(process.env.STUDENT_EMAIL!);
     await page.getByLabel("Password").fill(process.env.STUDENT_PASSWORD!);
     await page.getByRole("button", { name: "Sign in", exact: true }).click();
