@@ -189,7 +189,7 @@ function Sidebar({
 
   return (
     <div
-      className="group peer text-sidebar-foreground hidden self-stretch md:block"
+      className="group peer text-sidebar-foreground hidden w-(--sidebar-width) shrink-0 self-stretch transition-[width] duration-200 ease-linear data-[collapsible=icon]:w-(--sidebar-width-icon) md:block"
       data-state={state}
       data-collapsible={state === "collapsed" ? collapsible : ""}
       data-variant="sidebar"
@@ -467,4 +467,5 @@ export {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 };
