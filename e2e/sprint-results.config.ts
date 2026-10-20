@@ -3,6 +3,8 @@ import config from "../playwright.config";
 export default defineConfig({
   ...config,
   testDir: ".",
+  // The app gets the local mock below; the e2e guard checks this, not the runner env.
+  metadata: { ...config.metadata, appSupabaseUrl: "http://127.0.0.1:54328" },
   testMatch: [
     "sprint-feedback.spec.ts",
     "sprint-results.spec.ts",

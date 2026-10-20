@@ -1,3 +1,4 @@
+import { assertTargetVerified } from "./guard";
 import { createHash } from "node:crypto";
 import { expect, test, type Page } from "@playwright/test";
 import { adminClient, cleanupSessions, signIn, start } from "./helpers";
@@ -31,6 +32,7 @@ const comments = [
   },
 ];
 async function signInAdmin(page: Page) {
+  assertTargetVerified();
   await page.goto("/sign-in");
   await expect(page.getByLabel("Email")).toBeVisible({ timeout: 60000 });
   await page.getByLabel("Email").fill(process.env.ADMIN_EMAIL!);

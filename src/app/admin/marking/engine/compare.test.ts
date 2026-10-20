@@ -143,7 +143,7 @@ it("uses file stamps and bucket ids independent of sorting position", () => {
 it("compares all 226 items in the newest full CLI runs without collapsing repeated questions", () => {
   const load = (stamp: string) =>
     JSON.parse(
-      readFileSync(`src/lib/ai/eval/results/${stamp}.json`, "utf8"),
+      readFileSync(`data/eval/results/${stamp}.json`, "utf8"),
     ) as CompareRun;
   const result = compareRuns(load("2026-10-09-1415"), load("2026-10-09-1358"));
   expect(result.rows).toHaveLength(226);
@@ -158,7 +158,7 @@ it("compares all 226 items in the newest full CLI runs without collapsing repeat
 it("compares the three real --items regression rows by original full-array index", () => {
   const load = (stamp: string) =>
     JSON.parse(
-      readFileSync(`src/lib/ai/eval/results/${stamp}.json`, "utf8"),
+      readFileSync(`data/eval/results/${stamp}.json`, "utf8"),
     ) as CompareRun;
   const a = load("2026-10-09-1439"),
     b = load("2026-10-09-1440");
@@ -174,7 +174,7 @@ it("compares the three real --items regression rows by original full-array index
 it("matches real --limit section prefixes to full and --items runs by original index", () => {
   const load = (stamp: string) =>
     JSON.parse(
-      readFileSync(`src/lib/ai/eval/results/${stamp}.json`, "utf8"),
+      readFileSync(`data/eval/results/${stamp}.json`, "utf8"),
     ) as CompareRun;
   const limited = load("2026-10-09-1414"),
     full = load("2026-10-09-1415");

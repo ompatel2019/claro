@@ -92,23 +92,19 @@ function importReviewPairs(threshold: number, filters: QuestionFilters) {
     }),
   );
   return unstable_cache(
-    async () => {
-      // PostgREST caps a response (1000 rows by default), so read every page.
-      const all: ReviewPair[] = [];
-      for (let from = 0; ; from += REVIEW_FETCH) {
-        const { data } = await admin()
-          .rpc("question_import_review", {
-            p_threshold: threshold,
-            p_filters: normalized,
-          })
-          .order("id")
-          .range(from, from + REVIEW_FETCH - 1)
-          .throwOnError();
-        const chunk = (data ?? []) as ReviewPair[];
-        all.push(...chunk);
-        if (chunk.length < REVIEW_FETCH) return all;
-      }
-    },
+    () =>
+      pages<ReviewPair>(
+        (from, to) =>
+          admin()
+            .rpc("question_import_review", {
+              p_threshold: threshold,
+              p_filters: normalized,
+            })
+            .order("id")
+            .range(from, to)
+            .throwOnError(),
+        REVIEW_FETCH,
+      ),
     [QUESTION_IMPORT_REVIEW_TAG, String(threshold), JSON.stringify(normalized)],
     { revalidate: 120, tags: [QUESTION_IMPORT_REVIEW_TAG] },
   )();

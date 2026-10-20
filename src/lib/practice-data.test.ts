@@ -92,7 +92,9 @@ it("reads model answers only for the caller's marked written question ids", asyn
     ["user_id", profile.id],
   ]);
   expect(adminFrom).toHaveBeenCalledExactlyOnceWith("questions");
-  expect(refs.select).toHaveBeenCalledExactlyOnceWith("id, sample_answer");
+  expect(refs.select).toHaveBeenCalledExactlyOnceWith(
+    "id,explanation,sample_answer",
+  );
   expect(refs.in).toHaveBeenCalledExactlyOnceWith("id", ["short", "extended"]);
   for (const row of result.attempts) {
     if (row.id === "short")
@@ -101,6 +103,64 @@ it("reads model answers only for the caller's marked written question ids", asyn
       expect(row.sample_answer).toBe("Extended model answer.");
     else expect(row).not.toHaveProperty("sample_answer");
   }
+});
+
+it("fetches mixed checked references once and preserves the full practice output", async () => {
+  const extended = attempt("extended", "extended");
+  const short = attempt("short");
+  const mcq = attempt("mcq", "mcq");
+  const pending = attempt("pending", "mcq", "pending");
+  const empty = attempt("empty", "short", "marked", { note: "No answer" });
+  const { refs, adminFrom, attempts } = setup([
+    extended,
+    empty,
+    short,
+    pending,
+    mcq,
+  ]);
+  refs.in.mockResolvedValue({
+    data: [
+      {
+        id: "extended",
+        sample_answer: "Extended model answer.",
+        explanation: "Hidden",
+      },
+      { id: "mcq", sample_answer: "Hidden", explanation: "MC explanation." },
+      {
+        id: "short",
+        sample_answer: "Short model answer.",
+        explanation: "Hidden",
+      },
+      { id: "empty", sample_answer: "Hidden", explanation: "Hidden" },
+      { id: "pending", sample_answer: "Hidden", explanation: "Hidden" },
+    ],
+    error: null,
+  });
+
+  const expected = structuredClone({
+    profile,
+    session,
+    explanations: { mcq: "MC explanation." },
+    attempts: [
+      pending,
+      mcq,
+      empty,
+      { ...short, sample_answer: "Short model answer." },
+      { ...extended, sample_answer: "Extended model answer." },
+    ],
+  });
+  expect(await loadSprint("sprint")).toEqual(expected);
+  expect(attempts.order).toHaveBeenCalledExactlyOnceWith("position");
+  expect(admin).toHaveBeenCalledTimes(1);
+  expect(adminFrom).toHaveBeenCalledExactlyOnceWith("questions");
+  expect(refs.select).toHaveBeenCalledExactlyOnceWith(
+    "id,explanation,sample_answer",
+  );
+  expect(refs.in).toHaveBeenCalledExactlyOnceWith("id", [
+    "mcq",
+    "short",
+    "extended",
+  ]);
 });
 
 it.each([

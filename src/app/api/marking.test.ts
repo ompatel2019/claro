@@ -12,7 +12,8 @@ vi.mock("@/lib/single-check-marking", () => ({
   markOwnCheck: vi.fn(),
   markBankCheck: vi.fn(),
 }));
-vi.mock("@/lib/ai/rate-limit", () => ({
+vi.mock("@/lib/ai/rate-limit", async (original) => ({
+  ...(await original<typeof import("@/lib/ai/rate-limit")>()),
   assertStudentAiRateLimit: vi.fn(async () => ({ ok: true })),
   rateLimitedResponse: (result: { error: string; retryAfterSec: number }) =>
     Response.json(
@@ -54,6 +55,8 @@ import { POST as finish } from "./sessions/[id]/finish/route";
 import { assertStudentAiRateLimit } from "@/lib/ai/rate-limit";
 
 const userId = "d0d38222-b9bb-4089-81d5-383878dd9d9d";
+const photo = (index = 0) =>
+  `${userId}/75f2a40b-3e20-4a56-9e14-1b237cfc8396-1729000000000-${index}.png`;
 const sessionId = "75f2a40b-3e20-4a56-9e14-1b237cfc8396";
 const singleStarted = "2026-10-09T01:00:00Z";
 const singleSessionId = (
@@ -99,6 +102,7 @@ function client(rows: unknown[], signedIn = true) {
       }),
     },
     from: vi.fn(),
+    storage: { from: vi.fn() },
   };
   for (const chain of chains) supabase.from.mockReturnValueOnce(chain);
   vi.mocked(createClient).mockResolvedValue(supabase as never);
@@ -175,14 +179,47 @@ it("returns the MCQ answer key after marking an owned attempt", async () => {
 
 it.each([
   { answer: "" },
-  { answer: "a".repeat(2001) },
+  { answer: "   " },
+  { answer: "a".repeat(1001) },
   { answer: "Valid", sessionId: "invalid" },
+  { answer: "Valid", answer_mode: "invalid" },
+  { answer: "Valid", answer_mode: null },
+  { answer: "Valid", extra: true },
   { answer: 1 },
+  ...[-1, 0.25, 2, "1", null].map((mark) => ({
+    sessionId,
+    override: { reviewId: sessionId, mark },
+  })),
+  { sessionId, override: { reviewId: "invalid", mark: 1 } },
+  { sessionId, override: { reviewId: sessionId, mark: 1, extra: true } },
+  { override: { reviewId: sessionId, mark: 1 } },
+  { sessionId, override: { reviewId: sessionId, mark: 1 }, extra: true },
 ])("rejects invalid flashcard body %#", async (body) => {
   const { supabase } = client([]);
-  expect((await flashcard(request(body), ctx)).status).toBe(400);
+  const response = await flashcard(request(body), ctx);
+  expect(response.status).toBe(400);
+  expect(await response.json()).toEqual({ error: "Invalid request body" });
   expect(supabase.from).not.toHaveBeenCalled();
 });
+
+it.each([
+  { answer: "  " + "a".repeat(1000) + "  " },
+  { answer: "Answer", sessionId: null, answer_mode: "spoken" },
+  { answer: "Answer" },
+  ...[0, 0.5, 1].map((mark) => ({
+    sessionId,
+    override: { reviewId: sessionId, mark },
+  })),
+])(
+  "accepts flashcard body boundary %# before looking up the card",
+  async (body) => {
+    const { supabase } = client([null]);
+    const response = await flashcard(request(body), ctx);
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "Flashcard not found" });
+    expect(supabase.from).toHaveBeenCalledWith("flashcards");
+  },
+);
 
 it("rejects malformed JSON", async () => {
   client([]);
@@ -283,7 +320,7 @@ it("rejects an image path outside the caller's storage folder", async () => {
 it("rejects photo pages when any page is outside the caller's folder", async () => {
   client([
     {
-      image_paths: [`${userId}/page-1.jpg`, "another-user/page-2.jpg"],
+      image_paths: [photo(), "another-user/page-2.jpg"],
       session: { kind: "sprint" },
       status: "pending",
     },
@@ -295,7 +332,7 @@ it("rejects photo pages when any page is outside the caller's folder", async () 
 it("does not reopen a marked attempt for transcription", async () => {
   client([
     {
-      image_paths: [`${userId}/image.jpg`],
+      image_paths: [photo()],
       status: "marked",
       session: { kind: "sprint" },
     },
@@ -307,7 +344,7 @@ it("does not reopen a marked attempt for transcription", async () => {
 it("downloads handwriting and saves the transcript for confirmation", async () => {
   client([
     {
-      image_paths: [`${userId}/image.png`],
+      image_paths: [photo()],
       status: "pending",
       question_id: "q",
       question: { type: "short", stem: "Explain" },
@@ -319,7 +356,9 @@ it("downloads handwriting and saves the transcript for confirmation", async () =
     data: new Blob(["image"], { type: "image/png" }),
     error: null,
   });
-  vi.mocked(admin().storage.from).mockReturnValue({ download } as never);
+  vi.mocked((await createClient()).storage.from).mockReturnValue({
+    download,
+  } as never);
   const update = vi.fn();
   const save = {
     update,
@@ -338,8 +377,9 @@ it("downloads handwriting and saves the transcript for confirmation", async () =
   };
   vi.mocked(transcribeImage).mockResolvedValue(result);
   expect(await (await transcribe(request(), ctx)).json()).toEqual(result);
-  expect(admin().storage.from).toHaveBeenCalledWith("answers");
-  expect(download).toHaveBeenCalledWith(`${userId}/image.png`);
+  expect((await createClient()).storage.from).toHaveBeenCalledWith("answers");
+  expect(download).toHaveBeenCalledWith(photo());
+  expect(admin().storage.from).not.toHaveBeenCalled();
   expect(update).toHaveBeenCalledWith({
     transcript: "Written answer",
     status: "transcribed",
@@ -351,6 +391,7 @@ it("returns only the score and summary for an owned session", async () => {
     {
       id: "id",
       kind: "sprint",
+      finished_at: "2026-10-08",
       session_id: sessionId,
       session: { finished_at: "2026-10-08" },
       question: { type: "mcq" },
@@ -796,7 +837,7 @@ it("rejects an override whose review is not owned or belongs to another session"
 it("transcribes every photo page in its saved order", async () => {
   client([
     {
-      image_paths: [`${userId}/2.png`, `${userId}/1.png`],
+      image_paths: [photo(2), photo(1)],
       status: "pending",
       question_id: "q",
       question: { type: "short", stem: "Explain" },
@@ -808,7 +849,9 @@ it("transcribes every photo page in its saved order", async () => {
     data: new Blob(["image"], { type: "image/png" }),
     error: null,
   });
-  vi.mocked(admin().storage.from).mockReturnValue({ download } as never);
+  vi.mocked((await createClient()).storage.from).mockReturnValue({
+    download,
+  } as never);
   const save = adminQuery(null);
   vi.mocked(admin().from).mockReturnValue(save as never);
   vi.mocked(transcribeImage)
@@ -827,10 +870,7 @@ it("transcribes every photo page in its saved order", async () => {
     lines: ["Second page", "First page"],
     notes: "Check",
   });
-  expect(download.mock.calls).toEqual([
-    [`${userId}/2.png`],
-    [`${userId}/1.png`],
-  ]);
+  expect(download.mock.calls).toEqual([[photo(2)], [photo(1)]]);
 });
 
 it.each([
@@ -842,9 +882,8 @@ it.each([
     client([
       {
         status: "pending",
-        image_paths: Array.from(
-          { length: count as number },
-          (_, i) => `${userId}/${i}.png`,
+        image_paths: Array.from({ length: count as number }, (_, i) =>
+          photo(i),
         ),
         question: { type },
         session: { kind },
@@ -931,7 +970,7 @@ it("handles an own-question photo without dereferencing a bank row", async () =>
       question_id: null,
       question: null,
       status: "pending",
-      image_paths: [`${userId}/1.png`],
+      image_paths: [photo(1)],
       session: {
         kind: "single",
         started_at: singleStarted,
@@ -943,7 +982,9 @@ it("handles an own-question photo without dereferencing a bank row", async () =>
     data: new Blob(["image"], { type: "image/png" }),
     error: null,
   });
-  vi.mocked(admin().storage.from).mockReturnValue({ download } as never);
+  vi.mocked((await createClient()).storage.from).mockReturnValue({
+    download,
+  } as never);
   vi.mocked(admin().from).mockReturnValue(adminQuery(null) as never);
   vi.mocked(transcribeImage).mockResolvedValue({
     transcript: "Some answer",
@@ -965,7 +1006,7 @@ it("allows up to eight pages for a short single check", async () => {
       question_id: null,
       question: null,
       status: "pending",
-      image_paths: Array.from({ length: 9 }, (_, i) => `${userId}/${i}.png`),
+      image_paths: Array.from({ length: 9 }, (_, i) => photo(i)),
       session: {
         kind: "single",
         started_at: singleStarted,
@@ -1021,7 +1062,7 @@ it("rejects an unreserved single photo before downloading or transcribing", asyn
     {
       session_id: sessionId,
       status: "pending",
-      image_paths: [`${userId}/1.png`],
+      image_paths: [photo(1)],
       question: null,
       session: {
         kind: "single",
@@ -1038,7 +1079,7 @@ it("validates every stored photo before spending on transcription", async () => 
   client([
     {
       status: "pending",
-      image_paths: [`${userId}/1.png`, `${userId}/2.png`],
+      image_paths: [photo(1), photo(2)],
       question: { type: "short", stem: "Explain inflation." },
       session: { kind: "sprint" },
     },
@@ -1047,7 +1088,9 @@ it("validates every stored photo before spending on transcription", async () => 
     .fn()
     .mockResolvedValueOnce({ data: new Blob(["photo"], { type: "image/png" }) })
     .mockResolvedValueOnce({ data: new Blob(["bad"], { type: "text/plain" }) });
-  vi.mocked(admin().storage.from).mockReturnValue({ download } as never);
+  vi.mocked((await createClient()).storage.from).mockReturnValue({
+    download,
+  } as never);
   expect((await transcribe(request(), ctx)).status).toBe(400);
   expect(transcribeImage).not.toHaveBeenCalled();
 });
@@ -1057,7 +1100,7 @@ it("persists the unreadable state for a single photo with no usable transcript",
     {
       session_id: singleSessionId,
       status: "pending",
-      image_paths: [`${userId}/1.png`],
+      image_paths: [photo(1)],
       question: null,
       session: {
         kind: "single",
@@ -1069,7 +1112,9 @@ it("persists the unreadable state for a single photo with no usable transcript",
   const download = vi
     .fn()
     .mockResolvedValue({ data: new Blob(["photo"], { type: "image/png" }) });
-  vi.mocked(admin().storage.from).mockReturnValue({ download } as never);
+  vi.mocked((await createClient()).storage.from).mockReturnValue({
+    download,
+  } as never);
   const save = adminQuery(null);
   vi.mocked(admin().from).mockReturnValue(save as never);
   vi.mocked(transcribeImage).mockResolvedValue({
@@ -1091,7 +1136,7 @@ it("checks the AI rate limit again before transcribing another page", async () =
   client([
     {
       status: "pending",
-      image_paths: [`${userId}/1.png`, `${userId}/2.png`],
+      image_paths: [photo(1), photo(2)],
       question: { type: "short", stem: "Explain inflation." },
       session: { kind: "sprint" },
     },
@@ -1099,7 +1144,9 @@ it("checks the AI rate limit again before transcribing another page", async () =
   const download = vi
     .fn()
     .mockResolvedValue({ data: new Blob(["photo"], { type: "image/png" }) });
-  vi.mocked(admin().storage.from).mockReturnValue({ download } as never);
+  vi.mocked((await createClient()).storage.from).mockReturnValue({
+    download,
+  } as never);
   vi.mocked(assertStudentAiRateLimit)
     .mockResolvedValueOnce({ ok: true })
     .mockResolvedValueOnce({
@@ -1121,7 +1168,7 @@ it("rejects transcription of a submitted single before any AI call", async () =>
     {
       session_id: singleSessionId,
       status: "pending",
-      image_paths: [`${userId}/page.png`],
+      image_paths: [photo()],
       question: { type: "short", stem: "Explain" },
       session: {
         kind: "single",
@@ -1179,7 +1226,7 @@ it.each([mark, transcribe, finish])(
         : {
             session: { kind: "paper", config: {} },
             status: "pending",
-            image_paths: [`${userId}/1.png`],
+            image_paths: [photo(1)],
           },
     ]);
     const response = await handler(request(), ctx);
@@ -1226,4 +1273,26 @@ it("keeps an own-question guideline failure retryable on the saved report", asyn
     status: "failed",
     feedback: { error },
   });
+});
+
+it.each([
+  "../victim/photo.png",
+  "%2e%2e/victim/photo.png",
+  "..\\victim\\photo.png",
+  "/photo.png",
+  "photo.png?x=1",
+])("rejects traversal %s before any storage or paid access", async (suffix) => {
+  const { supabase } = client([
+    {
+      image_paths: [`${userId}/${suffix}`],
+      status: "pending",
+      question: { type: "short", stem: "Explain" },
+      session: { kind: "sprint" },
+    },
+  ]);
+  expect((await transcribe(request(), ctx)).status).toBe(400);
+  expect(supabase.storage.from).not.toHaveBeenCalled();
+  expect(admin().storage.from).not.toHaveBeenCalled();
+  expect(admin().rpc).not.toHaveBeenCalled();
+  expect(transcribeImage).not.toHaveBeenCalled();
 });

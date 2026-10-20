@@ -1,6 +1,10 @@
 import "server-only";
 import { createClient } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/auth";
+import {
+  selectFeedbackRow,
+  signFeedbackScreenshots,
+} from "@/lib/admin-feedback-detail";
 import { FEEDBACK_KIND, pageOf, tableParams } from "@/lib/admin";
 
 import { pages } from "@/lib/flashcard-data";
@@ -109,23 +113,17 @@ export async function loadFeedbackList(f: Record<string, string | undefined>) {
 export async function loadFeedbackItem(id: string) {
   await requireAdmin();
   const db = await createClient();
-  const { data } = await db
-    .from("feedback")
-    .select(
-      "id,user_id,kind,message,page_path,user_agent,screenshots,question_id,session_id,status,admin_note,created_at,profile:profiles(full_name)",
-    )
-    .eq("id", id)
+  const { data } = await selectFeedbackRow(
+    db,
+    id,
+    "id,user_id,kind,message,page_path,user_agent,screenshots,question_id,session_id,status,admin_note,created_at,profile:profiles(full_name)",
+  )
     .maybeSingle()
     .throwOnError();
   if (!data) return null;
   const paths = data.screenshots as string[];
   const [signed, attempt] = await Promise.all([
-    paths.length
-      ? db.storage
-          .from("reports")
-          .createSignedUrls(paths, 3600)
-          .catch(() => null)
-      : null,
+    signFeedbackScreenshots(db, paths)?.catch(() => null) ?? null,
     data.session_id && data.question_id
       ? db
           .from("attempts")

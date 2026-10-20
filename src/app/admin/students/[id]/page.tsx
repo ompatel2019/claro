@@ -2,37 +2,17 @@ import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { History, Close, PortalIcon } from "@/components/icons";
-import {
-  loadSessionReport,
-  loadStudentDetail,
-  loadStudentFeedback,
-} from "@/lib/admin-data";
-import {
-  FEEDBACK_KIND,
-  pageOf,
-  pctOf,
-  singleParams,
-  sydneyDay,
-  tableParams,
-} from "@/lib/admin";
-import { AI_RATE_LIMIT_PER_HOUR } from "@/lib/ai/rate-limit";
-import { markingState } from "@/lib/feedback";
-import { dateLabel, percentage, plural, scoreTone } from "@/lib/practice";
-import { mcGridRows, visibleResults } from "@/lib/results";
+import { loadStudentDetail, loadStudentFeedback } from "@/lib/admin-data";
+import { pageOf, singleParams, sydneyDay, tableParams } from "@/lib/admin";
+import { dateLabel, plural } from "@/lib/practice";
 import {
   calendarDate,
   filterSessions,
   sessionItems,
   sessionStatus,
   sessionTitle,
-  type SessionRow,
 } from "@/lib/students";
 import { ActivityHeatmap } from "@/components/activity-heatmap";
-import {
-  ResultsAnswers,
-  OverallFeedback,
-  type OverallSummary,
-} from "@/components/results-report";
 import { FeedbackDetail } from "@/components/feedback-detail";
 import { UrlSheet } from "@/components/url-sheet";
 import { FilterBar } from "@/components/filter-bar";
@@ -41,13 +21,13 @@ import { LinkTabs } from "@/components/link-tabs";
 import { PageHeader } from "@/components/page-header";
 import { SessionsTable, type SessionItem } from "@/components/sessions-table";
 import { StatCard } from "@/components/claro/data-display";
-import { ServerTable } from "@/components/static-table-server";
-import { StaticTable, type StaticRow } from "@/components/static-table";
-import { StatusPill, STATUS_PILL } from "@/components/status-pill";
-import { SpotCheck, StudentMenu } from "@/components/student-actions";
-import { Card } from "@/components/ui/card";
+import { StudentMenu } from "@/components/student-actions";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
+
+import { Report } from "./report";
+import { UsageTab } from "./usage-tab";
+import { TopicsTab, ReviewsTab, FeedbackTab } from "./detail-tables";
 
 const TABS = {
   sessions: "Sessions",
@@ -55,11 +35,6 @@ const TABS = {
   reviews: "Reviews & disputes",
   feedback: "Feedback",
   usage: "AI usage",
-} as const;
-const REASON = {
-  check_disagreed: "Check disagreed",
-  student_dispute: "Student dispute",
-  spot_check: "Spot check",
 } as const;
 const pct = (n: number | null) => (n == null ? null : Math.round(n));
 const SESSION_KEYS: Record<string, (s: SessionItem) => string | number | null> =
@@ -72,115 +47,6 @@ const SESSION_KEYS: Record<string, (s: SessionItem) => string | number | null> =
     date: (s) => s.started_at,
     status: (s) => s.status,
   };
-
-async function Report({
-  sessionId,
-  userId,
-  session,
-}: {
-  sessionId: string;
-  userId: string;
-  session: SessionRow | undefined;
-}) {
-  if (session && !["sprint", "single", "flashcards"].includes(session.kind))
-    return <p className="text-sm">This session kind has been removed.</p>;
-  const r = await loadSessionReport(sessionId, userId);
-  if (!r || !session) return <p className="text-sm">Session not found.</p>;
-  if (session.kind === "flashcards")
-    return (
-      <>
-        <p className="text-sm">
-          {r.finished ? "Finished" : "In progress"} · {sessionItems(session)}
-        </p>
-        <StaticTable
-          label="Flashcard report"
-          columns={[
-            {
-              id: "front",
-              header: "Card",
-              className: "max-w-48 whitespace-normal break-words",
-            },
-            {
-              id: "answer",
-              header: "Answer",
-              className: "max-w-48 whitespace-normal break-words",
-            },
-            { id: "mark", header: "Rating", className: "hidden sm:table-cell" },
-            {
-              id: "back",
-              header: "Model answer",
-              className: "max-w-48 whitespace-normal break-words",
-            },
-          ]}
-          rows={r.cards.map((c) => ({
-            id: c.id,
-            cells: {
-              front: c.card?.front ?? "Deleted card",
-              answer: c.answer || "Self-rated",
-              mark:
-                c.mark === 1 ? "Known" : c.mark === 0.5 ? "Learning" : "Missed",
-              back: c.card?.back ?? "Unavailable",
-            },
-          }))}
-        />
-        {r.cards.length === 0 && (
-          <EmptyState
-            icon={History}
-            title="No cards reviewed"
-            description="This student has not reviewed a card in this session."
-          />
-        )}
-      </>
-    );
-  if (!r.finished)
-    return (
-      <p className="text-sm">
-        In progress · {session.attempts.filter((a) => a.answered).length} of{" "}
-        {session.attempts.length} answered
-      </p>
-    );
-  const rows = visibleResults(r.rows);
-  const summary = session.summary as OverallSummary | null;
-  const settled = !rows.some((row) => markingState(row) === "marking");
-  return (
-    <>
-      <p className="text-sm font-medium">
-        {settled && session.max_score && session.score != null
-          ? `${session.score} / ${session.max_score} · ${percentage(session.score, session.max_score)}`
-          : "No score yet"}
-      </p>
-      {session.config.question?.criteria_text && (
-        <Card className="p-5">
-          <h2 className="text-base font-semibold">Marking guidelines</h2>
-          <p className="mt-3 whitespace-pre-wrap">
-            {session.config.question.criteria_text}
-          </p>
-        </Card>
-      )}
-      <OverallFeedback summary={summary} pending={!settled} />
-      <ResultsAnswers
-        rows={rows}
-        id={sessionId}
-        name={() => ""}
-        photos={r.url}
-        mcGrid={mcGridRows(rows)}
-        readOnly
-        writtenAction={(row) =>
-          markingState(row) === "marking" ? null : (
-            <SpotCheck attemptId={row.attempt_id} />
-          )
-        }
-      />
-      {rows.length === 0 && (
-        <EmptyState
-          icon={History}
-          title="No answers"
-          description="There are no answers in this report."
-        />
-      )}
-    </>
-  );
-}
 
 export const metadata = pageMetadata("Student details");
 
@@ -249,35 +115,6 @@ export default async function StudentDetail({
   });
   const open = sp.session ? d.sessions.find((s) => s.id === sp.session) : null;
   if (sp.session && !open) notFound();
-  const topicRow = (t: (typeof d.topics)[number]): StaticRow => {
-    const p = d.progress.find((p) => p.topic_id === t.id);
-    const earned = Number(p?.earned ?? 0),
-      possible = Number(p?.possible ?? 0);
-    const v = pctOf(earned, possible);
-    return {
-      id: t.id,
-      cells: {
-        topic: t.name,
-        answered: p?.answered ?? 0,
-        marks: `${earned} / ${possible}`,
-        pct:
-          v == null ? (
-            "Not started"
-          ) : (
-            <Badge variant={scoreTone(v)}>{v}%</Badge>
-          ),
-        last: p?.last_answered ? dateLabel(p.last_answered, true) : "Never",
-      },
-      keys: {
-        topic: t.name,
-        answered: Number(p?.answered ?? 0),
-        marks: earned,
-        pct: v,
-        last: p?.last_answered ?? null,
-      },
-    };
-  };
-
   return (
     <div className="space-y-6">
       <Link
@@ -487,185 +324,9 @@ export default async function StudentDetail({
           )}
         </>
       )}
-      {tab === "topics" && (
-        <ServerTable
-          params={sp}
-          label="Marks by topic"
-          columns={[
-            {
-              id: "topic",
-              header: "Topic",
-              sortable: true,
-              className:
-                "max-sm:max-w-36 max-sm:whitespace-normal max-sm:break-words",
-            },
-            {
-              id: "answered",
-              header: "Answered",
-              sortable: true,
-              className: "hidden sm:table-cell",
-            },
-            {
-              id: "marks",
-              header: "Marks",
-              sortable: true,
-              className: "hidden sm:table-cell",
-            },
-            {
-              id: "pct",
-              header: "%",
-              sortable: true,
-              className: "max-sm:px-2",
-            },
-            {
-              id: "last",
-              header: "Last practised",
-              sortable: true,
-              className: "hidden sm:table-cell",
-            },
-          ]}
-          rows={d.topics
-            .filter((t) => !t.parent_id)
-            .map((t) => ({
-              ...topicRow(t),
-              children: d.topics
-                .filter((child) => child.parent_id === t.id)
-                .map(topicRow),
-            }))}
-        />
-      )}
-      {tab === "reviews" && (
-        <ServerTable
-          params={sp}
-          label="Reviews and disputes"
-          columns={[
-            {
-              id: "when",
-              header: "When",
-              sortable: true,
-              className: "hidden sm:table-cell",
-            },
-            {
-              id: "reason",
-              header: "Reason",
-              sortable: true,
-              className: "hidden sm:table-cell",
-            },
-            {
-              id: "question",
-              header: "Question",
-              sortable: true,
-              className:
-                "max-sm:max-w-36 max-sm:whitespace-normal max-sm:break-words",
-            },
-            {
-              id: "marks",
-              header: "AI → final",
-              sortable: true,
-              className: "hidden sm:table-cell",
-            },
-            {
-              id: "status",
-              header: "Status",
-              sortable: true,
-              className: "max-sm:px-2",
-            },
-          ]}
-          rows={d.reviews.map((r) => ({
-            id: r.id,
-            cells: {
-              when: dateLabel(r.created_at, true),
-              reason: REASON[r.reason as keyof typeof REASON] ?? r.reason,
-              question: r.attempt?.session_id ? (
-                <Link
-                  className="underline"
-                  href={`${base}?tab=sessions&session=${r.attempt.session_id}`}
-                >
-                  {r.attempt.question?.source ??
-                    r.attempt?.question?.stem?.slice(0, 60) ??
-                    "Question"}
-                </Link>
-              ) : (
-                "Question"
-              ),
-              marks: `${r.ai_mark ?? "No AI mark"} → ${r.final_mark ?? "pending"}`,
-              status: (
-                <StatusPill
-                  pill={STATUS_PILL[r.status as keyof typeof STATUS_PILL]}
-                />
-              ),
-            },
-            keys: {
-              when: r.created_at,
-              reason: REASON[r.reason as keyof typeof REASON] ?? r.reason,
-              status: r.status,
-              question: `${r.attempt?.question?.source ?? ""} ${r.attempt?.question?.stem ?? ""}`,
-              marks: `${r.ai_mark ?? "No AI mark"} ${r.final_mark ?? "pending"}`,
-            },
-          }))}
-        />
-      )}
-      {tab === "feedback" && (
-        <ServerTable
-          params={sp}
-          label="Feedback"
-          columns={[
-            {
-              id: "when",
-              header: "Date",
-              sortable: true,
-              className: "hidden sm:table-cell",
-            },
-            {
-              id: "kind",
-              header: "Kind",
-              sortable: true,
-              className: "hidden sm:table-cell",
-            },
-            {
-              id: "message",
-              header: "Message",
-              sortable: true,
-              className:
-                "max-sm:max-w-36 max-sm:whitespace-normal max-sm:break-words",
-            },
-            {
-              id: "status",
-              header: "Status",
-              sortable: true,
-              className: "max-sm:px-2",
-            },
-          ]}
-          rows={d.feedback.map((f) => ({
-            id: f.id,
-            cells: {
-              when: dateLabel(f.created_at, true),
-              kind:
-                FEEDBACK_KIND[f.kind as keyof typeof FEEDBACK_KIND] ?? f.kind,
-              message: (
-                <Link
-                  className="line-clamp-1 max-w-md whitespace-normal underline"
-                  href={`/admin/feedback?status=${f.status}&id=${f.id}`}
-                >
-                  {f.message}
-                </Link>
-              ),
-              status: (
-                <StatusPill
-                  pill={STATUS_PILL[f.status as keyof typeof STATUS_PILL]}
-                />
-              ),
-            },
-            keys: {
-              when: f.created_at,
-              kind:
-                FEEDBACK_KIND[f.kind as keyof typeof FEEDBACK_KIND] ?? f.kind,
-              status: f.status,
-              message: f.message,
-            },
-          }))}
-        />
-      )}
+      {tab === "topics" && <TopicsTab d={d} sp={sp} />}
+      {tab === "reviews" && <ReviewsTab d={d} sp={sp} base={base} />}
+      {tab === "feedback" && <FeedbackTab d={d} sp={sp} />}
       {tab === "usage" && (
         <UsageTab
           usage={d.usage}
@@ -674,83 +335,6 @@ export default async function StudentDetail({
           params={sp}
         />
       )}
-    </div>
-  );
-}
-
-function UsageTab({
-  usage,
-  lastHour,
-  spend,
-  params,
-}: {
-  usage: {
-    task: string;
-    calls: number;
-    tokens: number;
-    usd: number;
-  }[];
-  lastHour: number;
-  spend: number;
-  params: Record<string, string | undefined>;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatCard
-          title="Calls in the last hour"
-          value={`${lastHour} of ${AI_RATE_LIMIT_PER_HOUR}`}
-          description="Rate limit per student"
-        />
-        <StatCard title="Spend, last 30 days" value={`$${spend.toFixed(2)}`} />
-      </div>
-      <ServerTable
-        params={params}
-        label="AI usage by task"
-        columns={[
-          {
-            id: "task",
-            header: "Task",
-            sortable: true,
-            className:
-              "max-sm:max-w-36 max-sm:whitespace-normal max-sm:break-words",
-          },
-          {
-            id: "calls",
-            header: "Calls",
-            sortable: true,
-            className: "hidden sm:table-cell",
-          },
-          {
-            id: "tokens",
-            header: "Tokens",
-            sortable: true,
-            className: "hidden sm:table-cell",
-          },
-          {
-            id: "usd",
-            header: "USD",
-            sortable: true,
-            className: "max-sm:px-2",
-          },
-        ]}
-        rows={usage.map((t) => ({
-          id: t.task,
-          cells: {
-            task: t.task,
-            calls: t.calls,
-            tokens: t.tokens.toLocaleString("en-AU"),
-            usd: `$${t.usd.toFixed(4)}`,
-          },
-          keys: { task: t.task, calls: t.calls, tokens: t.tokens, usd: t.usd },
-        }))}
-      />
-      <Link
-        href="/admin/spend"
-        className={buttonVariants({ variant: "outline", size: "sm" })}
-      >
-        Open AI spend
-      </Link>
     </div>
   );
 }

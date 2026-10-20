@@ -29,11 +29,8 @@ import {
 const empty = {
   students: 0,
   active: { now: 0, prev: 0 },
-  sessionsWeek: 0,
   openReviews: { count: 0, oldestDays: null },
   spend: { month: 0, all: 0 },
-  sessionsTotal: 0,
-  spendTotal: 0,
   sessionsPerDay: [],
   spendPerDay: [],
   attention: {
@@ -160,7 +157,6 @@ it("pages usage past 1000 rows and returns shared caps and limits", async () => 
     cached_tokens: 2402,
     output_tokens: 6005,
   });
-  expect(result.markedWritten).toBe(1);
   expect(result.cap).toBe(100);
   expect(result.markers).toEqual([80, 90, 100]);
   expect(result.limits).toEqual({

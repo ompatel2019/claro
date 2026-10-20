@@ -15,11 +15,8 @@ import AdminHome from "./page";
 const data = {
   students: 1,
   active: { now: 0, prev: 0 },
-  sessionsWeek: 0,
   openReviews: { count: 0, oldestDays: null },
   spend: { month: 0, all: 0, cap: 100 },
-  sessionsTotal: 0,
-  spendTotal: 0,
   sessionsPerDay: [{ day: "2026-10-09", value: 0 }],
   spendPerDay: [{ day: "2026-10-09", value: 0 }],
   attention: {
@@ -46,11 +43,8 @@ it("keeps A1's dashboard KPIs and both daily charts with totals derived from the
   mocks.loadDashboard.mockResolvedValue({
     ...data,
     active: { now: 12, prev: 9 },
-    sessionsWeek: 27,
     openReviews: { count: 4, oldestDays: 2 },
     spend: { month: 14.25, all: 81.5, cap: 100 },
-    sessionsTotal: 63,
-    spendTotal: 19.75,
     sessionsPerDay: [{ day: "2026-10-09", value: 3 }],
     spendPerDay: [{ day: "2026-10-09", value: 1.25 }],
   });
@@ -217,9 +211,6 @@ it("promotes attention above charts and caps the recent mini-list at three", asy
 it("uses the same seven plotted Sydney days for the session KPI and chart total", async () => {
   mocks.loadDashboard.mockResolvedValue({
     ...data,
-    sessionsWeek: 999,
-    sessionsTotal: 999,
-    spendTotal: 999,
     sessionsPerDay: Array.from({ length: 30 }, (_, i) => ({
       day: `2026-09-${String(i + 1).padStart(2, "0")}`,
       value: i < 23 ? 100 : 1,

@@ -1,5 +1,7 @@
 "use server";
 
+import { safeLocalPath } from "@/lib/safe-local-path";
+
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
@@ -20,7 +22,7 @@ export async function signIn(_: AuthState, form: FormData): Promise<AuthState> {
   const { error } = await supabase.auth.signInWithPassword(parsed.data);
   if (error) return { error: error.message };
   const next = String(form.get("next") ?? "/");
-  const safe = next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  const safe = safeLocalPath(next);
   if (safe === "/") {
     const {
       data: { user },

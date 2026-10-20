@@ -1,14 +1,11 @@
-import Link from "next/link";
 import type { ReviewRow } from "@/lib/feedback";
 import { markingState, markLabel } from "@/lib/feedback";
 import {
-  below,
   firstBelow,
   scored,
   markTone,
   TYPE_LABEL,
   type McGridRow,
-  type NextAction,
 } from "@/lib/results";
 import { PortalIcon } from "./icons";
 import { QuestionView } from "./question-view";
@@ -20,7 +17,6 @@ import { QuestionMark } from "./question-mark";
 import { McReview } from "./mc-review";
 import { ResultsBrowser } from "./results-browser";
 import { statePill } from "./status-pill";
-import { buttonVariants } from "./ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 
 /** Results composition for sprint and single-answer pages, using the existing kit. */
@@ -188,74 +184,12 @@ export type OverallSummary = {
 export function OverallFeedback({
   summary,
   pending,
-  actions,
-  rows = [],
   nextStep,
 }: {
   summary: OverallSummary | null;
   pending: boolean;
-  actions?: NextAction[];
-  rows?: ReviewRow[];
   nextStep?: React.ReactNode;
 }) {
-  const actionLinks = actions && actions.length > 0 && (
-    <div className="flex flex-wrap gap-2">
-      {actions.map((a) => (
-        <div key={a.href} className="space-y-2">
-          <Link
-            href={a.href}
-            className={buttonVariants({
-              variant: "outline",
-              size: "sm",
-              className:
-                "h-auto min-h-9 max-w-full shrink py-1.5 text-left whitespace-normal",
-            })}
-          >
-            {a.label}
-          </Link>
-          {!!a.questions?.length && (
-            <div className="flex flex-wrap gap-2">
-              {a.questions.map((q) => (
-                <a
-                  key={q.position}
-                  href={`#q-${q.position}`}
-                  className="text-sm underline underline-offset-4"
-                >
-                  Review Q{q.position} · {TYPE_LABEL[q.type]}
-                </a>
-              ))}
-              {!nextStep && references(false)}
-            </div>
-          )}
-        </div>
-      ))}
-    </div>
-  );
-  const references = (lost: boolean) => {
-    const questions = rows.filter((r) =>
-      lost ? below(r) : scored(r) && !below(r),
-    );
-    return (
-      questions.length > 0 && (
-        <div className="space-y-2">
-          <p className="text-muted-foreground text-sm">
-            {lost ? "Marks to recover" : "Full-mark answers"}
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {questions.map((r) => (
-              <a
-                key={r.position}
-                href={`#q-${r.position}`}
-                className={buttonVariants({ variant: "outline", size: "sm" })}
-              >
-                Q{r.position} · {TYPE_LABEL[r.type]}
-              </a>
-            ))}
-          </div>
-        </div>
-      )
-    );
-  };
   return (
     <section
       aria-label="Overall feedback"
@@ -286,9 +220,7 @@ export function OverallFeedback({
                     ))}
                   </ul>
                 )}
-                {actionLinks}
               </section>
-              {references(true)}
             </>
           )}
         </CardContent>
@@ -340,7 +272,6 @@ export function OverallFeedback({
                   </ul>
                 </section>
               ))}
-              {!nextStep && references(false)}
             </div>
           ) : (
             <div className="space-y-3">

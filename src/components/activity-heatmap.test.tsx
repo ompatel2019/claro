@@ -176,30 +176,14 @@ it("keeps every year day reachable in compact views and preserves custom links",
   );
 });
 
-it("keeps legacy home copy unless the template presentation is requested", () => {
-  const view = render(
-    <ActivityHeatmap
-      days={days}
-      today="2026-10-08"
-      current={2}
-      longest={5}
-      home={{ action: <Link href="/student/sprint">Study</Link> }}
-    />,
-  );
-  expect(
-    screen.getByRole("heading", { name: "Your study days" }),
-  ).toBeVisible();
-  expect(
-    screen.getByText("Every day you study lights up a square."),
-  ).toBeVisible();
-  view.rerender(
+it("renders the home study days presentation", () => {
+  render(
     <ActivityHeatmap
       days={days}
       today="2026-10-08"
       current={2}
       longest={5}
       home={{
-        template: true,
         action: <Link href="/student/sprint">Study</Link>,
       }}
     />,

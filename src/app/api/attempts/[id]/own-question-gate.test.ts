@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
@@ -31,7 +32,8 @@ vi.mock("@/lib/marking/engine", () => ({
   transcribeImage: mocks.transcribeImage,
 }));
 vi.mock("@/lib/ai/usage-context", () => ({ withAttemptUsage: vi.fn() }));
-vi.mock("@/lib/ai/rate-limit", () => ({
+vi.mock("@/lib/ai/rate-limit", async (original) => ({
+  ...(await original<typeof import("@/lib/ai/rate-limit")>()),
   assertStudentAiRateLimit: mocks.rateLimit,
   rateLimitedResponse: () =>
     Response.json({ error: "Rate limited" }, { status: 429 }),
@@ -59,7 +61,9 @@ for (const [name, post] of [
         session_id: "session",
         question_id,
         status: "pending",
-        image_paths: ["owner/photo.png"],
+        image_paths: [
+          "owner/75f2a40b-3e20-4a56-9e14-1b237cfc8396-1729000000000-0.png",
+        ],
         question: question_id
           ? { type: "short", stem: "Explain inflation" }
           : null,

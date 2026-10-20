@@ -1,6 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { z } from "zod";
+import { flashcardRatingSchema } from "@/lib/flashcard-rating";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import { sydneyToday, type FlashcardConfig } from "@/lib/flashcards";
@@ -90,15 +91,13 @@ export async function rateFlashcard(
   answer = "",
   answerMode: "typed" | "spoken" = "typed",
 ) {
-  const parsed = z
-    .object({
-      sessionId: z.uuid(),
-      cardId: z.string().min(1).max(200),
-      mark: z.union([z.literal(0), z.literal(0.5), z.literal(1)]),
-      answer: z.string().max(1000),
-      answerMode: z.enum(["typed", "spoken"]),
-    })
-    .safeParse({ sessionId, cardId, mark, answer, answerMode });
+  const parsed = flashcardRatingSchema.safeParse({
+    sessionId,
+    cardId,
+    mark,
+    answer,
+    answerMode,
+  });
   if (!parsed.success) throw new Error("Choose a valid card rating.");
   const profile = await requireProfile();
   const db = await createClient();
@@ -169,14 +168,8 @@ export async function drainPersistRating(item: {
   answer?: string;
   answerMode?: "typed" | "spoken";
 }): Promise<"ok" | "missing" | "error"> {
-  const parsed = z
-    .object({
-      sessionId: z.uuid(),
-      cardId: z.string().min(1).max(200),
-      mark: z.union([z.literal(0), z.literal(0.5), z.literal(1)]),
-      answer: z.string().max(1000).optional(),
-      answerMode: z.enum(["typed", "spoken"]).optional(),
-    })
+  const parsed = flashcardRatingSchema
+    .partial({ answer: true, answerMode: true })
     .safeParse(item);
   if (!parsed.success) return "missing";
   const profile = await requireProfile();

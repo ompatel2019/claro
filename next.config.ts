@@ -8,9 +8,9 @@ const nextConfig: NextConfig = {
   outputFileTracingIncludes: {
     "/admin/marking/engine": [
       "./src/lib/ai/docs/*.md",
-      "./src/lib/ai/eval/results/*.json",
+      "./data/eval/results/*.json",
     ],
-    "/admin/marking/accuracy": ["./src/lib/ai/eval/results/*.json"],
+    "/admin/marking/accuracy": ["./data/eval/results/*.json"],
   },
   // Home and sprints moved under /student (§3, §7); keep old links working.
   async redirects() {

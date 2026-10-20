@@ -1,3 +1,4 @@
+import { shiftDay } from "@/lib/sydney-day";
 import { sydneyToday } from "@/lib/flashcards";
 import { evalAgreement, meanDelta, type EvalItem } from "./helpers";
 
@@ -60,10 +61,6 @@ export type Week = {
 
 export function parseRange(value: unknown): Range {
   return value === "7" ? 7 : value === "90" ? 90 : 30;
-}
-const DAY = 86_400_000;
-function shiftDay(day: string, days: number) {
-  return new Date(Date.parse(day) + days * DAY).toISOString().slice(0, 10);
 }
 /** Convert a Sydney wall-clock midnight to UTC, including either side of DST. */
 export function sydneyMidnight(day: string) {
@@ -269,69 +266,64 @@ export function computeAccuracy(
 /** Every query pages through the PostgREST cap, with a stable unique order. */
 export async function loadAccuracy(range: Range, now = new Date()) {
   const { admin } = await import("@/utils/supabase/admin");
+  const { pages } = await import("@/lib/flashcard-data");
   const db = admin();
   const { since, until } = rangeWindow(range, now);
   const question = "question:questions!inner(id,type,topic_id)";
-  const attempts: Attempt[] = [];
   const reviews = new Map<string, Review>();
-  const topics: Topic[] = [];
-  await Promise.all([
-    (async () => {
-      for (let from = 0; ; from += 1000) {
-        const { data } = await db
-          .from("attempts")
-          .select(
-            `id,status,check_status,max_marks,marked_at,created_at,${question},reviews:mark_reviews(reason)`,
-          )
-          .eq("status", "marked")
-          .in("question.type", ["short", "extended"])
-          .or(
-            `and(marked_at.gte.${since},marked_at.lte.${until}),and(marked_at.is.null,created_at.gte.${since},created_at.lte.${until})`,
-          )
-          .order("marked_at")
-          .order("id")
-          .range(from, from + 999)
-          .throwOnError();
-        const batch = (data ?? []) as unknown as Attempt[];
-        attempts.push(...batch);
-        if (batch.length < 1000) break;
-      }
-    })(),
-    ...(["created_at", "resolved_at"] as const).map(async (date) => {
-      for (let from = 0; ; from += 1000) {
-        let query = db
-          .from("mark_reviews")
-          .select(
-            `id,user_id,resolved_by,reason,status,ai_mark,final_mark,resolved_at,created_at,attempt:attempts(max_marks,${question})`,
-          )
-          .gte(date, since)
-          .lte(date, until);
-        query =
-          date === "created_at"
-            ? query.eq("reason", "student_dispute")
-            : query.eq("status", "resolved");
-        const { data } = await query
-          .order(date)
-          .order("id")
-          .range(from, from + 999)
-          .throwOnError();
-        const batch = (data ?? []) as unknown as Review[];
-        for (const r of batch) reviews.set(r.id, r);
-        if (batch.length < 1000) break;
-      }
-    }),
-    (async () => {
-      for (let from = 0; ; from += 1000) {
-        const { data } = await db
+  const [attempts, , topics] = await Promise.all([
+    pages<Attempt>(async (from, to) => {
+      const { data } = await db
+        .from("attempts")
+        .select(
+          `id,status,check_status,max_marks,marked_at,created_at,${question},reviews:mark_reviews(reason)`,
+        )
+        .eq("status", "marked")
+        .in("question.type", ["short", "extended"])
+        .or(
+          `and(marked_at.gte.${since},marked_at.lte.${until}),and(marked_at.is.null,created_at.gte.${since},created_at.lte.${until})`,
+        )
+        .order("marked_at")
+        .order("id")
+        .range(from, to)
+        .throwOnError();
+      return { data: data as unknown as Attempt[] | null, error: null };
+    }, 1000),
+    Promise.all(
+      (["created_at", "resolved_at"] as const).map(async (date) => {
+        await pages(async (from, to) => {
+          let query = db
+            .from("mark_reviews")
+            .select(
+              `id,user_id,resolved_by,reason,status,ai_mark,final_mark,resolved_at,created_at,attempt:attempts(max_marks,${question})`,
+            )
+            .gte(date, since)
+            .lte(date, until);
+          query =
+            date === "created_at"
+              ? query.eq("reason", "student_dispute")
+              : query.eq("status", "resolved");
+          const { data } = await query
+            .order(date)
+            .order("id")
+            .range(from, to)
+            .throwOnError();
+          const batch = (data ?? []) as unknown as Review[];
+          for (const r of batch) reviews.set(r.id, r);
+          return { data: batch, error: null };
+        }, 1000);
+      }),
+    ),
+    pages<Topic>(
+      (from, to) =>
+        db
           .from("topics")
           .select("id,parent_id,name")
           .order("id")
-          .range(from, from + 999)
-          .throwOnError();
-        topics.push(...(data ?? []));
-        if ((data?.length ?? 0) < 1000) break;
-      }
-    })(),
+          .range(from, to)
+          .throwOnError(),
+      1000,
+    ),
   ]);
   const excludedStudents = await loadExcludedStudents(
     db,
@@ -387,24 +379,18 @@ async function loadExcludedStudents(
   ];
   const excluded = new Set<string>();
   if (!users.length) return excluded;
-  const wanted = new Set(users);
+  const { lookupAuthUsers } = await import("@/lib/admin-auth-users");
   // Blocking uses Supabase Auth's existing banned_until flag, not a new profile field.
-  for (let page = 1; ; page++) {
-    const { data, error } = await db.auth.admin.listUsers({
-      page,
-      perPage: 1000,
-    });
-    if (error) throw error;
-    for (const user of data.users) {
-      if (!wanted.delete(user.id)) continue;
-      const until = (user as { banned_until?: string | null }).banned_until;
-      if (until && Date.parse(until) > now.getTime()) excluded.add(user.id);
-    }
-    if (!wanted.size || data.users.length < 1000) break;
+  const found = await lookupAuthUsers(db, users, now.getTime(), {
+    firstMatch: true,
+  });
+  for (const [id, user] of found) {
+    if (user.blocked) excluded.add(id);
   }
+  const { pages } = await import("@/lib/flashcard-data");
   for (let offset = 0; offset < users.length; offset += 500) {
     const history = new Map<string, { resolved: number; rejected: number }>();
-    for (let from = 0; ; from += 1000) {
+    await pages(async (from, to) => {
       const { data } = await db
         .from("mark_reviews")
         .select("user_id,ai_mark,final_mark")
@@ -412,7 +398,7 @@ async function loadExcludedStudents(
         .eq("status", "resolved")
         .in("user_id", users.slice(offset, offset + 500))
         .order("id")
-        .range(from, from + 999)
+        .range(from, to)
         .throwOnError();
       for (const r of data ?? []) {
         const h = history.get(r.user_id) ?? { resolved: 0, rejected: 0 };
@@ -425,8 +411,8 @@ async function loadExcludedStudents(
           h.rejected++;
         history.set(r.user_id, h);
       }
-      if ((data?.length ?? 0) < 1000) break;
-    }
+      return { data, error: null };
+    }, 1000);
     for (const [id, h] of history) if (repeatDisputer(h)) excluded.add(id);
   }
   return excluded;

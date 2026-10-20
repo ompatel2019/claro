@@ -1,3 +1,4 @@
+import { assertTargetVerified } from "./guard";
 import { test, expect } from "@playwright/test";
 import { adminClient } from "./helpers";
 test.describe("Real sign up", () => {
@@ -18,6 +19,7 @@ test.describe("Real sign up", () => {
     }
   });
   test("a new student lands on their dashboard", async ({ page }) => {
+    assertTargetVerified();
     await page.goto("/sign-up");
     const password = `E2e-${crypto.randomUUID()}`;
     await expect(async () => {

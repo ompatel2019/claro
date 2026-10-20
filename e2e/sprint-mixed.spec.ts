@@ -2,7 +2,6 @@ import { expect, test } from "@playwright/test";
 import {
   adminClient,
   cleanupSessions,
-  goToSprintStep,
   reviewSprintSetup,
   signIn,
 } from "./helpers";
@@ -27,14 +26,13 @@ for (const width of [400, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await signIn(page, "/student/sprint");
     });
-    test("linked buckets, invalid input, Back, reload, exact selection and MC-first order", async ({
+    test("linked buckets, invalid input, reload, exact selection and MC-first order", async ({
       page,
     }) => {
       await page.goto(
         `/student/sprint?type=mixed&sub=${bank.subtopic}&size=20`,
       );
-      const next = page.getByRole("button", { name: "Next", exact: true });
-      await goToSprintStep(page, 3);
+      await reviewSprintSetup(page);
       const mc = page.getByRole("spinbutton", {
         name: "Multiple choice questions",
       });
@@ -50,18 +48,14 @@ for (const width of [400, 1280]) {
       await expect(shorts).toHaveValue("0");
       await mc.fill("11");
       await expect(shorts).toHaveValue("9");
-      await page.getByRole("button", { name: "Back", exact: true }).click();
-      await next.click();
-      await expect(mc).toHaveValue("11");
       await page.goto("/student/sprint");
-      await goToSprintStep(page, 3);
+      await reviewSprintSetup(page);
       await expect(mc).toHaveValue("11");
       await expect(shorts).toHaveValue("9");
       await page.screenshot({
         path: test.info().outputPath("mixed-size.png"),
         fullPage: true,
       });
-      await next.click();
       await expect(
         page.locator("form").filter({
           has: page.getByRole("button", { name: /^Start (sprint|with)/ }),
@@ -105,14 +99,10 @@ for (const width of [400, 1280]) {
       await page.goto(
         `/student/sprint?type=mixed&sub=${bank.subtopic}&size=20`,
       );
-      await goToSprintStep(page, 3);
+      await reviewSprintSetup(page);
       await page
         .getByRole("spinbutton", { name: "Multiple choice questions" })
         .fill("20");
-      await expect(
-        page.getByText(/Only 12 multis and 17 marks of shorts match/),
-      ).toBeVisible();
-      await reviewSprintSetup(page);
       await expect(
         page.getByText(/Only 12 multis and 17 marks of shorts match/),
       ).toBeVisible();

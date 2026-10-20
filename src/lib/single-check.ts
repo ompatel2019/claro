@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { sydneyDay as formatSydneyDay } from "./sydney-day";
 import { MARK_MY_ANSWER_DAILY_LIMIT, WRITTEN_WORD_LIMIT } from "./limits";
 import type { Attempt } from "./practice";
 
@@ -82,13 +83,7 @@ export const singleConfig = (question: OwnQuestion) => ({
 });
 export const checksLeft = (used: number) =>
   Math.max(0, MARK_MY_ANSWER_DAILY_LIMIT - Math.max(0, used));
-export const sydneyDay = (now = new Date()) =>
-  new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Australia/Sydney",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(now);
+export const sydneyDay = (now = new Date()) => formatSydneyDay(now);
 /** Sydney midnight, including the day of a daylight-saving transition. */
 export function sydneyDayStart(now = new Date()) {
   const day = sydneyDay(now);

@@ -1,3 +1,4 @@
+import { isAnswerImageKey } from "@/lib/answer-image-key";
 import { withAttemptUsage } from "@/lib/ai/usage-context";
 import { singleSlotIds } from "@/lib/single-check";
 import {
@@ -10,6 +11,7 @@ import { transcribeImage } from "@/lib/marking/engine";
 import { admin } from "@/utils/supabase/admin";
 import {
   assertStudentAiRateLimit,
+  withAiUsageReservation,
   rateLimitedResponse,
 } from "@/lib/ai/rate-limit";
 import { createClient } from "@/utils/supabase/server";
@@ -62,7 +64,7 @@ export async function POST(
       { status: 409 },
     );
   const pages: string[] = attempt.image_paths ?? [];
-  if (!pages.length || !pages.every((p) => p.startsWith(`${user.id}/`)))
+  if (!pages.length || !pages.every((p) => isAnswerImageKey(p, user.id)))
     return Response.json({ error: "No answer image" }, { status: 400 });
   const question = attempt.question as unknown as {
     type: string;
@@ -95,74 +97,86 @@ export async function POST(
   const limited = await assertStudentAiRateLimit({ userId: user.id });
   if (!limited.ok) return rateLimitedResponse(limited);
   try {
-    const { data: spent, error: spendError } = await admin().rpc("ai_spend");
-    if (spendError) throw spendError;
-    if (Number(spent) >= BUDGET_USD)
-      return Response.json(
-        {
-          error:
-            "Marking is paused right now. Your photos are saved; try again later.",
-        },
-        { status: 503 },
-      );
-    const stem = question?.stem ?? session?.config?.question?.stem;
-    if (!stem)
-      return Response.json({ error: "Question not found" }, { status: 400 });
-    const images: Blob[] = [];
-    for (const page of pages) {
-      const { data: image, error } = await admin()
-        .storage.from("answers")
-        .download(page);
-      if (error || !image) throw new Error("Image not found");
-      if (
-        image.size > ANSWER_PHOTO_BYTE_LIMIT ||
-        ![
-          "image/jpeg",
-          "image/png",
-          "image/webp",
-          "image/heic",
-          "image/heif",
-        ].includes(image.type)
-      )
+    return await withAiUsageReservation(limited, async () => {
+      const { data: spent, error: spendError } = await admin().rpc("ai_spend");
+      if (spendError) throw spendError;
+      if (Number(spent) >= BUDGET_USD)
         return Response.json(
-          { error: "Choose a JPEG, PNG, WebP or HEIC photo of 10 MB or less." },
-          { status: 400 },
+          {
+            error:
+              "Marking is paused right now. Your photos are saved; try again later.",
+          },
+          { status: 503 },
         );
-      images.push(image);
-    }
-    const results = [];
-    for (const [index, image] of images.entries()) {
-      if (index > 0) {
-        const pageLimited = await assertStudentAiRateLimit({ userId: user.id });
-        if (!pageLimited.ok) return rateLimitedResponse(pageLimited);
+      const stem = question?.stem ?? session?.config?.question?.stem;
+      if (!stem)
+        return Response.json({ error: "Question not found" }, { status: 400 });
+      const images: Blob[] = [];
+      for (const page of pages) {
+        const { data: image, error } = await supabase.storage
+          .from("answers")
+          .download(page);
+        if (error || !image) throw new Error("Image not found");
+        if (
+          image.size > ANSWER_PHOTO_BYTE_LIMIT ||
+          ![
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+            "image/heic",
+            "image/heif",
+          ].includes(image.type)
+        )
+          return Response.json(
+            {
+              error: "Choose a JPEG, PNG, WebP or HEIC photo of 10 MB or less.",
+            },
+            { status: 400 },
+          );
+        images.push(image);
       }
-      results.push(
-        await withAttemptUsage(id, async () =>
-          transcribeImage(await image.arrayBuffer(), image.type, stem, user.id),
-        ),
-      );
-    }
-    const result = {
-      transcript: results.map((r) => r.transcript).join("\n\n"),
-      lines: results.flatMap((r) => r.lines),
-      notes: results
-        .map((r) => r.notes)
-        .filter(Boolean)
-        .join("\n"),
-    };
-    const unreadable = !result.transcript.trim();
-    const status =
-      unreadable && kind === "single" ? "unreadable" : "transcribed";
-    await admin()
-      .from("attempts")
-      .update({ transcript: result.transcript, status })
-      .eq("id", id)
-      .in("status", ["pending", "transcribed", "unreadable"])
-      .throwOnError();
-    return Response.json({
-      ...result,
-      ...(kind === "single" ? { status } : {}),
-      ...(unreadable ? { unreadable: true } : {}),
+      const results = [];
+      for (const [index, image] of images.entries()) {
+        const pageLimited =
+          index > 0
+            ? await assertStudentAiRateLimit({ userId: user.id })
+            : { ok: true as const };
+        if (!pageLimited.ok) return rateLimitedResponse(pageLimited);
+        results.push(
+          await withAiUsageReservation(pageLimited, () =>
+            withAttemptUsage(id, async () =>
+              transcribeImage(
+                await image.arrayBuffer(),
+                image.type,
+                stem,
+                user.id,
+              ),
+            ),
+          ),
+        );
+      }
+      const result = {
+        transcript: results.map((r) => r.transcript).join("\n\n"),
+        lines: results.flatMap((r) => r.lines),
+        notes: results
+          .map((r) => r.notes)
+          .filter(Boolean)
+          .join("\n"),
+      };
+      const unreadable = !result.transcript.trim();
+      const status =
+        unreadable && kind === "single" ? "unreadable" : "transcribed";
+      await admin()
+        .from("attempts")
+        .update({ transcript: result.transcript, status })
+        .eq("id", id)
+        .in("status", ["pending", "transcribed", "unreadable"])
+        .throwOnError();
+      return Response.json({
+        ...result,
+        ...(kind === "single" ? { status } : {}),
+        ...(unreadable ? { unreadable: true } : {}),
+      });
     });
   } catch (error) {
     if (error instanceof Error && error.message === "AI budget reached")

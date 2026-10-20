@@ -36,10 +36,6 @@ export function monthLabels(weeks: (string | null)[][]) {
   });
 }
 
-export const SHADES = Array.from(
-  { length: 5 },
-  (_, i) => `var(--heatmap-${i})`,
-);
 export const SHADE_LABELS = [
   "No activity",
   "1 to 5",

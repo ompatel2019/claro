@@ -27,7 +27,7 @@ export default async function Layout({
     cookies(),
   ]);
   return (
-    <FeedbackWidget userId={profile.id} floating={false}>
+    <FeedbackWidget userId={profile.id}>
       <AppShell
         kind="student"
         examDays={examDaysLeft(sydneyToday())}

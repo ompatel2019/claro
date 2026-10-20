@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ImagePlus, Message, Close } from "@/components/icons";
+import { ImagePlus, Close } from "@/components/icons";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import {
@@ -36,23 +36,6 @@ const Open = createContext<(preset?: Preset) => void>(() => {});
 /** Opens the feedback dialog, optionally preset with a kind and linked item. */
 export const useFeedback = () => useContext(Open);
 
-/** Narrow screens keep feedback in the app header, clear of page controls. */
-export function HeaderFeedback() {
-  const open = useFeedback();
-  return (
-    <Button
-      type="button"
-      variant="ghost"
-      size="icon"
-      aria-label="Feedback"
-      className="ml-auto shrink-0 lg:hidden"
-      onClick={() => open()}
-    >
-      <Message aria-hidden className="size-5" />
-    </Button>
-  );
-}
-
 function Thumb({ file, onRemove }: { file: File; onRemove: () => void }) {
   const url = useMemo(() => URL.createObjectURL(file), [file]);
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
@@ -76,15 +59,12 @@ function Thumb({ file, onRemove }: { file: File; onRemove: () => void }) {
   );
 }
 
-/** §2.4: one feedback widget with context — footer button + dialog. */
+/** §2.4: shared feedback dialog, opened through context. */
 export function FeedbackWidget({
   userId,
-  floating = true,
   children,
 }: {
   userId: string;
-  /** Sessions hide the footer button; SessionShell has a top-bar icon. */
-  floating?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -174,19 +154,6 @@ export function FeedbackWidget({
   return (
     <Open.Provider value={show}>
       {children}
-      {floating && (
-        <button
-          type="button"
-          onClick={() => show()}
-          aria-label="Feedback"
-          className="group bg-primary text-primary-foreground fixed right-6 bottom-20 z-40 hidden h-12 min-w-12 items-center justify-center gap-2 rounded-full px-3.5 shadow-lg lg:flex print:hidden"
-        >
-          <Message aria-hidden className="size-5" />
-          <span className="hidden text-sm font-medium group-hover:inline group-focus-visible:inline">
-            Feedback
-          </span>
-        </button>
-      )}
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent
           className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-lg"

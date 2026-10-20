@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { useState } from "react";
 import { sortRows, type Column } from "@/components/data-table";
 import type { Sorting } from "@/lib/admin";
+import { nextSorting } from "@/app/admin/sort-state";
 import {
   Table,
   TableBody,
@@ -192,13 +193,7 @@ export function RunsTable({ rows }: { rows: RunSummary[] }) {
       ? sortRows(rows, sortBy, sorting.dir)
       : rows;
   const toggle = (id: string) =>
-    setSorting((current) =>
-      current?.id !== id
-        ? { id, dir: "asc" }
-        : current.dir === "asc"
-          ? { id, dir: "desc" }
-          : null,
-    );
+    setSorting((current) => nextSorting(current, id));
   return (
     <Card className="min-w-0">
       <CardHeader>
