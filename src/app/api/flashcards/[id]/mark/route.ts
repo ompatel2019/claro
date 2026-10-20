@@ -7,6 +7,7 @@ import { matchFlashcardAnswer } from "@/lib/flashcards";
 import { markFlashcard } from "@/lib/marking/engine";
 import {
   assertStudentAiRateLimit,
+  withAiUsageReservation,
   rateLimitedResponse,
 } from "@/lib/ai/rate-limit";
 import { admin } from "@/utils/supabase/admin";
@@ -109,10 +110,12 @@ export async function POST(
     if (!result) {
       const limited = await assertStudentAiRateLimit({ userId: user.id });
       if (!limited.ok) return rateLimitedResponse(limited);
-      result = await markFlashcard(
-        { ...card, kind: card.kind as "term" | "stat" },
-        answer,
-        user.id,
+      result = await withAiUsageReservation(limited, () =>
+        markFlashcard(
+          { ...card, kind: card.kind as "term" | "stat" },
+          answer,
+          user.id,
+        ),
       );
     }
     const { data: review } = await db

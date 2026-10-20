@@ -16,6 +16,7 @@ vi.mock("@/utils/supabase/admin", () => {
 });
 
 import { callJson } from "@/lib/ai/openai";
+import { AiRateLimitError, AiUsageGuardError } from "@/lib/ai/rate-limit";
 import { examplePool } from "./examples";
 import { admin } from "@/utils/supabase/admin";
 import {
@@ -1825,4 +1826,54 @@ it("does not finalize an answer left pending by repeated edits during marking", 
   } finally {
     log.mockRestore();
   }
+});
+
+it.each(["marking", "summary"])(
+  "does not finish after an AI allowance denial during %s",
+  async (stage) => {
+    const attempt = {
+      id: "a",
+      user_id: "user",
+      status: stage === "marking" ? "pending" : "marked",
+      answer_version: 1,
+      answer_text: "The prices rise rapidly",
+      mark: 2,
+      max_marks: 4,
+      feedback: { analysis: { strengths: [] } },
+      question: q,
+    };
+    const chains = [
+      query({ user_id: "user", kind: "sprint" }),
+      query([attempt]),
+    ];
+    if (stage === "marking")
+      chains.push(query(attempt), query([{ id: "a" }]), query(null));
+    for (const chain of chains)
+      vi.mocked(admin().from).mockReturnValueOnce(chain as never);
+    const refusal = new AiRateLimitError({
+      ok: false,
+      error: "Slow down",
+      retryAfterSec: 60,
+    });
+    mockedCall.mockRejectedValue(refusal);
+    await expect(finishSession("s")).rejects.toBe(refusal);
+    expect(admin().rpc).not.toHaveBeenCalled();
+  },
+);
+
+it("does not finish when a deferred allowance database check fails", async () => {
+  const row = {
+    status: "marked",
+    answer_text: "Prices rise.",
+    mark: 2,
+    feedback: {},
+    question: q,
+  };
+  vi.mocked(admin().from)
+    .mockReturnValueOnce(query({ user_id: "user", kind: "sprint" }) as never)
+    .mockReturnValueOnce(query([row]) as never);
+  const failure = new AiUsageGuardError("Count unavailable");
+  mockedCall.mockRejectedValue(failure);
+  await expect(finishSession("s")).rejects.toBe(failure);
+  expect(admin().rpc).not.toHaveBeenCalled();
 });

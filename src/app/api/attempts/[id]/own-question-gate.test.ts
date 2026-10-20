@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 
 const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
@@ -31,7 +32,8 @@ vi.mock("@/lib/marking/engine", () => ({
   transcribeImage: mocks.transcribeImage,
 }));
 vi.mock("@/lib/ai/usage-context", () => ({ withAttemptUsage: vi.fn() }));
-vi.mock("@/lib/ai/rate-limit", () => ({
+vi.mock("@/lib/ai/rate-limit", async (original) => ({
+  ...(await original<typeof import("@/lib/ai/rate-limit")>()),
   assertStudentAiRateLimit: mocks.rateLimit,
   rateLimitedResponse: () =>
     Response.json({ error: "Rate limited" }, { status: 429 }),

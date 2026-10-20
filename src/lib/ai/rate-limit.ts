@@ -1,79 +1,137 @@
 import "server-only";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { admin } from "@/utils/supabase/admin";
 
-/** Easy knobs — per student. Admins are exempt. */
+/** Per-student limits; admins are exempt. Keep RPC thresholds in sync. */
 export const AI_RATE_LIMIT_PER_MINUTE = 20;
 export const AI_RATE_LIMIT_PER_HOUR = 200;
 
 export const AI_RATE_LIMIT_MESSAGE =
   "You're going a bit fast, try again in a minute";
+export const AUTOFILL_RATE_LIMIT_MESSAGE =
+  "You've used today's 10 autofill calls. Paste your own guidelines or try tomorrow.";
 
 export type RateLimitResult =
-  { ok: true } | { ok: false; error: string; retryAfterSec: number };
+  | { ok: true; reservationId?: string }
+  | { ok: false; error: string; retryAfterSec: number };
 
-async function countSince(userId: string, sinceIso: string): Promise<number> {
-  const { count, error } = await admin()
-    .from("ai_usage")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", userId)
-    .gte("created_at", sinceIso);
-  if (error) throw error;
-  return count ?? 0;
+const reservations = new AsyncLocalStorage<string[]>();
+export function aiUsageReservationIds() {
+  return reservations.getStore() ?? [];
 }
 
-/**
- * Per-student AI rate limit. Fail-open: any count/role error allows the request.
- * Finish checks once before the engine's batch marking.
- */
+/** Release unused capacity on every exit; crashed workers expire after 10 minutes. */
+export async function withAiUsageReservation<T>(
+  result: Extract<RateLimitResult, { ok: true }>,
+  work: () => Promise<T>,
+): Promise<T> {
+  const id = result.reservationId;
+  if (!id) return work();
+  try {
+    return await reservations.run([...aiUsageReservationIds(), id], work);
+  } finally {
+    await releaseReservation(id);
+  }
+}
+
+async function releaseReservation(id: string) {
+  try {
+    const { error } = await admin()
+      .from("ai_usage_reservations")
+      .delete()
+      .eq("id", id);
+    if (error) throw error;
+  } catch (error) {
+    console.error("ai reservation release failed (will expire)", error);
+  }
+}
+
+export class AiUsageGuardError extends Error {}
+
+export class AiRateLimitError extends AiUsageGuardError {
+  constructor(readonly result: Extract<RateLimitResult, { ok: false }>) {
+    super(result.error);
+  }
+}
+
+const paidWorkGuard = new AsyncLocalStorage<() => Promise<void>>();
+
+/** Also check at the provider boundary, after any engine answer reloads. */
+export async function ensureAiUsageReservation() {
+  await paidWorkGuard.getStore()?.();
+}
+
+/** Finish reserves once, lazily for deterministic sessions that gain an answer. */
+export async function withDeferredAiUsageReservation<T>(
+  reserve: () => Promise<RateLimitResult>,
+  validate: () => Promise<RateLimitResult | void>,
+  work: (ensure: () => Promise<void>) => Promise<T>,
+): Promise<T> {
+  const ids = [...aiUsageReservationIds()];
+  const ownedIds: string[] = [];
+  let checking: Promise<void> | undefined;
+  const ensure = () =>
+    (checking ??= (async () => {
+      const result = await reserve();
+      if (!result.ok) throw new AiRateLimitError(result);
+      if (result.reservationId) {
+        ownedIds.push(result.reservationId);
+        ids.push(result.reservationId);
+      }
+      const daily = await validate();
+      if (daily && !daily.ok) throw new AiRateLimitError(daily);
+      if (daily?.reservationId) {
+        ownedIds.push(daily.reservationId);
+        ids.push(daily.reservationId);
+      }
+    })().catch((error) => {
+      if (error instanceof AiUsageGuardError) throw error;
+      throw new AiUsageGuardError(
+        error instanceof Error
+          ? error.message
+          : "Could not verify AI allowance",
+      );
+    }));
+  try {
+    return await reservations.run(ids, () =>
+      paidWorkGuard.run(ensure, () => work(ensure)),
+    );
+  } finally {
+    for (const id of ownedIds) await releaseReservation(id);
+  }
+}
+
+/** Reserve atomically before paid work. Role/usage database errors fail closed. */
 export async function assertStudentAiRateLimit(opts: {
   userId: string;
   role?: string | null;
-  now?: Date;
-  /** Injected for Vitest — returns counts for [minute, hour]. */
-  counts?: (userId: string, now: Date) => Promise<[number, number]>;
+  scope?: "student" | "autofill";
 }): Promise<RateLimitResult> {
-  if (!opts.userId) return { ok: true };
-  const now = opts.now ?? new Date();
+  const scope = opts.scope ?? "student";
+  if (scope === "student" && opts.role === "admin") return { ok: true };
+  const error =
+    scope === "autofill" ? AUTOFILL_RATE_LIMIT_MESSAGE : AI_RATE_LIMIT_MESSAGE;
   try {
-    let role = opts.role;
-    if (role === undefined && !opts.counts) {
-      const { data } = await admin()
-        .from("profiles")
-        .select("role")
-        .eq("id", opts.userId)
-        .maybeSingle();
-      role = data?.role ?? null;
+    const { data, error: dbError } = await admin().rpc("reserve_ai_usage", {
+      p_user: opts.userId,
+      p_scope: scope,
+    });
+    if (dbError) throw dbError;
+    if (data?.ok === true) {
+      if (typeof data.reservationId === "string") return data;
+      // Only the DB-confirmed admin exemption may omit a reservation.
+      if (scope === "student" && data.adminExempt === true) return { ok: true };
     }
-    if (role === "admin") return { ok: true };
-
-    const [minuteCount, hourCount] = opts.counts
-      ? await opts.counts(opts.userId, now)
-      : await Promise.all([
-          countSince(
-            opts.userId,
-            new Date(now.getTime() - 60_000).toISOString(),
-          ),
-          countSince(
-            opts.userId,
-            new Date(now.getTime() - 3_600_000).toISOString(),
-          ),
-        ]);
-    if (minuteCount >= AI_RATE_LIMIT_PER_MINUTE)
-      return {
-        ok: false,
-        error: AI_RATE_LIMIT_MESSAGE,
-        retryAfterSec: 60,
-      };
-    if (hourCount >= AI_RATE_LIMIT_PER_HOUR)
-      return {
-        ok: false,
-        error: AI_RATE_LIMIT_MESSAGE,
-        retryAfterSec: 3600,
-      };
-    return { ok: true };
-  } catch (error) {
-    console.error("ai rate limit count failed (fail-open)", error);
-    return { ok: true };
+    if (data?.ok === false && [60, 3600, 86400].includes(data.retryAfterSec))
+      return { ok: false, error, retryAfterSec: data.retryAfterSec };
+    throw new Error("Invalid AI reservation result");
+  } catch (cause) {
+    console.error("ai reservation failed (fail-closed)", cause);
+    return {
+      ok: false,
+      error,
+      retryAfterSec: scope === "autofill" ? 86400 : 60,
+    };
   }
 }
 
