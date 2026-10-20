@@ -66,10 +66,15 @@ it.each([...new Set(["0034_import_review_trgm_index.sql", latest])])(
     );
     expect(normalized).toContain("order by c.score desc, c.id limit 1");
     expect(normalized).toContain("m.score::double precision");
-    // The output and all draft filters remain identical to the original RPC.
+    // The output and all draft filters remain identical to the original RPC, except that
+    // 0077 (Papers removed, none live) reduces the live-paper filter to its equivalent.
     const original = readSql("0030_admin_questions.sql")
       .replace(/\s+/g, " ")
-      .toLowerCase();
+      .toLowerCase()
+      .replace(
+        "or exists ( select 1 from public.paper_questions pq join public.papers p on p.id=pq.paper_id where pq.question_id=d.id and p.status='live') = (p_filters->>'paper' = 'yes'))",
+        file! >= "0077" ? "or p_filters->>'paper' = 'no')" : "$&",
+      );
     expect(
       normalized.slice(
         normalized.indexOf(") m where"),
