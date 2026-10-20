@@ -8,7 +8,6 @@ import {
   type ActivityData,
   type SearchParams,
 } from "@/lib/activity-filters";
-import { studentActivity } from "@/lib/activity-data";
 import {
   sessionLabels,
   sessionTitle,
@@ -40,19 +39,13 @@ export default async function Activity({
   ]);
   if (total.error || topics.error || total.count === null)
     throw new Error("Couldn't load your activity.");
-  const data = await studentActivity(
-    filters,
-    async (page) => {
-      const result = await db.rpc("activity_stats", {
-        p_filters: { ...filters, page },
-        p_labels: sessionLabels,
-      });
-      if (result.error || !result.data)
-        throw new Error("Couldn't load your activity.");
-      return result.data as ActivityData;
-    },
-    total.count,
-  );
+  const result = await db.rpc("activity_stats", {
+    p_filters: filters,
+    p_labels: sessionLabels,
+  });
+  if (result.error || !result.data)
+    throw new Error("Couldn't load your activity.");
+  const data = { ...(result.data as ActivityData), all_total: total.count };
   const sessions = await db
     .from("sessions")
     .select(
