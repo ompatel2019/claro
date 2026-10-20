@@ -17,4 +17,9 @@ export default function globalSetup(config: FullConfig) {
     baseUrls: config.projects.map((project) => project.use.baseURL),
   });
   process.env[GUARD_FLAG] = "1";
+  // Clear the flag when the run ends, so a later run in the same process (UI/watch mode)
+  // can't inherit a stale verification if its next setup never gets to run.
+  return () => {
+    delete process.env[GUARD_FLAG];
+  };
 }

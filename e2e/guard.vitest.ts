@@ -233,3 +233,30 @@ describe("hasE2ECredentials", () => {
     expect(hasE2ECredentials({ SUPABASE_SECRET_KEY: "x" })).toBe(true);
   });
 });
+
+describe("globalSetup", () => {
+  it("returns a teardown that clears the verification flag", async () => {
+    const { default: globalSetup } = await import("./global-setup");
+    const saved = { ...process.env };
+    try {
+      for (const k of [
+        "STUDENT_EMAIL",
+        "STUDENT_PASSWORD",
+        "ADMIN_EMAIL",
+        "ADMIN_PASSWORD",
+        "SUPABASE_SECRET_KEY",
+      ])
+        delete process.env[k];
+      const teardown = globalSetup({
+        metadata: {},
+        projects: [],
+      } as unknown as Parameters<typeof globalSetup>[0]);
+      expect(process.env[GUARD_FLAG]).toBe("1");
+      teardown();
+      expect(process.env[GUARD_FLAG]).toBeUndefined();
+      expect(() => assertTargetVerified()).toThrow();
+    } finally {
+      process.env = saved;
+    }
+  });
+});
