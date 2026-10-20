@@ -72,6 +72,26 @@ function offlinePlugin(): Plugin {
       builder.onLoad(
         { filter: /.*/, namespace: "node-stub" },
         ({ path: p }) => {
+          if (p === "node:async_hooks" || p === "async_hooks") {
+            return {
+              contents: `
+                export class AsyncLocalStorage {
+                  run(store, fn, ...args) {
+                    const previous = this.store;
+                    this.store = store;
+                    try { return fn(...args); }
+                    finally { this.store = previous; }
+                  }
+                  getStore() { return this.store; }
+                  exit() {}
+                  enterWith() {}
+                  disable() {}
+                }
+                export default { AsyncLocalStorage };
+              `,
+              loader: "js",
+            };
+          }
           if (p.startsWith("node:crypto") || p === "crypto") {
             return {
               contents:
