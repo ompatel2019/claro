@@ -32,17 +32,21 @@ drop policy if exists "own" on public.unpublished_paper_question_readers;
 create policy "own" on public.unpublished_paper_question_readers for select
   to authenticated using (user_id = (select auth.uid()));
 
-insert into public.unpublished_paper_questions (question_id)
-select q.id from public.questions q
-where q.status = 'draft' and q.id = any (array[
-          '2018-q01', '2018-q02', '2018-q03', '2018-q04', '2018-q05', '2018-q06', '2018-q07', '2018-q08',
-          '2018-q09', '2018-q10', '2018-q11', '2018-q12', '2018-q13', '2018-q14', '2018-q16', '2018-q17',
-          '2018-q18', '2018-q19', '2018-q21a', '2018-q21b', '2018-q21c', '2018-q25', '2018-q26'])
-on conflict (question_id) do nothing;
-insert into public.unpublished_paper_question_readers (question_id, user_id)
-select distinct a.question_id, a.user_id from public.attempts a
-join public.unpublished_paper_questions u on u.question_id = a.question_id
-on conflict (question_id, user_id) do nothing;
+-- Seeded once: a rerun never adds readers (an attempt row inserted after the first run grants nothing).
+do $$
+begin
+  if exists (select 1 from public.unpublished_paper_questions) then return; end if;
+  insert into public.unpublished_paper_questions (question_id)
+  select q.id from public.questions q
+  where q.status = 'draft' and q.id = any (array[
+            '2018-q01', '2018-q02', '2018-q03', '2018-q04', '2018-q05', '2018-q06', '2018-q07', '2018-q08',
+            '2018-q09', '2018-q10', '2018-q11', '2018-q12', '2018-q13', '2018-q14', '2018-q16', '2018-q17',
+            '2018-q18', '2018-q19', '2018-q21a', '2018-q21b', '2018-q21c', '2018-q25', '2018-q26']);
+  insert into public.unpublished_paper_question_readers (question_id, user_id)
+  select distinct a.question_id, a.user_id from public.attempts a
+  join public.unpublished_paper_questions u on u.question_id = a.question_id;
+end
+$$;
 
 drop policy if exists "attempted unpublished paper question" on public.questions;
 create policy "attempted unpublished paper question" on public.questions for select
