@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import type { Criterion, MarkReview, ReviewRow } from "@/lib/feedback";
 
 import type { DisputeHistory } from "@/lib/disputes";
+import { pages } from "@/lib/flashcard-data";
 import { reasons } from "./shared";
 export type Review = MarkReview & {
   ai_mark: number | null;
@@ -91,7 +92,7 @@ export async function loadQueue(tab: string) {
   const rows: QueueRow[] = [];
   const imagePaths = new Map<string, string[]>();
   // Read in batches so the API's row cap cannot silently truncate a queue.
-  for (let from = 0; ; from += 1000) {
+  await pages<unknown>(async (from, to) => {
     if (tab === "failed") {
       const { data } = await db
         .from("attempts")
@@ -102,7 +103,7 @@ export async function loadQueue(tab: string) {
         .gte("created_at", since)
         .order("created_at")
         .order("id")
-        .range(from, from + 999)
+        .range(from, to)
         .throwOnError();
       const batch = data as unknown as (Pick<
         ReviewAttempt,
@@ -134,7 +135,7 @@ export async function loadQueue(tab: string) {
           photos: [],
         });
       }
-      if ((batch?.length ?? 0) < 1000) break;
+      return { data: batch, error: null };
     } else {
       let query = db
         .from("mark_reviews")
@@ -146,7 +147,7 @@ export async function loadQueue(tab: string) {
       const { data } = await query
         .order("created_at")
         .order("id")
-        .range(from, from + 999)
+        .range(from, to)
         .throwOnError();
       const batch = data as unknown as (Review & {
         student: { full_name: string | null } | null;
@@ -170,9 +171,9 @@ export async function loadQueue(tab: string) {
           note: r.student_note,
           photos: [],
         });
-      if ((batch?.length ?? 0) < 1000) break;
+      return { data: batch, error: null };
     }
-  }
+  }, 1000);
   if (tab === "failed" && rows.length) {
     const paths = [...imagePaths.values()].flat();
     if (paths.length) {
