@@ -28,13 +28,13 @@ vi.mock("openai", () => ({
   },
 }));
 
-// Keep the route, Finish engine, limit decisions and provider guard real.
+// Keep the route, Finish engine, RPC clients and provider guard real.
+// The SQL predicate is exercised separately against disposable Postgres.
 import { POST } from "./route";
 import {
   aiUsageReservationIds,
   AI_RATE_LIMIT_MESSAGE,
 } from "@/lib/ai/rate-limit";
-import { needsAiFinish } from "@/lib/marking/finish-limits";
 import { CheckSchema, GradeSchema } from "@/lib/marking/schemas";
 import type { MarkableQuestion } from "@/lib/marking/grade";
 
@@ -147,8 +147,10 @@ beforeEach(() => {
       ...structuredClone(a),
       questions: { type: a.question.type },
     }));
-    // This is the real sessionNeedsAi query, not a stubbed boolean result.
-    expect(needsAiFinish(snapshot)).toBe(false);
+    // Model the SQL predicate seeing blank attempts before the engine reload.
+    expect(snapshot.every((a) => !a.answer_text && a.transcript === null)).toBe(
+      true,
+    );
     events.push("blank snapshot");
     return snapshot;
   });
@@ -187,25 +189,7 @@ beforeEach(() => {
       }
       if (table === "marking_examples_for_grader") return result([]);
       if (table === "sessions") {
-        if (columns.startsWith("id,attempts!inner")) {
-          events.push("daily check");
-          dailyChecked = true;
-          return result(
-            allowance === "daily"
-              ? Array.from({ length: 200 }, () => ({
-                  attempts: [
-                    {
-                      status: "marked",
-                      answer_text: "A completed written answer",
-                      transcript: null,
-                      feedback: null,
-                      questions: { type: "short" },
-                    },
-                  ],
-                }))
-              : [],
-          );
-        }
+        expect(columns).not.toContain("attempts");
         return result(structuredClone(sessions.get(String(filters.id))));
       }
       if (table !== "attempts") throw new Error(`Unexpected table ${table}`);
@@ -218,8 +202,7 @@ beforeEach(() => {
         rows.forEach((a) => Object.assign(a, patch));
         return result(structuredClone(single ? rows[0] : rows));
       }
-      if (columns.includes("questions!inner"))
-        return result(mocks.snapshot(rows));
+      expect(columns).not.toContain("questions!inner");
       if (single) return result(structuredClone(rows[0]));
       return Promise.resolve(mocks.load(String(filters.session_id))).then(
         result,
@@ -283,6 +266,11 @@ beforeEach(() => {
   });
   mocks.rpc.mockImplementation(
     (name: string, args: Record<string, unknown>) => {
+      if (name === "session_needs_ai_finish") {
+        expect(args.p_user).toBe("student");
+        mocks.snapshot(attempts.filter((a) => a.session_id === args.p_session));
+        return result(false);
+      }
       if (name === "reserve_ai_usage") {
         events.push("reserve");
         expect(args).toEqual({ p_user: "student", p_scope: "student" });
@@ -297,13 +285,25 @@ beforeEach(() => {
         reservations.add(id);
         return result({ ok: true, reservationId: id });
       }
+      if (name === "reserve_ai_sprint") {
+        events.push("daily check");
+        dailyChecked = true;
+        expect(args).toMatchObject({ p_user: "student" });
+        expect(sessions.has(String(args.p_session))).toBe(true);
+        if (allowance === "daily")
+          return result({ ok: false, retryAfterSec: 86400 });
+        const id = `daily-${args.p_session}`;
+        reservations.add(id);
+        return result({ ok: true, reservationId: id });
+      }
       if (name === "ai_spend_for_prefixes") return result(0);
       if (name === "record_reserved_ai_usage") {
         const ids = args.p_reservations as string[];
-        expect(ids).toHaveLength(1);
+        expect(ids).toHaveLength(2);
         // Model the RPC replacing pending capacity with completed usage once.
         for (const id of ids) {
-          if (reservations.delete(id)) settled.add(id);
+          if (!id.startsWith("daily-") && reservations.delete(id))
+            settled.add(id);
         }
         events.push("usage recorded");
         return result(null);
@@ -332,7 +332,7 @@ beforeEach(() => {
       expect(events.indexOf("daily check")).toBeGreaterThan(
         events.indexOf("reserve"),
       );
-      expect(aiUsageReservationIds()).toHaveLength(1);
+      expect(aiUsageReservationIds()).toHaveLength(2);
       const task = options.response_format.json_schema.name;
       events.push(`provider:${task}`);
       const output =
@@ -412,7 +412,7 @@ it.each(["minute", "hour", "daily", "allowed"] as const)(
     }
     expect(reservations.size).toBe(0);
     expect(mocks.release).toHaveBeenCalledTimes(
-      limit === "minute" || limit === "hour" ? 0 : 1,
+      limit === "minute" || limit === "hour" ? 0 : limit === "daily" ? 1 : 2,
     );
   },
 );
@@ -492,3 +492,45 @@ it.each(["same", "different"])(
     expect(reservations.size).toBe(0);
   },
 );
+
+it("finish: two sessions at 199 daily sprints admit exactly one before paid work", async () => {
+  sessions.set("other", { ...sessions.get("sprint")!, id: "other" });
+  attempts.push(attempt("c", "other"));
+  const snapshot = mocks.snapshot.getMockImplementation()!;
+  const load = mocks.load.getMockImplementation()!;
+  let bothRead!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    bothRead = resolve;
+  });
+  mocks.snapshot.mockImplementation((rows) => {
+    const value = snapshot(rows);
+    if (mocks.snapshot.mock.calls.length === 2) bothRead();
+    return value;
+  });
+  mocks.load.mockImplementation(async (id) => {
+    await ready;
+    return load(id);
+  });
+  const rpc = mocks.rpc.getMockImplementation()!;
+  let dailyReserved = false;
+  mocks.rpc.mockImplementation((name, args) => {
+    if (name === "reserve_ai_sprint") {
+      if (dailyReserved) return result({ ok: false, retryAfterSec: 86400 });
+      dailyReserved = true;
+    }
+    return rpc(name, args);
+  });
+  const responses = await Promise.all([finish(), finish("other")]);
+  expect(responses.map((r) => r.status).sort()).toEqual([200, 429]);
+  const denied = responses.find((r) => r.status === 429)!;
+  expect(denied.headers.get("Retry-After")).toBe("86400");
+  expect(await denied.json()).toEqual({
+    error: "You've reached today's sprint limit. Try again tomorrow.",
+  });
+  expect(rpcCalls("reserve_ai_usage")).toHaveLength(2);
+  expect(rpcCalls("reserve_ai_sprint")).toHaveLength(2);
+  expect(rpcCalls("finish_versioned_session")).toHaveLength(1);
+  expect([...sessions.values()].filter((s) => s.finished_at)).toHaveLength(1);
+  expect(settled.size).toBe(1);
+  expect(reservations.size).toBe(0);
+});

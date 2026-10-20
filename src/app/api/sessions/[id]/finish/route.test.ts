@@ -49,7 +49,7 @@ vi.mock("@/utils/supabase/server", () => ({
 }));
 vi.mock("@/lib/marking/finish-limits", () => ({
   sessionNeedsAi: mocks.needsAi,
-  dailyAiSprintCount: mocks.dailyCount,
+  reserveDailyAiSprint: mocks.dailyCount,
 }));
 vi.mock("@/lib/marking/engine", () => ({ finishSession: mocks.finish }));
 import { POST } from "./route";
@@ -71,7 +71,13 @@ beforeEach(() => {
   mocks.needsAi.mockResolvedValue(true);
   mocks.dailyCount.mockImplementation(async () => {
     if (mocks.countError) throw mocks.countError;
-    return mocks.count;
+    return mocks.count >= 200
+      ? {
+          ok: false,
+          retryAfterSec: 86400,
+          error: "You've reached today's sprint limit. Try again tomorrow.",
+        }
+      : { ok: true, reservationId: "daily-slot" };
   });
   mocks.signedIn = true;
   mocks.missing = false;
@@ -126,19 +132,10 @@ it("checks the student AI allowance before marking", async () => {
   expect(mocks.finish).not.toHaveBeenCalled();
   expect(mocks.dailyCount).not.toHaveBeenCalled();
 });
-it("allows the final daily sprint and counts finished written sessions since Sydney midnight", async () => {
-  vi.useFakeTimers();
-  vi.setSystemTime(new Date("2026-10-20T05:00:00Z"));
-  try {
-    mocks.count = 199;
-    expect((await finish()).status).toBe(200);
-    expect(mocks.dailyCount).toHaveBeenCalledExactlyOnceWith(
-      "u",
-      "2026-10-19T13:00:00.000Z",
-    );
-  } finally {
-    vi.useRealTimers();
-  }
+it("reserves the final daily sprint for the owned session through the RPC helper", async () => {
+  mocks.count = 199;
+  expect((await finish()).status).toBe(200);
+  expect(mocks.dailyCount).toHaveBeenCalledExactlyOnceWith("u", "s");
 });
 it.each([200, 201])(
   "blocks daily written sprint count %i before marking",
@@ -226,7 +223,7 @@ it("carries one atomic reservation through engine marking and releases it", asyn
   mocks.rate.mockResolvedValue({ ok: true, reservationId: "finish-slot" });
   mocks.finish.mockImplementationOnce(async () => {
     await Promise.all([ensureAiUsageReservation(), ensureAiUsageReservation()]);
-    expect(aiUsageReservationIds()).toEqual(["finish-slot"]);
+    expect(aiUsageReservationIds()).toEqual(["finish-slot", "daily-slot"]);
     expect(mocks.release).not.toHaveBeenCalled();
     return { score: 2, max_score: 4, summary: null };
   });
@@ -234,6 +231,7 @@ it("carries one atomic reservation through engine marking and releases it", asyn
   expect(mocks.rate).toHaveBeenCalledTimes(1);
   expect(mocks.dailyCount).toHaveBeenCalledTimes(1);
   expect(mocks.release).toHaveBeenCalledWith("id", "finish-slot");
+  expect(mocks.release).toHaveBeenCalledWith("id", "daily-slot");
 });
 
 it.each(["allowed", "minute", "daily", "database"])(

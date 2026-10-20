@@ -1,138 +1,91 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({ query: vi.fn() }));
+const mocks = vi.hoisted(() => ({ rpc: vi.fn(), from: vi.fn() }));
 vi.mock("server-only", () => ({}));
-vi.mock("@/utils/supabase/admin", () => ({
-  admin: () => ({
-    from: (table: string) => {
-      const filters: unknown[] = [table];
-      const query = {
-        select: (...args: unknown[]) => {
-          filters.push(args);
-          return query;
-        },
-        eq: (...args: unknown[]) => {
-          filters.push(args);
-          return query;
-        },
-        neq: (...args: unknown[]) => {
-          filters.push(args);
-          return query;
-        },
-        gte: (...args: unknown[]) => {
-          filters.push(args);
-          return query;
-        },
-        order: (...args: unknown[]) => {
-          filters.push(args);
-          return query;
-        },
-        range: (...args: unknown[]) => {
-          filters.push(args);
-          return query;
-        },
-        throwOnError: () => mocks.query(filters),
-      };
-      return query;
-    },
-  }),
-}));
-import {
-  dailyAiSprintCount,
-  needsAiFinish,
-  sessionNeedsAi,
-} from "./finish-limits";
+vi.mock("@/utils/supabase/admin", () => ({ admin: () => mocks }));
+import { reserveDailyAiSprint, sessionNeedsAi } from "./finish-limits";
 
-const written = {
-  status: "pending",
-  answer_text: "A usable written answer",
-  transcript: null,
-  feedback: null,
-  questions: { type: "short" },
-};
-const mcq = { ...written, questions: { type: "mcq" } };
+beforeEach(() => vi.resetAllMocks());
 
-beforeEach(() => vi.clearAllMocks());
+it.each([true, false])(
+  "checks owned AI work through the SQL predicate: %s",
+  async (data) => {
+    mocks.rpc.mockResolvedValue({ data, error: null });
+    expect(await sessionNeedsAi("s", "u")).toBe(data);
+    expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith(
+      "session_needs_ai_finish",
+      { p_session: "s", p_user: "u" },
+    );
+    expect(mocks.from).not.toHaveBeenCalled();
+  },
+);
+
+it.each([null, [], {}])(
+  "fails closed on malformed AI-need reply %j",
+  async (data) => {
+    mocks.rpc.mockResolvedValue({ data, error: null });
+    await expect(sessionNeedsAi("s", "u")).rejects.toThrow(
+      "Invalid AI finish lookup result",
+    );
+  },
+);
+
+it("reserves daily capacity through the service RPC without loading historical answers", async () => {
+  mocks.rpc.mockResolvedValue({
+    data: { ok: true, reservationId: "daily" },
+    error: null,
+  });
+  expect(await reserveDailyAiSprint("u", "s")).toEqual({
+    ok: true,
+    reservationId: "daily",
+  });
+  expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith("reserve_ai_sprint", {
+    p_user: "u",
+    p_session: "s",
+  });
+  expect(mocks.from).not.toHaveBeenCalled();
+});
+
+it("preserves the daily denial", async () => {
+  mocks.rpc.mockResolvedValue({
+    data: { ok: false, retryAfterSec: 86400 },
+    error: null,
+  });
+  expect(await reserveDailyAiSprint("u", "s")).toEqual({
+    ok: false,
+    retryAfterSec: 86400,
+    error: "You've reached today's sprint limit. Try again tomorrow.",
+  });
+});
 
 it.each([
-  ["empty", [], false],
-  ["MCQ-only", [mcq], false],
-  ["mixed with only MCQs", [mcq, mcq], false],
-  ["written", [written], true],
-  ["mixed with written", [mcq, written], true],
-  ["empty written", [{ ...written, answer_text: " " }], false],
-  ["too short written", [{ ...written, answer_text: "two words" }], false],
-  ["confirmed empty transcript", [{ ...written, transcript: "" }], false],
-  [
-    "usable transcript",
-    [{ ...written, answer_text: null, transcript: "A usable transcript" }],
-    true,
-  ],
-  [
-    "marked writing still needs summary",
-    [{ ...written, status: "marked", answer_text: "Answer" }],
-    true,
-  ],
-  [
-    "marked no answer",
-    [{ ...written, status: "marked", feedback: { note: "No answer" } }],
-    false,
-  ],
-] as const)("detects AI work for %s", (_name, attempts, expected) => {
-  expect(needsAiFinish([...attempts])).toBe(expected);
+  { ok: true, adminExempt: true },
+  { ok: true, alreadyFinished: true },
+])("accepts the DB-confirmed exemption %j", async (data) => {
+  mocks.rpc.mockResolvedValue({ data, error: null });
+  expect(await reserveDailyAiSprint("u", "s")).toEqual({ ok: true });
 });
 
-it("inspects actual owned attempts using engine visibility", async () => {
-  mocks.query.mockResolvedValue({ data: [mcq, written] });
-  expect(await sessionNeedsAi("s", "u")).toBe(true);
-  expect(mocks.query).toHaveBeenCalledWith(
-    expect.arrayContaining(["attempts", ["session_id", "s"], ["user_id", "u"]]),
-  );
-});
-
-it("counts only sessions with AI work, once per session, across pages", async () => {
-  mocks.query
-    .mockResolvedValueOnce({
-      data: Array.from({ length: 200 }, () => ({
-        attempts: [written, written],
-      })),
-    })
-    .mockResolvedValueOnce({
-      data: [
-        { attempts: [mcq] },
-        { attempts: [{ ...written, answer_text: "" }] },
-        { attempts: [mcq, written] },
-        {
-          attempts: [
-            { ...written, status: "marked", feedback: { note: "No answer" } },
-          ],
-        },
-      ],
-    });
-  expect(await dailyAiSprintCount("u", "midnight")).toBe(201);
-  expect(mocks.query).toHaveBeenNthCalledWith(
-    1,
-    expect.arrayContaining([
-      "sessions",
-      ["user_id", "u"],
-      ["kind", "sprint"],
-      ["finished_at", "midnight"],
-      [0, 199],
-    ]),
-  );
-  expect(mocks.query).toHaveBeenNthCalledWith(
-    2,
-    expect.arrayContaining([[200, 399]]),
-  );
-});
+it.each([null, {}, { ok: true }, { ok: false, retryAfterSec: 60 }])(
+  "fails closed on malformed daily reply %j",
+  async (data) => {
+    mocks.rpc.mockResolvedValue({ data, error: null });
+    await expect(reserveDailyAiSprint("u", "s")).rejects.toThrow(
+      "Invalid daily sprint reservation result",
+    );
+  },
+);
 
 it("propagates lookup failures before paid work", async () => {
-  mocks.query.mockRejectedValue(new Error("Database unavailable"));
+  mocks.rpc.mockResolvedValue({
+    data: null,
+    error: new Error("Database unavailable"),
+  });
   await expect(sessionNeedsAi("s", "u")).rejects.toThrow(
     "Database unavailable",
   );
-  await expect(dailyAiSprintCount("u", "midnight")).rejects.toThrow(
+  await expect(reserveDailyAiSprint("u", "s")).rejects.toThrow(
     "Database unavailable",
   );
 });

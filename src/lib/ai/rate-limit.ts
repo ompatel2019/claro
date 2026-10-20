@@ -64,19 +64,26 @@ export async function ensureAiUsageReservation() {
 /** Finish reserves once, lazily for deterministic sessions that gain an answer. */
 export async function withDeferredAiUsageReservation<T>(
   reserve: () => Promise<RateLimitResult>,
-  validate: () => Promise<void>,
+  validate: () => Promise<RateLimitResult | void>,
   work: (ensure: () => Promise<void>) => Promise<T>,
 ): Promise<T> {
   const ids = [...aiUsageReservationIds()];
-  let id: string | undefined;
+  const ownedIds: string[] = [];
   let checking: Promise<void> | undefined;
   const ensure = () =>
     (checking ??= (async () => {
       const result = await reserve();
       if (!result.ok) throw new AiRateLimitError(result);
-      id = result.reservationId;
-      if (id) ids.push(id);
-      await validate();
+      if (result.reservationId) {
+        ownedIds.push(result.reservationId);
+        ids.push(result.reservationId);
+      }
+      const daily = await validate();
+      if (daily && !daily.ok) throw new AiRateLimitError(daily);
+      if (daily?.reservationId) {
+        ownedIds.push(daily.reservationId);
+        ids.push(daily.reservationId);
+      }
     })().catch((error) => {
       if (error instanceof AiUsageGuardError) throw error;
       throw new AiUsageGuardError(
@@ -90,7 +97,7 @@ export async function withDeferredAiUsageReservation<T>(
       paidWorkGuard.run(ensure, () => work(ensure)),
     );
   } finally {
-    if (id) await releaseReservation(id);
+    for (const id of ownedIds) await releaseReservation(id);
   }
 }
 

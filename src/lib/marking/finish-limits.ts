@@ -2,56 +2,35 @@ import "server-only";
 
 import { admin } from "@/utils/supabase/admin";
 
-type FinishAttempt = {
-  status: string;
-  answer_text: string | null;
-  transcript: string | null;
-  feedback: { note?: string } | null;
-  questions: { type: string };
-};
-
-const ATTEMPTS = "status,answer_text,transcript,feedback,questions!inner(type)";
-
-// Match markAttempt's minimum answer and finishSession's writing-summary input.
-export function needsAiFinish(attempts: FinishAttempt[]) {
-  return attempts.some((a) => {
-    if (a.questions.type === "mcq") return false;
-    const answer = (a.transcript ?? a.answer_text ?? "").trim();
-    return a.status === "marked"
-      ? a.feedback?.note !== "No answer" && answer.length > 0
-      : answer.split(/\s+/).filter(Boolean).length >= 3;
-  });
-}
-
 export async function sessionNeedsAi(sessionId: string, userId: string) {
-  // Use the engine's visibility, including questions retired during a sprint.
-  const { data } = await admin()
-    .from("attempts")
-    .select(ATTEMPTS)
-    .eq("session_id", sessionId)
-    .eq("user_id", userId)
-    .throwOnError();
-  return needsAiFinish((data ?? []) as unknown as FinishAttempt[]);
+  const { data, error } = await admin().rpc("session_needs_ai_finish", {
+    p_session: sessionId,
+    p_user: userId,
+  });
+  if (error) throw error;
+  if (typeof data !== "boolean")
+    throw new Error("Invalid AI finish lookup result");
+  return data;
 }
 
-export async function dailyAiSprintCount(userId: string, since: string) {
-  let count = 0;
-  // Page parents: an embedded many-attempt sprint must count only once.
-  for (let offset = 0; ; offset += 200) {
-    const { data } = await admin()
-      .from("sessions")
-      .select(`id,attempts!inner(${ATTEMPTS})`)
-      .eq("user_id", userId)
-      .eq("kind", "sprint")
-      .neq("attempts.questions.type", "mcq")
-      .gte("finished_at", since)
-      .order("id")
-      .range(offset, offset + 199)
-      .throwOnError();
-    const sessions = (data ?? []) as unknown as {
-      attempts: FinishAttempt[];
-    }[];
-    count += sessions.filter((s) => needsAiFinish(s.attempts)).length;
-    if (sessions.length < 200) return count;
+// The SQL count and pending admission run together under the per-user lock.
+export async function reserveDailyAiSprint(userId: string, sessionId: string) {
+  const { data, error } = await admin().rpc("reserve_ai_sprint", {
+    p_user: userId,
+    p_session: sessionId,
+  });
+  if (error) throw error;
+  if (data?.ok === true) {
+    if (typeof data.reservationId === "string")
+      return { ok: true as const, reservationId: data.reservationId };
+    if (data.adminExempt === true || data.alreadyFinished === true)
+      return { ok: true as const };
   }
+  if (data?.ok === false && data.retryAfterSec === 86400)
+    return {
+      ok: false as const,
+      error: "You've reached today's sprint limit. Try again tomorrow.",
+      retryAfterSec: 86400,
+    };
+  throw new Error("Invalid daily sprint reservation result");
 }

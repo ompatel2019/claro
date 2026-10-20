@@ -7,14 +7,10 @@ import {
   withDeferredAiUsageReservation,
   rateLimitedResponse,
 } from "@/lib/ai/rate-limit";
-import { sydneyDayStart } from "@/lib/single-check";
 import {
-  dailyAiSprintCount,
+  reserveDailyAiSprint,
   sessionNeedsAi,
 } from "@/lib/marking/finish-limits";
-
-// Even 200 minimum-size written sprints exceed a normal day's study.
-const DAILY_WRITTEN_SPRINT_LIMIT = 200;
 
 export const maxDuration = 300;
 
@@ -55,15 +51,7 @@ export async function POST(
         return assertStudentAiRateLimit({ userId: user.id, role });
       },
       async () => {
-        if (role !== "admin") {
-          const count = await dailyAiSprintCount(user.id, sydneyDayStart());
-          if (count >= DAILY_WRITTEN_SPRINT_LIMIT)
-            throw new AiRateLimitError({
-              ok: false,
-              error: "You've reached today's sprint limit. Try again tomorrow.",
-              retryAfterSec: 86400,
-            });
-        }
+        if (role !== "admin") return reserveDailyAiSprint(user.id, id);
       },
       async (ensure) => {
         // Deterministic finishes need no allowance. The provider guard also
