@@ -45,6 +45,26 @@ begin
  s := public.start_sprint('{"mode":"mixed","target":5,"mcq_count":5,"short_marks":0,"topics":["t1"],"subtopics":["t1-lane2-split-check"],"timed":false}');
  select config into cfg from public.sessions where id=s;
  if (cfg->>'target')::int<>5 or (cfg->>'actual_mcq_count')::int<>5 or (cfg->>'actual_short_marks')::int<>0 then raise exception 'Five-mark mixed failed'; end if;
+ -- D1: mixed INSERTs cannot exceed target plus the two-mark tolerance,
+ -- including direct batches using repeated positions.
+ insert into public.attempts(session_id,question_id,position)
+ select s,q.id,1 from public.questions q where q.topic_id='t1-lane2-split-check' and q.type='mcq'
+   and not exists(select 1 from public.attempts a where a.session_id=s and a.question_id=q.id) limit 2;
+ begin
+  insert into public.attempts(session_id,question_id,position)
+  select s,q.id,1 from public.questions q where q.topic_id='t1-lane2-split-check' and q.type='mcq'
+    and not exists(select 1 from public.attempts a where a.session_id=s and a.question_id=q.id) limit 1;
+  raise exception 'Mixed allocation overflow accepted';
+ exception when insufficient_privilege then null; end;
+ -- D1: transcript uses the same ceiling as typed answers; NULL remains valid.
+ update public.attempts set transcript=repeat('x',1000000) where session_id=s;
+ begin
+  update public.attempts set transcript=repeat('x',1000001) where session_id=s;
+  raise exception 'Mixed oversized transcript accepted';
+ exception when check_violation then
+  if sqlerrm not like '%attempts_transcript_length%' then raise; end if;
+ end;
+ update public.attempts set transcript=null where session_id=s;
  s := public.start_sprint('{"mode":"mixed","target":5,"topics":["t1"],"subtopics":["t1-lane2-split-check"],"timed":false}');
  select config into cfg from public.sessions where id=s;
  if (cfg->>'mcq_count')::int<>3 or (cfg->>'short_marks')::int<>2 then raise exception 'Default five-mark split should be 3/2'; end if;

@@ -13,6 +13,7 @@ import {
 } from "@/lib/marking/engine";
 import {
   assertStudentAiRateLimit,
+  withAiUsageReservation,
   rateLimitedResponse,
 } from "@/lib/ai/rate-limit";
 import { admin } from "@/utils/supabase/admin";
@@ -96,88 +97,91 @@ export async function POST(
       { error: "Multiple-choice answers are marked when you finish" },
       { status: 409 },
     );
-  if (question?.type !== "mcq") {
-    const limited = await assertStudentAiRateLimit({ userId: user.id });
-    if (!limited.ok) {
-      await singleFailure(limited.error);
-      return rateLimitedResponse(limited);
-    }
+  const limited =
+    question?.type !== "mcq"
+      ? await assertStudentAiRateLimit({ userId: user.id })
+      : { ok: true as const };
+  if (!limited.ok) {
+    await singleFailure(limited.error);
+    return rateLimitedResponse(limited);
   }
   try {
-    if (question?.type !== "mcq") {
-      const { data: spent, error: spendError } = await admin().rpc("ai_spend");
-      if (spendError) throw spendError;
-      if (Number(spent) >= BUDGET_USD) {
-        const error =
-          "Marking is paused right now. Your answer is saved; try again later.";
-        await singleFailure(error);
-        return Response.json({ error }, { status: 503 });
+    return await withAiUsageReservation(limited, async () => {
+      if (question?.type !== "mcq") {
+        const { data: spent, error: spendError } =
+          await admin().rpc("ai_spend");
+        if (spendError) throw spendError;
+        if (Number(spent) >= BUDGET_USD) {
+          const error =
+            "Marking is paused right now. Your answer is saved; try again later.";
+          await singleFailure(error);
+          return Response.json({ error }, { status: 503 });
+        }
       }
-    }
-    const { mark, max_marks, band, feedback, status } = await withAttemptUsage(
-      id,
-      async () =>
-        session.kind === "single"
-          ? attempt.question_id
-            ? await markBankCheck(id, user.id, attempt.question_id)
-            : await markOwnCheck(id, user.id, session.config)
-          : await markAttempt(id),
-    );
-    if (session.kind === "single" && feedback?.note === "No answer")
-      await admin()
-        .from("attempts")
-        .update({ check_status: "skipped" })
-        .eq("id", id)
-        .eq("user_id", user.id)
-        .throwOnError();
-    if (finished) {
-      if (session.kind === "single") {
+      const { mark, max_marks, band, feedback, status } =
+        await withAttemptUsage(id, async () =>
+          session.kind === "single"
+            ? attempt.question_id
+              ? await markBankCheck(id, user.id, attempt.question_id)
+              : await markOwnCheck(id, user.id, session.config)
+            : await markAttempt(id),
+        );
+      if (session.kind === "single" && feedback?.note === "No answer")
         await admin()
-          .from("sessions")
-          .update({ score: mark, max_score: max_marks })
-          .eq("id", attempt.session_id)
+          .from("attempts")
+          .update({ check_status: "skipped" })
+          .eq("id", id)
           .eq("user_id", user.id)
           .throwOnError();
-      } else await rescoreSession(attempt.session_id);
-    }
-    // The answer is locked now, so the explanation (MCQ) or model answer
-    // (written) can be shown with the mark. Students cannot read these columns.
-    const reference =
-      checkMode &&
-      attempt.question_id &&
-      (question?.type === "mcq" ||
-        (status === "marked" && feedback?.note !== "No answer"))
-        ? (
-            await admin()
-              .from("questions")
-              .select("explanation, sample_answer")
-              .eq("id", attempt.question_id)
-              .single()
-          ).data
-        : null;
-    const explanation =
-      question?.type === "mcq" ? reference?.explanation : null;
-    const sample_answer =
-      question?.type !== "mcq" &&
-      status === "marked" &&
-      feedback?.note !== "No answer"
-        ? reference?.sample_answer
-        : null;
-    const structuredExplanation = readMcqExplanation(explanation);
-    return Response.json({
-      mark,
-      max_marks,
-      band,
-      feedback: studentMarking({ feedback }).feedback,
-      status,
-      ...(explanation ? { explanation } : {}),
-      ...(sample_answer ? { sample_answer } : {}),
-      ...(structuredExplanation
-        ? { structured_explanation: structuredExplanation }
-        : {}),
-      ...(feedback?.correct_index != null
-        ? { correct_index: feedback.correct_index }
-        : {}),
+      if (finished) {
+        if (session.kind === "single") {
+          await admin()
+            .from("sessions")
+            .update({ score: mark, max_score: max_marks })
+            .eq("id", attempt.session_id)
+            .eq("user_id", user.id)
+            .throwOnError();
+        } else await rescoreSession(attempt.session_id);
+      }
+      // The answer is locked now, so the explanation (MCQ) or model answer
+      // (written) can be shown with the mark. Students cannot read these columns.
+      const reference =
+        checkMode &&
+        attempt.question_id &&
+        (question?.type === "mcq" ||
+          (status === "marked" && feedback?.note !== "No answer"))
+          ? (
+              await admin()
+                .from("questions")
+                .select("explanation, sample_answer")
+                .eq("id", attempt.question_id)
+                .single()
+            ).data
+          : null;
+      const explanation =
+        question?.type === "mcq" ? reference?.explanation : null;
+      const sample_answer =
+        question?.type !== "mcq" &&
+        status === "marked" &&
+        feedback?.note !== "No answer"
+          ? reference?.sample_answer
+          : null;
+      const structuredExplanation = readMcqExplanation(explanation);
+      return Response.json({
+        mark,
+        max_marks,
+        band,
+        feedback: studentMarking({ feedback }).feedback,
+        status,
+        ...(explanation ? { explanation } : {}),
+        ...(sample_answer ? { sample_answer } : {}),
+        ...(structuredExplanation
+          ? { structured_explanation: structuredExplanation }
+          : {}),
+        ...(feedback?.correct_index != null
+          ? { correct_index: feedback.correct_index }
+          : {}),
+      });
     });
   } catch (error) {
     if (error instanceof AlreadyMarking)

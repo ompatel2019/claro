@@ -12,7 +12,8 @@ vi.mock("@/lib/single-check-marking", () => ({
   markOwnCheck: vi.fn(),
   markBankCheck: vi.fn(),
 }));
-vi.mock("@/lib/ai/rate-limit", () => ({
+vi.mock("@/lib/ai/rate-limit", async (original) => ({
+  ...(await original<typeof import("@/lib/ai/rate-limit")>()),
   assertStudentAiRateLimit: vi.fn(async () => ({ ok: true })),
   rateLimitedResponse: (result: { error: string; retryAfterSec: number }) =>
     Response.json(
@@ -357,6 +358,7 @@ it("returns only the score and summary for an owned session", async () => {
     {
       id: "id",
       kind: "sprint",
+      finished_at: "2026-10-08",
       session_id: sessionId,
       session: { finished_at: "2026-10-08" },
       question: { type: "mcq" },
