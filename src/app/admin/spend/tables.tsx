@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { sortRows, type Sorting } from "@/lib/admin";
+import { nextSorting } from "@/app/admin/sort-state";
 import { DataTable, EmptyState } from "@/components/claro";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -131,15 +132,7 @@ export function TaskTable({ groups }: { groups: Spend["byTask"] }) {
                   <button
                     type="button"
                     className="uppercase"
-                    onClick={() =>
-                      setSorting(
-                        sorting?.id !== column.id
-                          ? { id: column.id, dir: "asc" }
-                          : sorting.dir === "asc"
-                            ? { id: column.id, dir: "desc" }
-                            : null,
-                      )
-                    }
+                    onClick={() => setSorting(nextSorting(sorting, column.id))}
                   >
                     {column.header}
                   </button>
