@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 // Brand SVGs in public/logos (from the marketing site). White variants for dark theme.
 const ART = {
   lockup: { file: "claro-lockup", ratio: 726 / 228 },
-  mark: { file: "claro-mark", ratio: 90 / 100 },
 };
 
 function Art({ kind, height }: { kind: keyof typeof ART; height: number }) {
