@@ -53,7 +53,13 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@/components/ui/sidebar";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type NavItem = { label: string; href: string; icon: Icon };
 export const nav: Record<
@@ -194,14 +200,15 @@ function AppShellContent({
         Skip to content
       </a>
       <Sidebar collapsible="icon">
-        <SidebarHeader className="h-16 justify-center px-5 group-data-[collapsible=icon]:px-0">
+        <SidebarHeader className="group/header relative h-16 flex-row items-center justify-between gap-2 pr-3 pl-5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
           <Link
             href={home}
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
-            className="flex justify-start group-data-[collapsible=icon]:justify-center"
+            className="ring-sidebar-ring flex justify-start rounded-md outline-hidden group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:group-hover/header:opacity-0 group-data-[collapsible=icon]:group-has-[[data-sidebar=trigger]:focus-visible]/header:opacity-0 focus-visible:ring-2"
           >
             {kind === "student" ? <ShellLogo /> : <Logo collapsible />}
           </Link>
+          <SidebarHeaderToggle />
         </SidebarHeader>
         {kind === "student" && <SubjectSwitcher />}
         <SidebarContent className="pt-3 pb-2">
@@ -346,9 +353,10 @@ function AppShellContent({
           </SidebarMenu>
         </SidebarFooter>
       </Sidebar>
-      <SidebarInset className="min-w-0">
+      {/* Collapsing hands the rail's freed width to the content column. */}
+      <SidebarInset className="min-w-0 md:peer-data-[state=collapsed]:[--shell-reclaim:calc(var(--sidebar-width)-var(--sidebar-width-icon))]">
         <TopBar>
-          <SidebarTrigger className="max-sm:size-9" />
+          <SidebarTrigger className="max-sm:size-9 md:hidden" />
           <Link
             href={home}
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
@@ -409,8 +417,8 @@ function AppShellContent({
           id="main"
           className={
             kind === "student"
-              ? "mx-auto w-full max-w-[1400px] min-w-0 flex-1 px-4 pt-6 pb-24 sm:px-8 sm:pt-8"
-              : "mx-auto w-full max-w-[1464px] min-w-0 flex-1 px-4 py-6 sm:px-8 sm:py-8"
+              ? "mx-auto w-full max-w-[calc(1400px+var(--shell-reclaim,0px))] min-w-0 flex-1 px-4 pt-6 pb-24 transition-[max-width] duration-200 ease-linear sm:px-8 sm:pt-8"
+              : "mx-auto w-full max-w-[calc(1464px+var(--shell-reclaim,0px))] min-w-0 flex-1 px-4 py-6 transition-[max-width] duration-200 ease-linear sm:px-8 sm:py-8"
           }
         >
           {children}
@@ -421,28 +429,56 @@ function AppShellContent({
   );
 }
 
+/**
+ * Desktop sidebar toggle in the sidebar header. Expanded: sits right of the logo.
+ * Collapsed: overlays the Claro tile and appears on header hover or keyboard focus
+ * (ChatGPT/Claude rail pattern). The mobile drawer keeps the top-bar menu button.
+ */
+function SidebarHeaderToggle() {
+  const { isMobile, open } = useSidebar();
+  if (isMobile) return null;
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <SidebarTrigger
+            aria-expanded={open}
+            className="text-muted-foreground hover:text-foreground shrink-0 group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-1/2 group-data-[collapsible=icon]:left-1/2 group-data-[collapsible=icon]:-translate-1/2 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:group-hover/header:opacity-100 group-data-[collapsible=icon]:focus-visible:opacity-100"
+          />
+        }
+      />
+      <TooltipContent side="right" align="center">
+        {open ? "Collapse sidebar" : "Expand sidebar"} (⌘B)
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 /** Reuse the approved wordmark without the marketing tile in the portal chrome. */
 function ShellLogo({ mobile = false }: { mobile?: boolean }) {
   return (
-    <span
-      role="img"
-      aria-label="Claro"
-      className="inline-flex shrink-0 group-data-[collapsible=icon]:scale-75"
-    >
+    <span role="img" aria-label="Claro" className="inline-flex shrink-0">
       {/* eslint-disable @next/next/no-img-element -- approved static brand assets */}
+      <img
+        src="/logos/claro-tile.svg"
+        alt=""
+        width={28}
+        height={28}
+        className="hidden shrink-0 rounded-[22%] group-data-[collapsible=icon]:block"
+      />
       <img
         src="/logos/claro-lockup.svg"
         alt=""
         width={mobile ? 64 : 70}
         height={mobile ? 20 : 24}
-        className="dark:hidden"
+        className="group-data-[collapsible=icon]:hidden dark:hidden"
       />
       <img
         src="/logos/claro-lockup-white.svg"
         alt=""
         width={mobile ? 64 : 70}
         height={mobile ? 20 : 24}
-        className="hidden dark:block"
+        className="hidden group-data-[collapsible=icon]:hidden dark:block"
       />
       {/* eslint-enable @next/next/no-img-element */}
     </span>
