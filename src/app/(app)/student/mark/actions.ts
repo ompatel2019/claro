@@ -6,7 +6,7 @@ import {
 } from "@/lib/limits";
 import { createClient } from "@/utils/supabase/server";
 import { admin } from "@/utils/supabase/admin";
-import { bankQuestions } from "@/lib/single-check-data";
+import { bankQuestionAvailable } from "@/lib/single-check-data";
 import {
   answerValid,
   ownQuestionSchema,
@@ -35,7 +35,7 @@ async function create(input: unknown) {
     );
   if (
     request.source === "bank" &&
-    !(await bankQuestions(db)).some((q) => q.id === request.question_id)
+    !(await bankQuestionAvailable(db, request.question_id))
   )
     throw new Error(
       "This question is no longer available. Choose another question.",
