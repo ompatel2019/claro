@@ -128,15 +128,6 @@ export const Book = icon(
   "book",
   <path d="M12 5v16M12 5C8 2 4 3 2 4v15c3-1 6-1 10 2 4-3 7-3 10-2V4c-2-1-6-2-10 1ZM5 7h3M16 7h3" />,
 );
-export const Calculator = icon(
-  "calculator",
-  <>
-    <rect x="5" y="3" width="14" height="18" rx="2" />
-    <path
-      d={`M8.5 7h7v3h-7z${dot(8.5, 14)}${dot(12, 14)}${dot(15.5, 14)}${dot(8.5, 17.5)}${dot(12, 17.5)}${dot(15.5, 17.5)}`}
-    />
-  </>,
-);
 export const SearchOff = icon(
   "search-off",
   <>
