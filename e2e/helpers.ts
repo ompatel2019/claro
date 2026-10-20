@@ -97,6 +97,20 @@ export async function signInAdmin(page: Page) {
     "/admin",
   );
 }
+/** Older marking/removed-route suites wait for the sign-in redirect only. */
+export async function signInAdminRedirect(page: Page, waitForEmail = true) {
+  assertTargetVerified();
+  await page.goto("/sign-in");
+  if (waitForEmail)
+    await expect(page.getByLabel("Email")).toBeVisible({ timeout: 60000 });
+  await page.getByLabel("Email").fill(process.env.ADMIN_EMAIL!);
+  await page.getByLabel("Password").fill(process.env.ADMIN_PASSWORD!);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await page.waitForURL(
+    /\/(admin)?$/,
+    waitForEmail ? { timeout: 30000 } : undefined,
+  );
+}
 export function adminClient() {
   return process.env.SUPABASE_SECRET_KEY && process.env.NEXT_PUBLIC_SUPABASE_URL
     ? createClient(
