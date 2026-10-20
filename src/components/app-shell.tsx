@@ -200,7 +200,7 @@ function AppShellContent({
         Skip to content
       </a>
       <Sidebar collapsible="icon">
-        <SidebarHeader className="h-16 flex-row items-center justify-between gap-2 pr-3 pl-5 group-data-[collapsible=icon]:h-auto group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:gap-3 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:pt-4 group-data-[collapsible=icon]:pb-1">
+        <SidebarHeader className="h-16 flex-row items-center justify-between gap-2 pr-3 pl-5 group-data-[collapsible=icon]:h-auto group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:gap-3 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:pt-4 group-data-[collapsible=icon]:pb-2">
           <Link
             href={home}
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
@@ -211,7 +211,9 @@ function AppShellContent({
           <SidebarHeaderToggle />
         </SidebarHeader>
         {kind === "student" && (
-          <div className="group-data-[collapsible=icon]:hidden">
+          // Collapsed: keep the switcher's expanded footprint (laid out at full
+          // width, invisible) so the nav icons stay at the same y on toggle.
+          <div className="group-data-[collapsible=icon]:invisible group-data-[collapsible=icon]:w-(--sidebar-width)">
             <SubjectSwitcher />
           </div>
         )}

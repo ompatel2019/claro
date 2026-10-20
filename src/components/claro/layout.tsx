@@ -125,18 +125,18 @@ export function SubjectSwitcher() {
   return (
     <div
       data-component="SubjectSwitcher"
-      className="bg-card mx-3 flex items-center gap-3 rounded-xl border p-2 shadow-xs group-data-[collapsible=icon]:mx-0 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:border-0"
+      className="bg-card mx-3 flex items-center gap-3 rounded-xl border p-2 shadow-xs"
     >
       <span className="bg-primary text-primary-foreground grid size-8 shrink-0 place-items-center rounded-lg">
         <PortalIcon name="graduation-cap" size={18} />
       </span>
-      <span className="grid flex-1 text-[13px] group-data-[collapsible=icon]:hidden">
+      <span className="grid flex-1 text-[13px]">
         <span className="font-semibold">Economics</span>
         <span className="text-muted-foreground text-xs">HSC · Year 12</span>
       </span>
       <PortalIcon
         name="chevrons-up-down"
-        className="text-muted-foreground mr-0.5 size-4 group-data-[collapsible=icon]:hidden"
+        className="text-muted-foreground mr-0.5 size-4"
       />
     </div>
   );
