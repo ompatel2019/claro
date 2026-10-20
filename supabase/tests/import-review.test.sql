@@ -22,14 +22,21 @@ update public.questions set origin = 'a1', verb = 'Explain', stimulus = 'A stimu
 update public.questions set duplicate_of = 'c2-0-retired', explanation = '  ' where id = 'c2-mcq';
 update public.questions set duplicate_of = 'c2-0-retired', sample_answer = 'Sample', explanation = 'Explanation' where id = 'c2-complete';
 update public.questions set duplicate_of = id where id = 'c2-self';
-insert into public.papers (id, title, status) values
-  ('c2000000-0000-0000-0000-000000000011', 'Live test paper', 'live'),
-  ('c2000000-0000-0000-0000-000000000012', 'Draft test paper', 'draft'),
-  ('c2000000-0000-0000-0000-000000000013', 'Retired test paper', 'retired');
-insert into public.paper_questions (paper_id, position, question_id) values
-  ('c2000000-0000-0000-0000-000000000011', 1, 'c2-best'),
-  ('c2000000-0000-0000-0000-000000000012', 1, 'c2-mcq'),
-  ('c2000000-0000-0000-0000-000000000013', 1, 'c2-complete');
+-- Papers exist until E6 (0077) drops them; afterwards the paper filter is yes = none, no = all.
+do $$
+begin
+  if to_regclass('public.papers') is null then return; end if;
+  execute $sql$
+    insert into public.papers (id, title, status) values
+      ('c2000000-0000-0000-0000-000000000011', 'Live test paper', 'live'),
+      ('c2000000-0000-0000-0000-000000000012', 'Draft test paper', 'draft'),
+      ('c2000000-0000-0000-0000-000000000013', 'Retired test paper', 'retired');
+    insert into public.paper_questions (paper_id, position, question_id) values
+      ('c2000000-0000-0000-0000-000000000011', 1, 'c2-best'),
+      ('c2000000-0000-0000-0000-000000000012', 1, 'c2-mcq'),
+      ('c2000000-0000-0000-0000-000000000013', 1, 'c2-complete')
+  $sql$;
+end $$;
 
 do $$
 declare
@@ -38,6 +45,7 @@ declare
   pair record;
   c record;
   actual text[];
+  expected text[];
 begin
   foreach threshold in array array[null, 0.59, 1.0]::double precision[] loop
     begin
@@ -121,10 +129,16 @@ begin
     ('{"q":null,"type":null,"topic":null,"from":null,"to":null,"origin":null,"verb":null,"marks":null,"paper":null,"missing":null}', array['c2-best','c2-complete','c2-mcq']),
     ('{"type":"short","origin":"a1","topic":"c2-parent","from":"2024","to":"2024","verb":"Explain","marks":"4","paper":"yes","missing":"sample"}', array['c2-best'])
   ) cases(filters, expected) loop
+    expected := c.expected;
+    if to_regclass('public.papers') is null then
+      if c.filters->>'paper' = 'yes' then expected := array[]::text[];
+      elsif c.filters->>'paper' = 'no' then expected := array['c2-best','c2-complete','c2-mcq'];
+      end if;
+    end if;
     select coalesce(array_agg(id order by id), array[]::text[]) into actual
       from public.question_import_review(0.82, c.filters) where id in ('c2-best','c2-complete','c2-mcq');
-    if actual is distinct from c.expected then
-      raise exception 'import review filter %: expected %, got %', c.filters, c.expected, actual;
+    if actual is distinct from expected then
+      raise exception 'import review filter %: expected %, got %', c.filters, expected, actual;
     end if;
   end loop;
 end $$;
