@@ -200,17 +200,21 @@ function AppShellContent({
         Skip to content
       </a>
       <Sidebar collapsible="icon">
-        <SidebarHeader className="group/header relative h-16 flex-row items-center justify-between gap-2 pr-3 pl-5 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-0">
+        <SidebarHeader className="h-16 flex-row items-center justify-between gap-2 pr-3 pl-5 group-data-[collapsible=icon]:h-auto group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:gap-3 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:pt-4 group-data-[collapsible=icon]:pb-1">
           <Link
             href={home}
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
-            className="ring-sidebar-ring flex justify-start rounded-md outline-hidden group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:group-hover/header:opacity-0 group-data-[collapsible=icon]:group-has-[[data-sidebar=trigger]:focus-visible]/header:opacity-0 focus-visible:ring-2"
+            className="ring-sidebar-ring flex justify-start rounded-md outline-hidden group-data-[collapsible=icon]:justify-center focus-visible:ring-2"
           >
             {kind === "student" ? <ShellLogo /> : <Logo collapsible />}
           </Link>
           <SidebarHeaderToggle />
         </SidebarHeader>
-        {kind === "student" && <SubjectSwitcher />}
+        {kind === "student" && (
+          <div className="group-data-[collapsible=icon]:hidden">
+            <SubjectSwitcher />
+          </div>
+        )}
         <SidebarContent className="pt-3 pb-2">
           <nav
             aria-label={
@@ -431,8 +435,8 @@ function AppShellContent({
 
 /**
  * Desktop sidebar toggle in the sidebar header. Expanded: sits right of the logo.
- * Collapsed: overlays the Claro tile and appears on header hover or keyboard focus
- * (ChatGPT/Claude rail pattern). The mobile drawer keeps the top-bar menu button.
+ * Collapsed: stacked, always visible, directly under the Claro tile.
+ * The mobile drawer keeps the top-bar menu button.
  */
 function SidebarHeaderToggle() {
   const { isMobile, open } = useSidebar();
@@ -443,7 +447,7 @@ function SidebarHeaderToggle() {
         render={
           <SidebarTrigger
             aria-expanded={open}
-            className="text-muted-foreground hover:text-foreground shrink-0 group-data-[collapsible=icon]:absolute group-data-[collapsible=icon]:top-1/2 group-data-[collapsible=icon]:left-1/2 group-data-[collapsible=icon]:-translate-1/2 group-data-[collapsible=icon]:opacity-0 group-data-[collapsible=icon]:group-hover/header:opacity-100 group-data-[collapsible=icon]:focus-visible:opacity-100"
+            className="text-muted-foreground hover:text-foreground shrink-0"
           />
         }
       />
