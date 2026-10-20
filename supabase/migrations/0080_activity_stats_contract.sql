@@ -8,7 +8,7 @@ CREATE OR REPLACE FUNCTION public.activity_stats(p_filters jsonb, p_labels jsonb
  SET search_path TO ''
 AS $function$
 with mine as materialized (
-  select s.id, s.kind, s.paper_id, s.config, s.started_at, s.finished_at, s.elapsed_s,
+  select s.id, s.kind, lp.paper_id, s.config, s.started_at, s.finished_at, s.elapsed_s,
     (s.started_at at time zone 'Australia/Sydney')::date as day,
     coalesce(s.kind = 'flashcards' and s.config->>'mode' = 'study', false) as study,
     coalesce(a.answered, 0) as answered,
@@ -16,7 +16,7 @@ with mine as materialized (
     case when s.finished_at is null then 'In progress' when a.pending then 'Marking'
       when a.provisional then 'Provisional' else 'Finished' end as status,
     case when a.pending then null else h.pct end as pct,
-    coalesce(case s.kind when 'paper' then coalesce(p.title, s.config->>'title', p_labels->>'paper')
+    coalesce(case s.kind when 'paper' then coalesce(lp.title, s.config->>'title', p_labels->>'paper')
       when 'single' then p_labels->>'single'
       when 'flashcards' then p_labels->>case when s.config->>'mode' = 'test' then 'test' else 'study' end
       else coalesce(p_labels->>(s.config->>'mode'), 'Practice sprint') end, 'Practice')
@@ -24,8 +24,8 @@ with mine as materialized (
     case when s.kind = 'flashcards' then coalesce(jsonb_array_length(s.config->'card_ids'), 0)
       else coalesce(a.items, 0) end as items
   from public.sessions s
+  left join public.legacy_paper_sessions lp on lp.session_id = s.id
   left join public.score_history h on h.id = s.id and h.user_id = (select auth.uid())
-  left join public.papers p on p.id = s.paper_id
   left join lateral (
     select count(*) filter (where a.status <> 'skipped') as items,
       count(*) filter (where a.status <> 'skipped' and a.feedback->>'note' is distinct from 'No answer' and (a.choice_index is not null
@@ -109,7 +109,7 @@ CREATE OR REPLACE FUNCTION public.activity_stats(p_filters jsonb, p_labels jsonb
  SET search_path TO ''
 AS $function$
 with mine as materialized (
-  select s.id, s.kind, s.paper_id, s.config, s.started_at, s.finished_at, s.elapsed_s,
+  select s.id, s.kind, lp.paper_id, s.config, s.started_at, s.finished_at, s.elapsed_s,
     (s.started_at at time zone 'Australia/Sydney')::date as day,
     coalesce(s.kind = 'flashcards' and s.config->>'mode' = 'study', false) as study,
     coalesce(a.answered, 0) as answered,
@@ -117,7 +117,7 @@ with mine as materialized (
     case when s.finished_at is null then 'In progress' when a.pending then 'Marking'
       when a.provisional then 'Provisional' else 'Finished' end as status,
     case when a.pending then null else h.pct end as pct,
-    coalesce(case s.kind when 'paper' then coalesce(p.title, s.config->>'title', p_labels->>'paper')
+    coalesce(case s.kind when 'paper' then coalesce(lp.title, s.config->>'title', p_labels->>'paper')
       when 'single' then p_labels->>'single'
       when 'flashcards' then p_labels->>case when s.config->>'mode' = 'test' then 'test' else 'study' end
       else coalesce(p_labels->>(s.config->>'mode'), 'Practice sprint') end, 'Practice')
@@ -125,8 +125,8 @@ with mine as materialized (
     case when s.kind = 'flashcards' then coalesce(jsonb_array_length(s.config->'card_ids'), 0)
       else coalesce(a.items, 0) end as items
   from public.sessions s
+  left join public.legacy_paper_sessions lp on lp.session_id = s.id
   left join public.score_history h on h.id = s.id and h.user_id = (select auth.uid())
-  left join public.papers p on p.id = s.paper_id
   left join lateral (
     select count(*) filter (where a.status <> 'skipped') as items,
       count(*) filter (where a.status <> 'skipped' and a.feedback->>'note' is distinct from 'No answer' and (a.choice_index is not null

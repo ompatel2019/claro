@@ -2,7 +2,7 @@
 -- psql -h /tmp -p 55481 -U postgres -v ON_ERROR_STOP=1 -f supabase/tests/activity-stats-contract.sql
 begin;
 
--- Previous definition from 0076, changing only the function's temporary name.
+-- Previous definition from 0077 (unchanged by 0078), changing only the temporary name.
 CREATE OR REPLACE FUNCTION pg_temp.activity_stats_before(p_filters jsonb, p_labels jsonb)
  RETURNS jsonb
  LANGUAGE sql
@@ -10,7 +10,7 @@ CREATE OR REPLACE FUNCTION pg_temp.activity_stats_before(p_filters jsonb, p_labe
  SET search_path TO ''
 AS $function$
 with mine as materialized (
-  select s.id, s.kind, s.paper_id, s.config, s.started_at, s.finished_at, s.elapsed_s,
+  select s.id, s.kind, lp.paper_id, s.config, s.started_at, s.finished_at, s.elapsed_s,
     (s.started_at at time zone 'Australia/Sydney')::date as day,
     coalesce(s.kind = 'flashcards' and s.config->>'mode' = 'study', false) as study,
     coalesce(a.answered, 0) as answered,
@@ -18,7 +18,7 @@ with mine as materialized (
     case when s.finished_at is null then 'In progress' when a.pending then 'Marking'
       when a.provisional then 'Provisional' else 'Finished' end as status,
     case when a.pending then null else h.pct end as pct,
-    coalesce(case s.kind when 'paper' then coalesce(p.title, s.config->>'title', p_labels->>'paper')
+    coalesce(case s.kind when 'paper' then coalesce(lp.title, s.config->>'title', p_labels->>'paper')
       when 'single' then p_labels->>'single'
       when 'flashcards' then p_labels->>case when s.config->>'mode' = 'test' then 'test' else 'study' end
       else coalesce(p_labels->>(s.config->>'mode'), 'Practice sprint') end, 'Practice')
@@ -26,8 +26,8 @@ with mine as materialized (
     case when s.kind = 'flashcards' then coalesce(jsonb_array_length(s.config->'card_ids'), 0)
       else coalesce(a.items, 0) end as items
   from public.sessions s
+  left join public.legacy_paper_sessions lp on lp.session_id = s.id
   left join public.score_history h on h.id = s.id and h.user_id = (select auth.uid())
-  left join public.papers p on p.id = s.paper_id
   left join lateral (
     select count(*) filter (where a.status <> 'skipped') as items,
       count(*) filter (where a.status <> 'skipped' and a.feedback->>'note' is distinct from 'No answer' and (a.choice_index is not null
@@ -115,10 +115,6 @@ insert into public.questions (id, type, topic_id, marks, stem, source, year, cri
 insert into public.flashcards (id, topic_id, kind, front, back) values
   ('c4-card', 'c4-child', 'term', 'Synthetic C4 card', 'Synthetic');
 
-insert into public.papers (id, title, status) values
-  ('00000000-0000-4000-8000-00000000c450', 'Synthetic C4 live paper', 'live'),
-  ('00000000-0000-4000-8000-00000000c451', 'Synthetic C4 retired paper', 'retired');
-
 -- Exactly 40 supported rows plus two legacy rows: old RPC has three pages, new RPC has two.
 -- Tied timestamps/scores, fractional percentages and legacy rows interleaved.
 insert into public.sessions (id, user_id, kind, config, started_at, finished_at, score, max_score)
@@ -131,15 +127,22 @@ select ('00000000-0000-4000-8000-' || lpad(i::text, 12, '0'))::uuid,
   case when i = 25 then null else '2026-10-04T01:00:00Z'::timestamptz end,
   case when i % 6 = 0 then null else (i % 3 + 1)::numeric end, 3
 from generate_series(1, 36) i;
-insert into public.sessions (id, user_id, kind, config, started_at, finished_at, score, max_score, paper_id) values
-  ('00000000-0000-4000-8000-00000000c411', '00000000-0000-4000-8000-00000000c401', 'paper', '{"title":"Synthetic legacy"}', '2026-10-03T16:00:00Z', '2026-10-04T01:00:00Z', 99, 100, '00000000-0000-4000-8000-00000000c450'),
-  ('00000000-0000-4000-8000-00000000c412', '00000000-0000-4000-8000-00000000c401', 'paper', '{}', '2026-04-04T16:00:00Z', null, null, null, '00000000-0000-4000-8000-00000000c451'),
-  ('00000000-0000-4000-8000-00000000c413', '00000000-0000-4000-8000-00000000c401', 'single', '{"question":{"topic_id":"c4-child"}}', '2026-10-03T13:59:59Z', '2026-10-04T01:00:00Z', 1, 3, null),
-  ('00000000-0000-4000-8000-00000000c414', '00000000-0000-4000-8000-00000000c401', 'flashcards', '{"mode":"study","card_ids":["c4-card"]}', '2026-10-03T14:00:00Z', '2026-10-04T01:00:00Z', 1, 1, null),
-  ('00000000-0000-4000-8000-00000000c415', '00000000-0000-4000-8000-00000000c401', 'flashcards', '{"mode":"test","card_ids":["c4-card"]}', '2026-04-04T15:59:59Z', '2026-04-05T01:00:00Z', 1, 2, null),
-  ('00000000-0000-4000-8000-00000000c416', '00000000-0000-4000-8000-00000000c401', 'sprint', '{"mode":"extended","topics":["c4-child"]}', '2026-04-04T16:00:00Z', '2026-04-05T01:00:00Z', 1, 0, null),
-  ('00000000-0000-4000-8000-00000000c421', '00000000-0000-4000-8000-00000000c402', 'single', '{"question":{"topic_id":"c4-child"}}', '2026-10-03T14:00:00Z', '2026-10-04T01:00:00Z', 1, 1, null),
-  ('00000000-0000-4000-8000-00000000c441', '00000000-0000-4000-8000-00000000c404', 'paper', '{}', '2026-10-03T14:00:00Z', '2026-10-04T01:00:00Z', 1, 1, '00000000-0000-4000-8000-00000000c450');
+insert into public.sessions (id, user_id, kind, config, started_at, finished_at, score, max_score) values
+  ('00000000-0000-4000-8000-00000000c411', '00000000-0000-4000-8000-00000000c401', 'paper', '{"title":"Synthetic legacy"}', '2026-10-03T16:00:00Z', '2026-10-04T01:00:00Z', 99, 100),
+  ('00000000-0000-4000-8000-00000000c412', '00000000-0000-4000-8000-00000000c401', 'paper', '{"title":"Synthetic config fallback"}', '2026-04-04T16:00:00Z', null, null, null),
+  ('00000000-0000-4000-8000-00000000c413', '00000000-0000-4000-8000-00000000c401', 'single', '{"question":{"topic_id":"c4-child"}}', '2026-10-03T13:59:59Z', '2026-10-04T01:00:00Z', 1, 3),
+  ('00000000-0000-4000-8000-00000000c414', '00000000-0000-4000-8000-00000000c401', 'flashcards', '{"mode":"study","card_ids":["c4-card"]}', '2026-10-03T14:00:00Z', '2026-10-04T01:00:00Z', 1, 1),
+  ('00000000-0000-4000-8000-00000000c415', '00000000-0000-4000-8000-00000000c401', 'flashcards', '{"mode":"test","card_ids":["c4-card"]}', '2026-04-04T15:59:59Z', '2026-04-05T01:00:00Z', 1, 2),
+  ('00000000-0000-4000-8000-00000000c416', '00000000-0000-4000-8000-00000000c401', 'sprint', '{"mode":"extended","topics":["c4-child"]}', '2026-04-04T16:00:00Z', '2026-04-05T01:00:00Z', 1, 0),
+  ('00000000-0000-4000-8000-00000000c421', '00000000-0000-4000-8000-00000000c402', 'single', '{"question":{"topic_id":"c4-child"}}', '2026-10-03T14:00:00Z', '2026-10-04T01:00:00Z', 1, 1),
+  ('00000000-0000-4000-8000-00000000c441', '00000000-0000-4000-8000-00000000c404', 'paper', '{}', '2026-10-03T14:00:00Z', '2026-10-04T01:00:00Z', 1, 1);
+-- E6 archives readable paper history instead of retaining the Papers tables/column.
+-- Also retain a supported session's archived paper_id in the returned row.
+insert into public.legacy_paper_sessions (session_id, paper_id, title) values
+  ('00000000-0000-4000-8000-00000000c411', '00000000-0000-4000-8000-00000000c450', 'Synthetic archived paper'),
+  ('00000000-0000-4000-8000-00000000c412', '00000000-0000-4000-8000-00000000c451', null),
+  ('00000000-0000-4000-8000-00000000c441', '00000000-0000-4000-8000-00000000c450', null),
+  ('00000000-0000-4000-8000-000000000001', '00000000-0000-4000-8000-00000000c451', 'Synthetic supported history');
 insert into public.attempts (session_id, user_id, question_id, position, answer_text, transcript, image_paths, status, check_status, feedback, marked_at)
 select id, user_id, case when right(id::text, 1) = '4' then 'c4-retired' else 'c4-live' end, 1,
   case when right(id::text, 1) = '5' then null else 'Synthetic answer' end,
@@ -207,6 +210,11 @@ do $$
 declare uid uuid; filters jsonb; extra jsonb; kind text; sort text; requested_page int; labels jsonb;
   expected jsonb; actual jsonb; first jsonb; before_pages jsonb; page int; cases int := 0;
 begin
+  if to_regclass('public.papers') is not null or to_regclass('public.paper_questions') is not null
+    or exists (select 1 from information_schema.columns where table_schema = 'public'
+      and table_name = 'sessions' and column_name = 'paper_id') then
+    raise exception 'C4 must run after E6 removed the Papers schema';
+  end if;
   if has_function_privilege('anon', 'public.activity_stats(jsonb,jsonb)', 'execute')
     or not has_function_privilege('authenticated', 'public.activity_stats(jsonb,jsonb)', 'execute')
     or exists (select 1 from pg_proc p, lateral aclexplode(p.proacl) a
@@ -221,6 +229,11 @@ begin
     '00000000-0000-4000-8000-00000000c403'::uuid, '00000000-0000-4000-8000-00000000c404'::uuid] loop
     perform set_config('request.jwt.claim.sub', uid::text, true);
     perform set_config('request.jwt.claims', jsonb_build_object('sub', uid, 'role', 'authenticated')::text, true);
+    if (select count(*) from public.legacy_paper_sessions) <> (case uid
+      when '00000000-0000-4000-8000-00000000c401'::uuid then 3
+      when '00000000-0000-4000-8000-00000000c404'::uuid then 1 else 0 end) then
+      raise exception 'Legacy archive RLS changed for %', uid;
+    end if;
     foreach sort in array array['newest', 'oldest', 'highest', 'lowest'] loop
       foreach kind in array array['', 'sprint', 'single', 'flashcards'] loop
         foreach requested_page in array array[1, 2, 999] loop
@@ -267,11 +280,33 @@ begin
   end loop;
   -- Fixed expectations make the fixtures' ownership and supported-kind coverage explicit.
   perform set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-00000000c401', true);
+  perform set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-00000000c401","role":"authenticated"}', true);
   actual := public.activity_stats('{}', '{}');
   if actual->'all_total' <> '40'::jsonb or actual->'kind_total' <> '40'::jsonb
     or actual->'kinds' <> '{"sprint":37,"single":1,"flashcards":2}'::jsonb then
     raise exception 'Supported counts or ownership changed: %', actual;
   end if;
+  if not exists (select 1 from jsonb_array_elements(public.activity_stats('{"sort":"oldest"}', '{}')->'rows') r
+    where r->>'id' = '00000000-0000-4000-8000-000000000001'
+      and r->>'paper_id' = '00000000-0000-4000-8000-00000000c451') then
+    raise exception 'Supported session lost its archived paper_id';
+  end if;
+  first := pg_temp.activity_stats_before('{"kind":"paper"}', '{"paper":"Paper label"}');
+  if not exists (select 1 from jsonb_array_elements(first->'rows') r
+    where r->>'title' = 'Synthetic archived paper')
+    or not exists (select 1 from jsonb_array_elements(first->'rows') r
+      where r->>'title' = 'Synthetic config fallback') then
+    raise exception '0077 archive/config title precedence changed: %', first;
+  end if;
+  perform set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-00000000c404', true);
+  perform set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-00000000c404","role":"authenticated"}', true);
+  first := pg_temp.activity_stats_before('{}', '{"paper":"Paper label"}');
+  if first->'rows'->0->>'title' is distinct from 'Paper label'
+    or public.activity_stats('{}', '{}')->'rows' <> '[]'::jsonb then
+    raise exception '0077 NULL archive title fallback or legacy-only contract changed';
+  end if;
+  perform set_config('request.jwt.claim.sub', '00000000-0000-4000-8000-00000000c401', true);
+  perform set_config('request.jwt.claims', '{"sub":"00000000-0000-4000-8000-00000000c401","role":"authenticated"}', true);
   first := pg_temp.activity_stats_before('{"page":999}', '{}');
   actual := public.activity_stats('{"page":999}', '{}');
   if first->'total' <> '42'::jsonb or first->'page' <> '3'::jsonb
