@@ -11,7 +11,7 @@ export default defineConfig({
   use: {
     ...devices["Desktop Chrome"],
     launchOptions: {
-      executablePath: "/usr/bin/google-chrome",
+      executablePath: process.env.CI ? undefined : "/usr/bin/google-chrome",
       args: ["--no-sandbox"],
     },
   },
