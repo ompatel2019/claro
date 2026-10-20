@@ -52,7 +52,7 @@ const rows = [
 beforeEach(() => {
   vi.resetAllMocks();
   mocks.session.mockResolvedValue({ data: { config: { feedback: "each" } } });
-  mocks.attempts.mockResolvedValue({ data: rows });
+  mocks.attempts.mockResolvedValue({ data: structuredClone(rows) });
   mocks.keys.mockResolvedValue({
     data: [{ id: "q1", explanation: "Stored explanation" }],
   });
@@ -69,9 +69,18 @@ it("restores only checked MC explanations after ownership lookup", async () => {
   expect((await loadSprint("s")).explanations).toEqual({
     checked: "Stored explanation",
   });
-  expect(mocks.keys).toHaveBeenCalledWith("id", ["q1"]);
-  for (const [, ids] of mocks.keys.mock.calls)
-    expect(ids).not.toEqual(expect.arrayContaining(["q1", "q3"]));
+  expect(mocks.keys).toHaveBeenCalledExactlyOnceWith("id", ["q1", "q3"]);
+});
+it("keeps checked MC explanations after finishing without attaching written model answers", async () => {
+  mocks.session.mockResolvedValue({
+    data: { config: { feedback: "each" }, finished_at: "2026-10-14" },
+  });
+  const result = await loadSprint("s");
+  expect(result.explanations).toEqual({ checked: "Stored explanation" });
+  expect(result.attempts.find((a) => a.id === "written")).not.toHaveProperty(
+    "sample_answer",
+  );
+  expect(mocks.keys).toHaveBeenCalledExactlyOnceWith("id", ["q1"]);
 });
 it.each(["end", "unchecked", "foreign"])(
   "does not query answer keys for %s sessions",
