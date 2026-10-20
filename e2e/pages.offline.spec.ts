@@ -1,21 +1,12 @@
+import { offlineCss, offlineBundle } from "./offline-harness";
 import { expect, test, type Page, type Locator } from "@playwright/test";
-import { build } from "esbuild";
-import postcss from "postcss";
-import tailwind from "@tailwindcss/postcss";
-import { readFile } from "node:fs/promises";
 
 let bundle: string;
 let css: string;
 test.beforeAll(async () => {
-  css = (
-    await postcss([tailwind()]).process(
-      await readFile("src/app/globals.css", "utf8"),
-      { from: "src/app/globals.css" },
-    )
-  ).css;
-  const result = await build({
-    stdin: {
-      contents: `import React from 'react'; import {createRoot} from 'react-dom/client';
+  css = await offlineCss();
+  bundle = await offlineBundle(
+    `import React from 'react'; import {createRoot} from 'react-dom/client';
         import Home from './src/app/(app)/student/page';
         import Admin from './src/app/admin/page';
         import Flashcards from './src/app/admin/content/flashcards/page';
@@ -30,16 +21,7 @@ test.beforeAll(async () => {
         const page=path.includes('progress') ? await Progress({searchParams:Promise.resolve(f)}) : path.includes('flashcards') ? await Flashcards({searchParams:Promise.resolve(f)}) : path.includes('admin') ? Admin() : path.includes('activity') ? <ActivityBrowser data={activity} filters={{kind:'',status:'',topic:'',range:'',q:'',sort:'newest',date:'',from:'',to:'',page:1}} topics={[]} today="2026-10-19"/> : await Home();
         const resolved=await resolve(page);
         createRoot(document.getElementById('root')).render(<FeedbackWidget userId="student"><header className="h-16 border-b px-4 py-5">Claro<FeedbackTrigger/></header><main className="mx-auto max-w-[1280px] px-4 py-6 md:px-6"><div className="pb-0 lg:pb-12">{resolved}</div></main></FeedbackWidget>);`,
-      resolveDir: process.cwd(),
-      loader: "tsx",
-    },
-    bundle: true,
-    write: false,
-    platform: "browser",
-    format: "esm",
-    jsx: "automatic",
-    define: { "process.env.NODE_ENV": '"test"' },
-    plugins: [
+    [
       {
         name: "synthetic-pages",
         setup(builder) {
@@ -117,8 +99,7 @@ test.beforeAll(async () => {
         },
       },
     ],
-  });
-  bundle = result.outputFiles[0].text;
+  );
 });
 
 test.beforeEach(async ({ page }) => {

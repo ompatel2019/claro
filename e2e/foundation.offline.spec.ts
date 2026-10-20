@@ -1,57 +1,38 @@
+import { offlineCss, offlineBundle } from "./offline-harness";
 import { expect, test } from "@playwright/test";
-import { build } from "esbuild";
-import postcss from "postcss";
-import tailwind from "@tailwindcss/postcss";
 import { readFile } from "node:fs/promises";
 let bundle: string, css: string;
 test.beforeAll(async () => {
-  css = (
-    await postcss([tailwind()]).process(
-      await readFile("src/app/globals.css", "utf8"),
-      { from: "src/app/globals.css" },
-    )
-  ).css;
-  bundle = (
-    await build({
-      stdin: {
-        contents: `import React from 'react';import {createRoot} from 'react-dom/client';import {AppShell} from './src/components/app-shell';import {Kit} from './src/components/claro/kit';import {Toaster} from 'sonner';createRoot(document.getElementById('root')).render(<AppShell kind={location.search.includes('admin')?'admin':'student'} name="Claro Test Student" defaultOpen={true}><Kit/><Toaster/></AppShell>);`,
-        resolveDir: process.cwd(),
-        loader: "tsx",
-      },
-      bundle: true,
-      write: false,
-      platform: "browser",
-      format: "esm",
-      jsx: "automatic",
-      define: { "process.env.NODE_ENV": '"test"' },
-      plugins: [
-        {
-          name: "offline-shell",
-          setup(builder) {
-            builder.onResolve(
-              {
-                filter:
-                  /^(next\/(link|navigation)|@\/app\/\(auth\)\/actions|@\/components\/feedback-widget)$/,
-              },
-              ({ path }) => ({ path, namespace: "mock" }),
-            );
-            builder.onLoad({ filter: /.*/, namespace: "mock" }, ({ path }) => ({
-              contents:
-                path === "next/link"
-                  ? `import React from 'react';export default function Link({href,prefetch,...props}){return <a href={href} {...props}/>}`
-                  : path === "next/navigation"
-                    ? `export const usePathname=()=>location.pathname;export const useRouter=()=>({push:url=>{history.pushState({},'',url);window.dispatchEvent(new Event('navigated'));}});`
-                    : path.includes("actions")
-                      ? `export const signOut=()=>{};`
-                      : `export const useFeedback=()=>()=>{};`,
-              loader: "tsx",
-              resolveDir: process.cwd(),
-            }));
-          },
+  css = await offlineCss();
+  bundle = await offlineBundle(
+    `import React from 'react';import {createRoot} from 'react-dom/client';import {AppShell} from './src/components/app-shell';import {Kit} from './src/components/claro/kit';import {Toaster} from 'sonner';createRoot(document.getElementById('root')).render(<AppShell kind={location.search.includes('admin')?'admin':'student'} name="Claro Test Student" defaultOpen={true}><Kit/><Toaster/></AppShell>);`,
+    [
+      {
+        name: "offline-shell",
+        setup(builder) {
+          builder.onResolve(
+            {
+              filter:
+                /^(next\/(link|navigation)|@\/app\/\(auth\)\/actions|@\/components\/feedback-widget)$/,
+            },
+            ({ path }) => ({ path, namespace: "mock" }),
+          );
+          builder.onLoad({ filter: /.*/, namespace: "mock" }, ({ path }) => ({
+            contents:
+              path === "next/link"
+                ? `import React from 'react';export default function Link({href,prefetch,...props}){return <a href={href} {...props}/>}`
+                : path === "next/navigation"
+                  ? `export const usePathname=()=>location.pathname;export const useRouter=()=>({push:url=>{history.pushState({},'',url);window.dispatchEvent(new Event('navigated'));}});`
+                  : path.includes("actions")
+                    ? `export const signOut=()=>{};`
+                    : `export const useFeedback=()=>()=>{};`,
+            loader: "tsx",
+            resolveDir: process.cwd(),
+          }));
         },
-      ],
-    })
-  ).outputFiles[0].text;
+      },
+    ],
+  );
 });
 test.beforeEach(async ({ page }) => {
   await page.route("**/*", async (route) => {
