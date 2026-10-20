@@ -10,15 +10,7 @@ export function ago(iso: string, now = new Date()) {
   return dateLabel(iso);
 }
 
-/** Sydney calendar day of an instant, "YYYY-MM-DD". */
-export function sydneyDay(iso: string | Date) {
-  return new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Australia/Sydney",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).format(typeof iso === "string" ? new Date(iso) : iso);
-}
+export { sydneyDay } from "./sydney-day";
 
 export type Sorting = { id: string; dir: "asc" | "desc" };
 export type Pager = {
