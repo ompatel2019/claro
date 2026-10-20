@@ -6,6 +6,8 @@ import {
 } from "@/lib/flashcard-progress";
 import { matchFlashcardAnswer } from "@/lib/flashcards";
 import { markFlashcard } from "@/lib/marking/engine";
+import { BUDGET_USD } from "@/lib/ai/prices";
+import { openRouterSpend } from "@/lib/ai/spend";
 import {
   assertStudentAiRateLimit,
   withAiUsageReservation,
@@ -111,13 +113,21 @@ export async function POST(
     if (!result) {
       const limited = await assertStudentAiRateLimit({ userId: user.id });
       if (!limited.ok) return rateLimitedResponse(limited);
-      result = await withAiUsageReservation(limited, () =>
-        markFlashcard(
+      const marked = await withAiUsageReservation(limited, async () => {
+        // Same budget scope as the model call guard in src/lib/ai/openai.ts; throws (500) if spend can't be read.
+        if ((await openRouterSpend(db)) >= BUDGET_USD)
+          return Response.json(
+            { error: "Marking is paused right now. Rate yourself instead." },
+            { status: 503 },
+          );
+        return markFlashcard(
           { ...card, kind: card.kind as "term" | "stat" },
           answer,
           user.id,
-        ),
-      );
+        );
+      });
+      if (marked instanceof Response) return marked;
+      result = marked;
     }
     const { data: review } = await db
       .from("flashcard_reviews")
