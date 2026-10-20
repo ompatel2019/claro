@@ -105,7 +105,7 @@ Light up today (due flashcards when available, otherwise Topic Sprint). Existing
 Coverage includes `src/app/(app)/student/quick-start.test.tsx`, `src/lib/home.test.ts`,
 `e2e/pages.offline.spec.ts` and `e2e/student-home.spec.ts`.
 
-Brand: `public/logos/` holds the marketing-site lockup and mark SVGs (white variants
+Brand: `public/logos/` holds the marketing-site lockup SVGs and tile (white variants
 in dark theme via `src/components/logo.tsx`); the lockup is used in the sidebar,
 mobile header, auth pages and marking screen. Logo pairs the lockup with
 `claro-tile.svg`; the collapsed sidebar uses the tile alone.

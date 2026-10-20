@@ -2,11 +2,11 @@
 import { Fragment, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { Alert, CheckCircle, Clock, PortalIcon } from "./icons";
+import { PortalIcon } from "./icons";
 import { type TableSorting } from "./data-table";
 import { Meter } from "./claro/data-display";
 import { buttonVariants } from "./ui/button";
-import { dateLabel, scoreTone } from "@/lib/practice";
+import { dateLabel } from "@/lib/practice";
 import {
   practiseHref,
   verbRows,
@@ -35,42 +35,6 @@ function useTableSort(key: string, columns: string[]) {
       });
     },
   };
-}
-
-export function ProgressScore({
-  pct,
-  bar = false,
-}: {
-  pct: number | null;
-  bar?: boolean;
-}) {
-  if (pct === null)
-    return <span className="text-muted-foreground text-xs">No marks yet</span>;
-  const tone = scoreTone(pct);
-  const Icon =
-    tone === "success" ? CheckCircle : tone === "warning" ? Clock : Alert;
-  const word =
-    tone === "success"
-      ? "Strong"
-      : tone === "warning"
-        ? "Building"
-        : "Needs practice";
-  return (
-    <div className="flex items-center gap-3">
-      {bar && (
-        <Meter
-          value={pct}
-          label={`${Math.round(pct)}% average`}
-          tone={pct < 50 ? "brand" : "default"}
-          className="min-w-20 flex-1"
-        />
-      )}
-      <span className="inline-flex shrink-0 items-center gap-1 text-[13px] font-semibold tabular-nums">
-        <Icon aria-hidden className="sr-only" />
-        {Math.round(pct)}%<span className="sr-only"> · {word}</span>
-      </span>
-    </div>
-  );
 }
 
 export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {

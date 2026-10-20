@@ -1,4 +1,7 @@
 "use server";
+
+import { isAnswerImageKey } from "@/lib/answer-image-key";
+
 import { z } from "zod";
 import {
   MARK_MY_ANSWER_DAILY_LIMIT,
@@ -135,7 +138,7 @@ async function finish(sessionId: string) {
     !answer ||
     !answerValid(answer, true) ||
     (answer.image_paths?.length ?? 0) > LONG_PHOTO_PAGE_LIMIT ||
-    answer.image_paths?.some((path: string) => !path.startsWith(`${user.id}/`))
+    answer.image_paths?.some((path: string) => !isAnswerImageKey(path, user.id))
   )
     throw new Error(
       "Add your answer and confirm any photo transcript before submitting.",
