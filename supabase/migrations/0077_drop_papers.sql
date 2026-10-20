@@ -11,7 +11,7 @@
 --    student_progress and session reads are byte-identical.
 --  * New 'paper' sessions were only possible with a paper_id; a restrictive policy keeps
 --    students from inserting them once the column and its check constraint go.
---  * The Papers RPCs (also dropped by 0071) are dropped here too, so this file never
+--  * The Papers RPCs (also dropped by 0078) are dropped here too, so this file never
 --    leaves functions pointing at removed tables, whichever order the two are applied.
 -- Exact names, no CASCADE. Live definitions otherwise verbatim (activity_stats includes E7).
 create table if not exists public.legacy_paper_sessions (
