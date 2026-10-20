@@ -1,9 +1,11 @@
 -- Requires Om/master sign-off before production application.
 -- KILL_LIST E6: remove the Papers schema (feature already removed from the app; RPCs in E1).
--- Behaviour is unchanged:
---  * sprint_questions excluded questions in LIVE papers only. Prod has one DRAFT paper
---    (23 questions, all also live bank questions that sprints already include), so the
---    exclusion set is empty; the guard below aborts if any live paper exists at apply time.
+-- Behaviour (Om, 20 Oct 2026 11:11): the one DRAFT paper's questions leave the sprint pool.
+--  * sprint_questions excluded questions in LIVE papers only, so the draft paper's 23 live
+--    bank questions were in sprints. They are now set to status 'draft' (unpublished; rows,
+--    attempts and history kept; students see them exactly like other non-live questions),
+--    and the draft paper is removed with the Papers tables. Prod live pool: 861 -> 838.
+--    The guard below aborts if any live paper exists at apply time.
 --  * question_import_review's 'paper' filter likewise reduces to: yes = none, no = all.
 --  * Legacy paper sessions keep their paper_id and the paper title their owner could see
 --    (papers RLS: live, listed draft preview, or admin) in legacy_paper_sessions, readable
@@ -32,6 +34,11 @@ begin
   if exists (select 1 from public.papers where status = 'live') then
     raise exception 'A live paper exists; removing Papers would change sprint selection';
   end if;
+  -- Unpublish the draft papers' questions (Om's decision); never hard-delete question rows.
+  update public.questions q set status = 'draft', updated_at = now()
+  where q.status = 'live' and exists (
+    select 1 from public.paper_questions pq join public.papers p on p.id = pq.paper_id
+    where pq.question_id = q.id and p.status = 'draft');
   insert into public.legacy_paper_sessions (session_id, paper_id, title)
   select s.id, s.paper_id,
     case when p.status = 'live'
