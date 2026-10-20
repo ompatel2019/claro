@@ -8,7 +8,6 @@ import {
   type ActivityData,
   type SearchParams,
 } from "@/lib/activity-filters";
-import { studentActivity } from "@/lib/activity-data";
 import {
   sessionLabels,
   sessionTitle,
@@ -40,19 +39,26 @@ export default async function Activity({
   ]);
   if (total.error || topics.error || total.count === null)
     throw new Error("Couldn't load your activity.");
-  const data = await studentActivity(
-    filters,
-    async (page) => {
-      const result = await db.rpc("activity_stats", {
-        p_filters: { ...filters, page },
-        p_labels: sessionLabels,
-      });
-      if (result.error || !result.data)
-        throw new Error("Couldn't load your activity.");
-      return result.data as ActivityData;
-    },
-    total.count,
-  );
+  const result = await db.rpc("activity_stats", {
+    p_filters: filters,
+    p_labels: sessionLabels,
+  });
+  if (result.error || !result.data)
+    throw new Error("Couldn't load your activity.");
+  const { score_values: scores, ...activity } = result.data as ActivityData & {
+    score_values?: number[];
+  };
+  const data = { ...activity, all_total: total.count };
+  if (scores) {
+    // Match the old adapter's JS arithmetic, including raw JSON numeric strings.
+    data.stats = {
+      ...data.stats,
+      average: scores.length
+        ? scores.reduce((n, pct) => n + pct, 0) / scores.length
+        : null,
+      best: scores.length ? Math.max(...scores) : null,
+    };
+  }
   const sessions = await db
     .from("sessions")
     .select(

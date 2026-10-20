@@ -1,3 +1,4 @@
+import { isAnswerImageKey } from "@/lib/answer-image-key";
 import { z } from "zod";
 import { studentMarking } from "@/lib/feedback";
 import { readMcqExplanation } from "@/lib/mcq-explanation";
@@ -232,7 +233,10 @@ export async function PATCH(
   const parsed = sprintAnswerPatch.safeParse(
     await request.json().catch(() => null),
   );
-  if (!parsed.success)
+  if (
+    !parsed.success ||
+    parsed.data.image_paths?.some((path) => !isAnswerImageKey(path, user.id))
+  )
     return Response.json({ error: "Invalid answer" }, { status: 400 });
   for (let retry = 0; retry < 3; retry++) {
     const { data: row, error } = await admin()

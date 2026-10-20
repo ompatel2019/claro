@@ -1,3 +1,4 @@
+import { assertTargetVerified } from "./guard";
 import { expect, test } from "@playwright/test";
 import { signIn } from "./helpers";
 
@@ -22,6 +23,7 @@ test.describe("Homework is removed", () => {
     ).toMatch(/claroSans/);
   });
   test("admin homework routes 404", async ({ page }) => {
+    assertTargetVerified();
     await page.goto("/sign-in");
     await page.getByLabel("Email").fill(process.env.ADMIN_EMAIL!);
     await page.getByLabel("Password").fill(process.env.ADMIN_PASSWORD!);

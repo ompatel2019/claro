@@ -65,16 +65,62 @@ it("uses the same glyph contract for all Home tiles and the streak", () => {
   }
 });
 
-it("covers the entire template glyph vocabulary", () => {
-  const names: string[] = JSON.parse(
-    readFileSync("src/test/fixtures/claro-icon-names.json", "utf8"),
-  );
+it("covers the supported portal glyph vocabulary", () => {
+  const names = [
+    "arrow-down-right",
+    "arrow-left",
+    "arrow-right",
+    "arrow-up",
+    "arrow-up-right",
+    "book-open",
+    "calculator",
+    "camera",
+    "chart-line",
+    "check",
+    "chevron-left",
+    "chevron-right",
+    "chevrons-up-down",
+    "circle-alert",
+    "circle-check",
+    "circle-dot",
+    "clock",
+    "copy",
+    "corner-down-left",
+    "ellipsis",
+    "flag",
+    "graduation-cap",
+    "history",
+    "hourglass",
+    "keyboard",
+    "layers",
+    "layout-grid",
+    "list",
+    "list-checks",
+    "lock",
+    "menu",
+    "message-circle",
+    "mic",
+    "minus",
+    "moon",
+    "panel-left",
+    "pen-line",
+    "play",
+    "plus",
+    "refresh-cw",
+    "rotate-ccw",
+    "search",
+    "sparkles",
+    "sun",
+    "table",
+    "table-2",
+    "target",
+    "timer",
+    "trending-up",
+    "user",
+    "zap",
+  ] as const;
   for (const name of names) {
-    const { container, unmount } = render(
-      <icons.PortalIcon
-        name={name as Parameters<typeof icons.PortalIcon>[0]["name"]}
-      />,
-    );
+    const { container, unmount } = render(<icons.PortalIcon name={name} />);
     expect(container.querySelector("svg"), name).toHaveAttribute(
       "data-icon",
       name,

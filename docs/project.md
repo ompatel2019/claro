@@ -43,8 +43,8 @@ with "field name must not be null" when history includes a non-live question.
 
 ## Brand
 
-Real Claro lockup/mark SVGs live in `public/logos/` (white variants in dark theme);
-the sidebar/header still use these lockup/mark SVGs. The tab/app icons
+Real Claro lockup SVGs and tile live in `public/logos/` (white variants in dark theme);
+the sidebar/header still use these lockup SVGs and tile. The tab/app icons
 (`src/app/icon.svg`, `src/app/favicon.ico`, `src/app/apple-icon.png`) are the Claro
 marketing-site icon copied byte for byte (full-bleed #e86239 tile, white C and dot);
 `scripts/tab-icons.mjs` builds `favicon.ico` from it. The link preview is the student
