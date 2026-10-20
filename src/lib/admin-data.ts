@@ -302,14 +302,11 @@ const point = z.object({ day: z.string(), value: z.number() });
 const dashboardSchema = z.object({
   students: z.number(),
   active: z.object({ now: z.number(), prev: z.number() }),
-  sessionsWeek: z.number(),
   openReviews: z.object({
     count: z.number(),
     oldestDays: z.number().nullable(),
   }),
   spend: z.object({ month: z.number(), all: z.number() }),
-  sessionsTotal: z.number(),
-  spendTotal: z.number(),
   sessionsPerDay: z.array(point),
   spendPerDay: z.array(point),
   attention: z.object({

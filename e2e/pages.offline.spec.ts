@@ -105,7 +105,7 @@ test.beforeAll(async () => {
                                     : path === "@/components/welcome-dialog"
                                       ? `export const WelcomeDialog=()=>null;`
                                       : path === "@/lib/admin-data"
-                                        ? `export const loadDashboard=async()=>({students:1,active:{now:2,prev:1},sessionsWeek:3,openReviews:{count:1,oldestDays:2},spend:{all:81,month:10,cap:100},sessionsTotal:3,spendTotal:2,sessionsPerDay:[],spendPerDay:[],attention:{failed:0,newFeedback:2,contentReports:1,importReview:0,agreement:90},latest:Array.from({length:10},(_,i)=>({id:'s'+i,user_id:'u',name:'Student '+i,kind:'single',mode:null,score:2,max:2,finished_at:'2026-10-19T00:00:00Z'}))});`
+                                        ? `export const loadDashboard=async()=>({students:1,active:{now:2,prev:1},openReviews:{count:1,oldestDays:2},spend:{all:81,month:10,cap:100},sessionsPerDay:[],spendPerDay:[],attention:{failed:0,newFeedback:2,contentReports:1,importReview:0,agreement:90},latest:Array.from({length:10},(_,i)=>({id:'s'+i,user_id:'u',name:'Student '+i,kind:'single',mode:null,score:2,max:2,finished_at:'2026-10-19T00:00:00Z'}))});`
                                         : path === "@/utils/supabase/client"
                                           ? `export const createClient=()=>({});`
                                           : path === "@/utils/supabase/server"

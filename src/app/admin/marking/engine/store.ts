@@ -70,10 +70,6 @@ export async function writeJson(path: string, value: unknown, upsert = true) {
   );
   if (error) throw new Error(error.message);
 }
-export async function remove(path: string) {
-  const { error } = await mutate(bucket().remove([path]));
-  if (error) throw new Error(error.message);
-}
 export const LEASE_MS = 10 * 60_000;
 export type Lease = { owner: string; expiresAt: string };
 export const leaseActive = (lease: Lease | null) =>

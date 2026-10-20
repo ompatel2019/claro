@@ -133,7 +133,6 @@ it("aggregates model tokens, task groups and daily model stacks; averages only w
     "month",
     now,
   );
-  expect(result.markedWritten).toBe(3);
   expect(result.byModel).toEqual([
     {
       model: "Model A",
@@ -244,15 +243,15 @@ it("includes lower boundaries and excludes the midnight after a custom end day",
     { month: 0, all: 0 },
     rows,
     [
-      attempt({ marked_at: "2026-10-03T14:00:00Z" }),
-      attempt({ marked_at: "2026-10-04T13:00:00Z" }),
+      attempt({ marked_at: "2026-10-03T14:00:00Z", max_marks: 2 }),
+      attempt({ marked_at: "2026-10-04T13:00:00Z", max_marks: 2 }),
     ],
     students,
     { from: "2026-10-04", to: "2026-10-04" },
     now,
   );
   expect(result.byModel[0].usd).toBe(5);
-  expect(result.markedWritten).toBe(1);
+  expect(result.byMarkValue[0].answers).toBe(1);
 });
 it("uses exactly 30 Sydney days for students and includes the rolling hour boundary", () => {
   const rows = [
@@ -298,9 +297,14 @@ it("normalises real engine and eval names before grouping and averaging", () => 
     { month: 0, all: 0 },
     rows,
     [
-      attempt(),
-      attempt({ note: "No answer" }),
-      attempt({ question_id: null, question: null, note: "No answer" }),
+      attempt({ max_marks: 2 }),
+      attempt({ max_marks: 2, note: "No answer" }),
+      attempt({
+        max_marks: 2,
+        question_id: null,
+        question: null,
+        note: "No answer",
+      }),
     ],
     students,
     "month",
@@ -325,16 +329,16 @@ it("normalises real engine and eval names before grouping and averaging", () => 
     usd: 4,
     avgPerCall: 1,
   });
-  expect(result.markedWritten).toBe(1);
+  expect(result.byMarkValue[0].answers).toBe(1);
   expect(
     computeSpend(
       { month: 0, all: 0 },
       [],
-      [attempt({ note: "No answer" })],
+      [attempt({ max_marks: 2, note: "No answer" })],
       students,
       "month",
       now,
-    ).markedWritten,
+    ).byMarkValue[0].answers,
   ).toBe(0);
 });
 it("accepts sane custom boundaries including today in Sydney", () => {
