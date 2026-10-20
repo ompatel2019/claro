@@ -18,10 +18,7 @@ afterEach(() => {
   push.mockClear();
 });
 it("preserves every template light and dark token, except font families", () => {
-  const template = readFileSync(
-    "design/claro-portal-template.html",
-    "utf8",
-  ).match(/<style id="claro-tokens">([\s\S]*?)<\/style>/)![1];
+  const template = readFileSync("src/test/fixtures/claro-tokens.css", "utf8");
   const css = readFileSync("src/app/globals.css", "utf8");
   for (const selector of [":root", ".dark"]) {
     const block = (text: string) =>

@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { beforeEach, expect, it, vi } from "vitest";
+vi.mock("server-only", () => ({}));
 const mocks = vi.hoisted(() => ({
   user: vi.fn(),
   ownAttempt: vi.fn(),
@@ -40,7 +41,8 @@ vi.mock("@/lib/single-check-marking", () => ({
   markOwnCheck: vi.fn(),
   markBankCheck: vi.fn(),
 }));
-vi.mock("@/lib/ai/rate-limit", () => ({
+vi.mock("@/lib/ai/rate-limit", async (original) => ({
+  ...(await original<typeof import("@/lib/ai/rate-limit")>()),
   assertStudentAiRateLimit: mocks.rate,
   rateLimitedResponse: vi.fn(),
 }));
@@ -315,4 +317,33 @@ it("rejects a save when Finish wins after the editable snapshot was read", async
     error: "This answer is no longer editable",
   });
   expect(mocks.rpc).toHaveBeenCalledTimes(1);
+});
+
+it.each([
+  "../victim/photo.png",
+  "%2e%2e/photo.png",
+  "..\\victim\\photo.png",
+  "/photo.png",
+])(
+  "rejects unsafe saved image key %s before privileged access",
+  async (suffix) => {
+    expect((await patchAnswer({ image_paths: [`u/${suffix}`] })).status).toBe(
+      400,
+    );
+    expect(mocks.adminFrom).not.toHaveBeenCalled();
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  },
+);
+
+it("saves photos in the uploader's canonical format", async () => {
+  const load = saveQuery(savedAttempt);
+  const save = saveQuery([{ id: "a" }]);
+  mocks.adminFrom.mockReturnValueOnce(load).mockReturnValueOnce(save);
+  const image_paths = [
+    "u/75f2a40b-3e20-4a56-9e14-1b237cfc8396-1729000000000-0.jpg",
+  ];
+  expect((await patchAnswer({ image_paths })).status).toBe(200);
+  expect(save.update).toHaveBeenCalledWith(
+    expect.objectContaining({ image_paths }),
+  );
 });

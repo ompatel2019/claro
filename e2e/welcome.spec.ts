@@ -1,3 +1,4 @@
+import { assertTargetVerified } from "./guard";
 import { test, expect, type Page } from "@playwright/test";
 import { adminClient, signInAdmin } from "./helpers";
 
@@ -28,6 +29,7 @@ test.describe("First sign-in welcome", () => {
   });
 
   async function login(page: Page) {
+    assertTargetVerified();
     await page.goto("/sign-in");
     await expect(async () => {
       if (new URL(page.url()).pathname === "/student") return;

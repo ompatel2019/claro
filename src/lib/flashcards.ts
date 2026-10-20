@@ -66,16 +66,7 @@ export function nextQueue(
   if (repeatMissed && mark < 1 && attempts < 3) next.push(cardId);
   return next;
 }
-export function sydneyToday(date = new Date()) {
-  const parts = new Intl.DateTimeFormat("en-AU", {
-    timeZone: "Australia/Sydney",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(date);
-  const part = (type: string) => parts.find((p) => p.type === type)!.value;
-  return `${part("year")}-${part("month")}-${part("day")}`;
-}
+export { sydneyToday } from "./sydney-day";
 export function firstReviews(reviews: readonly FlashcardReview[]) {
   const first = new Map<string, FlashcardReview>();
   for (const review of reviews)

@@ -1,8 +1,10 @@
+import { assertTargetVerified } from "./guard";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 
 async function signInAdmin(page: Page) {
+  assertTargetVerified();
   await page.goto("/sign-in");
   await expect(page.getByLabel("Email")).toBeVisible({ timeout: 60000 });
   await page.getByLabel("Email").fill(process.env.ADMIN_EMAIL!);
@@ -130,7 +132,7 @@ test.describe("admin marking engine", () => {
       // Independently derive expected metrics from the shipped human-marked run.
       const run = JSON.parse(
         await readFile(
-          join(process.cwd(), "src/lib/ai/eval/results/2026-10-09-1415.json"),
+          join(process.cwd(), "data/eval/results/2026-10-09-1415.json"),
           "utf8",
         ),
       ) as {

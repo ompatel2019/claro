@@ -9,7 +9,7 @@ export default async function FocusLayout({
 }) {
   const profile = await requireProfile();
   return (
-    <FeedbackWidget userId={profile.id} floating={false}>
+    <FeedbackWidget userId={profile.id}>
       <FlashcardPersistDrain />
       {children}
       <Toaster position="top-center" />

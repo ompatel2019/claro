@@ -193,35 +193,21 @@ export async function bulkQuestions(
         duplicate_of: row.duplicate_of,
       });
   };
-  if (action.kind === "topic" || action.kind === "verb") {
+  if (
+    action.kind === "topic" ||
+    action.kind === "verb" ||
+    action.kind === "retire"
+  ) {
     const patch =
       action.kind === "topic"
         ? { topic_id: z.string().min(1).parse(action.topic_id) }
-        : { verb: action.verb };
+        : action.kind === "verb"
+          ? { verb: action.verb }
+          : { status: "retired" };
     for (const row of previous ?? []) {
       const { data } = await db
         .from("questions")
         .update({ ...patch, updated_at: now })
-        .eq("id", row.id)
-        .eq("updated_at", row.updated_at)
-        .select("id")
-        .throwOnError();
-      if (data?.length) remember(row.id);
-      else
-        failures.push({
-          id: row.id,
-          problem: "Changed by another admin. Reload and try again.",
-        });
-    }
-    revalidatePath(LIST);
-    updateTag(QUESTION_IMPORT_REVIEW_TAG);
-    return { done: undo.length, failures, undo };
-  }
-  if (action.kind === "retire") {
-    for (const row of previous ?? []) {
-      const { data } = await db
-        .from("questions")
-        .update({ status: "retired", updated_at: now })
         .eq("id", row.id)
         .eq("updated_at", row.updated_at)
         .select("id")

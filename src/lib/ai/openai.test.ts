@@ -11,6 +11,8 @@ const mocks = vi.hoisted(() => ({
   serverEnv: vi.fn(),
   spend: vi.fn(),
   insert: vi.fn(),
+  rpc: vi.fn(),
+  release: vi.fn(),
   unlogged: vi.fn(),
 }));
 
@@ -39,7 +41,11 @@ vi.mock("./spend", async (original) => ({
 }));
 vi.mock("@/utils/supabase/admin", () => ({
   admin: () => ({
-    from: () => ({ insert: mocks.insert }),
+    rpc: mocks.rpc,
+    from: () => ({
+      insert: mocks.insert,
+      delete: () => ({ eq: mocks.release }),
+    }),
   }),
 }));
 
@@ -59,6 +65,8 @@ beforeEach(() => {
   mocks.unlogged.mockResolvedValue(0);
   mocks.spend.mockResolvedValue(0);
   mocks.insert.mockResolvedValue({ error: null });
+  mocks.rpc.mockResolvedValue({ error: null });
+  mocks.release.mockResolvedValue({ error: null });
   mocks.openrouterCreate.mockResolvedValue(response);
   mocks.openaiCreate.mockResolvedValue({
     ...response,
@@ -388,3 +396,106 @@ it("routes the cheapest autofill model through OpenRouter and logs its cost", as
     }),
   );
 });
+
+it("atomically replaces pending reservations with unchanged completed usage", async () => {
+  const { callJson } = await import("./openai");
+  const { withAiUsageReservation } = await import("./rate-limit");
+  const { withAttemptUsage } = await import("./usage-context");
+  await withAttemptUsage("attempt", () =>
+    withAiUsageReservation({ ok: true, reservationId: "student-slot" }, () =>
+      withAiUsageReservation({ ok: true, reservationId: "daily-slot" }, () =>
+        callJson({
+          task: "own-question-autofill",
+          model: MODELS.ownQuestionAutofill,
+          schema,
+          messages,
+          userId: "student",
+        }),
+      ),
+    ),
+  );
+  expect(mocks.rpc).toHaveBeenCalledExactlyOnceWith(
+    "record_reserved_ai_usage",
+    {
+      p_reservations: ["student-slot", "daily-slot"],
+      p_usage: {
+        user_id: "student",
+        attempt_id: "attempt",
+        task: "own-question-autofill",
+        model: MODELS.ownQuestionAutofill,
+        input_tokens: 1000,
+        cached_tokens: 0,
+        output_tokens: 100,
+        usd: expect.any(Number),
+      },
+    },
+  );
+  expect(mocks.insert).not.toHaveBeenCalled();
+  expect(mocks.release).toHaveBeenCalledTimes(2);
+});
+
+it("still accounts for invalid paid output before releasing reservations", async () => {
+  const { callJson } = await import("./openai");
+  const { withAiUsageReservation } = await import("./rate-limit");
+  mocks.openaiCreate.mockResolvedValue({
+    ...response,
+    choices: [{ message: { content: "{}" } }],
+  });
+  await expect(
+    withAiUsageReservation({ ok: true, reservationId: "slot" }, () =>
+      callJson({
+        task: "mark_flashcard",
+        model: MODELS.cheap,
+        schema,
+        messages,
+        userId: "student",
+      }),
+    ),
+  ).rejects.toBeInstanceOf(ZodError);
+  expect(mocks.rpc).toHaveBeenCalledTimes(1);
+  expect(mocks.release).toHaveBeenCalledTimes(1);
+});
+
+it.each([true, false])(
+  "checks a deferred Finish allowance before the provider (allowed=%s)",
+  async (allowed) => {
+    const { callJson } = await import("./openai");
+    const { aiUsageReservationIds, withDeferredAiUsageReservation } =
+      await import("./rate-limit");
+    const reserve = vi.fn(async () =>
+      allowed
+        ? { ok: true as const, reservationId: "finish-slot" }
+        : { ok: false as const, error: "Slow down", retryAfterSec: 60 },
+    );
+    const validate = vi.fn(async () => {});
+    mocks.openaiCreate.mockImplementationOnce(async () => {
+      expect(aiUsageReservationIds()).toEqual(["finish-slot"]);
+      expect(validate).toHaveBeenCalledTimes(1);
+      return response;
+    });
+    const work = withDeferredAiUsageReservation(reserve, validate, async () => {
+      expect(reserve).not.toHaveBeenCalled();
+      return callJson({
+        task: "session-summary",
+        model: MODELS.cheap,
+        schema,
+        messages,
+        userId: "student",
+      });
+    });
+    if (allowed) {
+      await expect(work).resolves.toEqual({ answer: "Answer" });
+      expect(mocks.rpc).toHaveBeenCalledWith(
+        "record_reserved_ai_usage",
+        expect.objectContaining({ p_reservations: ["finish-slot"] }),
+      );
+      expect(mocks.release).toHaveBeenCalledWith("id", "finish-slot");
+    } else {
+      await expect(work).rejects.toThrow("Slow down");
+      expect(mocks.openaiCreate).not.toHaveBeenCalled();
+      expect(mocks.openrouterCreate).not.toHaveBeenCalled();
+      expect(mocks.rpc).not.toHaveBeenCalled();
+    }
+    expect(reserve).toHaveBeenCalledTimes(1);
+  },
+);

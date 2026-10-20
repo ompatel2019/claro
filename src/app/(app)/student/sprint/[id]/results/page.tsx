@@ -12,7 +12,6 @@ import {
   delta,
   kpis,
   markingInFlight,
-  nextActions,
   pct,
   sprintHref,
   timeMeta,
@@ -142,7 +141,6 @@ export default async function Results({
   const timeAvg = avg(past.data.map((p) => p.elapsed_s));
   const elapsed = s.elapsed_s ?? 0;
   const minutes = (n: number | null) => (n == null ? null : n / 60);
-  const actions = nextActions(rows, s.config.mode, topics, cards);
   const places = s.config.subtopics?.length
     ? s.config.subtopics
     : s.config.topics;
@@ -233,8 +231,6 @@ export default async function Results({
       <OverallFeedback
         summary={s.summary}
         pending={progress.summaryPending}
-        actions={actions}
-        rows={rows}
         nextStep={
           <ResultsNextStep
             rows={rows}

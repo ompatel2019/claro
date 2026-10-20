@@ -3,9 +3,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
+import { questionUndoCallback } from "./admin-question-undo";
 import {
   bulkQuestions,
-  undoQuestionChanges,
   type BulkAction,
 } from "@/app/admin/content/questions/actions";
 import { DataTable, type Column } from "@/components/data-table";
@@ -165,15 +165,9 @@ export function QuestionsTable({
             action: r.undo.length
               ? {
                   label: "Undo",
-                  onClick: () =>
-                    start(async () => {
-                      try {
-                        await undoQuestionChanges(r.undo);
-                        router.refresh();
-                      } catch {
-                        toast.error("Couldn't undo. Reload and try again.");
-                      }
-                    }),
+                  onClick: questionUndoCallback(r.undo, start, () =>
+                    router.refresh(),
+                  ),
                 }
               : undefined,
           });

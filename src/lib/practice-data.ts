@@ -36,20 +36,6 @@ export async function loadSprint(id: string) {
       ? rows.filter((a) => a.status === "marked" && a.question.type === "mcq")
       : [];
   const explanations: Record<string, string> = {};
-  if (checkedMcq.length) {
-    const { data: keys, error: keyError } = await admin()
-      .from("questions")
-      .select("id,explanation")
-      .in(
-        "id",
-        checkedMcq.map((a) => a.question_id),
-      );
-    if (keyError) throw new Error("Could not load your checked explanations.");
-    for (const a of checkedMcq) {
-      const key = keys?.find((q) => q.id === a.question_id);
-      if (key?.explanation) explanations[a.id] = key.explanation;
-    }
-  }
   const checked =
     !session.finished_at && session.config?.feedback === "each"
       ? rows.filter(
@@ -59,17 +45,25 @@ export async function loadSprint(id: string) {
             a.feedback?.note !== "No answer",
         )
       : [];
-  if (checked.length) {
-    // Model answers for written answers already checked (§3.3); students
-    // cannot select questions.sample_answer, so read it server-side.
+  if (checkedMcq.length || checked.length) {
+    // Read protected references once, then attach only each eligible field.
     const { data: refs, error: refError } = await admin()
       .from("questions")
-      .select("id, sample_answer")
+      .select("id,explanation,sample_answer")
       .in(
         "id",
-        checked.map((a) => a.question_id),
+        [...checkedMcq, ...checked].map((a) => a.question_id),
       );
-    if (refError) throw new Error("Could not load your questions.");
+    if (refError)
+      throw new Error(
+        checkedMcq.length
+          ? "Could not load your checked explanations."
+          : "Could not load your questions.",
+      );
+    for (const a of checkedMcq) {
+      const ref = refs?.find((q) => q.id === a.question_id);
+      if (ref?.explanation) explanations[a.id] = ref.explanation;
+    }
     const byId = new Map((refs ?? []).map((q) => [q.id, q.sample_answer]));
     for (const a of checked) a.sample_answer = byId.get(a.question_id) ?? null;
   }

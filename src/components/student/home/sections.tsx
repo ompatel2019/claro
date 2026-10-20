@@ -707,7 +707,7 @@ export async function HomeRecent({
       className="xl:min-h-[390px]"
     >
       {rows ? (
-        <SessionList home sessions={rows} topics={topics ?? []} />
+        <SessionList sessions={rows} topics={topics ?? []} />
       ) : (
         <TryAgain what="your recent sessions" />
       )}

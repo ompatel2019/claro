@@ -1,0 +1,54 @@
+Parsed test spec with 3 sessions
+
+starting permutation: begin_first begin_second reserve_first reserve_second commit_first commit_second check_capacity
+step begin_first: begin; set local role service_role;
+step begin_second: begin; set local role service_role;
+step reserve_first: select public.reserve_ai_sprint('d4000000-0000-4000-8000-000000000073',md5('d4-isolation-200')::uuid)->>'ok' as allowed;
+allowed
+-------
+true   
+(1 row)
+
+step reserve_second: select public.reserve_ai_sprint('d4000000-0000-4000-8000-000000000073',md5('d4-isolation-201')::uuid) as refused; <waiting ...>
+step commit_first: commit;
+step reserve_second: <... completed>
+refused                              
+-------------------------------------
+{"ok": false, "retryAfterSec": 86400}
+(1 row)
+
+step commit_second: commit;
+step check_capacity: 
+  do $$ begin
+    if (select count(*) from public.ai_usage_reservations where user_id='d4000000-0000-4000-8000-000000000073' and scope='sprint') <> 1
+      or (select count(*) from public.sessions where user_id='d4000000-0000-4000-8000-000000000073' and finished_at is not null) > 200
+    then raise exception 'Concurrent finishes exceeded daily capacity'; end if;
+  end $$;
+
+
+starting permutation: begin_first begin_second reserve_first reserve_second finish_first commit_first commit_second check_capacity
+step begin_first: begin; set local role service_role;
+step begin_second: begin; set local role service_role;
+step reserve_first: select public.reserve_ai_sprint('d4000000-0000-4000-8000-000000000073',md5('d4-isolation-200')::uuid)->>'ok' as allowed;
+allowed
+-------
+true   
+(1 row)
+
+step reserve_second: select public.reserve_ai_sprint('d4000000-0000-4000-8000-000000000073',md5('d4-isolation-201')::uuid) as refused; <waiting ...>
+step finish_first: update public.sessions set finished_at=now() where id=md5('d4-isolation-200')::uuid;
+step commit_first: commit;
+step reserve_second: <... completed>
+refused                              
+-------------------------------------
+{"ok": false, "retryAfterSec": 86400}
+(1 row)
+
+step commit_second: commit;
+step check_capacity: 
+  do $$ begin
+    if (select count(*) from public.ai_usage_reservations where user_id='d4000000-0000-4000-8000-000000000073' and scope='sprint') <> 1
+      or (select count(*) from public.sessions where user_id='d4000000-0000-4000-8000-000000000073' and finished_at is not null) > 200
+    then raise exception 'Concurrent finishes exceeded daily capacity'; end if;
+  end $$;
+

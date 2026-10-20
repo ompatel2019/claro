@@ -54,8 +54,6 @@ it("reads only the JSON results in the bundled folder", async () => {
     agreement: 1,
     exact: 0,
   });
-  expect(vi.mocked(readdir).mock.calls[0][0]).toMatch(
-    /src\/lib\/ai\/eval\/results$/,
-  );
+  expect(vi.mocked(readdir).mock.calls[0][0]).toMatch(/data\/eval\/results$/);
   expect(readFile).toHaveBeenCalledTimes(2);
 });

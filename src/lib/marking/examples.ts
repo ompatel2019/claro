@@ -9,7 +9,7 @@ export {
   pickQuotaExamples,
   type MarkedExample,
 } from "./example-selection";
-import { pickBandExamples, type MarkedExample } from "./example-selection";
+import type { MarkedExample } from "./example-selection";
 
 /** Eligible pool in stable id order; the grader view excludes split 'test' rows. */
 export async function examplePool(
@@ -25,11 +25,4 @@ export async function examplePool(
   const { data, error } = await query.order("id");
   if (error) throw new Error(`marking examples: ${error.message}`);
   return (data ?? []) as MarkedExample[];
-}
-
-export async function bandExamples(
-  q: MarkableQuestion,
-  excludedIds: readonly string[] = [],
-) {
-  return pickBandExamples(q.criteria, await examplePool(q, excludedIds));
 }

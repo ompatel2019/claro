@@ -9,6 +9,9 @@ vi.mock("@/utils/supabase/admin", () => {
 });
 vi.mock("@/lib/ai/rate-limit", () => ({
   assertStudentAiRateLimit: vi.fn(async () => ({ ok: true })),
+  withAiUsageReservation: vi.fn(
+    async (_r: unknown, work: () => Promise<unknown>) => work(),
+  ),
   rateLimitedResponse: () => Response.json({}, { status: 429 }),
 }));
 vi.mock("@/lib/marking/engine", () => ({ markFlashcard: vi.fn() }));
@@ -17,6 +20,7 @@ import { createClient } from "@/utils/supabase/server";
 import { admin } from "@/utils/supabase/admin";
 import { markFlashcard } from "@/lib/marking/engine";
 import { BUDGET_USD } from "@/lib/ai/prices";
+import { withAiUsageReservation } from "@/lib/ai/rate-limit";
 import { POST } from "./route";
 
 const ctx = { params: Promise.resolve({ id: "card" }) };
@@ -71,6 +75,24 @@ it("refuses AI marking at the total AI budget without calling the model", async 
   expect(await response.json()).toEqual({
     error: "Marking is paused right now. Rate yourself instead.",
   });
+  expect(markFlashcard).not.toHaveBeenCalled();
+  expect(admin().from).not.toHaveBeenCalled();
+});
+
+it("checks spend inside the usage reservation when over budget", async () => {
+  vi.mocked(admin().rpc).mockResolvedValue({
+    data: BUDGET_USD + 1,
+    error: null,
+  } as never);
+  vi.mocked(withAiUsageReservation).mockImplementationOnce(async (_r, work) => {
+    expect(admin().rpc).not.toHaveBeenCalled();
+    const result = await work();
+    expect(admin().rpc).toHaveBeenCalledWith("ai_spend");
+    return result;
+  });
+  const response = await POST(request("A different answer"), ctx);
+  expect(response.status).toBe(503);
+  expect(withAiUsageReservation).toHaveBeenCalledOnce();
   expect(markFlashcard).not.toHaveBeenCalled();
   expect(admin().from).not.toHaveBeenCalled();
 });

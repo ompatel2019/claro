@@ -1,8 +1,9 @@
-import { timer, modeLabel, topicNames } from "./practice";
+import { timer } from "./practice";
 
 import { HSC_EXAM, examDaysLeft } from "./hsc-exam";
 import { addDays } from "./activity";
 import { sydneyToday } from "./flashcards";
+import { weeklyScores } from "./progress";
 
 const SYDNEY = "Australia/Sydney";
 
@@ -58,23 +59,6 @@ export function continueTime(
   return `Started ${relative} ago`;
 }
 
-/** One session title for history and resume cards, using the shared mode/topic labels. */
-export function sessionTitle(
-  session: {
-    kind?: string;
-    config: { mode?: string; topics?: string[]; subtopics?: string[] };
-  },
-  topics: import("./practice").Topic[],
-) {
-  if (session.kind === "single") return "Mark my answer";
-  if (session.kind === "flashcards")
-    return `Flashcards · ${session.config.mode === "test" ? "Test" : "Study"}`;
-  const ids = session.config.subtopics?.length
-    ? session.config.subtopics
-    : session.config.topics;
-  return `${modeLabel(session.config.mode)} sprint · ${topicNames(ids, topics)}`;
-}
-
 // NSW Eastern division student dates. Week numbers follow Monday–Sunday school weeks.
 // Sources: https://education.nsw.gov.au/schooling/calendars/2026 and /2027 (19 Oct 2026).
 const TERMS: Record<string, [string, string][]> = {
@@ -107,20 +91,6 @@ export function schoolWeek(today: string) {
     ) + 1;
   return { term: index + 1, week: week(today), weeks: week(end) };
 }
-// Claro's own short lines, one per day.
-const QUOTES = [
-  "Habits beat cramming.",
-  "Show up first. Marks follow.",
-  "Small sessions, big results.",
-  "Practise now, relax in the exam.",
-  "Consistency is the cheat code.",
-  "Done today beats perfect tomorrow.",
-  "Every answer sharpens the next.",
-];
-export function dailyQuote(today: string) {
-  return QUOTES[Math.floor(Date.parse(today) / 86400000) % QUOTES.length];
-}
-
 /** Parent units only, in syllabus order; dot points must not duplicate totals. */
 export function homeUnits(topics: import("./progress").TopicProgress[]) {
   return topics
@@ -131,32 +101,9 @@ export function homeUnits(topics: import("./progress").TopicProgress[]) {
 /** Monday buckets, averaging the marked session scores supplied by the RPC.
  * Flashcard recall percentages are not marked-answer scores. Empty weeks are omitted. */
 export function homeWeeks(history: import("./progress").HistoryScore[]) {
-  const weeks = new Map<string, number[]>();
-  for (const s of history) {
-    if (
-      s.kind === "flashcards" ||
-      s.pct == null ||
-      !Number.isFinite(s.pct) ||
-      !Number.isFinite(Date.parse(s.finished_at))
-    )
-      continue;
-    const day = new Intl.DateTimeFormat("en-CA", {
-      timeZone: SYDNEY,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(new Date(s.finished_at));
-    const date = new Date(`${day}T00:00:00Z`);
-    date.setUTCDate(date.getUTCDate() - ((date.getUTCDay() + 6) % 7));
-    const monday = date.toISOString().slice(0, 10);
-    weeks.set(monday, [...(weeks.get(monday) ?? []), s.pct]);
-  }
-  return [...weeks]
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([day, scores]) => ({
-      day,
-      pct: scores.reduce((a, b) => a + b, 0) / scores.length,
-    }));
+  return weeklyScores(history.filter((s) => s.kind !== "flashcards")).map(
+    ({ day, value }) => ({ day, pct: value }),
+  );
 }
 
 /** Calendar-week comparison, never an invented comparison with an empty prior period. */

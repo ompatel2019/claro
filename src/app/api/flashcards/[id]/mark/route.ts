@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { flashcardRatingSchema } from "@/lib/flashcard-rating";
 import {
   updateFlashcardProgress,
   rescheduleFlashcardProgress,
@@ -8,22 +9,23 @@ import { markFlashcard } from "@/lib/marking/engine";
 import { BUDGET_USD } from "@/lib/ai/prices";
 import {
   assertStudentAiRateLimit,
+  withAiUsageReservation,
   rateLimitedResponse,
 } from "@/lib/ai/rate-limit";
 import { admin } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 
 export const maxDuration = 60;
-const Mark = z.union([z.literal(0), z.literal(0.5), z.literal(1)]);
+const rating = flashcardRatingSchema.shape;
 const Body = z.union([
   z.strictObject({
     answer: z.string().trim().min(1).max(1000),
-    answer_mode: z.enum(["typed", "spoken"]).default("typed"),
-    sessionId: z.uuid().nullable().optional(),
+    answer_mode: rating.answerMode.default("typed"),
+    sessionId: rating.sessionId.nullable().optional(),
   }),
   z.strictObject({
-    sessionId: z.uuid(),
-    override: z.strictObject({ reviewId: z.uuid(), mark: Mark }),
+    sessionId: rating.sessionId,
+    override: z.strictObject({ reviewId: z.uuid(), mark: rating.mark }),
   }),
 ]);
 
@@ -110,18 +112,22 @@ export async function POST(
     if (!result) {
       const limited = await assertStudentAiRateLimit({ userId: user.id });
       if (!limited.ok) return rateLimitedResponse(limited);
-      const { data: spent, error: spendError } = await db.rpc("ai_spend");
-      if (spendError) throw spendError;
-      if (Number(spent) >= BUDGET_USD)
-        return Response.json(
-          { error: "Marking is paused right now. Rate yourself instead." },
-          { status: 503 },
+      const marked = await withAiUsageReservation(limited, async () => {
+        const { data: spent, error: spendError } = await db.rpc("ai_spend");
+        if (spendError) throw spendError;
+        if (Number(spent) >= BUDGET_USD)
+          return Response.json(
+            { error: "Marking is paused right now. Rate yourself instead." },
+            { status: 503 },
+          );
+        return markFlashcard(
+          { ...card, kind: card.kind as "term" | "stat" },
+          answer,
+          user.id,
         );
-      result = await markFlashcard(
-        { ...card, kind: card.kind as "term" | "stat" },
-        answer,
-        user.id,
-      );
+      });
+      if (marked instanceof Response) return marked;
+      result = marked;
     }
     const { data: review } = await db
       .from("flashcard_reviews")

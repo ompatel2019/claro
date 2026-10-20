@@ -6,7 +6,7 @@ import type { OfflineEvalRun } from "../engine/summary";
 
 export async function loadEvalRuns() {
   // Included in this route's serverless bundle by next.config.ts.
-  const directory = path.join(process.cwd(), "src/lib/ai/eval/results");
+  const directory = path.join(process.cwd(), "data/eval/results");
   let files: string[];
   try {
     files = (await readdir(directory)).filter((file) => file.endsWith(".json"));

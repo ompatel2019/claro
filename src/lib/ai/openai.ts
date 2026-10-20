@@ -1,5 +1,6 @@
 import "server-only";
 import { usageAttemptId } from "./usage-context";
+import { aiUsageReservationIds, ensureAiUsageReservation } from "./rate-limit";
 
 import OpenAI from "openai";
 import { zodResponseFormat } from "openai/helpers/zod";
@@ -34,6 +35,7 @@ export async function callJson<S extends z.ZodType>(opts: {
   /** Priority processing: lower latency at 2x price. Used for student-facing marking. */
   fast?: boolean;
 }): Promise<z.infer<S>> {
+  await ensureAiUsageReservation();
   const spendRequest = openRouterSpend(admin());
   const spent = await (opts.task === "eval"
     ? bounded(spendRequest, opts.signal)
@@ -107,18 +109,23 @@ export async function callJson<S extends z.ZodType>(opts: {
     const usd = costUsd(opts.model, res.usage, res.service_tier === "priority");
     opts.onUsage?.(usd);
     const logUsage = async () => {
-      const { error: logError } = await admin()
-        .from("ai_usage")
-        .insert({
-          user_id: opts.userId ?? null,
-          attempt_id: usageAttemptId(),
-          task: opts.task,
-          model: opts.model,
-          input_tokens: usage.prompt_tokens,
-          cached_tokens: usage.prompt_tokens_details?.cached_tokens ?? 0,
-          output_tokens: usage.completion_tokens,
-          usd,
-        });
+      const row = {
+        user_id: opts.userId ?? null,
+        attempt_id: usageAttemptId(),
+        task: opts.task,
+        model: opts.model,
+        input_tokens: usage.prompt_tokens,
+        cached_tokens: usage.prompt_tokens_details?.cached_tokens ?? 0,
+        output_tokens: usage.completion_tokens,
+        usd,
+      };
+      const ids = aiUsageReservationIds();
+      const { error: logError } = ids.length
+        ? await admin().rpc("record_reserved_ai_usage", {
+            p_reservations: ids,
+            p_usage: row,
+          })
+        : await admin().from("ai_usage").insert(row);
       if (logError) {
         if (opts.task === "eval")
           throw new Error(`Eval usage logging failed: ${logError.message}`);

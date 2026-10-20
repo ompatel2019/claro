@@ -13,12 +13,7 @@ vi.mock("@/utils/supabase/admin", () => ({
   admin: () => ({ from: query.from }),
 }));
 
-import {
-  bandExamples,
-  examplePool,
-  pickBandExamples,
-  pickQuotaExamples,
-} from "./examples";
+import { examplePool, pickBandExamples, pickQuotaExamples } from "./examples";
 import { evalSets } from "@/lib/ai/eval/sets";
 import type { MarkableQuestion } from "./grade";
 
@@ -54,21 +49,21 @@ it("reads the grader view for the question, which excludes test rows", async () 
   query.not.mockReturnValue(query);
   query.order.mockResolvedValue({ data: [ex(2), ex(1)], error: null });
   const q = { id: "a1-m2-21a", criteria } as MarkableQuestion;
-  expect(await bandExamples(q)).toEqual([ex(2), ex(1)]);
+  expect(await examplePool(q)).toEqual([ex(2), ex(1)]);
   expect(query.from).toHaveBeenCalledWith("marking_examples_for_grader");
   expect(query.eq).toHaveBeenCalledWith("question_id", "a1-m2-21a");
   query.order.mockResolvedValue({ data: null, error: { message: "boom" } });
-  await expect(bandExamples(q)).rejects.toThrow("marking examples: boom");
+  await expect(examplePool(q)).rejects.toThrow("marking examples: boom");
 });
 
-it("applies eval exclusions before fetching band anchors", async () => {
+it("applies eval exclusions before fetching the example pool", async () => {
   query.from.mockReturnValue(query);
   query.select.mockReturnValue(query);
   query.eq.mockReturnValue(query);
   query.not.mockReturnValue(query);
   query.order.mockResolvedValue({ data: [ex(2)], error: null });
   const q = { id: "fixture-question", criteria } as MarkableQuestion;
-  expect(await bandExamples(q, ["locked-final", "dev-self"])).toEqual([ex(2)]);
+  expect(await examplePool(q, ["locked-final", "dev-self"])).toEqual([ex(2)]);
   expect(query.not).toHaveBeenCalledWith(
     "id",
     "in",

@@ -9,7 +9,6 @@ import {
   kpis,
   markingInFlight,
   markTone,
-  nextActions,
   sprintHref,
   timeMeta,
 } from "./results";
@@ -26,11 +25,6 @@ const row = (o: Partial<ReviewRow>): ReviewRow =>
     topic_id: "t3-inflation",
     ...o,
   }) as ReviewRow;
-const topics = [
-  { id: "t3-inflation", parent_id: "t3", name: "Inflation", sort: 1 },
-  { id: "t3-unemployment", parent_id: "t3", name: "Unemployment", sort: 2 },
-];
-
 describe("results", () => {
   it("tallies scored questions only, split by MC and written", () => {
     const k = kpis([
@@ -75,43 +69,6 @@ describe("results", () => {
     ).toBe(
       "/student/sprint?type=short&topics=t3&sub=t3-inflation&history=mistakes",
     );
-  });
-  it("builds next-step actions from the weakest subtopics, deterministically", () => {
-    const actions = nextActions(
-      [
-        row({ position: 3, topic_id: "t3-inflation", mark: 1 }),
-        row({ position: 7, topic_id: "t3-unemployment", mark: 3 }),
-        row({ topic_id: "t3-unemployment", mark: 4 }),
-      ],
-      "short",
-      topics,
-      { "t3-inflation": 6 },
-    );
-    expect(actions).toEqual([
-      {
-        questions: [{ position: 3, type: "short" }],
-        label: "Practise Inflation short answers",
-        href: "/student/sprint?type=short&sub=t3-inflation",
-      },
-      {
-        label: "Retry mistakes on Inflation",
-        href: "/student/sprint?type=short&sub=t3-inflation&history=mistakes",
-      },
-      {
-        questions: [{ position: 7, type: "short" }],
-        label: "Practise Unemployment short answers",
-        href: "/student/sprint?type=short&sub=t3-unemployment",
-      },
-      {
-        label: "Retry mistakes on Unemployment",
-        href: "/student/sprint?type=short&sub=t3-unemployment&history=mistakes",
-      },
-      {
-        label: "Review 6 flashcards on Inflation",
-        href: "/student/flashcards?topic=t3-inflation",
-      },
-    ]);
-    expect(nextActions([row({})], "short", topics, {})).toEqual([]);
   });
 });
 

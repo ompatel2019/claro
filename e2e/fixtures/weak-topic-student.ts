@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { test as base } from "@playwright/test";
 import { createServerClient } from "@supabase/ssr";
 import { adminClient } from "../helpers";
-import { assertTestSupabaseUrl } from "../guard";
+import { assertTargetVerified, assertTestSupabaseUrl } from "../guard";
 
 // Each test owns a synthetic account; teardown cascades only its own study history.
 export const test = base.extend<{
@@ -12,6 +12,7 @@ export const test = base.extend<{
   };
 }>({
   historyStudent: async ({ page, baseURL }, runFixture) => {
+    assertTargetVerified();
     const db = adminClient()!;
     const email = `claro-history-${randomUUID()}@example.com`;
     const password = `${randomUUID()}Aa1!`;

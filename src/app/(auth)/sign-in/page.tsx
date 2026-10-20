@@ -1,3 +1,4 @@
+import { safeLocalPath } from "@/lib/safe-local-path";
 import type { Metadata } from "next";
 
 import { PageHeader } from "@/components/claro/layout";
@@ -18,10 +19,7 @@ export default async function SignInPage({
         title="Welcome back"
         description="Pick up where you left off."
       />
-      <AuthForm
-        mode="sign-in"
-        next={next?.startsWith("/") && !next.startsWith("//") ? next : "/"}
-      />
+      <AuthForm mode="sign-in" next={safeLocalPath(next)} />
     </>
   );
 }

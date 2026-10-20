@@ -21,10 +21,9 @@ const attempt = {
   transcript: null,
   image_paths: null,
 } as Attempt;
-function answer(inputOnly = true, disabled = false) {
+function answer(disabled = false) {
   return render(
     <WrittenAnswer
-      inputOnly={inputOnly}
       disabled={disabled}
       attempt={attempt}
       userId="u"
@@ -72,7 +71,7 @@ it("polls the server status route and applies its student feedback", async () =>
   });
 });
 it("locks typing and photo upload together while disabled", () => {
-  answer(true, true);
+  answer(true);
   expect(screen.getByRole("textbox")).toBeDisabled();
   expect(screen.getByLabelText("Take photo / Upload")).toBeDisabled();
 });
@@ -123,7 +122,6 @@ it("appends camera shots, flushes once per batch, and reads only on request", as
     return (
       <WrittenAnswer
         attempt={row}
-        inputOnly
         disabled={false}
         userId="u"
         onBusy={vi.fn()}

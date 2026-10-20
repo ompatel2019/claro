@@ -3,6 +3,10 @@ import { cache } from "react";
 import { admin } from "@/utils/supabase/admin";
 import { createClient } from "@/utils/supabase/server";
 import { requireAdmin } from "@/lib/auth";
+import {
+  selectFeedbackRow,
+  signFeedbackScreenshots,
+} from "@/lib/admin-feedback-detail";
 import { sydneyDay } from "@/lib/admin";
 import {
   computeSpend,
@@ -23,6 +27,7 @@ import {
   OPEN_DISPUTES_PER_STUDENT,
 } from "@/lib/limits";
 import { z } from "zod";
+import { lookupAuthUsers } from "@/lib/admin-auth-users";
 import { pages } from "@/lib/flashcard-data";
 import { addDays, type ActivityDay } from "@/lib/activity";
 import type { ReviewRow } from "@/lib/feedback";
@@ -59,27 +64,11 @@ export const SPEND_CAP_USD = 100;
 
 /** Auth users by id: email and whether sign-in is blocked (banned_until in the future). */
 async function authUsers(ids: string[]) {
-  const users = new Map<string, { email: string; blocked: boolean }>();
   const svc = admin();
   const now = Date.now();
-  const wanted = new Set(ids);
-  for (let page = 1; ; page++) {
-    const { data, error } = await svc.auth.admin.listUsers({
-      page,
-      perPage: 1000,
-    });
-    if (error) throw new Error("Could not load student emails.");
-    for (const u of data.users)
-      if (wanted.has(u.id)) {
-        const until = (u as { banned_until?: string | null }).banned_until;
-        users.set(u.id, {
-          email: u.email ?? "",
-          blocked: !!until && Date.parse(until) > now,
-        });
-      }
-    if (data.users.length < 1000 || users.size === wanted.size) break;
-  }
-  return users;
+  return lookupAuthUsers(svc, ids, now, {
+    errorMessage: "Could not load student emails.",
+  });
 }
 
 /** SQL owns §4.2 aggregates; auth emails never leave this admin-only loader. */
@@ -313,14 +302,11 @@ const point = z.object({ day: z.string(), value: z.number() });
 const dashboardSchema = z.object({
   students: z.number(),
   active: z.object({ now: z.number(), prev: z.number() }),
-  sessionsWeek: z.number(),
   openReviews: z.object({
     count: z.number(),
     oldestDays: z.number().nullable(),
   }),
   spend: z.object({ month: z.number(), all: z.number() }),
-  sessionsTotal: z.number(),
-  spendTotal: z.number(),
   sessionsPerDay: z.array(point),
   spendPerDay: z.array(point),
   attention: z.object({
@@ -429,19 +415,16 @@ export async function loadStudentFeedback(id: string, userId: string) {
   if (!z.uuid().safeParse(id).success || !z.uuid().safeParse(userId).success)
     return null;
   const db = await createClient();
-  const { data } = await db
-    .from("feedback")
-    .select(
-      "id,user_id,message,status,admin_note,page_path,user_agent,question_id,session_id,screenshots",
-    )
-    .eq("id", id)
+  const { data } = await selectFeedbackRow(
+    db,
+    id,
+    "id,user_id,message,status,admin_note,page_path,user_agent,question_id,session_id,screenshots",
+  )
     .eq("user_id", userId)
     .maybeSingle()
     .throwOnError();
   if (!data) return null;
-  const signed = data.screenshots.length
-    ? await db.storage.from("reports").createSignedUrls(data.screenshots, 3600)
-    : null;
+  const signed = await signFeedbackScreenshots(db, data.screenshots);
   if (signed?.error) throw signed.error;
   return {
     row: data as import("@/components/feedback-detail").FeedbackDetailRow,
