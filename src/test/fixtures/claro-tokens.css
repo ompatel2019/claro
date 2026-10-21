@@ -1,125 +1,129 @@
 :root {
-  --radius: 0.75rem;
+  --radius: 1rem;
 
   /* surfaces + ink */
-  --background: #F6F2F2;          /* page canvas (brand) */
-  --foreground: #1B1F34;          /* ink (brand navy) */
-  --card: #FFFFFF;
-  --card-foreground: #1B1F34;
-  --popover: #FFFFFF;
-  --popover-foreground: #1B1F34;
+  --background: #faf7f3; /* page canvas (brand) */
+  --foreground: #1e223d; /* ink (brand navy) */
+  --ink-2: #4a4e68;
+  --card: #ffffff;
+  --card-foreground: #1e223d;
+  --popover: #ffffff;
+  --popover-foreground: #1e223d;
 
   /* shadcn roles */
-  --primary: #1B1F34;             /* primary buttons, selected chips */
-  --primary-foreground: #FFFFFF;
-  --secondary: #F2EDED;
-  --secondary-foreground: #1B1F34;
-  --muted: #F4F0F0;               /* tracks, icon tiles, table heads */
-  --muted-foreground: #616474;    /* 5.9:1 on white */
-  --accent: #F6F2F2;              /* hover wash */
-  --accent-foreground: #1B1F34;
-  --destructive: #D92D20;
-  --border: #EBE5E5;              /* hairlines */
-  --input: #E2DADB;
-  --ring: #1B1F34;
-  --toggle-on: #FFFFFF;           /* active segment in a toggle group */
+  --primary: #1e223d; /* primary buttons, selected chips */
+  --primary-foreground: #ffffff;
+  --secondary: #f3eee7;
+  --secondary-foreground: #1e223d;
+  --muted: #f3eee7; /* tracks, icon tiles, table heads */
+  --muted-foreground: #646780;
+  --accent: #faf7f3; /* hover wash */
+  --accent-foreground: #1e223d;
+  --destructive: #b3261e;
+  --destructive-soft: #fdecea;
+  --border: #e7e1d9; /* hairlines */
+  --input: #8a8698;
+  --ring: #1e223d;
+  --toggle-on: #ffffff; /* active segment in a toggle group */
 
   /* brand */
-  --brand: #FD3F2A;               /* coral: marks, indicators, highlights */
-  --brand-foreground: #FFFFFF;
-  --brand-soft: #FFEFEB;          /* blush: active nav, brand badges */
-  --brand-text: #C42A15;          /* coral text that passes AA on white + blush */
-  --brand-deep: #E73C2B;          /* the stripe in the term banner */
+  --brand: #f54f1b; /* orange: marks, indicators, highlights */
+  --brand-foreground: #ffffff;
+  --brand-soft: #fdeee7; /* orange tint: active nav, brand badges */
+  --brand-text: #c2360b; /* orange text that passes AA on white + orange tint */
+  --brand-deep: #d63c0e; /* the stripe in the term banner */
 
   /* status (always paired with an icon + label) */
-  --success: #12875A;
-  --success-soft: #E6F4EC;
-  --success-text: #0E6B47;
-  --warning: #C77B0A;
-  --warning-soft: #FCF0DC;
-  --warning-text: #8A5300;
+  --success: #1d7a50;
+  --success-soft: #e6f3ec;
+  --success-text: #17653f;
+  --warning: #c77b0a;
+  --warning-soft: #fcf0dc;
+  --warning-text: #8a5300;
 
   /* charts */
-  --chart-1: #1B1F34;             /* main series */
-  --chart-2: #FD3F2A;             /* the one highlighted mark */
-  --chart-3: #CFC8CA;             /* de-emphasised marks */
-  --chart-grid: #F1ECEC;          /* hairline gridlines (solid, never dashed) */
-  --chart-axis: #616474;          /* tick labels */
-  --chart-track: #EEEBEE;         /* meter track = lighter step of navy */
-  --heat-0: #F1ECEC;              /* heatmap: one hue, light -> dark */
-  --heat-1: #FFD6CC;
-  --heat-2: #FFA592;
-  --heat-3: #FF6F57;
-  --heat-4: #FD3F2A;
+  --chart-1: #1e223d; /* main series */
+  --chart-2: #f54f1b; /* the one highlighted mark */
+  --chart-3: #8a8698; /* de-emphasised marks */
+  --chart-grid: #e7e1d9; /* hairline gridlines (solid, never dashed) */
+  --chart-axis: #646780; /* tick labels */
+  --chart-track: #f3eee7; /* meter track = lighter step of navy */
+  --heat-0: #f3eee7; /* heatmap: one hue, light -> dark */
+  --heat-1: #fdeee7;
+  --heat-2: color-mix(in srgb, var(--brand) 35%, var(--brand-soft));
+  --heat-3: color-mix(in srgb, var(--brand) 65%, var(--brand-soft));
+  --heat-4: #f54f1b;
 
   /* sidebar (shadcn sidebar block) */
-  --sidebar: #FFFFFF;
-  --sidebar-foreground: #1B1F34;
-  --sidebar-primary: #FD3F2A;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #FFEFEB;
-  --sidebar-accent-foreground: #1B1F34;
-  --sidebar-border: #EBE5E5;
-  --sidebar-ring: #1B1F34;
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1e223d;
+  --sidebar-primary: #f54f1b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fdeee7;
+  --sidebar-accent-foreground: #1e223d;
+  --sidebar-border: #e7e1d9;
+  --sidebar-ring: #1e223d;
 
-  --shadow-ink: 27 31 52;
+  --shadow-ink: 30 34 61;
 }
 
 .dark {
-  --background: #10121A;
-  --foreground: #F2EEEE;
-  --card: #171A25;
-  --card-foreground: #F2EEEE;
-  --popover: #1B1F2C;
-  --popover-foreground: #F2EEEE;
+  --background: #13152b;
+  --foreground: #f5f1ec;
+  --ink-2: #c5c7d6;
+  --card: #1d2039;
+  --card-foreground: #f5f1ec;
+  --popover: #262a47;
+  --popover-foreground: #f5f1ec;
 
-  --primary: #F2EEEE;
-  --primary-foreground: #1B1F34;
-  --secondary: #232736;
-  --secondary-foreground: #F2EEEE;
-  --muted: #1F2230;
-  --muted-foreground: #9B9EAF;
-  --accent: #212433;
-  --accent-foreground: #F2EEEE;
-  --destructive: #FF6B5E;
-  --border: #262A39;
-  --input: #2E3243;
-  --ring: #F2EEEE;
-  --toggle-on: #2C3042;
+  --primary: #f5f1ec;
+  --primary-foreground: #1e223d;
+  --secondary: #181b33;
+  --secondary-foreground: #f5f1ec;
+  --muted: #181b33;
+  --muted-foreground: #a3a6bd;
+  --accent: #262a47;
+  --accent-foreground: #f5f1ec;
+  --destructive: #ff6b5e;
+  --destructive-soft: color-mix(in srgb, var(--destructive) 12%, var(--card));
+  --border: #2f3354;
+  --input: #6e7396;
+  --ring: #f5f1ec;
+  --toggle-on: #262a47;
 
-  --brand: #FF4E39;
-  --brand-foreground: #FFFFFF;
-  --brand-soft: #35202A;
-  --brand-text: #FF8A75;
-  --brand-deep: #E73C2B;
+  --brand: #f54f1b;
+  --brand-foreground: #ffffff;
+  --brand-soft: #3b2019;
+  --brand-text: #ff7a4d;
+  --brand-deep: #d63c0e;
 
-  --success: #3CC48A;
-  --success-soft: #16291F;
-  --success-text: #5BD7A0;
-  --warning: #F0A93B;
-  --warning-soft: #2E2615;
-  --warning-text: #F5BE68;
+  --success: #3cc48a;
+  --success-soft: #16291f;
+  --success-text: #3cc48a;
+  --warning: #f0a93b;
+  --warning-soft: #2e2615;
+  --warning-text: #f0a93b;
 
-  --chart-1: #D9DBE6;
-  --chart-2: #FF4E39;
-  --chart-3: #4D5266;
-  --chart-grid: #232636;
-  --chart-axis: #8E91A3;
-  --chart-track: #262A39;
-  --heat-0: #212433;
-  --heat-1: #4A2830;
-  --heat-2: #7E3331;
-  --heat-3: #C2402F;
-  --heat-4: #FF4E39;
+  --chart-1: #f5f1ec;
+  --chart-2: #f54f1b;
+  --chart-3: #6e7396;
+  --chart-grid: #2f3354;
+  --chart-axis: #a3a6bd;
+  --chart-track: #2f3354;
+  --heat-0: #181b33;
+  --heat-1: #3b2019;
+  --heat-2: color-mix(in srgb, var(--brand) 35%, var(--brand-soft));
+  --heat-3: color-mix(in srgb, var(--brand) 65%, var(--brand-soft));
+  --heat-4: #f54f1b;
 
-  --sidebar: #141620;
-  --sidebar-foreground: #F2EEEE;
-  --sidebar-primary: #FF4E39;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #35202A;
-  --sidebar-accent-foreground: #F2EEEE;
-  --sidebar-border: #232636;
-  --sidebar-ring: #F2EEEE;
+  --sidebar: #1d2039;
+  --sidebar-foreground: #f5f1ec;
+  --sidebar-primary: #f54f1b;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #3b2019;
+  --sidebar-accent-foreground: #f5f1ec;
+  --sidebar-border: #2f3354;
+  --sidebar-ring: #f5f1ec;
 
   --shadow-ink: 0 0 0;
 }

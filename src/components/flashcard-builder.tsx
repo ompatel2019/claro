@@ -538,7 +538,7 @@ export function FlashcardBuilder({
           </p>
         </div>
         <div className="px-5">
-          <p className="text-[36px] leading-none font-bold tracking-[-0.04em]">
+          <p className="text-[36px] leading-none font-bold tracking-[-0.04em] tabular-nums">
             {size}
           </p>
           <p className="text-muted-foreground mt-1.5 text-xs">

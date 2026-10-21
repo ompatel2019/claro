@@ -183,7 +183,7 @@ export function ActivityHeatmap({
                     </dt>
                     <dd
                       className={cn(
-                        "text-2xl leading-tight font-bold",
+                        "text-2xl leading-tight font-bold tabular-nums",
                         "flex items-center gap-1 text-[22px]",
                       )}
                     >

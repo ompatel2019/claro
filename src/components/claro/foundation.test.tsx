@@ -30,7 +30,8 @@ it("preserves every template light and dark token, except font families", () => 
         `${name}: ${value.trim()};`.toLowerCase(),
       );
   }
-  expect(css).not.toMatch(/#f54f1b|Hanken Grotesk|Space Mono/i);
+  expect(css).toMatch(/--brand: #f54f1b/i);
+  expect(css).not.toMatch(/Hanken Grotesk|Space Mono/i);
 });
 it.each(["metaKey", "ctrlKey"])(
   "opens search with %s, filters and navigates using the keyboard",

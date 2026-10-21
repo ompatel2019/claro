@@ -17,19 +17,12 @@ export function MarkingScreen({ single = false }: { single?: boolean }) {
           fill="none"
           className="text-primary h-28 w-36 motion-safe:animate-pulse motion-reduce:animate-none"
         >
-          <rect
+          <image
+            href="/logos/claro-icon-orange.svg"
             x="30"
             y="8"
             width="60"
             height="60"
-            rx="18"
-            fill="currentColor"
-          />
-          <path
-            d="M70 28a15 15 0 1 0 0 20"
-            stroke="var(--primary-foreground)"
-            strokeWidth="8"
-            strokeLinecap="round"
           />
           <path
             d="M26 88h68"

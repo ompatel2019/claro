@@ -1,7 +1,39 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { themeScript } from "@/lib/theme";
-import { claroSans } from "./fonts/claro-sans/claro-sans";
+import localFont from "next/font/local";
+
+const claroSans = localFont({
+  src: "./fonts/claro-sans/ClaroSans[wght].woff2",
+  weight: "300 800",
+  style: "normal",
+  variable: "--font-claro-sans",
+  display: "swap",
+  fallback: ["system-ui", "-apple-system", "Segoe UI", "sans-serif"],
+});
+const instrumentSerif = localFont({
+  src: "./fonts/InstrumentSerif-Regular.woff2",
+  weight: "400",
+  style: "normal",
+  variable: "--font-instrument-serif",
+  display: "swap",
+  preload: false,
+});
+const caveat = localFont({
+  src: "./fonts/Caveat-Variable.woff2",
+  weight: "400 700",
+  style: "normal",
+  variable: "--font-caveat",
+  display: "swap",
+  preload: false,
+});
+
+export const viewport: Viewport = {
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#FAF7F3" },
+    { media: "(prefers-color-scheme: dark)", color: "#13152B" },
+  ],
+};
 
 const description = "HSC Economics practice with instant AI marking.";
 export const metadata: Metadata = {
@@ -43,7 +75,7 @@ export default function RootLayout({
     <html
       lang="en-AU"
       suppressHydrationWarning
-      className={`${claroSans.variable} h-full antialiased`}
+      className={`${claroSans.variable} ${instrumentSerif.variable} ${caveat.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />

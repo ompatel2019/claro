@@ -105,14 +105,19 @@ Light up today (due flashcards when available, otherwise Topic Sprint). Existing
 Coverage includes `src/app/(app)/student/quick-start.test.tsx`, `src/lib/home.test.ts`,
 `e2e/pages.offline.spec.ts` and `e2e/student-home.spec.ts`.
 
-Brand: `public/logos/` holds the marketing-site lockup SVGs and tile (white variants
-in dark theme via `src/components/logo.tsx`); the lockup is used in the sidebar,
-mobile header, auth pages and marking screen. Logo pairs the lockup with
-`claro-tile.svg`; the collapsed sidebar uses the tile alone.
-The tab/app icons (`src/app/icon.svg`, `src/app/favicon.ico`, `src/app/apple-icon.png`)
-come from the Claro brand kit (full-bleed #f54f1b Claro Orange tile,
-white C and dot; 21 Oct 2026). The sidebar tile and lockup dot use the same #f54f1b; `scripts/tab-icons.mjs` builds `favicon.ico` from `icon.svg`. The sidebar/header use the
-tile and lockup SVGs.
+Brand: `public/logos/` contains unchanged Claro kit SVGs. The shared Logo uses
+`claro-logo-primary-on-light.svg` / `claro-logo-primary-on-dark.svg`; the student
+sidebar/header uses `claro-wordmark-on-light.svg` / `claro-wordmark-on-dark.svg`.
+The collapsed sidebar and marking loader use `claro-icon-orange.svg`, including
+its native squircle shape. The tab/app icons (`src/app/icon.svg`,
+`src/app/favicon.ico`, `src/app/apple-icon.png`) match the kit byte-for-byte.
+The manifest uses the kit's 192px, 512px and maskable icons in `public/icons/`.
+Claro Sans is the UI face; Instrument Serif is used for displayed student answers
+and Caveat is available for marker notes. All three are self-hosted with OFL
+licences in `src/app/fonts/`. Paper is #FAF7F3, Navy #1E223D, Orange #F54F1B,
+and orange text on light is #C2360B. Surfaces use a 16px radius, the `line` hairline
+and `shadow-card`; compact inner chips, checkboxes, keyboard hints and markup
+highlights retain smaller corners. Buttons and tags retain their pill shape.
 `public/og/claro-portal-og.png` (rendered from `design/og-portal/og.html` with headless Chrome at 1200x630; brand-kit ember orange, mirrored from the marketing layout so the two previews differ) is the
 Open Graph/Twitter image (`src/app/layout.tsx`).
 

@@ -1,24 +1,25 @@
 import { cn } from "@/lib/utils";
 
-// Brand SVGs in public/logos (from the marketing site). White variants for dark theme.
+// Approved kit SVGs; preserve their native aspect ratios and spacing.
 const ART = {
-  lockup: { file: "claro-lockup", ratio: 726 / 228 },
+  lockup: { file: "claro-logo-primary", ratio: 489.61 / 135.8 },
 };
 
 function Art({ kind, height }: { kind: keyof typeof ART; height: number }) {
   const { file, ratio } = ART[kind];
-  const size = { width: Math.round(height * ratio), height };
+  const width = Math.max(96, height * ratio);
+  const size = { width, height: width / ratio };
   return (
     <>
       {/* eslint-disable @next/next/no-img-element -- static SVGs need no optimiser */}
       <img
-        src={`/logos/${file}.svg`}
+        src={`/logos/${file}-on-light.svg`}
         alt=""
         {...size}
         className="dark:hidden"
       />
       <img
-        src={`/logos/${file}-white.svg`}
+        src={`/logos/${file}-on-dark.svg`}
         alt=""
         {...size}
         className="hidden dark:block"
@@ -28,21 +29,21 @@ function Art({ kind, height }: { kind: keyof typeof ART; height: number }) {
   );
 }
 
-/** Marketing-site tile icon (same file as src/app/icon.svg), rounded for UI use. */
+/** Kit squircle icon, with its original corner shape. */
 function Tile({ size }: { size: number }) {
   return (
     // eslint-disable-next-line @next/next/no-img-element -- static SVG
     <img
-      src="/logos/claro-tile.svg"
+      src="/logos/claro-icon-orange.svg"
       alt=""
       width={size}
       height={size}
-      className="shrink-0 rounded-[22%]"
+      className="shrink-0"
     />
   );
 }
 
-/** Claro tile + lockup; `collapsible` swaps to the tile alone in the icon-only sidebar. */
+/** Claro primary logo; `collapsible` swaps to the tile alone in the icon-only sidebar. */
 export function Logo({
   height = 28,
   collapsible = false,
@@ -58,13 +59,7 @@ export function Logo({
           collapsible && "group-data-[collapsible=icon]:hidden",
         )}
       >
-        <span
-          className="inline-flex items-center"
-          style={{ gap: Math.round(height * 0.3) }}
-        >
-          <Tile size={Math.round(height * 1.2)} />
-          <Art kind="lockup" height={height} />
-        </span>
+        <Art kind="lockup" height={height} />
       </span>
       {collapsible && (
         <span className="hidden group-data-[collapsible=icon]:contents">

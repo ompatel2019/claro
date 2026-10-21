@@ -419,7 +419,7 @@ export function Kit() {
           wide
         >
           <div className="mb-5 flex flex-wrap items-center gap-8 text-sm">
-            <span className="text-[22px] font-bold">
+            <span className="text-[22px] font-bold tabular-nums">
               <PenCircle>48%</PenCircle>
             </span>
             <span className="flex items-center gap-2">

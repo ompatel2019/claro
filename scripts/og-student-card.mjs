@@ -2,7 +2,7 @@ import { readFile } from "node:fs/promises";
 import { chromium } from "@playwright/test";
 
 const logo = await readFile(
-  new URL("../public/logos/claro-lockup-white.svg", import.meta.url),
+  new URL("../public/logos/claro-wordmark-on-dark.svg", import.meta.url),
   "utf8",
 );
 const browser = await chromium.launch({

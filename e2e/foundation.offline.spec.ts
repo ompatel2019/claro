@@ -49,11 +49,17 @@ test.beforeEach(async ({ page }) => {
     if (url.pathname.endsWith(".woff2"))
       return route.fulfill({
         contentType: "font/woff2",
-        body: await readFile("src/app/fonts/claro-sans/ClaroSans[wght].woff2"),
+        body: await readFile(
+          url.pathname === "/serif.woff2"
+            ? "src/app/fonts/InstrumentSerif-Regular.woff2"
+            : url.pathname === "/hand.woff2"
+              ? "src/app/fonts/Caveat-Variable.woff2"
+              : "src/app/fonts/claro-sans/ClaroSans[wght].woff2",
+        ),
       });
     return route.fulfill({
       contentType: "text/html",
-      body: `<!doctype html><html lang="en-AU"><head><style>@font-face{font-family:ClaroSans;src:url(/claro.woff2);font-weight:100 900;font-display:swap}${css}</style></head><body style="--font-claro-sans:ClaroSans"><div id="root"></div><script type="module" src="/fixture.js"></script></body></html>`,
+      body: `<!doctype html><html lang="en-AU"><head><style>@font-face{font-family:ClaroSans;src:url(/claro.woff2);font-weight:300 800;font-display:swap}@font-face{font-family:InstrumentSerif;src:url(/serif.woff2);font-weight:400;font-display:swap}@font-face{font-family:Caveat;src:url(/hand.woff2);font-weight:400 700;font-display:swap}${css}</style></head><body style="--font-claro-sans:ClaroSans;--font-instrument-serif:InstrumentSerif;--font-caveat:Caveat"><div id="root"></div><script type="module" src="/fixture.js"></script></body></html>`,
     });
   });
 });
@@ -73,7 +79,7 @@ for (const width of [1440, 390])
     ).toBeLessThanOrEqual(width);
     await expect(
       page.getByRole("button", { name: "Default", exact: true }).first(),
-    ).toHaveCSS("background-color", "rgb(27, 31, 52)");
+    ).toHaveCSS("background-color", "rgb(30, 34, 61)");
     await expect(
       page.getByRole("button", { name: "Study", exact: true }),
     ).toHaveCSS("background-color", "rgb(255, 255, 255)");
@@ -82,7 +88,7 @@ for (const width of [1440, 390])
     ).toContainText("Select");
     expect(
       await page
-        .locator('img[src="/logos/claro-lockup.svg"]')
+        .locator('img[src="/logos/claro-wordmark-on-light.svg"]')
         .first()
         .evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
     ).toBe(true);
@@ -116,7 +122,7 @@ for (const width of [1440, 390])
       await page.evaluate(
         () => getComputedStyle(document.body).backgroundColor,
       ),
-    ).toBe("rgb(16, 18, 26)");
+    ).toBe("rgb(19, 21, 43)");
     await page.screenshot({
       path: `/tmp/claro-foundation-${width}-dark.png`,
       fullPage: true,

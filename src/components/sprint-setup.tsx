@@ -934,13 +934,13 @@ export function SprintSetup({
           </div>
           <div className="flex items-end gap-8">
             <div>
-              <p className="text-4xl leading-none font-bold tracking-tight">
+              <p className="text-4xl leading-none font-bold tracking-tight tabular-nums">
                 {c.target}
               </p>
               <p className="text-muted-foreground mt-2 text-xs">{unit}</p>
             </div>
             <div>
-              <p className="text-4xl leading-none font-bold tracking-tight">
+              <p className="text-4xl leading-none font-bold tracking-tight tabular-nums">
                 {c.timed ? minutes : "—"}
               </p>
               <p className="text-muted-foreground mt-2 text-xs">
