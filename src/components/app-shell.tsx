@@ -4,7 +4,6 @@ import { AskClaro } from "@/components/claro/ask-claro";
 import { CommandPalette } from "@/components/claro/command-palette";
 import {
   ExamCountdown,
-  SubjectSwitcher,
   TopBar,
 } from "@/components/claro/layout";
 import { ThemeToggle, setTheme } from "./theme-toggle";
@@ -210,13 +209,6 @@ function AppShellContent({
           </Link>
           <SidebarHeaderToggle />
         </SidebarHeader>
-        {kind === "student" && (
-          // Collapsed: keep the switcher's expanded footprint (laid out at full
-          // width, invisible) so the nav icons stay at the same y on toggle.
-          <div className="group-data-[collapsible=icon]:invisible group-data-[collapsible=icon]:w-(--sidebar-width)">
-            <SubjectSwitcher />
-          </div>
-        )}
         <SidebarContent className="pt-3 pb-2">
           <nav
             aria-label={
