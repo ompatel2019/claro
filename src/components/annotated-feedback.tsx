@@ -301,8 +301,8 @@ export function AnnotatedFeedback({
       onKeyUp={edit && !edit.disabled ? captureSelection : undefined}
       className={
         singleResult
-          ? "booklet relative min-h-28 text-[15px] leading-8 whitespace-pre-wrap"
-          : "relative max-w-[70ch] text-base leading-[26px] whitespace-pre-wrap"
+          ? "booklet relative min-h-28 font-serif text-base leading-[32px] whitespace-pre-wrap"
+          : "relative max-w-[70ch] font-serif text-base leading-[26px] whitespace-pre-wrap"
       }
     >
       {highlightSegments(displayedText, anchored).map((seg) => {
@@ -351,7 +351,7 @@ export function AnnotatedFeedback({
               <sup
                 key={c.id}
                 aria-hidden
-                className="text-brand mx-0.5 text-[10px] font-semibold"
+                className="text-brand-text mx-0.5 font-sans text-[10px] font-semibold"
               >
                 {c.n}
               </sup>

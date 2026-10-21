@@ -51,7 +51,7 @@ test.describe("App shell", () => {
     );
   });
 
-  test("Claro Sans is the only font", async ({ page }) => {
+  test("Only the kit UI and accent fonts are used", async ({ page }) => {
     const families = await page.evaluate(() => [
       ...new Set(
         [...document.querySelectorAll("body, body *")]
@@ -60,7 +60,8 @@ test.describe("App shell", () => {
       ),
     ]);
     expect(families.length).toBeGreaterThan(0);
-    for (const family of families) expect(family).toMatch(/claroSans/);
+    for (const family of families)
+      expect(family).toMatch(/claroSans|instrumentSerif|caveat/);
     const italic = await page.evaluate(
       () =>
         [...document.querySelectorAll("body *")].filter(
@@ -69,7 +70,7 @@ test.describe("App shell", () => {
     );
     expect(italic).toBe(0);
     const html = await page.content();
-    expect(html).not.toMatch(/Instrument|Caveat/);
+    expect(html).not.toMatch(/fonts\.googleapis|fonts\.gstatic/);
   });
 
   test("mobile opens the sidebar as a sheet", async ({ page }) => {

@@ -9,140 +9,146 @@
 /* ==========================================================================
    CLARO DESIGN TOKENS
    Paste this block into app/globals.css (shadcn/ui + Tailwind v4 format).
-   Brand colours are unchanged from the live portal:
-     navy  #1B1F34   coral #FD3F2A   canvas #F6F2F2   blush #FFEFEB
-   Rule of thumb: neutrals do 90% of the work. Coral is reserved for
+   Brand colours follow the Claro brand kit:
+     navy  #1e223d   orange #f54f1b   canvas #faf7f3   orange tint #FDEEE7
+   Rule of thumb: neutrals do 90% of the work. Orange is reserved for
    (1) the active nav item, (2) the ONE highlighted data point per chart,
    (3) the examiner's pen (markup, needs-work).
    ========================================================================== */
 :root {
-  --radius: 0.75rem;
+  --radius: 1rem;
 
   /* surfaces + ink */
-  --background: #f6f2f2; /* page canvas (brand) */
-  --foreground: #1b1f34; /* ink (brand navy) */
+  --background: #faf7f3; /* page canvas (brand) */
+  --foreground: #1e223d; /* ink (brand navy) */
+  --ink-2: #4a4e68;
   --card: #ffffff;
-  --card-foreground: #1b1f34;
+  --card-foreground: #1e223d;
   --popover: #ffffff;
-  --popover-foreground: #1b1f34;
+  --popover-foreground: #1e223d;
 
   /* shadcn roles */
-  --primary: #1b1f34; /* primary buttons, selected chips */
+  --primary: #1e223d; /* primary buttons, selected chips */
   --primary-foreground: #ffffff;
-  --secondary: #f2eded;
-  --secondary-foreground: #1b1f34;
-  --muted: #f4f0f0; /* tracks, icon tiles, table heads */
-  --muted-foreground: #616474; /* 5.9:1 on white */
-  --accent: #f6f2f2; /* hover wash */
-  --accent-foreground: #1b1f34;
-  --destructive: #d92d20;
-  --border: #ebe5e5; /* hairlines */
-  --input: #e2dadb;
-  --ring: #1b1f34;
+  --secondary: #f3eee7;
+  --secondary-foreground: #1e223d;
+  --muted: #f3eee7; /* tracks, icon tiles, table heads */
+  --muted-foreground: #646780;
+  --accent: #faf7f3; /* hover wash */
+  --accent-foreground: #1e223d;
+  --destructive: #b3261e;
+  --destructive-soft: #fdecea;
+  --border: #e7e1d9; /* hairlines */
+  --input: #8a8698;
+  --ring: #1e223d;
   --toggle-on: #ffffff; /* active segment in a toggle group */
 
   /* brand */
-  --brand: #fd3f2a; /* coral: marks, indicators, highlights */
+  --brand: #f54f1b; /* orange: marks, indicators, highlights */
   --brand-foreground: #ffffff;
-  --brand-soft: #ffefeb; /* blush: active nav, brand badges */
-  --brand-text: #c42a15; /* coral text that passes AA on white + blush */
-  --brand-deep: #e73c2b; /* the stripe in the term banner */
+  --brand-soft: #fdeee7; /* orange tint: active nav, brand badges */
+  --brand-text: #c2360b; /* orange text that passes AA on white + orange tint */
+  --brand-deep: #d63c0e; /* the stripe in the term banner */
 
   /* status (always paired with an icon + label) */
-  --success: #12875a;
-  --success-soft: #e6f4ec;
-  --success-text: #0e6b47;
+  --success: #1d7a50;
+  --success-soft: #e6f3ec;
+  --success-text: #17653f;
   --warning: #c77b0a;
   --warning-soft: #fcf0dc;
   --warning-text: #8a5300;
 
   /* charts */
-  --chart-1: #1b1f34; /* main series */
-  --chart-2: #fd3f2a; /* the one highlighted mark */
-  --chart-3: #cfc8ca; /* de-emphasised marks */
-  --chart-grid: #f1ecec; /* hairline gridlines (solid, never dashed) */
-  --chart-axis: #616474; /* tick labels */
-  --chart-track: #eeebee; /* meter track = lighter step of navy */
-  --heat-0: #f1ecec; /* heatmap: one hue, light -> dark */
-  --heat-1: #ffd6cc;
-  --heat-2: #ffa592;
-  --heat-3: #ff6f57;
-  --heat-4: #fd3f2a;
+  --chart-1: #1e223d; /* main series */
+  --chart-2: #f54f1b; /* the one highlighted mark */
+  --chart-3: #8a8698; /* de-emphasised marks */
+  --chart-grid: #e7e1d9; /* hairline gridlines (solid, never dashed) */
+  --chart-axis: #646780; /* tick labels */
+  --chart-track: #f3eee7; /* meter track = lighter step of navy */
+  --heat-0: #f3eee7; /* heatmap: one hue, light -> dark */
+  --heat-1: #fdeee7;
+  --heat-2: color-mix(in srgb, var(--brand) 35%, var(--brand-soft));
+  --heat-3: color-mix(in srgb, var(--brand) 65%, var(--brand-soft));
+  --heat-4: #f54f1b;
 
   /* sidebar (shadcn sidebar block) */
   --sidebar: #ffffff;
-  --sidebar-foreground: #1b1f34;
-  --sidebar-primary: #fd3f2a;
+  --sidebar-foreground: #1e223d;
+  --sidebar-primary: #f54f1b;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #ffefeb;
-  --sidebar-accent-foreground: #1b1f34;
-  --sidebar-border: #ebe5e5;
-  --sidebar-ring: #1b1f34;
+  --sidebar-accent: #fdeee7;
+  --sidebar-accent-foreground: #1e223d;
+  --sidebar-border: #e7e1d9;
+  --sidebar-ring: #1e223d;
 
-  --shadow-ink: 27 31 52;
+  --shadow-ink: 30 34 61;
 }
 
 .dark {
-  --background: #10121a;
-  --foreground: #f2eeee;
-  --card: #171a25;
-  --card-foreground: #f2eeee;
-  --popover: #1b1f2c;
-  --popover-foreground: #f2eeee;
+  --background: #13152b;
+  --foreground: #f5f1ec;
+  --ink-2: #c5c7d6;
+  --card: #1d2039;
+  --card-foreground: #f5f1ec;
+  --popover: #262a47;
+  --popover-foreground: #f5f1ec;
 
-  --primary: #f2eeee;
-  --primary-foreground: #1b1f34;
-  --secondary: #232736;
-  --secondary-foreground: #f2eeee;
-  --muted: #1f2230;
-  --muted-foreground: #9b9eaf;
-  --accent: #212433;
-  --accent-foreground: #f2eeee;
+  --primary: #f5f1ec;
+  --primary-foreground: #1e223d;
+  --secondary: #181b33;
+  --secondary-foreground: #f5f1ec;
+  --muted: #181b33;
+  --muted-foreground: #a3a6bd;
+  --accent: #262a47;
+  --accent-foreground: #f5f1ec;
   --destructive: #ff6b5e;
-  --border: #262a39;
-  --input: #2e3243;
-  --ring: #f2eeee;
-  --toggle-on: #2c3042;
+  --destructive-soft: color-mix(in srgb, var(--destructive) 12%, var(--card));
+  --border: #2f3354;
+  --input: #6e7396;
+  --ring: #f5f1ec;
+  --toggle-on: #262a47;
 
-  --brand: #ff4e39;
+  --brand: #f54f1b;
   --brand-foreground: #ffffff;
-  --brand-soft: #35202a;
-  --brand-text: #ff8a75;
-  --brand-deep: #e73c2b;
+  --brand-soft: #3b2019;
+  --brand-text: #ff7a4d;
+  --brand-deep: #d63c0e;
 
   --success: #3cc48a;
   --success-soft: #16291f;
-  --success-text: #5bd7a0;
+  --success-text: #3cc48a;
   --warning: #f0a93b;
   --warning-soft: #2e2615;
-  --warning-text: #f5be68;
+  --warning-text: #f0a93b;
 
-  --chart-1: #d9dbe6;
-  --chart-2: #ff4e39;
-  --chart-3: #4d5266;
-  --chart-grid: #232636;
-  --chart-axis: #8e91a3;
-  --chart-track: #262a39;
-  --heat-0: #212433;
-  --heat-1: #4a2830;
-  --heat-2: #7e3331;
-  --heat-3: #c2402f;
-  --heat-4: #ff4e39;
+  --chart-1: #f5f1ec;
+  --chart-2: #f54f1b;
+  --chart-3: #6e7396;
+  --chart-grid: #2f3354;
+  --chart-axis: #a3a6bd;
+  --chart-track: #2f3354;
+  --heat-0: #181b33;
+  --heat-1: #3b2019;
+  --heat-2: color-mix(in srgb, var(--brand) 35%, var(--brand-soft));
+  --heat-3: color-mix(in srgb, var(--brand) 65%, var(--brand-soft));
+  --heat-4: #f54f1b;
 
-  --sidebar: #141620;
-  --sidebar-foreground: #f2eeee;
-  --sidebar-primary: #ff4e39;
+  --sidebar: #1d2039;
+  --sidebar-foreground: #f5f1ec;
+  --sidebar-primary: #f54f1b;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #35202a;
-  --sidebar-accent-foreground: #f2eeee;
-  --sidebar-border: #232636;
-  --sidebar-ring: #f2eeee;
+  --sidebar-accent: #3b2019;
+  --sidebar-accent-foreground: #f5f1ec;
+  --sidebar-border: #2f3354;
+  --sidebar-ring: #f5f1ec;
 
   --shadow-ink: 0 0 0;
 }
 
 @theme inline {
   --font-sans: var(--font-claro-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-instrument-serif), Georgia, "Times New Roman", serif;
+  --font-hand: var(--font-caveat), "Segoe Print", cursive;
   --font-mono: var(--font-claro-sans), ui-sans-serif, system-ui, sans-serif;
 
   --color-background: var(--background);
@@ -199,17 +205,22 @@
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
 
-  --radius-sm: calc(var(--radius) - 4px); /*  8px  chips inside inputs   */
-  --radius-md: calc(var(--radius) - 2px); /* 10px  inputs, selects       */
-  --radius-lg: var(--radius); /* 12px  tiles inside cards    */
-  --radius-xl: calc(var(--radius) + 4px); /* 16px  cards                 */
-  --radius-2xl: calc(var(--radius) + 8px); /* 20px  sheets, dialogs       */
+  --radius-sm: 0.5rem; /* Small inner chips and compact controls. */
+  --radius-md: var(--radius);
+  --radius-lg: var(--radius);
+  --radius-xl: var(--radius);
+  --radius-2xl: var(--radius);
+  --radius-3xl: var(--radius);
+  --radius-4xl: var(--radius);
 
-  --shadow-xs: 0 1px 2px rgb(var(--shadow-ink) / 0.05);
   --shadow-card: 0 1px 2px rgb(var(--shadow-ink) / 0.04);
-  --shadow-pop:
-    0 12px 32px -8px rgb(var(--shadow-ink) / 0.18),
-    0 2px 6px rgb(var(--shadow-ink) / 0.06);
+  --shadow-xs: var(--shadow-card);
+  --shadow-sm: var(--shadow-card);
+  --shadow-md: var(--shadow-card);
+  --shadow-lg: var(--shadow-card);
+  --shadow-xl: var(--shadow-card);
+  --shadow-2xl: var(--shadow-card);
+  --shadow-pop: var(--shadow-card);
 }
 
 /* @tokens-end */
@@ -231,7 +242,7 @@
   body {
     @apply bg-background text-foreground font-sans antialiased;
     font-size: 14px;
-    line-height: 1.5;
+    line-height: 22px;
     text-rendering: optimizeLegibility;
   }
   ::selection {
@@ -416,9 +427,7 @@
   }
   [data-slot="toggle-group-item"][data-state="on"] {
     @apply bg-toggle-on text-foreground;
-    box-shadow:
-      0 1px 2px rgb(var(--shadow-ink) / 0.1),
-      0 0 0 1px rgb(var(--shadow-ink) / 0.04);
+    box-shadow: var(--shadow-card);
   }
 
   /* --- Choice chip (single or multi select) ------------------------------- */
@@ -467,7 +476,7 @@
     @apply bg-card block size-4 translate-x-0.5 rounded-full shadow-xs transition-transform duration-150;
   }
   [data-slot="switch"][data-state="on"] > span {
-    @apply translate-x-[18px] dark:bg-[#1B1F34];
+    @apply dark:bg-navy translate-x-[18px];
   }
 
   /* --- Checkbox ------------------------------------------------------------- */
@@ -607,23 +616,28 @@
 
   /* Marked answer, written on a ruled answer-booklet page. */
   .booklet {
-    @apply bg-card text-foreground relative rounded-lg border text-[15.5px];
-    line-height: 32px;
-    padding: 4px 20px 12px 44px;
+    --booklet-margin: 56px;
+    @apply bg-paper text-foreground relative rounded-lg border;
+    padding: 4px 20px 12px calc(var(--booklet-margin) + 12px);
     background-image:
       linear-gradient(
         to right,
-        transparent 31px,
-        color-mix(in srgb, var(--brand) 35%, transparent) 31px,
-        color-mix(in srgb, var(--brand) 35%, transparent) 32.5px,
-        transparent 32.5px
+        transparent var(--booklet-margin),
+        rgb(245 79 27 / 28%) var(--booklet-margin),
+        rgb(245 79 27 / 28%) calc(var(--booklet-margin) + 1px),
+        transparent calc(var(--booklet-margin) + 1px)
       ),
       repeating-linear-gradient(
         to bottom,
         transparent 0 31px,
-        var(--chart-grid) 31px 32px
+        rgb(30 34 61 / 5.5%) 31px 32px
       );
     background-position: 0 4px;
+  }
+  @media (width < 640px) {
+    .booklet {
+      --booklet-margin: 24px;
+    }
   }
   .mk {
     border-radius: 3px;
@@ -717,7 +731,6 @@
 :root,
 .dark {
   --surface: var(--card);
-  --destructive-soft: color-mix(in srgb, var(--destructive) 4%, var(--card));
   --chart-4: var(--chart-3);
   --chart-5: var(--chart-track);
   --heatmap-0: var(--heat-0);
@@ -727,6 +740,9 @@
   --heatmap-4: var(--heat-4);
 }
 @theme inline {
+  --color-navy: #1e223d;
+  --color-navy-deep: #171a31;
+  --color-ink-2: var(--ink-2);
   --color-ink: var(--foreground);
   --color-paper: var(--background);
   --color-surface: var(--surface);

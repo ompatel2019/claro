@@ -455,24 +455,24 @@ function ShellLogo({ mobile = false }: { mobile?: boolean }) {
     <span role="img" aria-label="Claro" className="inline-flex shrink-0">
       {/* eslint-disable @next/next/no-img-element -- approved static brand assets */}
       <img
-        src="/logos/claro-tile.svg"
+        src="/logos/claro-icon-orange.svg"
         alt=""
         width={28}
         height={28}
-        className="hidden shrink-0 rounded-[22%] group-data-[collapsible=icon]:block"
+        className="hidden shrink-0 group-data-[collapsible=icon]:block"
       />
       <img
-        src="/logos/claro-lockup.svg"
+        src="/logos/claro-wordmark-on-light.svg"
         alt=""
         width={mobile ? 64 : 70}
-        height={mobile ? 20 : 24}
+        height={(mobile ? 64 : 70) * (99.9 / 317.96)}
         className="group-data-[collapsible=icon]:hidden dark:hidden"
       />
       <img
-        src="/logos/claro-lockup-white.svg"
+        src="/logos/claro-wordmark-on-dark.svg"
         alt=""
         width={mobile ? 64 : 70}
-        height={mobile ? 20 : 24}
+        height={(mobile ? 64 : 70) * (99.9 / 317.96)}
         className="hidden group-data-[collapsible=icon]:hidden dark:block"
       />
       {/* eslint-enable @next/next/no-img-element */}

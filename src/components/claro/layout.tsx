@@ -153,7 +153,7 @@ export function ExamCountdown({
   return (
     <div
       data-component="ExamCountdown"
-      className="relative overflow-hidden rounded-2xl bg-[#1B1F34] p-4 text-white ring-1 ring-white/5"
+      className="bg-navy relative overflow-hidden rounded-2xl p-4 text-white ring-1 ring-white/5"
     >
       <svg
         className="pointer-events-none absolute inset-y-0 right-0 h-full w-[72px]"
@@ -161,13 +161,13 @@ export function ExamCountdown({
         preserveAspectRatio="none"
         aria-hidden
       >
-        <polygon points="30,0 44,0 24,100 10,100" fill="#752C30" />
-        <polygon points="52,0 72,0 72,100 32,100" fill="#E73C2B" />
+        <polygon points="30,0 44,0 24,100 10,100" fill="#f54f1b" />
+        <polygon points="52,0 72,0 72,100 32,100" fill="#d63c0e" />
       </svg>
       <div className="relative">
         <p className="text-xs font-medium text-white/65">{name}</p>
         <p className="mt-1.5 flex items-baseline gap-1.5">
-          <span className="text-[30px] leading-none font-bold tracking-[-0.03em]">
+          <span className="text-[30px] leading-none font-bold tracking-[-0.03em] tabular-nums">
             {days}
           </span>
           <span className="text-[13px] text-white/80">days to go</span>

@@ -78,7 +78,7 @@ export function MarkupAnswer({
       className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(240px,300px)]"
     >
       <div
-        className="booklet min-h-[116px]"
+        className="booklet min-h-[116px] font-serif text-base leading-[32px]"
         aria-label="Your answer, with examiner notes"
       >
         {segments.map((s, i) => (

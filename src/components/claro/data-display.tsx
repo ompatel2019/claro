@@ -245,7 +245,7 @@ export function ScoreRing({
   return (
     <div
       data-component="ScoreRing"
-      className="relative grid shrink-0 place-items-center"
+      className="relative grid shrink-0 place-items-center tabular-nums"
       style={{ width: size, height: size }}
       role="img"
       aria-label={`${score} out of ${of}`}
@@ -364,6 +364,7 @@ export function TargetGauge({
         strokeWidth="3"
       />
       <text
+        className="tabular-nums"
         x="110"
         y="83"
         textAnchor="middle"
