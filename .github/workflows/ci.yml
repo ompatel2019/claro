@@ -28,6 +28,14 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # Memory budget: forcing declaration emit is what incremental builds (Next/Vercel with a
+      # cached tsbuildinfo) do to compute file signatures, so a type that explodes there fails here.
+      - name: Typecheck memory budget (2.5 GB heap)
+        run: |
+          npx tsc --noEmit --incremental false --extendedDiagnostics
+          npx tsc -p . --noEmit false --declaration --emitDeclarationOnly --outDir "$RUNNER_TEMP/dts" --incremental false --extendedDiagnostics
+        env:
+          NODE_OPTIONS: --max-old-space-size=2560
       - run: npm run check
       - run: npm run build
 

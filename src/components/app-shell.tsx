@@ -2,10 +2,7 @@
 import { ActiveNavProvider, useActiveNav } from "@/components/claro/active-nav";
 import { AskClaro } from "@/components/claro/ask-claro";
 import { CommandPalette } from "@/components/claro/command-palette";
-import {
-  ExamCountdown,
-  TopBar,
-} from "@/components/claro/layout";
+import { ExamCountdown, TopBar } from "@/components/claro/layout";
 import { ThemeToggle, setTheme } from "./theme-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
