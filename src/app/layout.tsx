@@ -16,10 +16,10 @@ export const metadata: Metadata = {
     description,
     images: [
       {
-        url: "/og/claro-student-og.png",
+        url: "/og/claro-og-image-1200x630.png",
         width: 1200,
         height: 630,
-        alt: "Claro: HSC Economics, marked in seconds.",
+        alt: "Claro: Clear feedback for HSC Economics.",
       },
     ],
   },
@@ -27,10 +27,10 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     images: [
       {
-        url: "/og/claro-student-og.png",
+        url: "/og/claro-og-image-1200x630.png",
         width: 1200,
         height: 630,
-        alt: "Claro: HSC Economics, marked in seconds.",
+        alt: "Claro: Clear feedback for HSC Economics.",
       },
     ],
   },
