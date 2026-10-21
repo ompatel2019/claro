@@ -8,7 +8,7 @@
   -->
   <!-- Full-bleed tile: platforms round their own corners, and transparent
        corners read as white fringing on light embed cards. -->
-  <rect width="32" height="32" fill="#e86239" />
+  <rect width="32" height="32" fill="#f54f1b" />
   <path
     d="M21 10.1A8 8 0 1 0 21 21.9"
     fill="none"
