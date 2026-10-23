@@ -548,52 +548,59 @@ function SprintAnswers({
         aria-label="Previous and next question"
         className="grid grid-cols-2 gap-3"
       >
-        {near.map((i, side) =>
-          i === undefined ? (
-            <span key={side} />
-          ) : (
-            <button
-              key={side}
-              type="button"
-              onClick={() => {
-                setIndex(i);
-                document
-                  .getElementById("results-questions")
-                  ?.scrollIntoView({ block: "start" });
-              }}
-              className={cn(
-                "bg-card shadow-card hover:bg-muted/50 focus-visible:ring-ring flex min-w-0 items-center gap-3 rounded-xl border px-4 py-3 transition-colors outline-none focus-visible:ring-2",
-                side ? "justify-end text-right" : "text-left",
-              )}
-            >
-              {!side && (
-                <PortalIcon
-                  name="chevron-left"
-                  aria-hidden
-                  className="size-4 shrink-0"
-                />
-              )}
-              <span className="min-w-0">
-                <span className="text-muted-foreground block text-xs">
-                  {side ? "Next question" : "Previous question"}
-                </span>
-                <span className="block truncate text-sm font-semibold">
-                  Q{items[i].position ?? i + 1} · {items[i].topic}
-                </span>
-                <span className="text-muted-foreground block text-xs tabular-nums">
-                  {shown(items[i])}
-                </span>
+        {/* Both buttons stay mounted (aria-disabled, not disabled) so keyboard focus survives reaching Q1 or the last question. */}
+        {near.map((i, side) => (
+          <button
+            key={side}
+            type="button"
+            aria-disabled={i === undefined || undefined}
+            onClick={() => {
+              if (i === undefined) return;
+              setIndex(i);
+              document
+                .getElementById("results-questions")
+                ?.scrollIntoView({ block: "start" });
+            }}
+            className={cn(
+              "bg-card shadow-card hover:bg-muted/50 focus-visible:ring-ring aria-disabled:hover:bg-card flex min-w-0 items-center gap-3 rounded-xl border px-4 py-3 transition-colors outline-none focus-visible:ring-2 aria-disabled:cursor-default aria-disabled:opacity-50",
+              side ? "justify-end text-right" : "text-left",
+            )}
+          >
+            {!side && (
+              <PortalIcon
+                name="chevron-left"
+                aria-hidden
+                className="size-4 shrink-0"
+              />
+            )}
+            <span className="min-w-0">
+              <span className="text-muted-foreground block text-xs">
+                {side ? "Next question" : "Previous question"}
               </span>
-              {!!side && (
-                <PortalIcon
-                  name="chevron-right"
-                  aria-hidden
-                  className="size-4 shrink-0"
-                />
+              {i === undefined ? (
+                <span className="block truncate text-sm font-semibold">
+                  {side ? "Last question" : "First question"}
+                </span>
+              ) : (
+                <>
+                  <span className="block truncate text-sm font-semibold">
+                    Q{items[i].position ?? i + 1} · {items[i].topic}
+                  </span>
+                  <span className="text-muted-foreground block text-xs tabular-nums">
+                    {shown(items[i])}
+                  </span>
+                </>
               )}
-            </button>
-          ),
-        )}
+            </span>
+            {!!side && (
+              <PortalIcon
+                name="chevron-right"
+                aria-hidden
+                className="size-4 shrink-0"
+              />
+            )}
+          </button>
+        ))}
       </nav>
     </section>
   );

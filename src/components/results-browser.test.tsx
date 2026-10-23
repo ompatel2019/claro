@@ -249,10 +249,33 @@ it("pages to the previous and next question below the open one", () => {
   const pager = screen.getByRole("navigation", {
     name: "Previous and next question",
   });
-  expect(within(pager).queryByText("Previous question")).toBeNull();
-  fireEvent.click(within(pager).getByRole("button", { name: /Next question/ }));
+  const prev = within(pager).getByRole("button", { name: /Previous question/ });
+  const next = within(pager).getByRole("button", { name: /Next question/ });
+  expect(prev).toHaveAttribute("aria-disabled", "true");
+  fireEvent.click(prev);
+  expect(screen.getByText("Review 1")).toBeVisible();
+  fireEvent.click(next);
   expect(screen.getByText("Review 2")).toBeVisible();
-  expect(within(pager).getByText("Previous question")).toBeVisible();
+  expect(prev).not.toHaveAttribute("aria-disabled");
+  // Reaching the last question keeps the focused button mounted, so focus is not lost.
+  next.focus();
+  fireEvent.click(next);
+  expect(screen.getByText("Review 3")).toBeVisible();
+  expect(next).toBeInTheDocument();
+  expect(next).toHaveAttribute("aria-disabled", "true");
+  expect(next).toHaveFocus();
+  expect(next).toHaveTextContent("Last question");
+  fireEvent.click(next);
+  expect(screen.getByText("Review 3")).toBeVisible();
+  expect(next).toHaveFocus();
+  // The same holds paging back to Q1.
+  prev.focus();
+  fireEvent.click(prev);
+  fireEvent.click(prev);
+  expect(screen.getByText("Review 1")).toBeVisible();
+  expect(prev).toHaveAttribute("aria-disabled", "true");
+  expect(prev).toHaveFocus();
+  expect(prev).toHaveTextContent("First question");
 });
 
 it("lets a terminal status pill speak for an unmarked row in the table", () => {
