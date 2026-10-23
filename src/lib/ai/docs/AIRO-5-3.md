@@ -2,6 +2,17 @@
 
 23 Oct 2026. **Voice-only prompt tweak plus a deterministic post-filter. Evaluated on 23 Oct (runs 2120 and 2122): mark agreement and judge scores fell versus 5.2; see Results.**
 
+## Airo 5.3b: filter-only variant (proposed; branch `airo/5.3b-filter-only`)
+
+After the 5.3 benchmark failed the gate (held-out exact 52.6% to 50.0%, A1 judge 6.28 to 5.50), 5.3b reverts **every grading-prompt change**: the voice lines and the five voice examples (including the "840 ÷ 105 × 100 = $800m" example) are back to the Airo 5.2 text. The grading, blind-check and reconcile prompts are byte-identical to main; `prompts-baseline.json` is main's file again, and a sha256 over 61 rendered questions (A1 and A1 mock; full, check and reconcile prompts, with and without tutor examples and mark restrictions) matches main exactly.
+
+Kept:
+
+- The summary prompt changes (no meta lines, at most 3 one-line points per list with Q refs, state-ranker voice, and claro-dev's "The first next_steps item is the single most valuable action; do not repeat a Top fix word for word.").
+- The deterministic post-filter in `src/lib/marking/comment-voice.ts`, which runs after marking and changes prose only. 5.3b also stops it splitting inside single-quoted passages ('…. ….'), while in-word apostrophes are still ignored.
+
+What to expect, not measured (no paid run): **marks should be the same as 5.2**, since the marking prompts are identical and the filter runs after the mark; only run-to-run sampling noise remains. **The voice change is small**: offline over the saved 5.2 results, the filter touched 7 of 727 comments (2 bodies, 5 `next_mark` lines) and 0 of 67 in the A1 check. Session summaries change through the summary prompt and the filter. The 5.3 sections below describe the full voice version that was benchmarked and not shipped.
+
 Source: Om, 23 Oct (7:43pm): comments should "sound like a 21 state ranker gave em... to the point... SAME QUALITY... not woozy waazy." Judgement stays the same (marks, anchors, criteria coverage); only voice and length change.
 
 ## Change

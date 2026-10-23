@@ -46,6 +46,23 @@ describe("splitSentences", () => {
     ).toEqual(["Write “Rates rise. Demand falls.” as one chain.", "Done."]);
   });
 
+  it("never splits inside single-quoted passages, ignoring apostrophes (codex review)", () => {
+    const text =
+      "Replace 'Inflation falls. Prices fall.' with 'Prices rise more slowly'.";
+    expect(splitSentences(text)).toEqual([text]);
+    expect(tightenText(text, { maxSentences: 1 })).toBe(text);
+    expect(
+      splitSentences("Write ‘Rates rise. Demand falls.’ as one chain. Done."),
+    ).toEqual(["Write ‘Rates rise. Demand falls.’ as one chain.", "Done."]);
+    expect(
+      splitSentences("Don't stop. The student's link is clear. Done."),
+    ).toEqual(["Don't stop.", "The student's link is clear.", "Done."]);
+    expect(splitSentences("Use the workers' wages. Then link it.")).toEqual([
+      "Use the workers' wages.",
+      "Then link it.",
+    ]);
+  });
+
   it("returns text without a full stop as one sentence", () => {
     expect(splitSentences("Correct formula, it deflates nominal GDP")).toEqual([
       "Correct formula, it deflates nominal GDP",

@@ -14,7 +14,15 @@ const ABBREVIATIONS =
 
 function openQuote(text: string) {
   const count = (re: RegExp) => (text.match(re) ?? []).length;
-  return count(/"/gu) % 2 === 1 || count(/“/gu) > count(/”/gu);
+  // Single quotes open after a space or bracket and close before a space or
+  // punctuation; in-word apostrophes ("don't", "student's") match neither.
+  const singleOpen = count(/(?:^|[\s(“"])['‘](?=\S)/gu);
+  const singleClose = count(/(?<=\S)['’](?=$|[\s.,;:!?)”"])/gu);
+  return (
+    count(/"/gu) % 2 === 1 ||
+    count(/“/gu) > count(/”/gu) ||
+    singleOpen > singleClose
+  );
 }
 
 /** Split prose into sentences without breaking decimals, "e.g." or "$800m." mid-number. */
