@@ -1,5 +1,6 @@
 import { shiftDay } from "@/lib/sydney-day";
 import { singleParams, sydneyDay } from "@/lib/admin";
+import { isOpenRouterModel } from "@/lib/ai/spend";
 import { sydneyMidnight } from "../marking/accuracy/data";
 
 export type Range = "month" | "30" | "all" | { from: string; to: string };
@@ -106,7 +107,10 @@ function normaliseTask(task: string) {
   }
 }
 
-/** SQL dashboard totals, usage covering range and fixed 30 days, marked attempts and student profiles. */
+/**
+ * SQL dashboard totals, usage covering range and fixed 30 days, marked attempts and student profiles.
+ * Today, byModel and byTask count OpenRouter models only, like the SQL month/all totals (0083).
+ */
 export function computeSpend(
   totals: { month: number; all: number },
   usage: Usage[],
@@ -119,6 +123,7 @@ export function computeSpend(
   const todayKey = sydneyDay(now);
   const today = usage.reduce(
     (sum, row) =>
+      isOpenRouterModel(row.model) &&
       Date.parse(row.created_at) < now.getTime() &&
       sydneyDay(row.created_at) === todayKey
         ? sum + finiteCost(row.usd)
@@ -156,6 +161,12 @@ export function computeSpend(
   let writtenUsd = 0;
   for (const r of rows) {
     const usd = finiteCost(r.usd);
+    const name = normaliseTask(r.task);
+    const day = days.get(sydneyDay(r.created_at))!;
+    day.usd += usd;
+    day.models[r.model] = (day.models[r.model] ?? 0) + usd;
+    if (writtenTasks.includes(name)) writtenUsd += usd;
+    if (!isOpenRouterModel(r.model)) continue;
     const model = byModel.get(r.model) ?? {
       model: r.model,
       calls: 0,
@@ -170,7 +181,6 @@ export function computeSpend(
     model.output_tokens += r.output_tokens;
     model.usd += usd;
     byModel.set(r.model, model);
-    const name = normaliseTask(r.task);
     const task = byTask.get(name) ?? {
       task: name,
       calls: 0,
@@ -181,10 +191,6 @@ export function computeSpend(
     task.usd += usd;
     task.avgPerCall = task.usd / task.calls;
     byTask.set(name, task);
-    const day = days.get(sydneyDay(r.created_at))!;
-    day.usd += usd;
-    day.models[r.model] = (day.models[r.model] ?? 0) + usd;
-    if (writtenTasks.includes(name)) writtenUsd += usd;
   }
   const groups = ["Marking", "Admin and evals", "Other"]
     .map((name) => {
