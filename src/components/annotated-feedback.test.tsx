@@ -888,3 +888,21 @@ it("keeps the mark and next step when a marked photo answer switches to the phot
     screen.queryByRole("region", { name: "Comments" }),
   ).not.toBeInTheDocument();
 });
+
+it("starts the marked answer afresh when the attempt changes", () => {
+  const selected = () =>
+    [...document.querySelectorAll("mark[data-selected]")].map((m) =>
+      m.getAttribute("data-anchors"),
+    );
+  const { rerender } = render(<AnnotatedFeedback row={row} />);
+  const first = selected();
+  expect(first.length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole("button", { name: /next comment/i }));
+  expect(selected()).not.toEqual(first);
+  rerender(
+    <AnnotatedFeedback
+      row={{ ...row, attempt_id: "other", answer_text: `${text} More.` }}
+    />,
+  );
+  expect(selected()).toEqual(first);
+});

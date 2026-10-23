@@ -645,6 +645,9 @@ export function AnnotatedFeedback({
           <Photos photos={photos} />
         ) : docView ? (
           <MarkedAnswerDoc
+            // A new answer (e.g. the next checked question) starts fresh:
+            // slider back on its next-mark comment, highlights re-synced.
+            key={`${row.attempt_id}:${text}`}
             text={
               keepLineBreaks || !row.transcript ? text : displayAnswer(text)
             }
