@@ -1098,3 +1098,36 @@ it("View booklet blocks F and option keys, then jumps to the clicked question", 
     ).toHaveAttribute("aria-current", "step"),
   );
 });
+
+it("a reload after a confirmed leave saves the restored draft, then finishes", async () => {
+  mocks.fetch.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ saved: true }),
+  });
+  vi.stubGlobal("fetch", mocks.fetch);
+  localStorage.setItem(
+    "claro-draft-a",
+    JSON.stringify({ answer_text: "Saved on return" }),
+  );
+  sessionStorage.setItem("claro-left-s", "1");
+  show(
+    [
+      {
+        ...attempt,
+        choice_index: null,
+        question: { ...attempt.question, type: "short" },
+      },
+    ],
+    { mode: "short", feedback: "end", topics: [] },
+  );
+  await waitFor(finishCall);
+  expect(sessionStorage.getItem("claro-left-s")).toBeNull();
+  expect(mocks.fetch.mock.calls[0]).toEqual([
+    "/api/attempts/a/mark",
+    expect.objectContaining({
+      method: "PATCH",
+      body: JSON.stringify({ answer_text: "Saved on return" }),
+    }),
+  ]);
+});

@@ -243,18 +243,10 @@ export function SprintRunner({
     sessionId: session.id,
     active: !finishing,
     onAsk: () => setLeaving(true),
+    // Answers the server hasn't confirmed yet keep their local draft until saved.
+    unsaved: () =>
+      rows.current.some((a) => localStorage.getItem(draftKey(a.id)) != null),
   });
-  useEffect(() => {
-    // No resume: a reload or reopened tab after a confirmed leave goes to the results.
-    try {
-      if (sessionStorage.getItem(leftKey(session.id))) {
-        sessionStorage.removeItem(leftKey(session.id));
-        window.location.replace(`/student/activity/${session.id}`);
-      }
-    } catch {}
-    // Mount only.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
   useEffect(() => {
     // Restore drafts the server never confirmed (closed tab, lost connection).
     for (const a of rows.current) {
@@ -399,6 +391,22 @@ export function SprintRunner({
       throw error;
     }
   }
+  useEffect(() => {
+    // No resume: the student confirmed leaving by reload or tab close while answers were still
+    // saving, so the unload couldn't finish the sprint. Save the restored drafts, then finish.
+    try {
+      if (!sessionStorage.getItem(leftKey(session.id))) return;
+    } catch {
+      return;
+    }
+    const timer = setTimeout(() => {
+      sessionStorage.removeItem(leftKey(session.id));
+      void act(() => finish());
+    });
+    return () => clearTimeout(timer);
+    // Mount only, after the drafts above are restored.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const a = attempts[index];
   const editable =
     !!a &&

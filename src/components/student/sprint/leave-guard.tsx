@@ -13,7 +13,10 @@ import {
 export const LEAVE_MESSAGE =
   "Leaving ends this sprint. Your answered questions will be marked.";
 
-/** Set when the student confirmed leaving by reload or tab close; the next load ends the sprint. */
+/**
+ * Set when the student confirmed leaving by reload or tab close with answers still saving; the
+ * next load saves them and ends the sprint (otherwise the 30-minute sweep ends it).
+ */
 export const leftKey = (sessionId: string) => `claro-left-${sessionId}`;
 
 /** A same-tab, same-origin link click that would navigate away from the runner. */
@@ -47,21 +50,26 @@ export function leavingLink(event: MouseEvent, here: string) {
 /**
  * No resume: while a sprint is active, leaving asks first and confirming finishes it. Covers the
  * exit button (via `onAsk`), in-app links, browser back, and reload or tab close (the browser's own
- * prompt; a confirmed unload finishes the sprint with a beacon).
+ * prompt). A confirmed unload finishes the sprint with a beacon once every answer is saved; with
+ * answers still saving it never finishes early (that would mark stale text) and leaves a flag instead.
  */
 export function useLeaveGuard({
   sessionId,
   active,
   onAsk,
+  unsaved,
 }: {
   sessionId: string;
   active: boolean;
   onAsk: () => void;
+  unsaved: () => boolean;
 }) {
   const ask = useRef(onAsk);
+  const pending = useRef(unsaved);
   const guarded = useRef(false);
   useEffect(() => {
     ask.current = onAsk;
+    pending.current = unsaved;
   });
   useEffect(() => {
     if (!active) return;
@@ -87,10 +95,13 @@ export function useLeaveGuard({
     };
     const pageHide = (event: PageTransitionEvent) => {
       if (event.persisted) return;
+      if (!pending.current()) {
+        navigator.sendBeacon?.(finishUrl);
+        return;
+      }
       try {
         sessionStorage.setItem(leftKey(sessionId), "1");
       } catch {}
-      navigator.sendBeacon?.(finishUrl);
     };
     document.addEventListener("click", click, true);
     window.addEventListener("popstate", pop);

@@ -9,8 +9,16 @@ import {
   useLeaveGuard,
 } from "./leave-guard";
 
-function Guard({ active, onAsk }: { active: boolean; onAsk: () => void }) {
-  useLeaveGuard({ sessionId: "s", active, onAsk });
+function Guard({
+  active,
+  onAsk,
+  unsaved = false,
+}: {
+  active: boolean;
+  onAsk: () => void;
+  unsaved?: boolean;
+}) {
+  useLeaveGuard({ sessionId: "s", active, onAsk, unsaved: () => unsaved });
   return (
     <>
       <a href="/student">Home</a>
@@ -89,6 +97,15 @@ it("prompts on unload and finishes with a beacon once the page goes", () => {
     new PageTransitionEvent("pagehide", { persisted: false }),
   );
   expect(beacon).toHaveBeenCalledWith("/api/sessions/s/finish");
+  expect(sessionStorage.getItem(leftKey("s"))).toBeNull();
+});
+
+it("never finishes on unload while an answer is still saving; the next load does", () => {
+  render(<Guard active onAsk={vi.fn()} unsaved />);
+  window.dispatchEvent(
+    new PageTransitionEvent("pagehide", { persisted: false }),
+  );
+  expect(beacon).not.toHaveBeenCalled();
   expect(sessionStorage.getItem(leftKey("s"))).toBe("1");
 });
 

@@ -9,6 +9,8 @@ import {
 } from "@/lib/limits";
 import { createClient } from "@/utils/supabase/server";
 import { admin } from "@/utils/supabase/admin";
+import { after } from "next/server";
+import { finishOpenSessions } from "@/lib/session-finish";
 import { bankQuestionAvailable } from "@/lib/single-check-data";
 import {
   answerValid,
@@ -107,6 +109,8 @@ async function create(input: unknown) {
       .eq("user_id", user.id);
     throw new Error("Couldn't save your answer. Try again.");
   }
+  // No resume: starting a check finishes the student's earlier open sprints and decks.
+  after(() => finishOpenSessions(user.id, { keep: sessionId }));
   return { sessionId, attemptId };
 }
 async function finish(sessionId: string) {

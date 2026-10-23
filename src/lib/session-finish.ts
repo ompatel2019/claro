@@ -80,12 +80,28 @@ export async function finishOpenSessions(
 ) {
   const db = admin();
   // Service role: every read is pinned to the verified caller's user id.
-  const { data, error } = await db
+  let startedBefore: string | null = null;
+  if (opts.keep) {
+    // Only sessions started before the new one: overlapping starts never finish each other's
+    // newer session.
+    const kept = await db
+      .from("sessions")
+      .select("started_at")
+      .eq("id", opts.keep)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (kept.error) throw kept.error;
+    if (!kept.data) return 0;
+    startedBefore = (kept.data as { started_at: string }).started_at;
+  }
+  let open = db
     .from("sessions")
     .select("id,kind,finished_at,last_active_at:session_last_active_at")
     .eq("user_id", userId)
     .in("kind", LEAVABLE_KINDS)
     .is("finished_at", null);
+  if (startedBefore) open = open.lt("started_at", startedBefore);
+  const { data, error } = await open;
   if (error) throw error;
   const due = (
     (data ?? []) as {

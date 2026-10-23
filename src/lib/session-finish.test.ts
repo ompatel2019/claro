@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   rows: [] as Record<string, unknown>[],
   readError: null as Error | null,
+  kept: { started_at: "2026-10-23T10:00:00Z" } as { started_at: string } | null,
   filters: [] as unknown[][],
   finish: vi.fn(),
   needsAi: vi.fn(),
@@ -39,8 +40,15 @@ vi.mock("@/utils/supabase/admin", () => ({
           mocks.filters.push(["is", ...args]);
           return chain;
         },
+        lt: (...args: unknown[]) => {
+          mocks.filters.push(["lt", ...args]);
+          return chain;
+        },
         delete: () => chain,
-        maybeSingle: async () => ({ data: { role: "student" }, error: null }),
+        maybeSingle: async () =>
+          table === "sessions"
+            ? { data: mocks.kept, error: null }
+            : { data: { role: "student" }, error: null },
         then: (done: (value: unknown) => unknown) =>
           Promise.resolve({ data: mocks.rows, error: mocks.readError }).then(
             done,
@@ -68,6 +76,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.filters = [];
   mocks.readError = null;
+  mocks.kept = { started_at: "2026-10-23T10:00:00Z" };
   mocks.rows = [
     row("live", ago(5 * 60_000)),
     row("stale", ago(IDLE_FINISH_MS + 1000)),
@@ -108,6 +117,31 @@ it("the idle sweep finishes stale sessions and leaves live ones open", async () 
 it("starting a session finishes every other open one", async () => {
   expect(await finishOpenSessions("student-1", { keep: "live" })).toBe(2);
   expect(mocks.finish.mock.calls.map(([id]) => id)).toEqual(["stale", "deck"]);
+});
+
+it("a start only finishes sessions started before it, never a newer overlapping start", async () => {
+  await finishOpenSessions("student-1", { keep: "new" });
+  expect(mocks.filters.slice(0, 4)).toEqual([
+    ["select", "sessions", "started_at"],
+    ["eq", "id", "new"],
+    ["eq", "user_id", "student-1"],
+    [
+      "select",
+      "sessions",
+      "id,kind,finished_at,last_active_at:session_last_active_at",
+    ],
+  ]);
+  expect(mocks.filters).toContainEqual([
+    "lt",
+    "started_at",
+    "2026-10-23T10:00:00Z",
+  ]);
+});
+
+it("a start whose session isn't the student's finishes nothing", async () => {
+  mocks.kept = null;
+  expect(await finishOpenSessions("student-1", { keep: "other" })).toBe(0);
+  expect(mocks.finish).not.toHaveBeenCalled();
 });
 
 it("can finish one reopened session only", async () => {

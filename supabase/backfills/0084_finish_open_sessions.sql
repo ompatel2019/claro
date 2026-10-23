@@ -27,12 +27,31 @@ where s.finished_at is null
   and not exists (select 1 from public.attempts a where a.session_id = s.id
     and a.status = 'marking' and a.claimed_at > now() - interval '5 minutes');
 
-select kind, count(*) as to_finish from backfill_targets group by kind;
-
+-- Lock in the app's order (finish_versioned_session: the session's attempts by id, then the
+-- session), so a concurrent answer save either commits first or waits for this transaction.
 with locked as (
-  select s.id from public.sessions s join backfill_targets t on t.id = s.id for update of s
+  select a.id from public.attempts a join backfill_targets t on t.id = a.session_id
+  order by a.id for update of a
 )
-select count(*) as locked from locked;
+select count(*) as attempts_locked from locked;
+with locked as (
+  select s.id from public.sessions s join backfill_targets t on t.id = s.id
+  order by s.id for update of s
+)
+select count(*) as sessions_locked from locked;
+
+-- Re-check under the locks: drop any session that changed between the scan and the locks
+-- (finished, active again, a newly saved answer that needs AI, or a fresh marking claim).
+delete from backfill_targets t
+using public.sessions s
+where s.id = t.id
+  and (s.finished_at is not null
+    or public.session_last_active_at(s) >= now() - interval '30 minutes'
+    or (t.kind = 'sprint' and public.session_needs_ai_finish(s.id))
+    or exists (select 1 from public.attempts a where a.session_id = s.id
+      and a.status = 'marking' and a.claimed_at > now() - interval '5 minutes'));
+
+select kind, count(*) as to_finish from backfill_targets group by kind;
 
 -- MC: deterministic score.
 update public.attempts a
