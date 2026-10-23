@@ -9,9 +9,9 @@ export type SummaryLists = {
 
 export const SUMMARY_CAP = 3;
 
-// Conservative: only lines that talk about the summary or its inputs, not the student's work.
+// Guard for already-stored summaries (new marking filters these server-side): only specific
+// disclaimer phrasings, never a generic "This summary ..." prefix, so real feedback is kept.
 const META = [
-  /\bthis summary\b.{0,40}\b(?:covers?|includes?|is based on|only|looks at)\b/i,
   // "MC answers were not supplied", not "marginal cost (MC) is not included in fixed costs".
   /\b(?:multiple[- ]choice|mc)\b(?:\s*\(mc\))?\s+(?:answers?|questions?|responses?|items?)\b[^.]{0,30}\b(?:were|are|was|is|have been|has been)\s+not\s+(?:supplied|provided|included|available)\b/i,
   /\b(?:only|just) (?:covers?|includes?|looks at) (?:your )?written\b/i,

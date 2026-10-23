@@ -30,7 +30,7 @@ export default async function SpendPage({
   const spend = await loadSpend(range);
   const pct = Math.min(100, (spend.all / spend.cap) * 100);
   const calls = spend.byModel.reduce((total, model) => total + model.calls, 0);
-  const total = spend.byModel.reduce((total, model) => total + model.usd, 0);
+  const total = spend.perDay.reduce((sum, point) => sum + point.usd, 0);
   const throughNow = spend.window.to === sydneyDay(spend.window.until);
   return (
     <div className="min-w-0 space-y-4">
@@ -52,7 +52,8 @@ export default async function SpendPage({
         {spend.window.from
           ? `${dateLabel(spend.window.from)} to ${dateLabel(spend.window.to)}`
           : "All time"}{" "}
-        (Sydney{throughNow ? ", through now" : ", inclusive"}) · {calls} calls
+        (Sydney{throughNow ? ", through now" : ", inclusive"}) · {calls}{" "}
+        OpenRouter calls
         {rejectedDates && (
           <span> · Those dates aren&apos;t valid, showing this month</span>
         )}
@@ -61,12 +62,12 @@ export default async function SpendPage({
         <StatCard
           title="Today"
           value={usd(spend.today)}
-          description="Sydney day"
+          description="OpenRouter · Sydney day"
         />
         <StatCard
           title="This month"
           value={usd(spend.month)}
-          description="Sydney calendar month"
+          description="OpenRouter · Sydney calendar month"
         />
         <StatCard
           title="All time"
@@ -141,7 +142,8 @@ export default async function SpendPage({
         {total > 0 ? (
           <DailyChart
             title="Spend per day"
-            hero={usd(spend.perDay.reduce((sum, point) => sum + point.usd, 0))}
+            description="OpenRouter only"
+            hero={usd(total)}
             kind="bars"
             points={spend.perDay.map((p) => ({
               day: p.day,
@@ -152,7 +154,7 @@ export default async function SpendPage({
         ) : (
           <EmptyState
             title="No spend in this range"
-            description="Daily spend by model will appear after an AI call."
+            description="Daily OpenRouter spend by model will appear after an AI call."
           />
         )}
         <Card className="min-w-0">

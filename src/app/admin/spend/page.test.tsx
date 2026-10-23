@@ -48,7 +48,7 @@ it("renders KPIs and mark-value bands, labelled budget markers, empty sections a
   );
   expect(
     screen.getByText(
-      "1 Oct 2026 to 9 Oct 2026 (Sydney, through now) · 0 calls",
+      "1 Oct 2026 to 9 Oct 2026 (Sydney, through now) · 0 OpenRouter calls",
     ),
   ).toBeInTheDocument();
   expect(
@@ -57,10 +57,13 @@ it("renders KPIs and mark-value bands, labelled budget markers, empty sections a
   expect(screen.getByText("$0.00 of $100")).toBeInTheDocument();
   expect(screen.getAllByText("No tracked costs")).toHaveLength(6);
   for (const text of [
+    "OpenRouter · Sydney day",
+    "OpenRouter · Sydney calendar month",
     "80% · Evals blocked",
     "90% · All AI stops",
     "100% · Cap",
     "No spend in this range",
+    "Daily OpenRouter spend by model will appear after an AI call.",
     "No model spend yet",
     "No task spend yet",
     "No student spend in the last 30 days",
@@ -100,7 +103,7 @@ it("shows stacked spend, calls, written average and over-limit student links, cl
   render(await SpendPage({ searchParams: Promise.resolve({ range: "30" }) }));
   expect(loadSpend).toHaveBeenCalledWith("30");
   expect(
-    screen.getByText(/\(Sydney, through now\) · 2 calls$/),
+    screen.getByText(/\(Sydney, through now\) · 2 OpenRouter calls$/),
   ).toBeInTheDocument();
   expect(screen.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
@@ -117,6 +120,21 @@ it("shows stacked spend, calls, written average and over-limit student links, cl
   );
   expect(over).toHaveTextContent("151 calls");
 });
+it("labels the spend chart as OpenRouter only", async () => {
+  const data = spend();
+  data.perDay = [
+    { day: "2026-10-09", usd: 2.5, models: { "anthropic/model-a": 2.5 } },
+  ];
+  vi.mocked(loadSpend).mockResolvedValue(data);
+  render(await SpendPage({ searchParams: Promise.resolve({}) }));
+  const chart = screen
+    .getByRole("img", { name: "Spend per day, Sydney dates, stacked by model" })
+    .closest('[data-slot="card"]')!;
+  expect(
+    within(chart as HTMLElement).getByText("OpenRouter only"),
+  ).toBeInTheDocument();
+  expect(screen.queryByText("No spend in this range")).toBeNull();
+});
 it("reflects historical inclusive custom dates and defaults invalid ranges", async () => {
   const range = { from: "2026-09-01", to: "2026-09-30" };
   vi.mocked(loadSpend).mockResolvedValue(spend(range));
@@ -128,7 +146,7 @@ it("reflects historical inclusive custom dates and defaults invalid ranges", asy
   expect(loadSpend).toHaveBeenCalledWith(range);
   expect(
     screen.getByText(
-      "1 Sept 2026 to 30 Sept 2026 (Sydney, inclusive) · 0 calls",
+      "1 Sept 2026 to 30 Sept 2026 (Sydney, inclusive) · 0 OpenRouter calls",
     ),
   ).toBeInTheDocument();
   cleanup();
