@@ -1,6 +1,6 @@
 /**
- * Results answer pills, on the tracker tokens: full marks = Orange fill with Navy text (4.6:1),
- * part marks = orange tint with Orange Text (5.4:1 light), no marks = neutral muted,
+ * Results answer pills, on the tracker tokens: full marks = Orange fill with deep Navy text (4.9:1; brand Navy
+ * #1E223D is 4.45:1 on Orange, just under AA), part marks = orange tint with Orange Text (4.85:1 light, 5.8:1 dark), no marks = neutral muted,
  * not answered = dashed outline. The selected pill is raised with a 1px orange edge, never a dark ring.
  */
 export type AnswerPillState =

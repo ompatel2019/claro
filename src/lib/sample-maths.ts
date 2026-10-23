@@ -14,7 +14,7 @@ function tidy(expr: string) {
   // Two or more bare slashes reads like a date (1/2/2026), not a sum.
   if (ops.length > 1 && ops.every((o) => o === "/")) return null;
   return expr
-    .replace(/\s*\/\s*1(?![\d.,])/g, "")
+    .replace(/\s*\/\s*1(?![\d.,%])/g, "")
     .replace(/\s*\/\s*/g, " ÷ ")
     .replace(/\s*\*\s*|\s+[xX]\s+|(?<=\d)[xX](?=\d)/g, " × ")
     .replace(/\s*÷\s*/g, " ÷ ")
@@ -23,7 +23,17 @@ function tidy(expr: string) {
     .replace(/\s+-\s+/g, " − ");
 }
 
+const URL_SPAN = /(\b(?:https?:\/\/|www\.)\S+)/i;
+
 export function formatSampleMaths(text: string) {
+  // Odd indexes are URL spans, which are never rewritten.
+  return text
+    .split(URL_SPAN)
+    .map((part, i) => (i % 2 ? part : formatPart(part)))
+    .join("");
+}
+
+function formatPart(text: string) {
   return text.replace(
     EXPR,
     (all, expr: string, _eq, result: string, unit?: string) => {
