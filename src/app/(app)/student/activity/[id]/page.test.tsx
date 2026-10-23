@@ -1,6 +1,6 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { resolve } from "@/test/resolve-server-components";
-import { expect, it, vi, beforeEach, afterEach } from "vitest";
+import { expect, it, vi, beforeAll, beforeEach, afterEach } from "vitest";
 const mocks = vi.hoisted(() => ({
   kind: "paper",
   from: vi.fn(),
@@ -41,6 +41,12 @@ vi.mock("@/components/feedback-widget", () => ({
   useFeedback: () => vi.fn(),
 }));
 afterEach(cleanup);
+beforeAll(() => {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+});
 import Page from "./page";
 const id = "00000000-0000-4000-8000-000000000001";
 beforeEach(() => {

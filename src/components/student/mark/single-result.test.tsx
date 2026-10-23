@@ -1,10 +1,25 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, expect, it, vi } from "vitest";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
+import { afterEach, beforeAll, expect, it, vi } from "vitest";
 import type { ReviewRow } from "@/lib/feedback";
 import { SingleResult } from "./single-result";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("@/components/feedback-widget", () => ({ useFeedback: () => vi.fn() }));
+vi.mock("sonner", () => ({ toast: vi.fn() }));
 afterEach(cleanup);
+beforeAll(() => {
+  globalThis.ResizeObserver = class {
+    observe() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+  window.matchMedia = () => ({ matches: true }) as MediaQueryList;
+  Element.prototype.scrollIntoView = vi.fn();
+});
 const row = {
   attempt_id: "answer",
   question_id: "question",
@@ -59,16 +74,25 @@ it("derives the matched criteria, annotations and rewrite destination from the a
     "href",
     "/student/mark?question=question",
   );
+  const heading = screen.getByRole("heading", { name: "Your answer, marked" });
+  const card = heading.closest('[data-slot="card"]')!;
+  expect(card).toContainElement(heading);
+  const highlight = within(card as HTMLElement).getByRole("button", {
+    name: /^Strength 1/,
+  });
+  expect(highlight.tagName).toBe("MARK");
+  expect(highlight).toHaveTextContent("Demand");
+  const overall = within(card as HTMLElement).getByRole("heading", {
+    name: "Overall",
+  });
+  expect(overall.closest("li")).toHaveTextContent("Include evidence.");
   expect(
-    screen.getByRole("list", { name: "Examiner notes" }),
-  ).toHaveTextContent("Identifies demand.");
-  const note = screen.getByText("Identifies demand.").closest("li")!;
-  fireEvent.focus(note);
-  expect(screen.getByText("Demand")).toHaveClass("bg-brand-soft");
-  fireEvent.blur(note);
-  expect(screen.getByText("Demand")).not.toHaveClass("bg-brand-soft");
-  expect(screen.getByText("Add evidence")).toBeVisible();
-  expect(screen.getByText("Use a statistic.")).toBeVisible();
+    within(card as HTMLElement).getByRole("group", { name: "Filter comments" }),
+  ).toBeVisible();
+  expect(screen.getAllByText("Use a statistic.")).toHaveLength(2);
+  screen.getAllByText("Use a statistic.").forEach((line) => {
+    expect(line).toBeVisible();
+  });
 });
 it("distinguishes a reviewed full mark from provisional feedback", () => {
   render(
@@ -107,4 +131,90 @@ it("keeps explanations and disputes inside the final card's More disclosure", ()
   expect(
     screen.getByRole("button", { name: "Question this mark" }),
   ).toBeVisible();
+});
+
+it("keeps overlapping comments highlighted and out of Overall", () => {
+  const { container } = render(
+    <SingleResult
+      row={{
+        ...row,
+        answer_text: "Demand falls as prices rise.",
+        feedback: {
+          comments: [
+            {
+              quote: "Demand falls",
+              start: 0,
+              kind: "strength",
+              body: "Clear demand link.",
+            },
+            {
+              quote: "falls as prices",
+              start: 7,
+              kind: "fix",
+              body: "Explain the price link.",
+            },
+          ],
+        },
+      }}
+      sessionId="session"
+      when="2026-10-19T00:00:00Z"
+      topic="Economic growth"
+    />,
+  );
+  expect(screen.getByRole("button", { name: /^Strength 1/ }).tagName).toBe(
+    "MARK",
+  );
+  expect(screen.getByRole("button", { name: /^Fix 2/ }).tagName).toBe("MARK");
+  expect(container.querySelector('[data-card="0"]')).toHaveTextContent(
+    "Clear demand link.",
+  );
+  expect(container.querySelector('[data-card="1"]')).toHaveTextContent(
+    "Explain the price link.",
+  );
+  expect(
+    screen.queryByRole("heading", { name: "Overall" }),
+  ).not.toBeInTheDocument();
+});
+
+it("keeps every typed answer line break", () => {
+  const { container } = render(
+    <SingleResult
+      row={{ ...row, answer_text: "First line.\nSecond line.", feedback: null }}
+      sessionId="session"
+      when="2026-10-19T00:00:00Z"
+      topic=""
+    />,
+  );
+  expect(container.querySelector(".whitespace-pre-wrap")?.textContent).toBe(
+    "First line.\nSecond line.",
+  );
+});
+
+it("anchors to the transcript before the typed answer", () => {
+  render(
+    <SingleResult
+      row={{
+        ...row,
+        transcript: "Prices rose.",
+        answer_text: "Something else.",
+        feedback: {
+          comments: [
+            {
+              quote: "Prices",
+              start: 0,
+              kind: "strength",
+              body: "Clear trend.",
+            },
+          ],
+        },
+      }}
+      sessionId="session"
+      when="2026-10-19T00:00:00Z"
+      topic=""
+    />,
+  );
+  expect(screen.getByRole("button", { name: /^Strength 1/ })).toHaveTextContent(
+    "Prices",
+  );
+  expect(screen.queryByText("Something else.")).not.toBeInTheDocument();
 });
