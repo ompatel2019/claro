@@ -37,7 +37,16 @@ it("preserves question numbering and opens a question from the MC grid", () => {
       items={items}
       views={views}
       initial={1}
-      mcGrid={[{ position: 1, your: "B", correct: "C", right: false }]}
+      mcGrid={[
+        { position: 1, your: "B", correct: "C", answered: true, right: false },
+        {
+          position: 24,
+          your: "Not answered",
+          correct: "A",
+          answered: false,
+          right: false,
+        },
+      ]}
     />,
   );
   expect(screen.getByText("Answer to Q24")).toBeVisible();
@@ -50,6 +59,13 @@ it("preserves question numbering and opens a question from the MC grid", () => {
       screen.getByRole("table", { name: "Multiple choice answers 1" }),
     ).getByText("Incorrect"),
   ).toBeVisible();
+  const unanswered = within(
+    screen.getByRole("table", { name: "Multiple choice answers 1" }),
+  )
+    .getByRole("button", { name: "Review question 24" })
+    .closest("tr")!;
+  expect(within(unanswered).getAllByText("Not answered")).toHaveLength(2);
+  expect(within(unanswered).queryByText("Incorrect")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Review question 1" }));
   expect(screen.getByText("Answer to Q1")).toBeVisible();
   expect(Element.prototype.scrollIntoView).toHaveBeenCalled();

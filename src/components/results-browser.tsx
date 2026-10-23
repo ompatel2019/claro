@@ -239,7 +239,9 @@ export function ResultsBrowser({
                           <TableCell>{r.your}</TableCell>
                           <TableCell>{r.correct}</TableCell>
                           <TableCell>
-                            {r.right == null ? (
+                            {!r.answered ? (
+                              <StatusPill pill="Not answered" />
+                            ) : r.right == null ? (
                               "Pending"
                             ) : (
                               <span

@@ -90,10 +90,22 @@ describe("MC results", () => {
         row({ position: 6 }),
       ]),
     ).toEqual([
-      { position: 1, your: "B", correct: "B", right: true },
-      { position: 2, your: "A", correct: "C", right: false },
-      { position: 3, your: "Not answered", correct: "D", right: false },
-      { position: 4, your: "A", correct: "Unavailable", right: null },
+      { position: 1, your: "B", correct: "B", answered: true, right: true },
+      { position: 2, your: "A", correct: "C", answered: true, right: false },
+      {
+        position: 3,
+        your: "Not answered",
+        correct: "D",
+        answered: false,
+        right: false,
+      },
+      {
+        position: 4,
+        your: "A",
+        correct: "Unavailable",
+        answered: true,
+        right: null,
+      },
     ]);
   });
   it("keeps a marked MC answer whose blind check was skipped", () => {

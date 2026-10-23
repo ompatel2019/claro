@@ -105,6 +105,7 @@ export function mcGridRows(rows: ReviewRow[]) {
       your: letter(r.choice_index),
       correct:
         r.correct_index == null ? "Unavailable" : letter(r.correct_index),
+      answered: r.choice_index != null,
       right:
         r.correct_index == null ? null : r.choice_index === r.correct_index,
     }));
