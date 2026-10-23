@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { Close, PortalIcon } from "@/components/icons";
+import { PortalIcon } from "@/components/icons";
 import { useRouter } from "next/navigation";
 import { DataTable, type Column } from "@/components/data-table";
 import type { Pager } from "@/lib/admin";
@@ -99,18 +99,6 @@ const columns: Column<StudentRow>[] = [
     sort: true,
     cell: (s) => `$${s.ai_spend.toFixed(2)}`,
   },
-  {
-    id: "blocked",
-    header: "Blocked",
-    sort: true,
-    cell: (s) =>
-      s.blocked ? (
-        <Badge variant="destructive">
-          <Close />
-          Blocked
-        </Badge>
-      ) : null,
-  },
 ];
 
 export function StudentsTable({
@@ -147,13 +135,9 @@ export function StudentsTable({
                         <div
                           key={column.id}
                           className={
-                            [
-                              "email",
-                              "year",
-                              "sessions7",
-                              "avg",
-                              "blocked",
-                            ].includes(column.id)
+                            ["email", "year", "sessions7", "avg"].includes(
+                              column.id,
+                            )
                               ? "sm:hidden"
                               : undefined
                           }
@@ -161,11 +145,7 @@ export function StudentsTable({
                           <dt className="text-muted-foreground">
                             {column.header}
                           </dt>
-                          <dd className="wrap-anywhere">
-                            {column.id === "blocked" && !s.blocked
-                              ? "No"
-                              : column.cell(s)}
-                          </dd>
+                          <dd className="wrap-anywhere">{column.cell(s)}</dd>
                         </div>
                       ))}
                   </dl>
@@ -181,7 +161,7 @@ export function StudentsTable({
           ? "max-sm:px-2"
           : c.id === "email"
             ? "hidden max-w-56 whitespace-normal break-all sm:table-cell"
-            : ["year", "sessions7", "avg", "blocked"].includes(c.id)
+            : ["year", "sessions7", "avg"].includes(c.id)
               ? "hidden whitespace-normal sm:table-cell"
               : "hidden whitespace-normal 2xl:table-cell",
       [
@@ -199,7 +179,7 @@ export function StudentsTable({
   }));
   return (
     <>
-      <div className="space-y-3 md:hidden">
+      <div className="md:hidden">
         <ul
           aria-label="Students"
           className="bg-card divide-y overflow-hidden rounded-2xl border"

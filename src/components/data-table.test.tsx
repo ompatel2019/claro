@@ -284,7 +284,6 @@ it("student details preserve hidden metrics without triggering row navigation", 
     "Sessions total": "0",
     "Questions answered": "0",
     "AI spend (all time)": "$1.23",
-    Blocked: "No",
   });
   fireEvent.click(screen.getAllByRole("row")[1].querySelectorAll("td")[6]);
   expect(nav.push).toHaveBeenCalledWith("/admin/students/ada");

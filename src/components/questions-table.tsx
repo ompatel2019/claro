@@ -41,8 +41,8 @@ type Failure = { id: string; problem: string };
 function columns(name: (id: string) => string): Column<QuestionListRow>[] {
   const result: Column<QuestionListRow>[] = [
     {
-      id: "id",
-      header: "ID",
+      id: "source",
+      header: "Source",
       sort: true,
       cell: (q) => (
         <Link
@@ -50,11 +50,10 @@ function columns(name: (id: string) => string): Column<QuestionListRow>[] {
           className="font-medium underline-offset-4 hover:underline"
           href={`${BASE}/${q.id}`}
         >
-          {q.id}
+          {q.source}
         </Link>
       ),
     },
-    { id: "source", header: "Source", sort: true, cell: (q) => q.source },
     { id: "year", header: "Year", sort: true, cell: (q) => q.year },
     {
       id: "type",
@@ -106,11 +105,9 @@ function columns(name: (id: string) => string): Column<QuestionListRow>[] {
   return result.map((c) => ({
     ...c,
     // Fit next to the sidebar at 1280: per-question stats only from 2xl.
-    className: ["id", "marks", "status"].includes(c.id)
-      ? c.id === "id"
-        ? "max-w-36 truncate"
-        : undefined
-      : ["source", "type", "topic"].includes(c.id)
+    className: ["source", "marks", "status"].includes(c.id)
+      ? undefined
+      : ["type", "topic"].includes(c.id)
         ? `hidden sm:table-cell${c.id === "topic" ? " whitespace-normal min-w-40" : ""}`
         : c.id === "year"
           ? "hidden lg:table-cell"
