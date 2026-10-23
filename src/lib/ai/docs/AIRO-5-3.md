@@ -1,17 +1,31 @@
 # Airo 5.3
 
-23 Oct 2026. **Voice-only prompt tweak plus a deterministic post-filter. Evaluated on 23 Oct (runs 2120 and 2122): mark agreement and judge scores fell versus 5.2; see Results.**
+23 Oct 2026. **Shipped as filter-only.** The state-ranker voice lines in the grading prompt were benchmarked, failed the gate (held-out exact 52.6% to 50.0%, A1 judge 6.28 to 5.50) and were reverted. Airo 5.3 keeps the summary prompt changes and the deterministic comment post-filter; the grading, blind-check and reconcile prompts are byte-identical to 5.2.
 
-## Airo 5.3b: filter-only variant (proposed; branch `airo/5.3b-filter-only`)
+## Decision: filter-only (Om, 23 Oct)
 
-After the 5.3 benchmark failed the gate (held-out exact 52.6% to 50.0%, A1 judge 6.28 to 5.50), 5.3b reverts **every grading-prompt change**: the voice lines and the five voice examples (including the "840 ÷ 105 × 100 = $800m" example) are back to the Airo 5.2 text. The grading, blind-check and reconcile prompts are byte-identical to main; `prompts-baseline.json` is main's file again, and a sha256 over 61 rendered questions (A1 and A1 mock; full, check and reconcile prompts, with and without tutor examples and mark restrictions) matches main exactly.
+After the 5.3 benchmark failed the gate (held-out exact 52.6% to 50.0%, A1 judge 6.28 to 5.50), Airo 5.3 reverts **every grading-prompt change**: the voice lines and the five voice examples (including the "840 ÷ 105 × 100 = $800m" example) are back to the Airo 5.2 text. The grading, blind-check and reconcile prompts are byte-identical to main; `prompts-baseline.json` is main's file again, and a sha256 over 61 rendered questions (A1 and A1 mock; full, check and reconcile prompts, with and without tutor examples and mark restrictions) matches main exactly.
 
 Kept:
 
 - The summary prompt changes (no meta lines, at most 3 one-line points per list with Q refs, state-ranker voice, and claro-dev's "The first next_steps item is the single most valuable action; do not repeat a Top fix word for word.").
-- The deterministic post-filter in `src/lib/marking/comment-voice.ts`, which runs after marking and changes prose only. 5.3b also stops it splitting inside single-quoted passages ('…. ….'), while in-word apostrophes are still ignored.
+- The deterministic post-filter in `src/lib/marking/comment-voice.ts`, which runs after marking and changes prose only. The filter also stops splitting inside single-quoted passages ('…. ….'), while in-word apostrophes are still ignored.
 
-What to expect, not measured (no paid run): **marks should be the same as 5.2**, since the marking prompts are identical and the filter runs after the mark; only run-to-run sampling noise remains. **The voice change is small**: offline over the saved 5.2 results, the filter touched 7 of 727 comments (2 bodies, 5 `next_mark` lines) and 0 of 67 in the A1 check. Session summaries change through the summary prompt and the filter. The 5.3 sections below describe the full voice version that was benchmarked and not shipped.
+What to expect, not measured (no paid run): **marks should be the same as 5.2**, since the marking prompts are identical and the filter runs after the mark; only run-to-run sampling noise remains. **The voice change is small**: offline over the saved 5.2 results, the filter touched 7 of 727 comments (2 bodies, 5 `next_mark` lines) and 0 of 67 in the A1 check. Session summaries change through the summary prompt and the filter. ### A1 quality check on the filter-only head (run 2147, items 0-19, judge on; headline n = 18)
+
+Commit 7096395, clean tree, same marker and judge as 5.2.
+
+| Metric            | 5.2 (1414) | Filter-only (2147) |
+| ----------------- | ---------- | ------------------ |
+| Judge mean (1-10) | 6.28       | 5.83               |
+| Pros kept         | 73.3%      | 66.7%              |
+| Cons fixed        | 45.5%      | 40.9%              |
+| Exact             | 66.7%      | 61.1%              |
+| Within-1          | 94.4%      | 94.4%              |
+
+The prompts are identical to 5.2, so these differences are run-to-run sampling, not the filter. Final marks moved on 2 of 20 items, each by one mark, both through the blind-check/reconcile passes: ei-5 2 to 1 (tutor 1.5) and ep-4 2 to 3 (tutor 2). The judge changed by up to 6 points on items whose comments are nearly the same in both runs (ei-2 10 to 4, fm-5 10 to 4), which shows how noisy a single 20-item judge run is. Cost $2.09: run 2147 $1.78 ($0.94 marking + $0.84 judge), plus $0.31 for an interrupted first attempt (run 2146, 17 rows).
+
+The sections below describe the full voice version, which was benchmarked and not shipped.
 
 Source: Om, 23 Oct (7:43pm): comments should "sound like a 21 state ranker gave em... to the point... SAME QUALITY... not woozy waazy." Judgement stays the same (marks, anchors, criteria coverage); only voice and length change.
 
@@ -19,7 +33,7 @@ Source: Om, 23 Oct (7:43pm): comments should "sound like a 21 state ranker gave 
 
 ### Grading prompt (`gradeMessages`, full mode only)
 
-Only comment-writing text in the full-grading tail changed. The shared marking prefix (role, band procedure, strictness, verb glossary, evidence rules, injection guard, checklist and restriction instructions), the user message, the check variant and the reconcile prompt are **byte-identical to Airo 5.2**, enforced at the time by a test against a saved copy of the 5.2 baseline (removed in 5.3b, where `prompts-baseline.json` is the 5.2 file again).
+Only comment-writing text in the full-grading tail changed. The shared marking prefix (role, band procedure, strictness, verb glossary, evidence rules, injection guard, checklist and restriction instructions), the user message, the check variant and the reconcile prompt are **byte-identical to Airo 5.2**, enforced at the time by a test against a saved copy of the 5.2 baseline (later removed when the voice lines were reverted and `prompts-baseline.json` became the 5.2 file again).
 
 | 5.2 text                                                                                                                   | 5.3 text                                                                                                                                                                                                                                                                                                                                                               |
 | -------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
