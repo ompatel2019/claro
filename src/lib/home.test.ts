@@ -69,13 +69,89 @@ it("finds the NSW term, Monday week boundaries and term length", () => {
   expect(schoolWeek("2027-12-18")).toBeNull();
   expect(schoolWeek("2028-02-01")).toBeNull();
 });
-import { studyQuote } from "./home";
-import { sydneyToday } from "./flashcards";
-it("rotates original study quotes deterministically by Sydney day", () => {
-  const today = sydneyToday(new Date("2026-10-18T13:00:00Z"));
-  expect(today).toBe("2026-10-19");
-  expect(studyQuote(today)).toBe(studyQuote("2026-10-19"));
-  expect(studyQuote(today)).not.toBe(studyQuote("2026-10-20"));
-  expect(studyQuote(today)).toBe(studyQuote("2026-10-26"));
-  expect(schoolWeek(today)).toEqual({ term: 4, week: 2, weeks: 10 });
+
+import {
+  nextStepTopic,
+  NEXT_STEP_MIN_ANSWERS,
+  practiceWeek,
+  practiceAverage,
+  WEEKLY_PRACTICE_GOAL,
+} from "./home";
+import type { ProgressData, TopicProgress } from "./progress";
+const topic = (
+  id: string,
+  earned: number,
+  sort = 1,
+  answered = NEXT_STEP_MIN_ANSWERS,
+  parent_id: string | null = null,
+): TopicProgress => ({
+  id,
+  name: id,
+  parent_id,
+  sort,
+  answered,
+  earned,
+  possible: 10,
+  pct: null,
+  last_answered: null,
+});
+const data = (topics: TopicProgress[]): ProgressData => ({
+  topics,
+  types: [],
+  verbs: [],
+  history: [],
+  mastery: [],
+  missed: [],
+  due: [],
+});
+it("picks the weakest supported parent with deterministic ties and falls back to dot points", () => {
+  expect(
+    nextStepTopic(
+      data([
+        topic("too-few", 0, 0, 2),
+        topic("strong", 8),
+        topic("b", 4, 2),
+        topic("a", 4, 1),
+      ]),
+    )?.id,
+  ).toBe("a");
+  expect(nextStepTopic(data([topic("b", 4), topic("a", 4)]))?.id).toBe("a");
+  expect(nextStepTopic(data([topic("leaf", 1, 1, 3, "parent")]))?.id).toBe(
+    "leaf",
+  );
+  expect(nextStepTopic(data([topic("sparse", 0, 1, 1)]))).toBeNull();
+  expect(nextStepTopic(null)).toBeNull();
+});
+it("makes Monday–Sunday Sydney days, counting questions or cards and excluding future days", () => {
+  const week = practiceWeek("2026-10-25", [
+    { day: "2026-10-19", questions: 1, cards: 0 },
+    { day: "2026-10-25", questions: 0, cards: 2 },
+    { day: "2026-10-18", questions: 9, cards: 0 },
+  ]);
+  expect(week.map((d) => d.day)).toEqual([
+    "2026-10-19",
+    "2026-10-20",
+    "2026-10-21",
+    "2026-10-22",
+    "2026-10-23",
+    "2026-10-24",
+    "2026-10-25",
+  ]);
+  expect(week.filter((d) => d.done)).toHaveLength(2);
+  expect(week[6].today).toBe(true);
+  expect(
+    practiceWeek("2026-10-19", [
+      { day: "2026-10-20", questions: 1, cards: 0 },
+    ]).some((d) => d.done),
+  ).toBe(false);
+  expect(WEEKLY_PRACTICE_GOAL).toBe(5);
+});
+it("weights practice average by possible marks without double counting dot points or recall", () => {
+  expect(
+    practiceAverage(
+      data([topic("parent", 6), topic("leaf", 1, 1, 3, "parent")]),
+    ),
+  ).toBe(60);
+  expect(practiceAverage(data([]))).toBeNull();
+  expect(practiceAverage(null)).toBeNull();
 });

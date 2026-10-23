@@ -1,68 +1,24 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import { pageMetadata } from "@/lib/page-metadata";
 import { WelcomeDialog } from "@/components/welcome-dialog";
 import { needsWelcome } from "@/lib/welcome";
-import { PortalIcon } from "@/components/icons";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import { sydneyToday } from "@/lib/flashcards";
-import { addDays, type ActivityDay } from "@/lib/activity";
-import { greeting, longDate, schoolWeek, studyQuote } from "@/lib/home";
+import { type ActivityDay } from "@/lib/activity";
+import { greeting, longDate, schoolWeek, practiceWeek } from "@/lib/home";
 import {
   HomeRecent,
+  HomeNextStep,
+  HomeWeek,
   readHomeSessions,
 } from "@/components/student/home/sections";
-import { StudyChoice } from "@/components/student/home/study-choice";
-import { ActivityHeatmap } from "@/components/activity-heatmap";
-import { PageHeader, TermProgress } from "@/components/claro/layout";
+import { PageHeader } from "@/components/claro/layout";
 import { Shortcut } from "@/components/shortcut";
-import { TryAgain } from "@/components/try-again";
 import { Card } from "@/components/ui/card";
+import { loadProgress } from "@/lib/progress-data";
+import { examDaysLeft, HSC_EXAM } from "@/lib/hsc-exam";
 export const metadata = pageMetadata("Home");
-
-async function StudyDays({
-  today,
-  activity,
-}: {
-  today: string;
-  activity: Promise<ActivityDay[] | null>;
-}) {
-  const db = await createClient();
-  const [days, streaks] = await Promise.all([
-    activity,
-    db.rpc("activity_streaks").single(),
-  ]);
-  if (days === null) throw new Error("Couldn't load your study days.");
-  const streak = streaks.data as {
-    current_streak: number;
-    longest_streak: number;
-  } | null;
-  const action = <StudyChoice />;
-  return (
-    <ActivityHeatmap
-      days={days}
-      today={today}
-      current={streak?.current_streak ?? 0}
-      longest={streak?.longest_streak ?? 0}
-      error={!!streaks.error || !streak}
-      errorContent={<TryAgain what="your study days" />}
-      home={{ action }}
-    />
-  );
-}
-
-async function SafeStudyDays(props: Parameters<typeof StudyDays>[0]) {
-  try {
-    return await StudyDays(props);
-  } catch {
-    return (
-      <Card className="p-5">
-        <TryAgain what="your study days" />
-      </Card>
-    );
-  }
-}
 
 export default async function Home() {
   const profile = await requireProfile();
@@ -81,99 +37,55 @@ export default async function Home() {
   }
   const showWelcome = needsWelcome(profile, sessionCount);
   const today = sydneyToday();
+  const weekDays = practiceWeek(today, []);
   const activity = createClient()
     .then(async (db) => {
       const { data, error } = await db.rpc("activity_days", {
-        p_from: addDays(today, -371),
+        p_from: weekDays[0].day,
         p_to: today,
       });
       if (error) throw error;
       return (data ?? []) as ActivityDay[];
     })
     .catch(() => null);
+  const progress = loadProgress("30", today).catch(() => null);
   const sessions = readHomeSessions(id);
   const week = schoolWeek(today);
   return (
-    <div className="min-w-0 space-y-5" data-testid="student-home">
+    <div className="min-w-0 space-y-6" data-testid="student-home">
       {showWelcome && <WelcomeDialog profile={profile} />}
       {!showWelcome && <Shortcut k="s" href="/student/sprint" />}
       <PageHeader
-        eyebrow={longDate()}
+        eyebrow={
+          <>
+            {longDate()} ·{" "}
+            {week
+              ? `Term ${week.term}, week ${week.week}`
+              : "NSW school holidays"}
+            {examDaysLeft(today) !== null && (
+              <span className="md:hidden">
+                {" "}
+                · {HSC_EXAM.name} in {examDaysLeft(today)} days
+              </span>
+            )}
+          </>
+        }
         title={`${greeting()}${first ? `, ${first}` : ""}`}
       />
-      <Card
-        className="gap-3 p-5 md:flex-row md:items-center md:justify-between"
-        aria-label="Your study week"
-      >
-        <section aria-label="Your study week">
-          {week ? (
-            <TermProgress
-              term={week.term}
-              week={week.week}
-              weeks={week.weeks}
-            />
-          ) : (
-            <p className="text-sm font-medium">NSW school holidays</p>
-          )}
-        </section>
-        <p className="text-muted-foreground text-sm">{studyQuote(today)}</p>
-      </Card>
-      <div className="grid min-w-0 grid-cols-1 items-start gap-5 md:grid-cols-2">
-        <section
-          aria-label="Quick start"
-          className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2"
+      <Suspense fallback={<Card aria-hidden className="h-64 animate-pulse" />}>
+        <HomeNextStep progress={progress} />
+      </Suspense>
+      <div className="grid min-w-0 grid-cols-1 items-start gap-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+        <Suspense
+          fallback={<Card aria-hidden className="h-72 animate-pulse" />}
         >
-          {[
-            {
-              title: "Topic Sprint",
-              description: "Choose a topic and practise HSC questions.",
-              href: "/student/sprint",
-              icon: "zap" as const,
-              action: "Start a sprint",
-            },
-            {
-              title: "Flashcards",
-              description: "Build recall, one concept at a time.",
-              href: "/student/flashcards",
-              icon: "copy" as const,
-              action: "Choose your cards",
-            },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="bg-card shadow-card hover:bg-accent focus-visible:outline-ring flex min-h-44 flex-col items-start gap-3 rounded-2xl border p-5 focus-visible:outline-2 focus-visible:outline-offset-2"
-            >
-              <span className="text-brand">
-                <PortalIcon name={item.icon} />
-              </span>
-              <div>
-                <h2 className="text-xl font-semibold">{item.title}</h2>
-                <p className="text-muted-foreground mt-1 text-sm">
-                  {item.description}
-                </p>
-              </div>
-              <span className="mt-auto flex items-center gap-2 text-sm font-semibold">
-                {item.action}
-                <PortalIcon name="arrow-right" className="size-4" />
-              </span>
-            </Link>
-          ))}
-        </section>
-        <div className="min-w-0 md:col-start-2 md:row-span-2 md:row-start-1">
-          <Suspense
-            fallback={<Card aria-hidden className="h-80 animate-pulse" />}
-          >
-            <SafeStudyDays today={today} activity={activity} />
-          </Suspense>
-        </div>
-        <div className="min-w-0 md:col-start-1">
-          <Suspense
-            fallback={<Card aria-hidden className="h-80 animate-pulse" />}
-          >
-            <HomeRecent sessions={sessions} />
-          </Suspense>
-        </div>
+          <HomeRecent sessions={sessions} today={today} />
+        </Suspense>
+        <Suspense
+          fallback={<Card aria-hidden className="h-72 animate-pulse" />}
+        >
+          <HomeWeek today={today} activity={activity} progress={progress} />
+        </Suspense>
       </div>
     </div>
   );

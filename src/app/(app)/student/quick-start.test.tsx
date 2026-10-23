@@ -1,10 +1,4 @@
-import {
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-  within,
-} from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { resolve } from "@/test/resolve-server-components";
 import Home from "./page";
@@ -18,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   sessions: [] as Session[],
   calls: [] as unknown[][],
 }));
+vi.mock("@/lib/progress-data", () => ({ loadProgress: async () => null }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth", () => ({
   requireProfile: async () => ({
@@ -104,92 +99,44 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 
-it("shows the term, quote and two large study destinations", async () => {
+it("shows term context, one next step, honest weekly practice and a quiet flashcard link", async () => {
   render(await resolve(await Home()));
-  const hero = screen.getByRole("region", { name: "Your study week" });
-  expect(within(hero).getByText("Term 4 · Week 2")).toBeVisible();
-  expect(within(hero).getByTitle("Term 4, week 2 of 10")).toBeVisible();
-  const launches = screen.getByRole("region", { name: "Quick start" });
-  expect(within(launches).getAllByRole("link")).toHaveLength(2);
-  for (const [name, href] of [
-    ["Topic Sprint", "/student/sprint"],
-    ["Flashcards", "/student/flashcards"],
-  ]) {
-    expect(
-      within(launches).getByRole("link", { name: new RegExp(`^${name}`) }),
-    ).toHaveAttribute("href", href);
-  }
-  for (const name of [
-    "Marks earned",
-    "Questions answered",
-    "Study time",
-    "Cards due",
-    "Practice average",
-    "Today's plan",
-    "Topics",
-    "Where your marks go",
-    "Ask Claro",
-  ]) {
-    expect(screen.queryByRole("heading", { name })).toBeNull();
-  }
-  expect(screen.getByText(studyQuote("2026-10-19"))).toBeVisible();
-});
-import { studyQuote } from "@/lib/home";
-
-it("shows streak numbers, a heatmap with today marked and reads a year of activity", async () => {
-  render(await resolve(await Home()));
-  for (const [label, value] of [
-    ["Day streak", "2"],
-    ["Longest streak", "5"],
-    ["Days studied", "1"],
-  ])
-    expect(screen.getByText(label).nextElementSibling).toHaveTextContent(value);
-  expect(mocks.calls).toContainEqual([
-    "activity_days",
-    { p_from: "2025-10-13", p_to: "2026-10-19" },
-  ]);
-  const today = screen.getByRole("link", { name: /^Mon 19 Oct 2026/ });
-  expect(today).toHaveAttribute("aria-current", "date");
-  expect(today).toHaveAttribute("href", "/student/activity?date=2026-10-19");
-  expect(screen.getByText("Today is lit")).toBeInTheDocument();
-});
-
-it("offers a choice on an unlit day before opening any setup", async () => {
-  mocks.studiedToday = false;
-  render(await resolve(await Home()));
-  fireEvent.click(screen.getByRole("button", { name: "Light up today" }));
-  const dialog = await screen.findByRole("dialog");
+  expect(screen.getByText(/Term 4, week 2/)).toBeVisible();
+  const next = screen.getByRole("region", {
+    name: "Start your first Topic Sprint",
+  });
   expect(
-    within(dialog).getByRole("link", { name: /Topic Sprint/ }),
+    within(next).getByRole("link", { name: /Start sprint/ }),
   ).toHaveAttribute("href", "/student/sprint");
   expect(
-    within(dialog).getByRole("link", { name: /Flashcards/ }),
+    within(next).getByRole("link", { name: /Flashcards/ }),
   ).toHaveAttribute("href", "/student/flashcards");
-  expect(within(dialog).getByText(/Due for review means/)).toBeVisible();
+  expect(screen.getByRole("heading", { name: "This week" })).toBeVisible();
+  expect(screen.getByText("1 of 5")).toBeVisible();
+  expect(screen.getByLabelText("Mon: practised")).toHaveAttribute(
+    "aria-current",
+    "date",
+  );
+  expect(mocks.calls).toContainEqual([
+    "activity_days",
+    { p_from: "2026-10-19", p_to: "2026-10-19" },
+  ]);
 });
-
-it("keeps both actions usable when activity and topic reads fail", async () => {
+it("keeps next-step actions usable when progress and activity fail", async () => {
   mocks.failActivity = true;
   mocks.failTopics = true;
   render(await resolve(await Home()));
-  expect(screen.getByRole("link", { name: /^Flashcards/ })).toHaveAttribute(
-    "href",
-    "/student/flashcards",
-  );
-  expect(screen.getByRole("link", { name: /^Topic Sprint/ })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: /^Start sprint/ })).toHaveAttribute(
     "href",
     "/student/sprint",
   );
-  expect(screen.getAllByRole("alert").map((a) => a.textContent)).toEqual([
-    "Couldn't load your study days.Try again",
-  ]);
+  expect(screen.getByText("Practice days unavailable")).toBeVisible();
 });
-
-it("isolates a recent-session failure while keeping study actions usable", async () => {
+it("isolates recent-session failures", async () => {
   mocks.failSessions = true;
   render(await resolve(await Home()));
   expect(screen.getByText("Couldn't load your recent sessions.")).toBeVisible();
-  expect(screen.getByRole("region", { name: "Quick start" })).toBeVisible();
+  expect(screen.getByRole("link", { name: /^Start sprint/ })).toBeVisible();
 });
 
 it("links recent and unfinished sessions to their existing runner routes", async () => {
@@ -210,7 +157,7 @@ it("links recent and unfinished sessions to their existing runner routes", async
   render(await resolve(await Home()));
   expect(
     screen.getByRole("link", {
-      name: /Mixed sprint.*The Global Economy.*In progress/,
+      name: /Mixed sprint.*Continue.*The Global Economy/,
     }),
   ).toHaveAttribute("href", "/student/sprint/resume");
 });

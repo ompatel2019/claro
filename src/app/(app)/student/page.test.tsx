@@ -80,7 +80,7 @@ it("does not treat a failed session lookup as a first visit", async () => {
   await expect(Home()).rejects.toThrow("Couldn't check first visit.");
 });
 
-it("starts the activity read without querying dashboard progress or due cards", async () => {
+it("starts the activity read alongside 30-day progress without querying due cards", async () => {
   mocks.requireProfile.mockResolvedValue({
     id: "own-student",
     role: "student",
@@ -92,5 +92,5 @@ it("starts the activity read without querying dashboard progress or due cards", 
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(rpc).toHaveBeenCalledWith("activity_days", expect.any(Object));
   expect(mocks.from).not.toHaveBeenCalledWith("flashcard_progress");
-  expect(mocks.progress).not.toHaveBeenCalled();
+  expect(mocks.progress).toHaveBeenCalledWith("30", expect.any(String));
 });
