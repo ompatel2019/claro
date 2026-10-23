@@ -159,30 +159,10 @@ export default async function Results({
         <PageHeader
           eyebrow={`${when(s.started_at)} · ${timeMeta(elapsed, limit)}`}
           title={`${modeLabel(s.config.mode)} sprint · ${places?.length ? places.map(name).join(", ") : "All topics"}`}
-          actions={
-            <>
-              <SameSetup config={s.config} />
-              {failed.length > 0 && (
-                <RetryAnswer
-                  ids={failed.map((r) => r.attempt_id)}
-                  label={`Retry all failed (${failed.length})`}
-                />
-              )}
-              {mistakes > 0 && (
-                <Link
-                  href={sprintHref(s.config, { history: "mistakes" })}
-                  className={buttonVariants()}
-                >
-                  <PortalIcon name="target" className="size-4" />
-                  Practise mistakes ({mistakes})
-                </Link>
-              )}
-            </>
-          }
         />
       </div>
       <MarkingProgress {...progress} />
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4 xl:gap-5">
+      <div className="grid grid-cols-3 gap-4 xl:gap-5">
         <ResultStat
           label={
             <span className="flex items-center gap-2">
@@ -228,6 +208,25 @@ export default async function Results({
           />
         )}
       </div>
+      <div className="flex flex-wrap gap-2">
+        <SameSetup config={s.config} />
+        {failed.length > 0 && (
+          <RetryAnswer
+            ids={failed.map((r) => r.attempt_id)}
+            label={`Retry all failed (${failed.length})`}
+          />
+        )}
+        {mistakes > 0 && (
+          <Link
+            href={sprintHref(s.config, { history: "mistakes" })}
+            className={buttonVariants()}
+          >
+            <PortalIcon name="target" className="size-4" />
+            Practise mistakes ({mistakes})
+          </Link>
+        )}
+      </div>
+      <ResultsAnswers rows={rows} id={id} name={name} photos={url} />
       <OverallFeedback
         summary={s.summary}
         pending={progress.summaryPending}
@@ -240,7 +239,6 @@ export default async function Results({
           />
         }
       />
-      <ResultsAnswers rows={rows} id={id} name={name} photos={url} />
     </div>
   );
 }

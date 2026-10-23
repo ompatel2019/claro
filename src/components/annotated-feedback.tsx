@@ -9,7 +9,6 @@ import {
   useState,
 } from "react";
 import { Alert } from "@/components/icons";
-import { PenCaret } from "./claro/markup-answer";
 import {
   bandOf,
   layoutCards,
@@ -52,7 +51,7 @@ export {
 
 const reduced = () =>
   window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-const WIDE = 1100;
+const WIDE = 760;
 
 /** Display only: keep UTF-16 offsets, including both characters of a lone CRLF. */
 export function displayAnswer(text: string) {
@@ -61,7 +60,7 @@ export function displayAnswer(text: string) {
   );
 }
 
-/** §2.1 K14: summary, annotated answer with margin comments, guidelines and actions. */
+/** Question criteria, score, annotated answer with margin comments, and sample. */
 export function AnnotatedFeedback({
   row,
   photos = [],
@@ -154,7 +153,7 @@ export function AnnotatedFeedback({
     const el = root.current;
     if (!el) return;
     const observer = new ResizeObserver(([entry]) =>
-      setWide(entry.contentRect.width >= (singleResult ? 900 : WIDE)),
+      setWide(entry.contentRect.width >= WIDE),
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -301,8 +300,8 @@ export function AnnotatedFeedback({
       onKeyUp={edit && !edit.disabled ? captureSelection : undefined}
       className={
         singleResult
-          ? "booklet relative min-h-28 font-serif text-base leading-[32px] whitespace-pre-wrap"
-          : "relative max-w-[70ch] font-serif text-base leading-[26px] whitespace-pre-wrap"
+          ? "booklet relative min-h-28 font-serif text-xl leading-[32px] whitespace-pre-wrap"
+          : "relative max-w-[70ch] font-serif text-xl leading-8 whitespace-pre-wrap"
       }
     >
       {highlightSegments(displayedText, anchored).map((seg) => {
@@ -339,7 +338,9 @@ export function AnnotatedFeedback({
               onMouseLeave={() => setHover(null)}
               className={cn(
                 "mk text-ink cursor-pointer bg-transparent outline-offset-1",
-                owner.kind === "strength" ? "mk-credit" : "mk-improve",
+                owner.kind === "strength"
+                  ? "decoration-success underline decoration-wavy decoration-2 underline-offset-4"
+                  : "decoration-destructive underline decoration-wavy decoration-2 underline-offset-4",
                 covering.some((c) => c.id === hover) &&
                   "outline-ink/40 outline-2",
                 covering.some((c) => c.id === flash) && "outline-ink outline-2",
@@ -351,7 +352,10 @@ export function AnnotatedFeedback({
               <sup
                 key={c.id}
                 aria-hidden
-                className="text-brand-text mx-0.5 font-sans text-[10px] font-semibold"
+                className={cn(
+                  "mx-0.5 font-sans text-xs font-semibold",
+                  c.kind === "strength" ? "text-success" : "text-destructive",
+                )}
               >
                 {c.n}
               </sup>
@@ -447,8 +451,55 @@ export function AnnotatedFeedback({
       className={cn("space-y-4", singleResult && "min-w-0")}
       onKeyDown={onKey}
     >
+      {showReferences && !!row.criteria?.length && (
+        <section
+          aria-label="Marking criteria"
+          className="space-y-3 rounded-xl border p-4"
+        >
+          <h2 className="text-sm font-semibold">Marking criteria</h2>
+          {completeCriteria ? (
+            <table className="w-full text-left">
+              <thead className="text-muted-foreground text-xs">
+                <tr>
+                  <th className="py-2 pr-3 font-medium">Marks</th>
+                  <th className="py-2 font-medium">Descriptor</th>
+                </tr>
+              </thead>
+              <tbody>
+                {row.criteria.map((c) => (
+                  <tr
+                    key={c.descriptor}
+                    className={cn(
+                      "border-t",
+                      showMark && c === band?.row && "bg-accent",
+                    )}
+                  >
+                    <td className="py-2 pr-3 align-top tabular-nums">
+                      {c.min === c.max ? c.min : `${c.min}–${c.max}`}
+                    </td>
+                    <td className="py-2">
+                      {c.descriptor}
+                      {showMark && c === band?.row && (
+                        <Badge variant="outline" className="ml-2">
+                          Your band
+                        </Badge>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ) : (
+            <p>
+              The marking guidelines are incomplete, so the band table is
+              unavailable.
+            </p>
+          )}
+        </section>
+      )}
+
       {singleResult && showMark ? (
-        <div className="grid items-stretch gap-5 xl:grid-cols-3">
+        <div className="grid gap-5">
           <Card className="min-w-0 p-5">
             <div className="flex items-center gap-5">
               <ScoreRing score={Number(row.mark)} of={max} size={96} />
@@ -467,76 +518,21 @@ export function AnnotatedFeedback({
               </div>
             </div>
           </Card>
-          {!!row.criteria?.length && (
-            <Card className="min-w-0 gap-4 p-5">
-              <div>
-                <h2 className="text-sm font-semibold">Marking criteria</h2>
-                <p className="text-muted-foreground mt-1 text-[13px]">
-                  Where your answer sits
-                </p>
-              </div>
-              {completeCriteria ? (
-                <ul className="space-y-2">
-                  {row.criteria.map((c) => (
-                    <li
-                      key={c.descriptor}
-                      className={cn(
-                        "flex items-start gap-5 rounded-xl border p-3 text-[13px]",
-                        c === band?.row && "bg-muted border-foreground/25",
-                      )}
-                    >
-                      <span className="shrink-0">
-                        {c.min === c.max ? c.min : `${c.min}–${c.max}`}
-                      </span>
-                      <span>
-                        {c.descriptor}
-                        {c === band?.row && (
-                          <Badge className="ml-2" variant="secondary">
-                            Your band
-                          </Badge>
-                        )}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-muted-foreground text-sm">
-                  The marking guidelines are incomplete, so the band table is
-                  unavailable.
-                </p>
-              )}
-            </Card>
-          )}
-          {(next || comments.some((c) => c.kind === "fix")) && (
-            <Card className="min-w-0 gap-4 p-5">
-              <h2 className="text-sm font-semibold">Your next mark</h2>
-              {next && (
-                <p className="text-muted-foreground text-[13px]">{next}</p>
-              )}
-              <ul className="space-y-3">
-                {comments
-                  .filter((c) => c.kind === "fix")
-                  .slice(0, 3)
-                  .map((c) => (
-                    <li key={c.id} className="flex gap-3 text-[13px]">
-                      <PenCaret
-                        className="text-brand mt-0.5 shrink-0"
-                        aria-hidden
-                      />
-                      <span>{c.next_mark || c.body}</span>
-                    </li>
-                  ))}
-              </ul>
-            </Card>
-          )}
         </div>
       ) : (
         <Card>
           <CardContent className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
               {showMark ? (
-                <p className="text-[28px] leading-9 font-semibold tabular-nums">
-                  {markLabel(row)}
+                <p
+                  role="img"
+                  aria-label={`Your mark: ${markLabel(row).replaceAll(" ", "")}`}
+                  className="text-4xl leading-tight font-bold tabular-nums"
+                >
+                  {markLabel(row).split(" / ")[0]}
+                  <span className="text-muted-foreground text-lg font-medium">
+                    /{max}
+                  </span>
                 </p>
               ) : (
                 state === "marking" && (
@@ -594,68 +590,11 @@ export function AnnotatedFeedback({
                 <div className="bg-muted h-4 w-1/2 animate-pulse rounded" />
               </div>
             )}
-            {showMark && (edit || next) && (
-              <div>
-                <h3 className="text-sm font-semibold">
-                  What gets you the next mark
-                </h3>
-                {edit ? (
-                  <Textarea
-                    aria-label="What gets you the next mark"
-                    className="mt-1"
-                    value={edit.nextMark}
-                    disabled={edit.disabled}
-                    maxLength={4000}
-                    onChange={(e) =>
-                      edit.onChange(edit.comments, e.target.value)
-                    }
-                  />
-                ) : (
-                  <p className="mt-1">{next}</p>
-                )}
-              </div>
-            )}
-            {showMark && comments.length > 0 && (
-              <div className="grid gap-4 sm:grid-cols-2">
-                {(
-                  [
-                    ["Strengths", "strength"],
-                    ["Top fixes", "fix"],
-                  ] as const
-                ).map(([title, kind]) => {
-                  const items = comments
-                    .filter((c) => c.kind === kind)
-                    .slice(0, 3);
-                  return items.length ? (
-                    <div key={kind}>
-                      <h3 className="text-sm font-semibold">{title}</h3>
-                      <ul className="mt-1 space-y-1">
-                        {items.map((c) => (
-                          <li key={c.id}>
-                            <button
-                              type="button"
-                              className="text-left underline-offset-4 hover:underline"
-                              onClick={() => {
-                                setFilter("all");
-                                jumpTo(c.id);
-                                card(c.id)?.focus({ preventScroll: true });
-                              }}
-                            >
-                              {c.n}. {c.body}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ) : null;
-                })}
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
       <AnswerContainer>
-        {singleResult && (text || photos.length > 0) && (
+        {(text || photos.length > 0) && (
           <div>
             <h2 className="text-sm font-semibold">
               {showMark ? "Your answer, marked" : "Your answer"}
@@ -770,58 +709,28 @@ export function AnnotatedFeedback({
           </PopoverContent>
         </Popover>
 
+        {showMark && (edit || next) && (
+          <div>
+            <h3 className="text-sm font-semibold">
+              {singleResult ? "Your next mark" : "What gets you the next mark"}
+            </h3>
+            {edit ? (
+              <Textarea
+                aria-label="What gets you the next mark"
+                className="mt-1"
+                value={edit.nextMark}
+                disabled={edit.disabled}
+                maxLength={4000}
+                onChange={(e) => edit.onChange(edit.comments, e.target.value)}
+              />
+            ) : (
+              <p className="mt-1">{next}</p>
+            )}
+          </div>
+        )}
+
         {showMark && (
           <div className="space-y-2">
-            {showReferences && !singleResult && !!row.criteria?.length && (
-              <FeedbackDetails name="guidelines" title="Marking guidelines">
-                {completeCriteria ? (
-                  <table className="w-full text-left">
-                    <thead className="text-muted-foreground text-xs uppercase">
-                      <tr>
-                        <th className="py-2 pr-3 font-medium">Marks</th>
-                        <th className="py-2 font-medium">Descriptor</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {row.criteria.map((c) => (
-                        <tr
-                          key={c.descriptor}
-                          className={cn(
-                            "border-t border-dashed",
-                            c === band?.row && "bg-accent",
-                          )}
-                        >
-                          <td className="py-2 pr-3 align-top tabular-nums">
-                            {c.min === c.max ? c.min : `${c.min}–${c.max}`}
-                          </td>
-                          <td className="py-2">
-                            {c.descriptor}
-                            {c === band?.row && (
-                              <Badge variant="outline" className="ml-2">
-                                Your band
-                              </Badge>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p>
-                    The marking guidelines are incomplete, so the band table is
-                    unavailable.
-                  </p>
-                )}
-              </FeedbackDetails>
-            )}
-            {showReferences && row.sample_answer && (
-              <FeedbackDetails name="model" title="Model answer">
-                <p className="whitespace-pre-wrap">{row.sample_answer}</p>
-                <p className="text-muted-foreground mt-2 text-[13px]">
-                  One strong answer. Other answers can earn the same marks.
-                </p>
-              </FeedbackDetails>
-            )}
             {Number(row.mark) < max && outline.length > 0 && (
               <FeedbackDetails name="outline" title="How to reach full marks">
                 <ul className="list-disc space-y-1 pl-5">
@@ -830,6 +739,20 @@ export function AnnotatedFeedback({
                   ))}
                 </ul>
               </FeedbackDetails>
+            )}
+            {showReferences && row.sample_answer && (
+              <section
+                aria-label="Sample answer"
+                className="bg-muted/40 space-y-3 rounded-xl border p-5"
+              >
+                <h2 className="text-lg font-semibold">Sample answer</h2>
+                <p className="max-w-prose text-base leading-relaxed whitespace-pre-wrap">
+                  {row.sample_answer}
+                </p>
+                <p className="text-muted-foreground text-[13px]">
+                  One strong answer. Other answers can earn the same marks.
+                </p>
+              </section>
             )}
           </div>
         )}

@@ -4,12 +4,13 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("sonner", () => ({ toast: vi.fn() }));
 import { toast } from "sonner";
-import type { ReviewRow } from "@/lib/feedback";
+import { readComments, type ReviewRow } from "@/lib/feedback";
 import {
   AnnotatedFeedback,
   displayAnswer,
@@ -94,10 +95,10 @@ const row: ReviewRow = {
 
 it("shows the summary, numbered highlights and an Overall group", () => {
   render(<AnnotatedFeedback row={row} />);
-  expect(screen.getByText("3 / 6")).toBeTruthy();
+  expect(screen.getByLabelText("Your mark: 3/6")).toBeTruthy();
   expect(screen.getByText("Band: 3–4 marks")).toBeTruthy();
   expect(screen.getByText("Marked")).toBeTruthy();
-  expect(screen.getAllByText("Quote the 2022 CPI.")).toHaveLength(1);
+  expect(screen.getAllByText("Quote the 2022 CPI.")).toHaveLength(2);
   expect(screen.queryByText("Next mark:")).not.toBeInTheDocument();
   const fix = screen.getByRole("button", {
     name: "Fix 1, Evidence: Give a CPI figure.",
@@ -115,7 +116,9 @@ it("filters to strengths and moves through comments with J", () => {
   fireEvent.click(screen.getByRole("button", { name: "Strengths (1)" }));
   expect(screen.queryByRole("button", { name: /^Fix 1/ })).toBeNull();
   expect(screen.queryByText("Overall")).toBeNull();
-  fireEvent.keyDown(screen.getByText("Strengths"), { key: "j" });
+  fireEvent.keyDown(screen.getByRole("button", { name: "Strengths (1)" }), {
+    key: "j",
+  });
   expect(document.activeElement?.getAttribute("aria-label")).toMatch(
     /^Strength 2/,
   );
@@ -154,7 +157,7 @@ it("hides the mark while marking and pills each review state", () => {
   const { rerender } = render(
     <AnnotatedFeedback row={{ ...row, status: "marking" }} />,
   );
-  expect(screen.queryByText("3 / 6")).toBeNull();
+  expect(screen.queryByLabelText("Your mark: 3/6")).toBeNull();
   screen.getByText("Marking");
   const review = {
     status: "open",
@@ -171,7 +174,7 @@ it("hides the mark while marking and pills each review state", () => {
       }}
     />,
   );
-  screen.getByText("3 / 6");
+  screen.getByLabelText("Your mark: 3/6");
   expect(screen.queryByText("3–4 / 6")).toBeNull();
   screen.getByText("Provisional");
   rerender(
@@ -524,7 +527,7 @@ it("replaces a rubric with gaps with an honest unavailable message and no band l
   expect(screen.queryByRole("table", { hidden: true })).toBeNull();
   expect(screen.queryByText("Band: 3–4 marks")).toBeNull();
   expect(screen.getByText(/guidelines are incomplete/)).toBeInTheDocument();
-  expect(screen.getByText("Model answer")).toBeVisible();
+  expect(screen.getByText("Sample answer")).toBeVisible();
 });
 it("keeps complete ranged guidelines and their matching band", () => {
   render(<AnnotatedFeedback row={row} />);
@@ -579,19 +582,19 @@ it("keeps low-confidence states honest in standalone results", () => {
   expect(screen.getByText("Needs a clearer answer.")).toBeVisible();
   expect(screen.queryByRole("img", { name: "3 out of 6" })).toBeNull();
   expect(
-    screen.queryByRole("heading", { name: "Marking criteria" }),
-  ).toBeNull();
+    screen.getByRole("heading", { name: "Marking criteria" }),
+  ).toBeVisible();
 });
 
 it.each([
-  [false, false, 900, false],
-  [false, true, 1099, false],
+  [false, false, 759, false],
+  [false, true, 759, false],
   [false, false, 1100, true],
   [false, true, 1100, true],
-  [true, false, 899, false],
+  [true, false, 759, false],
   [true, false, 900, true],
 ] as const)(
-  "preserves default/admin layout and gates student styling (single=%s edit=%s width=%s)",
+  "keeps desktop comments beside the answer and stacks below 760px (single=%s edit=%s width=%s)",
   (singleResult, editing, width, wide) => {
     vi.stubGlobal(
       "ResizeObserver",
@@ -619,8 +622,8 @@ it.each([
     );
     expect(container.querySelector(".whitespace-pre-wrap")?.className).toBe(
       singleResult
-        ? "booklet relative min-h-28 font-serif text-base leading-[32px] whitespace-pre-wrap"
-        : "relative max-w-[70ch] font-serif text-base leading-[26px] whitespace-pre-wrap",
+        ? "booklet relative min-h-28 font-serif text-xl leading-[32px] whitespace-pre-wrap"
+        : "relative max-w-[70ch] font-serif text-xl leading-8 whitespace-pre-wrap",
     );
     expect(!!container.querySelector(".booklet")).toBe(singleResult);
     const grid = container.querySelector(".grid.gap-6")!;
@@ -633,3 +636,71 @@ it.each([
     );
   },
 );
+
+it("shows criteria, answer with semantic numbered notes, then an open sample answer", () => {
+  localStorage.setItem("claro-feedback-model", "0");
+  const { container } = render(<AnnotatedFeedback row={row} />);
+  const criteria = screen.getByRole("region", { name: "Marking criteria" });
+  const answer = screen.getByRole("heading", { name: "Your answer, marked" });
+  const sample = screen.getByRole("region", { name: "Sample answer" });
+  expect(
+    criteria.compareDocumentPosition(answer) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(
+    answer.compareDocumentPosition(sample) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(screen.getByText("Model text.")).toBeVisible();
+  expect(sample.closest("details")).toBeNull();
+  expect(screen.queryByRole("heading", { name: "Top fixes" })).toBeNull();
+  for (const [kind, colour] of [
+    ["Strength", "success"],
+    ["Fix", "destructive"],
+  ]) {
+    const highlight = screen.getByRole("button", {
+      name: new RegExp(`^${kind} [12],`),
+    });
+    expect(highlight).toHaveClass(`decoration-${colour}`, "decoration-wavy");
+    expect(highlight.parentElement?.querySelector("sup")).toHaveClass(
+      `text-${colour}`,
+    );
+    const number = highlight.parentElement?.querySelector("sup")?.textContent;
+    const note = [...container.querySelectorAll("[data-card]")].find(
+      (el) => el.querySelector("span")?.textContent === number,
+    )!;
+    expect(note.querySelector("span")).toHaveClass(`text-${colour}`);
+    expect(note.querySelector("svg")).toHaveClass(`text-${colour}`);
+    expect(note).toHaveTextContent(kind);
+  }
+  localStorage.clear();
+});
+
+it("keeps every fix's next-mark instruction beneath its numbered comment", () => {
+  const comments = readComments(row.feedback, text).map((c, i) => ({
+    ...c,
+    next_mark: i === 2 ? "Link the conclusion to inflation." : c.next_mark,
+  }));
+  render(
+    <AnnotatedFeedback
+      singleResult
+      readOnly
+      row={{
+        ...row,
+        feedback: {
+          ...row.feedback,
+          comments,
+          next_mark_line: "Focus on evidence and structure.",
+        },
+      }}
+    />,
+  );
+  for (const [body, instruction, number] of [
+    ["Give a CPI figure.", "Quote the 2022 CPI.", "1"],
+    ["Add a conclusion.", "Link the conclusion to inflation.", "3"],
+  ]) {
+    const card = screen.getByText(body).closest("[data-card]") as HTMLElement;
+    expect(within(card).getByText(number)).toBeVisible();
+    expect(within(card).getByText("Your next mark:")).toBeVisible();
+    expect(within(card).getByText(instruction)).toBeVisible();
+  }
+  expect(screen.getByText("Focus on evidence and structure.")).toBeVisible();
+});

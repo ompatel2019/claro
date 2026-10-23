@@ -13,24 +13,38 @@ export function MarkingScreen({ single = false }: { single?: boolean }) {
         <Logo height={32} />
         <svg
           aria-hidden="true"
-          viewBox="0 0 120 100"
+          viewBox="0 0 200 144"
           fill="none"
-          className="text-primary h-28 w-36 motion-safe:animate-pulse motion-reduce:animate-none"
+          className="h-36 w-52"
         >
-          <image
-            href="/logos/claro-icon-orange.svg"
-            x="30"
+          <rect
+            x="24"
             y="8"
-            width="60"
-            height="60"
+            width="152"
+            height="128"
+            rx="16"
+            className="fill-card stroke-border"
           />
           <path
-            d="M26 88h68"
-            stroke="currentColor"
-            strokeWidth="4"
-            strokeLinecap="round"
-            strokeDasharray="4 9"
+            d="M48 8v128M24 40h152M24 72h152M24 104h152"
+            className="stroke-border"
           />
+          <path
+            d="M64 32h72M64 64h48M64 96h64"
+            className="stroke-muted-foreground/40"
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          <g
+            className="pen-mark stroke-brand"
+            strokeWidth="3"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path pathLength="1" d="m144 56 7 8 13-20" />
+            <path pathLength="1" d="M64 108q30 5 64-1" />
+            <path pathLength="1" d="m144 88 7 8 13-20" />
+          </g>
         </svg>
         <div className="space-y-3">
           <h1 className="text-2xl font-semibold">

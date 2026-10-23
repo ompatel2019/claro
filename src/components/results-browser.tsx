@@ -40,21 +40,65 @@ export function ResultsBrowser({
 }) {
   const [index, setIndex] = useState(initial);
   const [table, setTable] = useState(false);
+  const [scrollTarget, setScrollTarget] = useState<{ id: string } | null>(null);
+  useEffect(() => {
+    if (scrollTarget) {
+      document
+        .getElementById(scrollTarget.id)
+        ?.scrollIntoView({ block: "start" });
+    }
+  }, [scrollTarget]);
   useEffect(() => {
     let active = true;
-    const selectHash = () => {
-      const match = /^#q-(\d+)$/.exec(window.location.hash);
+    const selectQuestion = (hash: string) => {
+      const match = /^#q-(\d+)$/.exec(hash);
       if (!match || !active) return;
       const target = items.findIndex(
         (item) => item.position === Number(match[1]),
       );
-      if (target >= 0) setIndex(target);
+      if (target < 0) return false;
+      setIndex(target);
+      setScrollTarget({ id: hash.slice(1) });
+      return true;
+    };
+    const selectHash = () => selectQuestion(window.location.hash);
+    const onQuestionLink = (event: MouseEvent) => {
+      if (
+        event.defaultPrevented ||
+        event.button !== 0 ||
+        event.metaKey ||
+        event.ctrlKey ||
+        event.shiftKey ||
+        event.altKey ||
+        !(event.target instanceof Element)
+      )
+        return;
+      const link = event.target.closest<HTMLAnchorElement>("a[href]");
+      if (
+        !link ||
+        link.hasAttribute("download") ||
+        (link.target && link.target !== "_self")
+      )
+        return;
+      const url = new URL(link.href);
+      if (
+        url.origin !== window.location.origin ||
+        url.pathname !== window.location.pathname ||
+        url.search !== window.location.search ||
+        !selectQuestion(url.hash)
+      )
+        return;
+      event.preventDefault();
+      if (url.hash !== window.location.hash)
+        window.history.pushState(null, "", url.hash);
     };
     queueMicrotask(selectHash);
+    document.addEventListener("click", onQuestionLink);
     window.addEventListener("hashchange", selectHash);
     return () => {
       active = false;
       window.removeEventListener("hashchange", selectHash);
+      document.removeEventListener("click", onQuestionLink);
     };
   }, [items]);
   useEffect(() => {
