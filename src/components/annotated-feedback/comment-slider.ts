@@ -1,7 +1,7 @@
 /**
- * Unstyled groundwork for the score-card-first comment slider: one comment at a
- * time, prev/next and arrow keys, synced both ways with answer highlights
- * (`mark[data-anchors]`). Used by the marked-answer doc.
+ * Comment slider state and highlight sync for the marked-answer doc: one comment
+ * at a time, prev/next and arrow keys, synced both ways with answer highlights
+ * (`mark[data-anchors]`).
  */
 import { useEffect, useRef, useState } from "react";
 
