@@ -116,7 +116,19 @@ it("starts with the question centred and keeps progress available", () => {
     .find((button) => button.hasAttribute("aria-pressed"))!;
   expect(desktop).toHaveAttribute("aria-pressed", "false");
   fireEvent.click(desktop);
-  expect(screen.getByText("Questions")).toBeVisible();
+  const rail = screen.getByText("Questions").closest("aside")!;
+  const progress = screen.getByRole("navigation", {
+    name: "Question progress",
+  });
+  expect(rail).toHaveClass("top-[68px]", "h-[calc(100svh-68px)]");
+  expect(rail.nextElementSibling).toBe(progress.parentElement);
+  expect(progress.nextElementSibling).toBe(screen.getByRole("main"));
+  expect(rail.closest(".sprint-focus")).toHaveClass("md:[--sprint-rail:272px]");
+  fireEvent.click(desktop);
+  expect(screen.queryByText("Questions")).toBeNull();
+  expect(progress.closest(".sprint-focus")).not.toHaveClass(
+    "md:[--sprint-rail:272px]",
+  );
 });
 
 it("scrolls the current question into view when navigation changes", () => {

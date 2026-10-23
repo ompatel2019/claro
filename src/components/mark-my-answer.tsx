@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
+import { RichText } from "./rich-text";
 import { MarkingScreen } from "./marking-screen";
 import { useRouter } from "next/navigation";
 import { z } from "zod";
@@ -25,7 +26,7 @@ import {
   type BankQuestion,
   type OwnQuestion,
 } from "@/lib/single-check";
-import type { Attempt, Topic } from "@/lib/practice";
+import { plural, type Attempt, type Topic } from "@/lib/practice";
 import { WrittenAnswer } from "./written-answer";
 import {
   MARK_MY_ANSWER_DAILY_LIMIT,
@@ -221,8 +222,18 @@ export function MarkMyAnswer({
     topic,
     year,
     search,
-  }).slice(0, 30);
+  });
+  const filtered =
+    !!search.trim() || type !== "all" || topic !== "all" || year !== "all";
   const optionIndex = Math.min(activeOption, Math.max(0, results.length - 1));
+  const activeId =
+    bankOpen && results[optionIndex]
+      ? `${bankListId}-${results[optionIndex].id}`
+      : undefined;
+  useEffect(() => {
+    if (activeId)
+      document.getElementById(activeId)?.scrollIntoView?.({ block: "nearest" });
+  }, [activeId]);
   const fieldError = (field: "stem" | "marks" | "criteria_text") => {
     if (!touched[field]) return null;
     const parsed = ownQuestionSchema.safeParse(own);
@@ -608,11 +619,7 @@ export function MarkMyAnswer({
                     aria-autocomplete="list"
                     aria-expanded={bankOpen && !questionLocked}
                     aria-controls={bankListId}
-                    aria-activedescendant={
-                      bankOpen && results[optionIndex]
-                        ? `${bankListId}-${results[optionIndex].id}`
-                        : undefined
-                    }
+                    aria-activedescendant={activeId}
                     onFocus={() => setBankOpen(true)}
                     onChange={(e) => {
                       setSearch(e.target.value);
@@ -700,7 +707,9 @@ export function MarkMyAnswer({
                       className="text-muted-foreground pt-1 pb-2 text-xs"
                     >
                       {results.length
-                        ? `${results.length} matching questions${results.length === 30 ? " · refine your search for more" : ""}`
+                        ? filtered
+                          ? `${results.length} matching`
+                          : plural(results.length, "question")
                         : allowOwnQuestion
                           ? "No questions match. Try another search or use your own question."
                           : "No questions match. Try another search or change your filters."}
@@ -732,16 +741,17 @@ export function MarkMyAnswer({
                                 <span className="bg-primary size-2 rounded-full" />
                               )}
                             </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block text-sm leading-snug font-medium">
-                                {q.stem}
-                              </span>
+                            <div className="min-w-0 flex-1">
+                              <RichText
+                                className="block text-sm leading-snug font-medium"
+                                text={q.stem}
+                              />
                               <span className="text-muted-foreground text-xs">
                                 {q.source} ·{" "}
                                 {topics.find((t) => t.id === q.topic_id)?.name}{" "}
                                 · {q.marks} marks
                               </span>
-                            </span>
+                            </div>
                           </button>
                         </li>
                       ))}
@@ -915,9 +925,10 @@ export function MarkMyAnswer({
             {question && (
               <div className="bg-muted rounded-xl px-3.5 py-3">
                 <p className="text-muted-foreground text-xs">Answering</p>
-                <p className="mt-0.5 text-sm leading-snug font-medium">
-                  {question.stem}
-                </p>
+                <RichText
+                  className="mt-0.5 text-sm leading-snug font-medium"
+                  text={question.stem}
+                />
                 <p className="text-muted-foreground mt-1 text-xs">
                   {question.marks} marks ·{" "}
                   {topics.find((t) => t.id === question.topic_id)?.name}
@@ -937,7 +948,7 @@ export function MarkMyAnswer({
                 </label>
                 <textarea
                   id="single-answer"
-                  className="ma-answer"
+                  className="ma-answer lined-answer"
                   placeholder="Start with the key idea, then explain how one thing leads to another."
                   value={answer.answer_text ?? ""}
                   disabled={busy || submitted || offline}

@@ -38,7 +38,7 @@ export function BacklogSummary({ runs }: { runs: OfflineEvalRun[] }) {
               ].map(([label, value]) => (
                 <div key={label}>
                   <dt className="text-muted-foreground text-sm">{label}</dt>
-                  <dd className="mt-1 text-[28px] leading-none font-bold tracking-[-0.03em] tabular-nums">
+                  <dd className="num-display mt-1 text-[28px] leading-none font-bold">
                     {value}
                   </dd>
                 </div>

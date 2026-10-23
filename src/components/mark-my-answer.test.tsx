@@ -621,3 +621,25 @@ it("waits for autofill before accepting the keyboard submit shortcut", async () 
     expect(screen.queryByText("Suggesting question details…")).toBeNull(),
   );
 });
+it("lists every bank match with the true count and keyboard reaches the last one", () => {
+  const bank = Array.from({ length: 45 }, (_, i) => ({
+    ...questions[0],
+    id: `q${i}`,
+    stem: `Explain effect ${i + 1} of inflation.`,
+    year: i < 40 ? 2023 : 2022,
+  }));
+  render(<MarkMyAnswer questions={bank} topics={[]} userId="u" left={20} />);
+  const search = screen.getByRole("combobox", { name: "Search questions" });
+  fireEvent.focus(search);
+  expect(screen.getByText("45 questions")).toHaveAttribute("role", "status");
+  expect(screen.getAllByRole("option")).toHaveLength(45);
+  expect(screen.queryByText(/refine your search/)).toBeNull();
+  fireEvent.change(search, { target: { value: "effect 45" } });
+  expect(screen.getByText("1 matching")).toHaveAttribute("role", "status");
+  fireEvent.change(search, { target: { value: "" } });
+  for (let i = 0; i < 50; i++) fireEvent.keyDown(search, { key: "ArrowDown" });
+  expect(search).toHaveAttribute(
+    "aria-activedescendant",
+    screen.getByRole("option", { name: /Explain effect 45 of/ }).id,
+  );
+});

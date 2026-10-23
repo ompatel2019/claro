@@ -1,3 +1,4 @@
+import { normaliseStem } from "@/lib/stem-text";
 import { blocks, imageParts } from "@/lib/markdown-table";
 
 /** Renders question stems/stimuli, turning GFM pipe tables into real HTML tables. */
@@ -12,7 +13,7 @@ export function RichText({
 }) {
   return (
     <div className={className}>
-      {blocks(text).map((block, i) =>
+      {blocks(normaliseStem(text)).map((block, i) =>
         block.type === "text" ? (
           renderImages ? (
             <div key={i} className="min-w-0 break-words whitespace-pre-wrap">
