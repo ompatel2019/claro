@@ -7,14 +7,9 @@ import { type TableSorting } from "./data-table";
 import { Meter } from "./claro/data-display";
 import { buttonVariants } from "./ui/button";
 import { dateLabel } from "@/lib/practice";
-import {
-  practiseHref,
-  verbRows,
-  type TopicProgress,
-  type Breakdown,
-} from "@/lib/progress";
+import { practiseHref, type TopicProgress } from "@/lib/progress";
 
-/** Keep the compact topic and verb tables shareable without duplicating table sorting. */
+/** Keep topic table sorting shareable through URL parameters. */
 function useTableSort(key: string, columns: string[]) {
   const params = useSearchParams(),
     router = useRouter(),
@@ -233,43 +228,5 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
         </tbody>
       </table>
     </div>
-  );
-}
-
-export function VerbProgressTable({ rows }: { rows: Breakdown[] }) {
-  const shown = verbRows(rows);
-  return (
-    <ul>
-      {shown.map((r, i) => (
-        <li
-          key={r.id}
-          className="grid grid-cols-[76px_minmax(0,1fr)_40px] items-center gap-3 rounded-lg py-2 text-[13px]"
-        >
-          <Link
-            href={`/student/sprint?type=short&verb=${encodeURIComponent(r.id)}`}
-            aria-label={i === 0 ? "Practise" : `Practise ${r.id}`}
-            className="font-medium hover:underline"
-          >
-            {r.id}
-          </Link>
-          <span className="h-2">
-            <span
-              className={
-                i === 0
-                  ? "bg-chart-2 block h-2 rounded-r-full"
-                  : "bg-chart-3 block h-2 rounded-r-full"
-              }
-              style={{ width: `${r.pct}%` }}
-            />
-          </span>
-          <span
-            className="text-right font-semibold"
-            title={`${r.answered} answers`}
-          >
-            {Math.round(r.pct!)}%
-          </span>
-        </li>
-      ))}
-    </ul>
   );
 }

@@ -8,9 +8,14 @@ import Loading from "./loading";
 const mocks = vi.hoisted(() => ({
   load: vi.fn(),
   refresh: vi.fn(),
+  eq: vi.fn(),
+  rpc: vi.fn(),
 }));
 vi.mock("@/utils/supabase/server", () => ({
-  createClient: async () => ({ rpc: async () => ({ data: [], error: null }) }),
+  createClient: async () => ({
+    rpc: mocks.rpc,
+    from: () => ({ select: () => ({ eq: mocks.eq }) }),
+  }),
 }));
 vi.mock("@/lib/auth", () => ({
   requireProfile: async () => ({ id: "student" }),
@@ -51,6 +56,11 @@ const empty: ProgressData = {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.load.mockResolvedValue(empty);
+  mocks.eq.mockReturnValue({
+    eq: mocks.eq,
+    lte: async () => ({ count: 7, error: null }),
+  });
+  mocks.rpc.mockResolvedValue({ data: [], error: null });
 });
 afterEach(cleanup);
 it("renders range-scoped breakdowns and per-card empty states while keeping untouched topics available", async () => {
@@ -60,18 +70,26 @@ it("renders range-scoped breakdowns and per-card empty states while keeping unto
     ),
   );
   expect(mocks.load).toHaveBeenCalledWith("year", "2026-10-09");
-  expect(screen.getAllByText("No activity in this range")).toHaveLength(2);
-  expect(screen.getByText("By question type")).toBeInTheDocument();
-  expect(screen.getByText("By directive verb")).toBeInTheDocument();
-  expect(screen.getByText("Weak spots")).toBeInTheDocument();
+  expect(screen.getAllByText("No activity in this range")).toHaveLength(1);
   expect(
     screen.getByRole("link", { name: "Start Global economy" }),
   ).toHaveAttribute("href", "/student/sprint?topics=t1");
-  expect(screen.queryByTestId("progress-stats")).toBeNull();
-  expect(screen.queryByText("Year heatmap")).toBeNull();
-  expect(screen.getAllByRole("heading", { level: 2 })[0]).toHaveTextContent(
-    "Against your target",
+  expect(
+    screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+  ).toEqual([
+    "Your practice",
+    "Practice average",
+    "Marks by topic",
+    "Where your marks go",
+  ]);
+  expect(screen.getByText("Marks earned")).toBeVisible();
+  expect(screen.getByText("Days studied")).toBeVisible();
+  expect(screen.getByRole("link", { name: "Cards due: 7" })).toHaveAttribute(
+    "href",
+    "/student/flashcards",
   );
+  expect(mocks.eq).toHaveBeenCalledWith("user_id", "student");
+  expect(mocks.eq).toHaveBeenCalledWith("flashcards.status", "live");
 });
 it("passes load failures to the route error boundary", async () => {
   mocks.load.mockRejectedValue(new Error("unavailable"));
@@ -95,7 +113,7 @@ it("provides a route retry and card-shaped loading skeletons", () => {
   ).toBeGreaterThan(10);
 });
 
-it("links each finished session to its correct report and scopes type chips to score history", async () => {
+it("excludes flashcard recall from mixed score history and scopes type chips to marked answers", async () => {
   const base = {
     config: { mode: "short" },
     finished_at: "2026-10-09T01:00:00Z",
@@ -112,7 +130,7 @@ it("links each finished session to its correct report and scopes type chips to s
         id: "sit",
         kind: "paper",
       },
-      { ...base, id: "cards", kind: "flashcards", by_type: {} },
+      { ...base, id: "cards", kind: "flashcards", pct: 20, by_type: {} },
       { ...base, id: "single", kind: "single" },
     ],
   });
@@ -127,9 +145,8 @@ it("links each finished session to its correct report and scopes type chips to s
   expect(
     screen.getAllByRole("link", { name: /Short answer sprint/ })[0],
   ).toHaveAttribute("href", "/student/sprint/sprint/results");
-  expect(
-    screen.getAllByRole("link", { name: /Flashcards/ })[0],
-  ).toHaveAttribute("href", "/student/flashcards/cards");
+  expect(screen.queryByRole("link", { name: /Flashcards/ })).toBeNull();
+  expect(screen.getByRole("cell", { name: "80%" })).toBeVisible();
   expect(
     screen.getAllByRole("link", { name: /Mark my answer/ })[0],
   ).toHaveAttribute("href", "/student/activity/single");
@@ -157,50 +174,6 @@ it("links each finished session to its correct report and scopes type chips to s
   expect(screen.queryByRole("link", { name: /Flashcards/ })).toBeNull();
 });
 
-it("keeps weak spots locked until both history boundaries", async () => {
-  const topic = {
-    ...empty.topics[0],
-    id: "synthetic",
-    parent_id: "t1",
-    name: "Synthetic topic",
-    answered: 2,
-    sessions: 2,
-    pct: 20,
-  };
-  mocks.load.mockResolvedValue({ ...empty, topics: [topic] });
-  const view = render(
-    await resolve(await Progress({ searchParams: Promise.resolve({}) })),
-  );
-  expect(
-    screen.getByText(/Answer 1 more question in Synthetic topic/),
-  ).toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: /^Retry questions$/ })).toBeNull();
-  view.unmount();
-  mocks.load.mockResolvedValue({
-    ...empty,
-    topics: [{ ...topic, answered: 3, sessions: 1 }],
-  });
-  const locked = render(
-    await resolve(await Progress({ searchParams: Promise.resolve({}) })),
-  );
-  expect(
-    screen.getByText(/Practise in one more session to unlock/),
-  ).toBeInTheDocument();
-  expect(screen.queryByRole("link", { name: /^Retry questions$/ })).toBeNull();
-  locked.unmount();
-  mocks.load.mockResolvedValue({
-    ...empty,
-    topics: [{ ...topic, answered: 3 }],
-  });
-  render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
-  expect(
-    screen.getByRole("link", { name: /^Retry questions$/ }),
-  ).toHaveAttribute(
-    "href",
-    "/student/sprint?topics=t1&sub=synthetic&history=mistakes",
-  );
-});
-
 it("derives the practice summary from parent topic marks without counting subtopics twice", async () => {
   mocks.load.mockResolvedValue({
     ...empty,
@@ -219,14 +192,9 @@ it("derives the practice summary from parent topic marks without counting subtop
   });
   render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
   expect(
-    screen.getByRole("img", { name: "70% practice average; target 80%" }),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByText("4 marked answers in the last 90 days"),
-  ).toBeInTheDocument();
-  expect(screen.getByText("Against your target")).toBeInTheDocument();
-  expect(screen.getByText("10 pts")).toBeInTheDocument();
-  expect(screen.queryByText(/^Since /)).toBeNull();
+    screen.getByText("70% across 4 marked answers · Your target is 80%"),
+  ).toBeVisible();
+  expect(screen.getAllByText("7/10").length).toBeGreaterThan(0);
 });
 
 it("rejects missing finish dates before converting them to Sydney dates", async () => {
@@ -250,39 +218,67 @@ it("rejects missing finish dates before converting them to Sydney dates", async 
   expect(screen.getAllByRole("link", { name: /75%/ })).toHaveLength(1);
   expect(screen.queryByText(/1970/)).toBeNull();
   expect(screen.queryByRole("link", { name: /unfinished/ })).toBeNull();
+  expect(screen.getByText("Study time").nextElementSibling).toHaveTextContent(
+    "0h 1m",
+  );
 });
 
-it("derives the target gap and change from the first scored week in the selected range", async () => {
-  const session = { kind: "sprint", config: {}, elapsed_s: 60, by_type: {} };
-  mocks.load.mockResolvedValue({
-    ...empty,
-    topics: [
-      { ...empty.topics[0], answered: 4, earned: 9, possible: 10, pct: 90 },
+it("counts only active days and handles an unavailable activity summary", async () => {
+  mocks.rpc.mockResolvedValue({
+    data: [
+      { day: "2026-10-08", questions: 2, cards: 0 },
+      { day: "2026-10-09", questions: 0, cards: 3 },
+      { day: "2026-10-07", questions: 0, cards: 0 },
     ],
-    history: [
-      {
-        ...session,
-        id: "outside",
-        finished_at: "2026-08-01T01:00:00Z",
-        pct: 10,
-      },
-      { ...session, id: "first", finished_at: "2026-09-14T01:00:00Z", pct: 40 },
-      {
-        ...session,
-        id: "second",
-        finished_at: "2026-09-15T01:00:00Z",
-        pct: 60,
-      },
-      { ...session, id: "now", finished_at: "2026-10-08T01:00:00Z", pct: 90 },
-    ],
+    error: null,
   });
-  render(
+  const view = render(
     await resolve(
       await Progress({ searchParams: Promise.resolve({ range: "30" }) }),
     ),
   );
-  expect(screen.getByText("On target")).toBeInTheDocument();
-  expect(screen.getByText("Since September")).toBeInTheDocument();
-  expect(screen.getByText("+40 pts")).toBeInTheDocument();
-  expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+  expect(screen.getByText("Days studied").nextElementSibling).toHaveTextContent(
+    "2",
+  );
+  expect(mocks.rpc).toHaveBeenCalledWith("activity_days", {
+    p_from: "2026-09-10",
+    p_to: "2026-10-09",
+  });
+  view.unmount();
+  mocks.rpc.mockResolvedValue({
+    data: null,
+    error: { message: "unavailable" },
+  });
+  render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
+  expect(screen.getByText("Days studied").nextElementSibling).toHaveTextContent(
+    "Unavailable",
+  );
+});
+
+it("keeps the practice chart empty for flashcard-only history", async () => {
+  mocks.load.mockResolvedValue({
+    ...empty,
+    history: [
+      {
+        id: "cards",
+        kind: "flashcards",
+        config: {},
+        finished_at: "2026-10-09T01:00:00Z",
+        elapsed_s: 120,
+        pct: 90,
+        by_type: {},
+      },
+    ],
+  });
+  render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
+  expect(
+    screen.getByText("No marked answers yet · Your target is 80%"),
+  ).toBeVisible();
+  expect(screen.getByText("No activity in this range")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Show chart data" }));
+  expect(screen.queryByRole("cell", { name: "90%" })).toBeNull();
+  expect(screen.queryByRole("link", { name: /Flashcards/ })).toBeNull();
+  expect(screen.getByText("Study time").nextElementSibling).toHaveTextContent(
+    "0h 2m",
+  );
 });

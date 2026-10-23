@@ -1,7 +1,10 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { SprintFocusShell } from "./focus-shell";
-vi.mock("@/components/feedback-widget", () => ({ useFeedback: () => vi.fn() }));
+const feedback = vi.hoisted(() => vi.fn());
+vi.mock("@/components/feedback-widget", () => ({
+  useFeedback: () => feedback,
+}));
 vi.mock("@/components/calculator", () => ({
   Calculator: ({ onClose }: { onClose: () => void }) => (
     <button onClick={onClose}>Close calculator</button>
@@ -60,4 +63,37 @@ it("handles navigation shortcuts while leaving consumed MC answer keys alone", (
   expect(
     screen.getByRole("button", { name: "Close calculator" }),
   ).toBeVisible();
+});
+
+it("labels calculator and feedback separately from flagging", () => {
+  show();
+  const calculator = screen.getByRole("button", { name: "Calculator (C)" });
+  expect(calculator).toHaveTextContent("Calculator");
+  fireEvent.click(calculator);
+  expect(
+    screen.getByRole("button", { name: "Close calculator" }),
+  ).toBeVisible();
+  const trigger = screen
+    .getAllByRole("button", { name: "Send feedback" })
+    .find((button) => button.textContent === "Feedback")!;
+  expect(trigger).toHaveTextContent("Feedback");
+  expect(trigger.querySelector('[data-icon="message-circle"]')).toBeTruthy();
+  fireEvent.click(trigger);
+  expect(feedback).toHaveBeenCalledOnce();
+});
+
+it("announces the mobile booklet sheet state independently of the desktop rail", () => {
+  show();
+  const mobile = screen
+    .getAllByRole("button", { name: "Booklet (B)" })
+    .find((button) => button.hasAttribute("aria-expanded"))!;
+  expect(mobile).toHaveAttribute("aria-expanded", "false");
+  expect(mobile).not.toHaveAttribute("aria-pressed");
+  fireEvent.click(mobile);
+  expect(mobile).toHaveAttribute("aria-expanded", "true");
+  expect(
+    document.getElementById(mobile.getAttribute("aria-controls")!),
+  ).toHaveAttribute("role", "dialog");
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+  expect(mobile).toHaveAttribute("aria-expanded", "false");
 });

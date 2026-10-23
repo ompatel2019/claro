@@ -1,10 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import {
-  Children,
-  isValidElement,
-  type ReactElement,
-  type ReactNode,
-} from "react";
+import { Children, type ReactElement } from "react";
 
 const mocks = vi.hoisted(() => ({
   requireProfile: vi.fn(),
@@ -85,52 +80,17 @@ it("does not treat a failed session lookup as a first visit", async () => {
   await expect(Home()).rejects.toThrow("Couldn't check first visit.");
 });
 
-it("handles activity failure while the due count is still pending", async () => {
+it("starts the activity read without querying dashboard progress or due cards", async () => {
   mocks.requireProfile.mockResolvedValue({
     id: "own-student",
     role: "student",
     year_level: 11,
   });
-  const due = Promise.withResolvers<{ count: number; error: null }>();
-  const lte = vi.fn().mockReturnValue(due.promise);
-  mocks.eq.mockReturnValue({ eq: mocks.eq, lte });
-  const rpc = vi.fn().mockResolvedValue({
-    data: null,
-    error: { message: "Activity unavailable" },
-  });
+  const rpc = vi.fn().mockRejectedValue(new Error("Activity unavailable"));
   mocks.createClient.mockResolvedValue({ from: mocks.from, rpc });
-  const unhandled = vi.fn();
-  process.on("unhandledRejection", unhandled);
-  const pagePromise = Home();
-  try {
-    // Let the fast RPC fail and Node report any rejection before releasing due.
-    await new Promise((resolve) => setTimeout(resolve, 0));
-    expect(rpc).toHaveBeenCalledWith("activity_days", expect.any(Object));
-    expect(lte).toHaveBeenCalled();
-    expect(unhandled).not.toHaveBeenCalled();
-
-    due.resolve({ count: 0, error: null });
-    const page = await pagePromise;
-    const activities: Promise<unknown>[] = [];
-    function visit(node: ReactNode) {
-      Children.forEach(node, (child) => {
-        if (
-          !isValidElement<{
-            children?: ReactNode;
-            activity?: Promise<unknown>;
-          }>(child)
-        )
-          return;
-        if (child.props.activity) activities.push(child.props.activity);
-        visit(child.props.children);
-      });
-    }
-    visit(page);
-    // HomeStats gets an empty array; SafeStudyDays retains the failure sentinel.
-    await expect(Promise.all(activities)).resolves.toEqual([[], null]);
-  } finally {
-    due.resolve({ count: 0, error: null });
-    await pagePromise;
-    process.off("unhandledRejection", unhandled);
-  }
+  await Home();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(rpc).toHaveBeenCalledWith("activity_days", expect.any(Object));
+  expect(mocks.from).not.toHaveBeenCalledWith("flashcard_progress");
+  expect(mocks.progress).not.toHaveBeenCalled();
 });

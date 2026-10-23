@@ -189,7 +189,9 @@ it("renders the home study days presentation", () => {
     />,
   );
   expect(screen.getByRole("heading", { name: "Study days" })).toBeVisible();
-  expect(screen.getByText("Consistency is the cheat code.")).toBeVisible();
+  expect(
+    screen.getByText("Every square is a day. A little practice lights it up."),
+  ).toBeVisible();
   expect(screen.getByText("Today is lit")).toBeVisible();
   expect(screen.queryByRole("link", { name: "Study" })).toBeNull();
   expect(screen.getByRole("link", { name: /^Thu 8 Oct 2026/ })).toHaveAttribute(

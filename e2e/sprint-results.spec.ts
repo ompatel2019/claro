@@ -58,7 +58,9 @@ test.describe("Sprint results", () => {
     await finish(page);
     const resultsUrl = page.url();
     await page.goto("/student");
-    const practise = page.getByRole("link", { name: "Practise", exact: true });
+    const practise = page
+      .getByRole("region", { name: "Quick start" })
+      .getByRole("link", { name: /^Topic Sprint/ });
     await expect(practise.last()).toBeVisible();
     for (const width of [360, 400, 640, 768]) {
       await page.setViewportSize({ width, height: 800 });
