@@ -28,12 +28,13 @@ export function ResultsNextStep({
         0,
       );
       const earned = rs.reduce((n, r) => n + Number(r.mark), 0);
-      return { id, rs, possible, earned, dropped: possible - earned };
+      const complete = rows.every((r) => r.topic_id !== id || scored(r));
+      return { id, rs, possible, earned, complete, dropped: possible - earned };
     })
     .filter((t) => t.possible > 0)
     .sort((a, b) => b.dropped - a.dropped);
   const needsWork = grouped.filter((t) => t.dropped > 0);
-  const fullMarks = grouped.filter((t) => t.dropped === 0);
+  const fullMarks = grouped.filter((t) => t.dropped === 0 && t.complete);
   const missed = rows.filter((r) => r.type === "mcq" && below(r));
   const allFullMarks =
     rows.length > 0 &&

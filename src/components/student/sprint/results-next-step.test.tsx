@@ -53,6 +53,20 @@ it("prioritises marks dropped, retains every topic and collapses full marks", ()
     "/student/flashcards?topic=child",
   );
 });
+it("only shows full marks for a topic once every answer in it is scored", () => {
+  render(
+    <ResultsNextStep
+      rows={[
+        row("full", 4, 4, 1),
+        { ...row("full", 0, 4, 2), mark: null, status: "failed" } as ReviewRow,
+      ]}
+      topics={topics}
+      config={{ mode: "mixed", topics: [] }}
+      cards={{}}
+    />,
+  );
+  expect(screen.queryByText(/Full marks/)).toBeNull();
+});
 it("shows the real summary advice and an honest pending state", () => {
   const { rerender } = render(
     <ResultsNextStep
