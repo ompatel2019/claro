@@ -217,21 +217,16 @@ test("S11: activity row shows result, date, and opens the session", async ({
 }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("http://claro.test/student/activity");
-  const table = page.getByRole("table", { name: "Your activity" });
-  // Template table: Session, Topic, Result, Time, When, Open (some hidden by breakpoint).
-  await expect(table.getByRole("columnheader")).toHaveCount(6);
-  const row = table.locator("tbody tr").filter({ has: page.locator("td") });
+  const list = page.getByRole("region", { name: "Your activity" });
+  await expect(
+    list.getByRole("heading", { name: /^Today · Mon 19 Oct/ }),
+  ).toBeVisible();
+  const row = list.getByRole("listitem");
   await expect(row).toHaveCount(1);
   await expect(row).toContainText("75%");
   await expect(row).not.toContainText("Finished");
   await expect(row.getByText("11:00am")).toBeVisible();
-  await capture(
-    page,
-    table,
-    "11",
-    "Activity result + date",
-    "s11-activity.png",
-  );
+  await capture(page, list, "11", "Activity result + date", "s11-activity.png");
   await row.click();
   await expect(page).toHaveURL("http://claro.test/student/sprint/s/results");
 });
