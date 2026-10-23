@@ -94,6 +94,11 @@ describe("tightenText", () => {
     expect(body("It is important to note that the CAD is a flow.")).toBe(
       "The CAD is a flow.",
     );
+    expect(
+      body(
+        "It is important to note the distinction between nominal and real GDP.",
+      ),
+    ).toBe("Note the distinction between nominal and real GDP.");
     expect(body("Well done, you define GDP precisely.")).toBe(
       "You define GDP precisely.",
     );
@@ -248,6 +253,7 @@ describe("tightenText", () => {
     for (const text of [
       "This will not earn a mark because nominal GDP does not adjust for inflation. Use real GDP instead.",
       "This will not change your mark as the definition is wrong. Fix it.",
+      "Your example is relevant. This will not add a mark without explaining how it affects demand.",
       "Name the policy. This will not lift your mark if you omit how it reduces borrowing.",
       "Your definition is accurate. This will not lift your mark unless you explain how higher rates reduce borrowing.",
       "Your definition is accurate. This will not add a mark until you name the transmission mechanism.",

@@ -71,7 +71,7 @@ const META_SENTENCE = [
   // Only when the subject is the comment itself ("This/It/That (change)"), so
   // advice such as "Do not add a statistic because it will not earn a mark" stays.
   // Explanations ("because …") and "earn a mark" judge the student's work, so they never match.
-  /^(?![^.;]*\b(?:because|since|as|unless|until|if)\b)(?:this|that|it)(?: (?:change|tweak|wording|fix|edit)(?: change| tweak)?)? (?:would|will|does|doesn't|won't|is|only)\b[^.;]*\b(?:not|never|without)\b[^.;]*\b(?:add|adding|change|changing|affect|affecting|cost|costing|lift|lifting) (?:a|the|your|any|another|an extra) (?:extra )?marks?\b/i,
+  /^(?![^.;]*\b(?:because|since|as|unless|until|if)\b|[^.;]*\bwithout (?!(?:changing|affecting|adding|lifting|costing) (?:a|the|your|any|another|an extra) (?:extra )?marks?\b))(?:this|that|it)(?: (?:change|tweak|wording|fix|edit)(?: change| tweak)?)? (?:would|will|does|doesn't|won't|is|only)\b[^.;]*\b(?:not|never|without)\b[^.;]*\b(?:add|adding|change|changing|affect|affecting|cost|costing|lift|lifting) (?:a|the|your|any|another|an extra) (?:extra )?marks?\b/i,
   /\bas an ai\b/i,
 ];
 
@@ -88,7 +88,6 @@ const OPENERS: RegExp[] = [
   /^overall,?\s+/i,
   /^(in summary|to summarise|to summarize|in conclusion),?\s+/i,
   /^it is (important|worth) (to note|noting) that\s+/i,
-  /^it is (important|worth) (to note|noting),?\s+/i,
   /^(please )?note that\s+/i,
   /^(note|notably),\s+/i,
   /^(perhaps|maybe),?\s+/i,
@@ -180,6 +179,11 @@ function stripOpeners(sentence: string): string {
   for (let guard = 0; guard < 4; guard++) {
     const before = s;
     s = s.replace(MODAL_SUGGESTION, "");
+    // "It is important to note X" keeps its verb: "Note X".
+    s = s.replace(
+      /^it is (?:important|worth) (?:to note|noting),?\s+(?!that\b)/i,
+      "Note ",
+    );
     const consider =
       /^(you (could|might|may|should) )?consider ([a-z]+ing)\b\s*/i.exec(s);
     if (consider && GERUNDS[consider[3].toLowerCase()]) {
