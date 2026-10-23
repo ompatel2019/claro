@@ -179,14 +179,14 @@ describe("tightenText", () => {
     );
     expect(
       body(
-        "This will not earn another mark; explain how higher rates reduce borrowing. Name the transmission mechanism.",
+        "This will not change your mark; explain how higher rates reduce borrowing. Name the transmission mechanism.",
       ),
     ).toBe(
       "Explain how higher rates reduce borrowing. Name the transmission mechanism.",
     );
     expect(
       body(
-        "Your definition is accurate. This wording will not earn another mark, so explain how higher rates reduce borrowing.",
+        "Your definition is accurate. This wording will not change your mark, so explain how higher rates reduce borrowing.",
       ),
     ).toBe(
       "Your definition is accurate. Explain how higher rates reduce borrowing.",
@@ -203,6 +203,8 @@ describe("tightenText", () => {
     ).toBe("Your mechanism is correct. Remove the repeated definition.");
     // Advice whose own subject is not the comment is kept whole (codex review).
     for (const text of [
+      "This will not earn a mark because nominal GDP does not adjust for inflation. Use real GDP instead.",
+      "This will not change your mark as the definition is wrong. Fix it.",
       "Your definition is accurate. Do not add a statistic because it will not earn another mark.",
       "Your definition is accurate. Repeating it will not earn another mark, so explain how higher rates reduce borrowing.",
     ])
