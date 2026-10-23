@@ -206,8 +206,8 @@ export function SingleResult({
             </Link>
           </div>
         </Card>
-        {/* Visible overflow keeps the answer's comment column sticky. */}
-        <Card className="overflow-visible md:col-span-2 xl:col-span-3">
+        {/* Visible overflow keeps the comment column sticky, 16px under the 56px top bar. */}
+        <Card className="overflow-visible [--cma-sticky-top:72px] md:col-span-2 xl:col-span-3">
           <CardContent>
             <AnnotatedFeedback
               row={row}

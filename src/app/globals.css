@@ -1885,8 +1885,8 @@ body:has(.sprint-focus)
   line-height: 22px;
   -webkit-font-smoothing: antialiased;
   --cma-r: 2px;
-  /* Clears the app's sticky top bar (56px) and the sprint focus bar (68px). */
-  --cma-sticky-top: 84px;
+  /* --cma-sticky-top: set by hosts (top bar + 16px); falls back to 84px, which
+     clears the app top bar (56px) and the sprint focus bar (68px). */
   --cma-col: 360px;
   --cma-gap: 48px;
 

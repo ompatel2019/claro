@@ -81,7 +81,7 @@ export function ResultsAnswers({
       <Card
         key={r.attempt_id}
         id={`q-${r.position}`}
-        className="scroll-mt-20 overflow-visible"
+        className="scroll-mt-20 overflow-visible [--cma-sticky-top:72px]"
       >
         <CardHeader className="space-y-2">
           <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
