@@ -173,7 +173,7 @@ export function MarkedAnswerDoc({
         const top =
           parseFloat(
             getComputedStyle(root).getPropertyValue("--cma-sticky-top"),
-          ) || 16;
+          ) || 84;
         const box = r.getBoundingClientRect();
         const lead = slider.current.getBoundingClientRect().top - box.top;
         on = box.height - lead + top + 16 <= window.innerHeight;

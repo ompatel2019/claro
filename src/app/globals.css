@@ -1885,6 +1885,8 @@ body:has(.sprint-focus)
   line-height: 22px;
   -webkit-font-smoothing: antialiased;
   --cma-r: 2px;
+  /* Clears the app's sticky top bar (56px) and the sprint focus bar (68px). */
+  --cma-sticky-top: 84px;
   --cma-col: 360px;
   --cma-gap: 48px;
 
@@ -2155,7 +2157,7 @@ body:has(.sprint-focus)
 }
 .cma .cma-slider,
 .cma .cma-hl {
-  scroll-margin: calc(var(--cma-sticky-top, 16px) + 8px) 16px 16px;
+  scroll-margin: calc(var(--cma-sticky-top, 84px) + 8px) 16px 16px;
 }
 .cma .cma-sl-bar {
   display: flex;
@@ -2398,7 +2400,7 @@ body:has(.sprint-focus)
      only when it fits the screen (the component sets data-sticky and --cma-rail-top). */
   .cma[data-sticky] .cma-rail {
     position: sticky;
-    top: var(--cma-rail-top, 16px);
+    top: var(--cma-rail-top, 84px);
   }
   .cma .cma-answer {
     margin-top: 0;
