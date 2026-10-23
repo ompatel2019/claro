@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { PortalIcon, Flag, Spinner } from "@/components/icons";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
+import { cleanupAnswerPhotos } from "@/lib/answer-photo-cleanup";
 import { ensureSession, withAuthRetry } from "@/lib/auth-client";
 import {
   answered,
@@ -48,7 +49,6 @@ export function SprintRunner({
   initialExplanations = {},
   userId,
   title,
-  topicNames = {},
   seen = [],
 }: {
   session: Session;
@@ -56,13 +56,15 @@ export function SprintRunner({
   initialExplanations?: Record<string, string>;
   userId: string;
   title: string;
-  topicNames?: Record<string, string>;
   seen?: string[];
 }) {
   const router = useRouter();
   const [db] = useState(createClient);
   const [attempts, setAttempts] = useState(initial);
   const rows = useRef(initial);
+  const photoPaths = useRef(
+    new Map(initial.map((a) => [a.id, a.image_paths ?? []])),
+  );
   const first = initial.findIndex((a) => !answered(a));
   const [index, setIndex] = useState(first < 0 ? 0 : first);
   const [elapsed, setElapsed] = useState(session.elapsed_s ?? 0);
@@ -139,6 +141,14 @@ export function SprintRunner({
     setSaveState("saving");
     const operation = queue.current.then(() =>
       withAuthRetry(db, async () => {
+        if (patch.image_paths) {
+          photoPaths.current.set(id, [
+            ...new Set([
+              ...(photoPaths.current.get(id) ?? []),
+              ...patch.image_paths,
+            ]),
+          ]);
+        }
         if (backgroundAnswer(rows.current.find((a) => a.id === id)!)) {
           const response = await fetch(`/api/attempts/${id}/mark`, {
             method: "PATCH",
@@ -166,8 +176,18 @@ export function SprintRunner({
           );
       }),
     );
-    queue.current = operation.catch(() => {});
-    return operation.then(
+    const cleaned = operation.then(async () => {
+      if ("image_paths" in patch) {
+        const paths = patch.image_paths ?? [];
+        const removed = (photoPaths.current.get(id) ?? []).filter(
+          (path) => !paths.includes(path),
+        );
+        await cleanupAnswerPhotos(userId, removed);
+        photoPaths.current.set(id, paths);
+      }
+    });
+    queue.current = cleaned.catch(() => {});
+    return cleaned.then(
       () => {
         if (!dirty.current.has(id)) localStorage.removeItem(draftKey(id));
         if (!dirty.current.size) setSaveState("saved");
@@ -189,6 +209,7 @@ export function SprintRunner({
       }
     }
     await queue.current;
+    await cleanupAnswerPhotos(userId);
   }
   async function persistTime() {
     await withAuthRetry(db, async () => {
@@ -214,9 +235,16 @@ export function SprintRunner({
     for (const a of rows.current) {
       const draft = localStorage.getItem(draftKey(a.id));
       if (!draft) continue;
-      if (backgroundAnswer(a) || ["pending", "transcribed"].includes(a.status))
-        edit(a.id, JSON.parse(draft));
-      else localStorage.removeItem(draftKey(a.id));
+      if (
+        backgroundAnswer(a) ||
+        ["pending", "transcribed"].includes(a.status)
+      ) {
+        const patch: Partial<Attempt> = JSON.parse(draft);
+        photoPaths.current.set(a.id, [
+          ...new Set([...(a.image_paths ?? []), ...(patch.image_paths ?? [])]),
+        ]);
+        edit(a.id, patch);
+      } else localStorage.removeItem(draftKey(a.id));
     }
     if (initial.some(answered))
       toast(
@@ -268,14 +296,18 @@ export function SprintRunner({
       document.removeEventListener("visibilitychange", hide);
     };
   }, [db, session.id, userId]);
+  const flushRef = useRef(flush);
   useEffect(() => {
-    // Debounced autosave; after a failure, retry every 5 s.
+    flushRef.current = flush;
+  });
+  useEffect(() => {
+    // Clock ticks must not restart the five-second retry delay.
     const timeout = setTimeout(
-      () => void flush().catch((e) => setError(e.message)),
+      () => void flushRef.current().catch((e) => setError(e.message)),
       saveState === "error" ? 5000 : 650,
     );
     return () => clearTimeout(timeout);
-  });
+  }, [saveState, attempts]);
   async function act(fn: () => Promise<void>) {
     setBusy(true);
     setError("");
@@ -608,7 +640,14 @@ export function SprintRunner({
               <Badge variant="secondary">
                 {plural(a.question.marks, "mark")}
               </Badge>
-              <span>{topicNames[a.question.topic_id]}</span>
+              {(a.question.year || a.question.source) && (
+                <span>
+                  {a.question.year &&
+                    !a.question.source.includes(String(a.question.year)) &&
+                    `${a.question.year} `}
+                  {a.question.source}
+                </span>
+              )}
               {seen.includes(a.question_id) && (
                 <Badge variant="outline" className="ml-2 align-middle">
                   Seen before
@@ -667,7 +706,10 @@ export function SprintRunner({
               attempt={backgroundAnswer(a) ? { ...a, status: "pending" } : a}
               userId={userId}
               edit={(patch) => edit(a.id, patch)}
-              save={(patch) => save(a.id, patch)}
+              save={async (patch) => {
+                edit(a.id, patch);
+                await flush();
+              }}
               flush={flush}
               local={(patch) => local(a.id, patch)}
             />

@@ -342,8 +342,27 @@ it("saves photos in the uploader's canonical format", async () => {
   const image_paths = [
     "u/75f2a40b-3e20-4a56-9e14-1b237cfc8396-1729000000000-0.jpg",
   ];
-  expect((await patchAnswer({ image_paths })).status).toBe(200);
+  expect(
+    (await patchAnswer({ image_paths, answer_text: null, transcript: null }))
+      .status,
+  ).toBe(200);
   expect(save.update).toHaveBeenCalledWith(
     expect.objectContaining({ image_paths }),
   );
+});
+
+it("rejects the old upload patch with server-owned status before database access", async () => {
+  expect(
+    (
+      await patchAnswer({
+        image_paths: [
+          "u/11111111-1111-4111-8111-111111111111-1729000000000-0.png",
+        ],
+        answer_text: null,
+        transcript: null,
+        status: "pending",
+      })
+    ).status,
+  ).toBe(400);
+  expect(mocks.adminFrom).not.toHaveBeenCalled();
 });

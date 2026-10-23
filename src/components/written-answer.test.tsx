@@ -164,3 +164,47 @@ it("appends camera shots, flushes once per batch, and reads only on request", as
     { method: "POST" },
   );
 });
+
+it("removes already uploaded objects if a later page in the batch fails", async () => {
+  const upload = vi
+    .fn()
+    .mockResolvedValueOnce({ error: null })
+    .mockResolvedValueOnce({ error: { message: "Upload interrupted" } });
+  const remove = vi.fn().mockResolvedValue({ error: null });
+  const { createClient } = await import("@/utils/supabase/client");
+  vi.mocked(createClient).mockReturnValue({
+    storage: { from: () => ({ upload, remove }) },
+  } as never);
+  const save = vi.fn();
+  render(
+    <WrittenAnswer
+      attempt={{
+        ...attempt,
+        id: "11111111-1111-4111-8111-111111111111",
+        answer_text: null,
+      }}
+      disabled={false}
+      userId="u"
+      onBusy={vi.fn()}
+      edit={vi.fn()}
+      save={save}
+      flush={vi.fn()}
+      local={vi.fn()}
+    />,
+  );
+  fireEvent.change(screen.getByLabelText("Take photo / Upload"), {
+    target: {
+      files: [1, 2].map(
+        (i) => new File(["photo"], `${i}.png`, { type: "image/png" }),
+      ),
+    },
+  });
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Upload interrupted",
+  );
+  expect(remove).toHaveBeenCalledExactlyOnceWith([
+    upload.mock.calls[0][0],
+    upload.mock.calls[1][0],
+  ]);
+  expect(save).not.toHaveBeenCalled();
+});
