@@ -461,6 +461,7 @@ it.each([
   });
   const options = mockedCall.mock.calls[0][0];
   expect(options).toMatchObject({
+    task: "transcribe_answer",
     model: MODELS.strong,
     schema: TranscriptSchema,
     effort: "low",
@@ -468,6 +469,25 @@ it.each([
   expect(options.messages[1].content).toContainEqual({
     type: "image_url",
     image_url: { url: "data:image/png;base64,aW1hZ2U=" },
+  });
+});
+
+it("passes scan task and detail overrides to the transcription call", async () => {
+  mockedCall.mockResolvedValue({ lines: ["Prices rise"], notes: "" });
+  await transcribeImage(Buffer.from("image"), "image/jpeg", q.stem, "user", {
+    task: "transcribe_answer:scan",
+    detail: "high",
+  });
+  const options = mockedCall.mock.calls[0][0];
+  expect(options).toMatchObject({
+    task: "transcribe_answer:scan",
+    model: MODELS.strong,
+    effort: "low",
+    userId: "user",
+  });
+  expect(options.messages[1].content).toContainEqual({
+    type: "image_url",
+    image_url: { url: "data:image/jpeg;base64,aW1hZ2U=", detail: "high" },
   });
 });
 

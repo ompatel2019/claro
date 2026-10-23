@@ -15,6 +15,16 @@ const mocks = vi.hoisted(() => ({
   fetch: vi.fn(),
   upload: vi.fn(),
   remove: vi.fn().mockResolvedValue({ error: null }),
+  scan: vi.fn(),
+}));
+vi.mock("@/hooks/use-scan-to-text", () => ({
+  useScanToText: () => ({
+    scan: mocks.scan,
+    state: "idle",
+    error: "",
+    retryAt: 0,
+    cancel: vi.fn(),
+  }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock("sonner", () => ({ toast: vi.fn() }));
@@ -845,4 +855,66 @@ it("deletes a fresh upload when the student removes it after its metadata save f
     expect(mocks.remove).toHaveBeenCalledWith([mocks.upload.mock.calls[0][0]]),
   );
   expect(localStorage.getItem(`claro-draft-${id}`)).toBeNull();
+});
+
+it("scans a written answer into the typed box and saves it as answer_text", async () => {
+  window.matchMedia = (() => ({ matches: true })) as never;
+  mocks.scan.mockResolvedValue({
+    text: "Tariffs raise import prices.",
+    uncertain: 0,
+    notes: "",
+  });
+  mocks.fetch.mockResolvedValue({ ok: true, json: async () => ({}) });
+  vi.stubGlobal("fetch", mocks.fetch);
+  const written = {
+    ...attempt,
+    choice_index: null,
+    question: { ...attempt.question, type: "short" as const },
+  };
+  show([written, { ...written, id: "b", question_id: "qb", position: 2 }], {
+    mode: "short",
+    feedback: "end",
+    topics: [],
+  });
+  await act(async () => {
+    fireEvent.change(
+      document.querySelector('input[type="file"][capture]:not([multiple])')!,
+      { target: { files: [new File(["x"], "a.jpg", { type: "image/jpeg" })] } },
+    );
+  });
+  expect(screen.getByRole("textbox", { name: "Your answer" })).toHaveValue(
+    "Tariffs raise import prices.",
+  );
+  fireEvent.click(screen.getByRole("button", { name: /^Question 2:/ }));
+  await waitFor(() =>
+    expect(mocks.fetch).toHaveBeenCalledWith(
+      "/api/attempts/a/mark",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify({ answer_text: "Tariffs raise import prices." }),
+      }),
+    ),
+  );
+});
+
+it("offers scanning only for editable typed written answers", () => {
+  show();
+  expect(
+    screen.queryByRole("button", { name: "Scan written answer" }),
+  ).toBeNull();
+  cleanup();
+  show(
+    [
+      {
+        ...attempt,
+        choice_index: null,
+        image_paths: ["u/a-1-0.jpg"],
+        question: { ...attempt.question, type: "short" },
+      },
+    ],
+    { mode: "short", feedback: "end", topics: [] },
+  );
+  expect(
+    screen.queryByRole("button", { name: "Scan written answer" }),
+  ).toBeNull();
 });
