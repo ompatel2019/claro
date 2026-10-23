@@ -1,7 +1,5 @@
 import { timer } from "./practice";
 
-import { weeklyScores } from "./progress";
-
 const SYDNEY = "Australia/Sydney";
 
 /** "Good morning" before 12, afternoon before 17, else evening (Sydney time). */
@@ -88,14 +86,6 @@ export function schoolWeek(today: string) {
     ) + 1;
   return { term: index + 1, week: week(today), weeks: week(end) };
 }
-/** Monday buckets, averaging the marked session scores supplied by the RPC.
- * Flashcard recall percentages are not marked-answer scores. Empty weeks are omitted. */
-export function homeWeeks(history: import("./progress").HistoryScore[]) {
-  return weeklyScores(history.filter((s) => s.kind !== "flashcards")).map(
-    ({ day, value }) => ({ day, pct: value }),
-  );
-}
-
 const STUDY_QUOTES = [
   "A little practice today makes tomorrow clearer.",
   "One question is a good place to start.",

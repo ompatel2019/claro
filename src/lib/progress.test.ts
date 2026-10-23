@@ -5,9 +5,6 @@ import {
   rangeFrom,
   reportHref,
   practiseHref,
-  verbRows,
-  weakSpots,
-  type TopicProgress,
 } from "./progress";
 import { fromParams, restore } from "./sprint";
 import { scoreTone } from "./practice";
@@ -31,65 +28,6 @@ describe("progress ranges use inclusive Sydney calendar days", () => {
     expect(rangeFrom("30", "2024-03-01")).toBe("2024-02-01");
     expect(rangeFrom("all", "2026-10-09")).toBeNull();
   });
-});
-const topic = (
-  id: string,
-  pct: number | null,
-  answered = 3,
-  parent_id: string | null = "t1",
-): TopicProgress => ({
-  id,
-  parent_id,
-  name: id,
-  sort: 1,
-  pct,
-  answered,
-  sessions: 2,
-  earned: 0,
-  possible: 10,
-  last_answered: null,
-});
-it("selects only eligible subtopics, alternates missed cards and caps at six", () => {
-  const spots = weakSpots(
-    [
-      topic("parent", 10, 10, null),
-      topic("few", 1, 2),
-      topic("edge", 60),
-      topic("empty", null),
-      topic("weak", 59.9),
-      topic("weakest", 10),
-      topic("next", 20),
-      topic("extra", 30),
-    ],
-    [
-      { id: "cards", name: "Cards", missed: 8 },
-      { id: "more", name: "More", missed: 2 },
-      { id: "none", name: "None", missed: 0 },
-    ],
-  );
-  expect(spots.map((s) => s.id)).toEqual([
-    "q-weakest",
-    "c-cards",
-    "q-next",
-    "c-more",
-    "q-extra",
-    "q-weak",
-  ]);
-  expect(spots[0].href).toBe(
-    "/student/sprint?topics=t1&sub=weakest&history=mistakes",
-  );
-  expect(spots[1].href).toBe("/student/flashcards?topic=cards");
-  expect(weakSpots([], [])).toEqual([]);
-});
-it("requires three answered questions per verb and orders the weakest first", () => {
-  expect(
-    verbRows([
-      { id: "Explain", answered: 2, pct: 0 },
-      { id: "Analyse", answered: 3, pct: 30 },
-      { id: "Discuss", answered: 5, pct: 70 },
-      { id: "Empty", answered: 4, pct: null },
-    ]).map((v) => v.id),
-  ).toEqual(["Analyse", "Discuss"]);
 });
 it.each([
   [0, "destructive"],

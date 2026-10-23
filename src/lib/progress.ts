@@ -1,4 +1,3 @@
-import { isWeakTopic } from "./weak-topics";
 import { addDays } from "./activity";
 import type { Topic } from "./practice";
 
@@ -83,55 +82,6 @@ export function practiseHref(
   );
   if (mistakes) p.set("history", "mistakes");
   return `/student/sprint?${p}`;
-}
-export function verbRows(rows: Breakdown[]) {
-  return rows
-    .filter((r) => r.answered >= 3 && r.pct !== null)
-    .sort((a, b) => a.pct! - b.pct! || a.id.localeCompare(b.id));
-}
-export function weakSpots(
-  topics: TopicProgress[],
-  cards: ProgressData["missed"],
-) {
-  const questions = topics
-    .filter((t) => t.parent_id && isWeakTopic(t))
-    .sort(
-      (a, b) =>
-        a.pct! - b.pct! || b.answered - a.answered || a.id.localeCompare(b.id),
-    );
-  const missed = cards
-    .filter((c) => c.missed > 0)
-    .sort((a, b) => b.missed - a.missed || a.id.localeCompare(b.id));
-  // Alternate the two ranked lists so card weaknesses remain visible alongside marks.
-  return Array.from(
-    { length: Math.max(questions.length, missed.length) },
-    (_, i) => [
-      ...(questions[i]
-        ? [
-            {
-              id: `q-${questions[i].id}`,
-              name: questions[i].name,
-              caption: `${Math.round(questions[i].pct!)}% · ${questions[i].answered} answered`,
-              href: practiseHref(questions[i], true),
-              action: "Practise",
-            },
-          ]
-        : []),
-      ...(missed[i]
-        ? [
-            {
-              id: `c-${missed[i].id}`,
-              name: missed[i].name,
-              caption: `${missed[i].missed} cards to revisit`,
-              href: `/student/flashcards?topic=${encodeURIComponent(missed[i].id)}`,
-              action: "Review cards",
-            },
-          ]
-        : []),
-    ],
-  )
-    .flat()
-    .slice(0, 6);
 }
 export function weeklyScores(
   history: HistoryScore[],

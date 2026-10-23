@@ -113,7 +113,7 @@ it("provides a route retry and card-shaped loading skeletons", () => {
   ).toBeGreaterThan(10);
 });
 
-it("links each finished session to its correct report and scopes type chips to score history", async () => {
+it("excludes flashcard recall from mixed score history and scopes type chips to marked answers", async () => {
   const base = {
     config: { mode: "short" },
     finished_at: "2026-10-09T01:00:00Z",
@@ -130,7 +130,7 @@ it("links each finished session to its correct report and scopes type chips to s
         id: "sit",
         kind: "paper",
       },
-      { ...base, id: "cards", kind: "flashcards", by_type: {} },
+      { ...base, id: "cards", kind: "flashcards", pct: 20, by_type: {} },
       { ...base, id: "single", kind: "single" },
     ],
   });
@@ -145,9 +145,8 @@ it("links each finished session to its correct report and scopes type chips to s
   expect(
     screen.getAllByRole("link", { name: /Short answer sprint/ })[0],
   ).toHaveAttribute("href", "/student/sprint/sprint/results");
-  expect(
-    screen.getAllByRole("link", { name: /Flashcards/ })[0],
-  ).toHaveAttribute("href", "/student/flashcards/cards");
+  expect(screen.queryByRole("link", { name: /Flashcards/ })).toBeNull();
+  expect(screen.getByRole("cell", { name: "80%" })).toBeVisible();
   expect(
     screen.getAllByRole("link", { name: /Mark my answer/ })[0],
   ).toHaveAttribute("href", "/student/activity/single");
@@ -253,5 +252,33 @@ it("counts only active days and handles an unavailable activity summary", async 
   render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
   expect(screen.getByText("Days studied").nextElementSibling).toHaveTextContent(
     "Unavailable",
+  );
+});
+
+it("keeps the practice chart empty for flashcard-only history", async () => {
+  mocks.load.mockResolvedValue({
+    ...empty,
+    history: [
+      {
+        id: "cards",
+        kind: "flashcards",
+        config: {},
+        finished_at: "2026-10-09T01:00:00Z",
+        elapsed_s: 120,
+        pct: 90,
+        by_type: {},
+      },
+    ],
+  });
+  render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
+  expect(
+    screen.getByText("No marked answers yet · Your target is 80%"),
+  ).toBeVisible();
+  expect(screen.getByText("No activity in this range")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Show chart data" }));
+  expect(screen.queryByRole("cell", { name: "90%" })).toBeNull();
+  expect(screen.queryByRole("link", { name: /Flashcards/ })).toBeNull();
+  expect(screen.getByText("Study time").nextElementSibling).toHaveTextContent(
+    "0h 2m",
   );
 });

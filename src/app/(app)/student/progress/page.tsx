@@ -72,6 +72,7 @@ export default async function Progress({
   const history = d.history
     .filter(
       (s) =>
+        s.kind !== "flashcards" &&
         (!p.kind || s.kind === p.kind) &&
         (!p.type || s.by_type[String(p.type)] != null),
     )
