@@ -186,6 +186,18 @@ describe("tightenText", () => {
     ).toBe(
       "Explain how higher rates reduce borrowing. Name the transmission mechanism.",
     );
+    expect(
+      body(
+        "Your definition is accurate. Repeating it will not earn another mark, so explain how higher rates reduce borrowing.",
+      ),
+    ).toBe(
+      "Your definition is accurate. Explain how higher rates reduce borrowing.",
+    );
+    expect(
+      body(
+        "This will not change your mark, but name the lag. Then add a result.",
+      ),
+    ).toBe("Name the lag. Then add a result.");
     expect(body("Explain the lag; this will not change your mark.")).toBe(
       "Explain the lag.",
     );

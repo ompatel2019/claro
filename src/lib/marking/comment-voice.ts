@@ -179,11 +179,12 @@ function stripOpeners(sentence: string): string {
 
 /**
  * Drop a meta sentence, or only its meta clauses when it also carries advice
- * ("Repeating it will not earn another mark; explain the mechanism.").
+ * ("Repeating it will not earn another mark; explain the mechanism." or
+ * "…, so explain the mechanism.").
  */
 function dropMetaClauses(sentence: string): string[] {
   if (!isMetaSentence(sentence)) return [sentence];
-  const clauses = sentence.split(/;\s*/u);
+  const clauses = sentence.split(/;\s*|,\s*(?:so|but|instead|then)\s+/u);
   if (clauses.length < 2) return [];
   const kept = clauses.filter((clause) => !isMetaSentence(clause.trim()));
   if (!kept.length) return [];
