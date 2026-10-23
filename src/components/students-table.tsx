@@ -95,7 +95,7 @@ const columns: Column<StudentRow>[] = [
   },
   {
     id: "spend",
-    header: "AI spend (all time)",
+    header: "AI cost (all providers)",
     sort: true,
     cell: (s) => `$${s.ai_spend.toFixed(2)}`,
   },
