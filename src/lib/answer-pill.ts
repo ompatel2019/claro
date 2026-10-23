@@ -1,26 +1,29 @@
 import { TRACKER_STATE } from "@/components/sprint/tracker-state";
 
 /**
- * Results answer tiles. Shared tracker colours come from TRACKER_STATE (a byte-for-byte copy of
- * #107's src/components/sprint/tracker-state.ts until it is on main); only the result-specific
+ * Results answer tiles. Shared tracker colours come from TRACKER_STATE; only the result-specific
  * states live in this one local map.
  */
-export type AnswerPillState = "full" | "dropped" | "not_answered" | "pending";
+export type AnswerPillState =
+  "full" | "dropped" | "not_answered" | "pending" | "unmarked";
 
 export function answerPillState({
   mark,
   max,
   answered = true,
   scored = true,
+  marking = true,
 }: {
   mark: unknown;
   max: unknown;
   answered?: boolean;
   scored?: boolean;
+  /** Still being marked. False for terminal unscored results (failed, unreadable, needs review). */
+  marking?: boolean;
 }): AnswerPillState {
   if (!answered) return "not_answered";
   if (!scored || mark == null || !Number.isFinite(Number(mark)))
-    return "pending";
+    return marking ? "pending" : "unmarked";
   const of = Number(max);
   return Number.isFinite(of) && of > 0 && Number(mark) >= of
     ? "full"
@@ -38,6 +41,7 @@ export const RESULT_TILE = {
   dropped: "bg-destructive-soft text-destructive-text",
   not_answered: TRACKER_STATE.unanswered,
   pending: TRACKER_STATE.unanswered,
+  unmarked: TRACKER_STATE.unanswered,
 } as const;
 
 export const RESULT_ICON = {
@@ -45,6 +49,7 @@ export const RESULT_ICON = {
   dropped: "flag",
   not_answered: "minus",
   pending: "clock",
+  unmarked: "circle-alert",
 } as const;
 
 export const RESULT_WORD: Record<AnswerPillState, string> = {
@@ -52,6 +57,7 @@ export const RESULT_WORD: Record<AnswerPillState, string> = {
   dropped: "Marks dropped",
   not_answered: "Not answered",
   pending: "Being marked",
+  unmarked: "No mark",
 };
 
 /** Legend swatches carry a hairline so the tints stay visible on Paper and in dark mode. */
@@ -61,6 +67,7 @@ export const RESULT_SWATCH = {
   dropped: "bg-destructive-soft border border-destructive/50",
   not_answered: "bg-muted border border-foreground/25",
   pending: "bg-muted border border-foreground/25",
+  unmarked: "bg-muted border border-foreground/25",
 } as const;
 
 export const RESULT_LEGEND: [string, string][] = [

@@ -254,3 +254,30 @@ it("pages to the previous and next question below the open one", () => {
   expect(screen.getByText("Review 2")).toBeVisible();
   expect(within(pager).getByText("Previous question")).toBeVisible();
 });
+
+it("lets a terminal status pill speak for an unmarked row in the table", () => {
+  render(
+    <ResultsBrowser
+      sprintLayout
+      items={[
+        {
+          ...items[0],
+          position: 1,
+          mark: null,
+          state: "unmarked",
+          pill: "Couldn't mark",
+        },
+        { ...items[0], position: 2, mark: null, state: "pending" },
+      ]}
+      views={views}
+      initial={0}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+  const [, failed, marking] = within(
+    screen.getByRole("table", { name: "Questions" }),
+  ).getAllByRole("row");
+  expect(failed).toHaveTextContent("Couldn't mark");
+  expect(failed).not.toHaveTextContent("Being marked");
+  expect(marking).toHaveTextContent("Being marked");
+});

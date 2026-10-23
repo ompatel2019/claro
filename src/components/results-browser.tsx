@@ -476,7 +476,9 @@ function SprintAnswers({
                             RESULT_SWATCH[state],
                           )}
                         />
-                        {RESULT_WORD[state]}
+                        {/* A terminal status pill ("Couldn't mark") already says it. */}
+                        {!(state === "unmarked" && it.pill) &&
+                          RESULT_WORD[state]}
                         {it.pill &&
                           it.pill !== "Marked" &&
                           it.pill !== "Not answered" && (

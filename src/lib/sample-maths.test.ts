@@ -29,6 +29,7 @@ it.each([
   "See /resources?calc=2*3=6 for more",
   "See www.example.com/a#840/105=8 for more",
   "See (/resources?calc=2*3=6) for more",
+  "See example.com/?calc=2*3=6 for more",
   'Open "/calc/840/105=8" to check',
 ])("leaves %j alone", (input) => {
   expect(formatSampleMaths(input)).toBe(input);

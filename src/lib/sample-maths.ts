@@ -24,7 +24,9 @@ function tidy(expr: string) {
 }
 
 // Absolute URLs, www. links and relative paths ("/resources?calc=2*3=6").
-const URL_SPAN = /(\b(?:https?:\/\/|www\.)\S+|(?<![^\s([{"'])\/\S+)/i;
+// Absolute, www., bare-domain ("example.com/...") and relative URL spans are left alone.
+const URL_SPAN =
+  /(\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\/\S*|(?<![^\s([{"'])\/\S+)/i;
 
 export function formatSampleMaths(text: string) {
   // Odd indexes are URL spans, which are never rewritten.

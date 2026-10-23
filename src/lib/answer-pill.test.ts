@@ -36,3 +36,12 @@ it("takes the open and unanswered tiles from the shared tracker map", async () =
   expect(RESULT_TILE.open).toBe(TRACKER_STATE.active);
   expect(RESULT_TILE.not_answered).toBe(TRACKER_STATE.unanswered);
 });
+
+it("keeps terminal unscored results apart from ones still being marked", () => {
+  expect(answerPillState({ mark: null, max: 4, scored: false })).toBe(
+    "pending",
+  );
+  expect(
+    answerPillState({ mark: null, max: 4, scored: false, marking: false }),
+  ).toBe("unmarked");
+});

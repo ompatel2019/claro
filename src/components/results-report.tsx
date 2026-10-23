@@ -281,6 +281,7 @@ export function ResultsAnswers({
                 max: r.max_marks ?? r.marks,
                 answered: !["not_answered", "skipped"].includes(state),
                 scored: scored(r),
+                marking: state === "marking",
               }),
               pill:
                 r.type === "mcq" && state !== "not_answered"

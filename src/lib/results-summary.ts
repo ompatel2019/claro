@@ -15,7 +15,8 @@ const META = [
   /\b(?:multiple[- ]choice|mc)\b[^.]{0,40}\b(?:were|are|was|is|have been|has been)\s+not\s+(?:supplied|provided|included|available)\b/i,
   /\b(?:only|just) (?:covers?|includes?|looks at) (?:your )?written\b/i,
   /\bmakes? no claims? about (?:your )?(?:mc|multiple[- ]choice)\b/i,
-  /\bas an ai\b/i,
+  // Model self-reference only at the start of a sentence, not "use ChatGPT as an AI tool".
+  /(?:^|[.!?]\s+)as an ai\b/i,
   /\b(?:as a language model|i am an ai|i'm an ai|i am a language model|i'm a language model)\b/i,
 ];
 
