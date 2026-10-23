@@ -122,15 +122,30 @@ const GERUNDS: Record<string, string> = {
   judging: "Judge",
 };
 
-/** Hedged phrases rewritten to the direct form. */
+/**
+ * Hedged phrases rewritten to the direct form, only when the subject is part of
+ * the student's writing (never an economic actor or outcome such as "demand").
+ */
+const WRITING =
+  "(?:your|this|that|the) (?:link|links|definition|answer|sentence|paragraph|point|explanation|contrast|comparison|argument|mechanism|response|opening|judgement|analysis|wording|example|chain|conclusion|topic sentence|introduction|structure)";
 const HEDGES: [RegExp, string][] = [
-  [/\bcould be made (more )?explicit\b/gi, "needs to be explicit"],
   [
-    /\bcould be (made )?(clearer|more precise|sharper|stronger)\b/gi,
-    "needs to be $2",
+    new RegExp(`\\b(${WRITING}) could be made (?:more )?explicit\\b`, "gi"),
+    "$1 needs to be explicit",
   ],
-  [/\bwould benefit from\b/gi, "needs"],
-  [/\bit might be (worth|helpful to)\s+/gi, ""],
+  // "It could be made more explicit." as a whole sentence is always about the writing.
+  [
+    /^(It) could be made (?:more )?explicit(?=[.!]?$)/i,
+    "$1 needs to be explicit",
+  ],
+  [
+    new RegExp(
+      `\\b(${WRITING}) could be (?:made )?(clearer|more precise|sharper)\\b`,
+      "gi",
+    ),
+    "$1 needs to be $2",
+  ],
+  [new RegExp(`\\b(${WRITING}) would benefit from\\b`, "gi"), "$1 needs"],
 ];
 
 function stripOpeners(sentence: string): string {

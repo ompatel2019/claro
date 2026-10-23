@@ -101,6 +101,13 @@ describe("tightenText", () => {
       "This paragraph needs a mechanism.",
     );
     expect(body("Perhaps add the lag.")).toBe("Add the lag.");
+    // Economic actors and outcomes are never rewritten (codex review).
+    for (const text of [
+      "Explain why exporters would benefit from a depreciation.",
+      "Explain why demand could be stronger after the tax cut.",
+      "Say why the policy could be made more explicit to markets.",
+    ])
+      expect(body(text)).toBe(text);
   });
 
   it("keeps substantive content and economic qualifiers (codex review)", () => {
