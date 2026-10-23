@@ -82,17 +82,21 @@ it("derives the matched criteria, annotations and rewrite destination from the a
   });
   expect(highlight.tagName).toBe("MARK");
   expect(highlight).toHaveTextContent("Demand");
-  const overall = within(card as HTMLElement).getByRole("heading", {
-    name: "Overall",
+  const slider = within(card as HTMLElement).getByRole("region", {
+    name: "Comments",
   });
-  expect(overall.closest("li")).toHaveTextContent("Include evidence.");
-  expect(
-    within(card as HTMLElement).getByRole("group", { name: "Filter comments" }),
-  ).toBeVisible();
+  expect(slider).toHaveAttribute("aria-roledescription", "carousel");
+  const overall = within(slider).getByRole("group", { name: "Comment 2 of 2" });
+  expect(overall).toHaveTextContent("Overall");
+  expect(overall).toHaveTextContent("Include evidence.");
+  expect(within(overall).getByText("Use a statistic.")).toBeVisible();
   expect(screen.getAllByText("Use a statistic.")).toHaveLength(2);
-  screen.getAllByText("Use a statistic.").forEach((line) => {
-    expect(line).toBeVisible();
-  });
+  expect(
+    screen.queryByRole("complementary", { name: /^Your mark:/ }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.queryByRole("group", { name: "Filter comments" }),
+  ).not.toBeInTheDocument();
 });
 it("distinguishes a reviewed full mark from provisional feedback", () => {
   render(
@@ -185,9 +189,9 @@ it("keeps every typed answer line break", () => {
       topic=""
     />,
   );
-  expect(container.querySelector(".whitespace-pre-wrap")?.textContent).toBe(
-    "First line.\nSecond line.",
-  );
+  expect(
+    [...container.querySelectorAll(".cma-text > p")].map((p) => p.textContent),
+  ).toEqual(["First line.", "Second line."]);
 });
 
 it("anchors to the transcript before the typed answer", () => {

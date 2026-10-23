@@ -80,12 +80,14 @@ function SliderHarness() {
 function SyncHarness({
   selectedId,
   onSelect,
+  scroll = true,
 }: {
   selectedId: number | null;
   onSelect: (id: number) => void;
+  scroll?: boolean;
 }) {
   const doc = useRef<HTMLDivElement>(null);
-  useHighlightSync(doc, selectedId, onSelect);
+  useHighlightSync(doc, selectedId, onSelect, { scroll });
   return (
     <div ref={doc}>
       <mark data-anchors="11">
@@ -379,6 +381,34 @@ describe("useHighlightSync", () => {
     expect(screen.getByText("First").closest("mark")).not.toHaveAttribute(
       "data-selected",
     );
+  });
+
+  it("syncs every selected piece without scrolling when scroll is false", () => {
+    const onSelect = vi.fn();
+    const { rerender } = render(
+      <SyncHarness selectedId={11} onSelect={onSelect} scroll={false} />,
+    );
+    expect(screen.getByText("First").closest("mark")).toHaveAttribute(
+      "data-selected",
+      "true",
+    );
+    rerender(
+      <SyncHarness selectedId={22} onSelect={onSelect} scroll={false} />,
+    );
+    expect(screen.getByText("First").closest("mark")).not.toHaveAttribute(
+      "data-selected",
+    );
+    for (const text of ["Shared", "Second"]) {
+      expect(screen.getByText(text).closest("mark")).toHaveAttribute(
+        "data-selected",
+        "true",
+      );
+    }
+    rerender(
+      <SyncHarness selectedId={null} onSelect={onSelect} scroll={false} />,
+    );
+    expect(document.querySelector("[data-selected]")).toBeNull();
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 
   it("removes the listener and selection attributes on unmount", () => {
