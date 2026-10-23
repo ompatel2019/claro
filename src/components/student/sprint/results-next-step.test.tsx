@@ -85,7 +85,10 @@ it("shows the real summary advice and an honest pending state", () => {
       topics={topics}
       config={{ mode: "mixed", topics: [] }}
       cards={{}}
-      note="Explain the mechanism before the example."
+      note={{
+        text: "Explain the mechanism before the example.",
+        question: null,
+      }}
     />,
   );
   expect(
@@ -138,3 +141,32 @@ it.each([
     expect(screen.getByText(new RegExp(advice))).toBeVisible();
   },
 );
+
+it("links the summary next step to its question when it is on the page", () => {
+  const { rerender } = render(
+    <ResultsNextStep
+      rows={[row("child", 0, 1, 2)]}
+      topics={topics}
+      config={{ mode: "mixed", topics: [] }}
+      cards={{}}
+      note={{ text: "In Q2, show the substitution.", question: 2 }}
+    />,
+  );
+  expect(screen.getByText("In Q2, show the substitution.")).toBeVisible();
+  expect(screen.getByRole("link", { name: /Go to Q2/ })).toHaveAttribute(
+    "href",
+    "#q-2",
+  );
+  rerender(
+    <ResultsNextStep
+      rows={[row("child", 0, 1, 2)]}
+      topics={topics}
+      config={{ mode: "mixed", topics: [] }}
+      cards={{}}
+      note={{ text: "In Q9, show the substitution.", question: 9 }}
+    />,
+  );
+  expect(
+    screen.queryByRole("link", { name: /Go to Q/ }),
+  ).not.toBeInTheDocument();
+});

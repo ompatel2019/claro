@@ -1,4 +1,5 @@
 "use client";
+import { formatSampleMaths } from "@/lib/sample-maths";
 import Link from "next/link";
 import {
   Fragment,
@@ -801,7 +802,7 @@ export function AnnotatedFeedback({
               >
                 <h2 className="text-lg font-semibold">Sample answer</h2>
                 <p className="max-w-prose text-base leading-relaxed whitespace-pre-wrap">
-                  {row.sample_answer}
+                  {formatSampleMaths(row.sample_answer)}
                 </p>
                 <p className="text-muted-foreground text-[13px]">
                   One strong answer. Other answers can earn the same marks.

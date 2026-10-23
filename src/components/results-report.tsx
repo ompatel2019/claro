@@ -7,6 +7,7 @@ import {
   TYPE_LABEL,
   type McGridRow,
 } from "@/lib/results";
+import { summaryView } from "@/lib/results-summary";
 import { PortalIcon } from "./icons";
 import { QuestionView } from "./question-view";
 import { Badge } from "./claro/controls";
@@ -200,6 +201,8 @@ export function OverallFeedback({
   nextStep?: React.ReactNode;
   hideNextStep?: boolean;
 }) {
+  // Stored summaries can carry meta lines; the sprint page shows the next step on its own.
+  const view = summaryView(summary, { withoutStep: hideNextStep });
   return (
     <section aria-label="Overall feedback" className="grid gap-5">
       <h2 className="sr-only">Overall feedback</h2>
@@ -245,12 +248,8 @@ export function OverallFeedback({
             <div className="grid gap-5 sm:grid-cols-2">
               {(
                 [
-                  ["Strengths", summary.strengths, false],
-                  [
-                    "Top fixes",
-                    summary.top_fixes ?? summary.improvements,
-                    true,
-                  ],
+                  ["Strengths", view.strengths, false],
+                  ["Top fixes", view.fixes, true],
                 ] as const
               ).map(([label, lines, lost]) => (
                 <section key={label} className="space-y-2">
@@ -270,7 +269,7 @@ export function OverallFeedback({
                     {label}
                   </h3>
                   <ul className="space-y-2 text-[13px]">
-                    {(lines ?? []).map((text, i) => (
+                    {lines.map((text, i) => (
                       <li key={i} className="flex items-start gap-2">
                         {!hideNextStep ? (
                           lost ? (

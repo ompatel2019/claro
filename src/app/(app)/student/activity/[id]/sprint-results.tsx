@@ -17,6 +17,7 @@ import {
   timeMeta,
   visibleResults,
 } from "@/lib/results";
+import { summaryView } from "@/lib/results-summary";
 import { PageHeader } from "@/components/claro/layout";
 import { MarkingProgress } from "@/components/marking-progress";
 import { RetryAnswer } from "@/components/retry-answer";
@@ -225,7 +226,7 @@ export async function SprintResults({ id }: { id: string }) {
         topics={topics}
         config={s.config}
         cards={cards}
-        note={s.summary?.improvements?.[0] ?? s.summary?.next_steps?.[0]}
+        note={summaryView(s.summary).nextStep}
       />
       <ResultsAnswers
         sprintLayout

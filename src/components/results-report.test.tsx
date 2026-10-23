@@ -370,3 +370,35 @@ it("shows the AI line once under all questions, not under each written answer", 
     screen.queryByText(/AI-assisted and criteria-based/),
   ).not.toBeInTheDocument();
 });
+
+it("drops meta lines, caps each list at three and skips the next step in fixes", () => {
+  render(
+    <OverallFeedback
+      hideNextStep
+      pending={false}
+      summary={{
+        strengths: [
+          "This summary covers your written short answers; multiple-choice (MC) answers were not supplied, so it makes no claims about your MC performance.",
+          "S1 in Q1.",
+          "S2 in Q4.",
+          "S3 in Q5.",
+          "S4 in Q3.",
+        ],
+        top_fixes: ["F1 in Q2.", "F2 in Q3.", "F3 in Q3.", "F4 in Q6."],
+      }}
+    />,
+  );
+  const items = screen.getAllByRole("listitem").map((li) => li.textContent);
+  expect(items).toEqual([
+    "S1 in Q1.",
+    "S2 in Q4.",
+    "S3 in Q5.",
+    "F2 in Q3.",
+    "F3 in Q3.",
+    "F4 in Q6.",
+  ]);
+  expect(screen.getAllByRole("link", { name: "Q3" })[0]).toHaveAttribute(
+    "href",
+    "#q-3",
+  );
+});

@@ -18,7 +18,7 @@ export function ResultsNextStep({
   topics: Topic[];
   config: SprintConfig;
   cards: Record<string, number>;
-  note?: string;
+  note?: { text: string; question: number | null } | null;
 }) {
   const grouped = [...new Set(rows.flatMap((r) => r.topic_id ?? []))]
     .map((id) => {
@@ -52,7 +52,7 @@ export function ResultsNextStep({
         <div>
           <h2 className="text-base font-semibold">Your next step</h2>
           <p className="text-ink-2 mt-1 text-sm">
-            {note ??
+            {note?.text ??
               (needsWork.length
                 ? `Focus on ${name(needsWork[0].id)} — ${needsWork[0].dropped} marks dropped here.`
                 : allFullMarks
@@ -63,6 +63,16 @@ export function ResultsNextStep({
                       ? "Review the marks you dropped while they’re fresh."
                       : "Your next steps will appear once marking finishes.")}
           </p>
+          {note?.question != null &&
+            rows.some((r) => r.position === note.question) && (
+              <a
+                href={`#q-${note.question}`}
+                className="text-ink-2 mt-2 mr-4 inline-flex items-center gap-2 text-[13px] underline underline-offset-4"
+              >
+                Go to Q{note.question}
+                <PortalIcon name="arrow-right" className="size-4" />
+              </a>
+            )}
           {!!missed.length && (
             <Link
               className="text-ink-2 mt-2 inline-flex items-center gap-2 text-[13px] underline underline-offset-4"
