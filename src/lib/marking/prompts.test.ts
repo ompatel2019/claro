@@ -15,8 +15,6 @@ import {
 } from "./prompts";
 import type { MarkableQuestion } from "./grade";
 import baselineMessages from "./prompts-baseline.json";
-import airo52Baseline from "./prompts-baseline-airo-5-2.json";
-import { splitSentences } from "./comment-voice";
 
 const q: MarkableQuestion = {
   id: "q1",
@@ -34,7 +32,7 @@ const q: MarkableQuestion = {
 };
 
 it.each([false, true])(
-  "matches the literal Airo 5.3 full baseline and derived check variant (check=%s)",
+  "matches the literal Airo 5.2 full baseline and derived check variant (check=%s)",
   (check) => {
     // Literal full-prompt baseline; check mode derives from the same shared prefix.
     const expected = baselineMessages.map((message) => ({ ...message }));
@@ -227,7 +225,7 @@ it("requests concise tagged comments and actionable next marks", () => {
     "copied character for character",
     "never a paraphrase",
     "never a whole paragraph",
-    "body is 1–2 short sentences speaking directly to the student",
+    "body is 1–2 sentences speaking directly to the student",
     "null on strengths",
     "at least one strength and one fix unless full marks (then strengths only)",
     'Don\'t tell the student what they "should have" done',
@@ -253,7 +251,7 @@ it("guards judgement advice and makes outline bullets concrete in full feedback 
     "for a how question, specify the mechanism steps to explain",
   );
   expect(tail).toContain(
-    "next_mark only on fixes = one imperative line naming the specific change that earns the next mark (null on strengths)",
+    "next_mark only on fixes = the specific change that earns the next mark (null on strengths)",
   );
   expect(gradeMessages(q, "Answer", true)[0].content).not.toContain(
     "In Analysis comments and better_answer_outline",
@@ -553,11 +551,11 @@ it("renders accepted tutor comments as bounded tutor rationales", () => {
 it("requests direct tutor voice with editable examples only in full grading", () => {
   const system = gradeMessages(q, "Answer")[0].content;
   for (const line of [
-    'use "you"/"your" or a plain imperative',
-    "A fix names the exact gap and the exact fix",
+    'use "you"/"your" or a clear imperative',
+    "Name the specific strength or change",
     "Apply this voice to body and next_mark",
     '"This demonstrates", "The response", "The student", "Overall", "It is important to note", "Consider", "well done"',
-    "voice and length only; use the student's evidence and this guideline, never copy these points",
+    "style only; use the student's evidence, never copy these points",
   ])
     expect(system).toContain(line);
   expect(COMMENT_VOICE_EXAMPLES.length).toBeGreaterThanOrEqual(4);
@@ -565,60 +563,6 @@ it("requests direct tutor voice with editable examples only in full grading", ()
   for (const example of COMMENT_VOICE_EXAMPLES) {
     expect(system).toContain(`- ${example}`);
     expect(gradeMessages(q, "Answer", true)[0].content).not.toContain(example);
-    expect(splitSentences(example).length).toBeLessThanOrEqual(2);
-    expect(example.length).toBeLessThanOrEqual(90);
-    expect(example).not.toMatch(
-      /\b(consider|overall|well done|could|might|perhaps)\b/i,
-    );
-  }
-});
-
-it("keeps every marking instruction byte-identical to Airo 5.2 (Airo 5.3 voice change)", () => {
-  const split = (content: string) => content.split("Return the full JSON");
-  const now = gradeMessages(q, "Answer");
-  // Shared marking prefix (role, bands, verbs, strictness) and the user message are unchanged.
-  expect(split(now[0].content as string)[0]).toBe(
-    split(airo52Baseline[0].content)[0],
-  );
-  expect(now[1]).toEqual(airo52Baseline[1]);
-  // Within the full-grading tail, only comment-voice text changed.
-  const oldTail = split(airo52Baseline[0].content)[1];
-  const newTail = split(now[0].content as string)[1];
-  for (const unchanged of [
-    " in schema order. Separate strengths, imprecision and missing ideas before evaluating bands. Quote the student's words in justification. Give 2–6 comments.",
-    "Give earned points, missing_points, and 3-6 better_answer_outline bullets.",
-    "Explain why_not_higher and how to reach the next band in next_band; use an empty next_band at full marks.",
-    "Comment like an experienced HSC tutor writing margin notes against this guideline",
-    "Ask for statistics or data only when the question or guideline requires them",
-  ]) {
-    expect(oldTail).toContain(unchanged);
-    expect(newTail).toContain(unchanged);
-  }
-});
-
-it("asks for state-ranker comment voice in full grading only (Airo 5.3)", () => {
-  const rules = [
-    "direct, confident voice of a top HSC state ranker tutoring",
-    "A fix names the exact gap and the exact fix; a strength names exactly what is right in one line, with no improvement tacked on",
-    'Never hedge or pad: no "consider", "could be made more explicit"',
-    "restating the question, or meta lines about the feedback, the mark or what was supplied",
-    "next_mark only on fixes = one imperative line",
-  ];
-  const full = gradeMessages(q, "Answer")[0].content as string;
-  const check = gradeMessages(q, "Answer", true)[0].content as string;
-  const reconcile = reconcileMessages(
-    q,
-    "Answer",
-    { band_selected: "Describes policies", mark: 10, justification: "A" },
-    { band_selected: "Describes policies", mark: 12, justification: "B" },
-  )[0].content as string;
-  for (const rule of rules) {
-    expect(full.split("Return the full JSON")[1]).toContain(rule);
-    expect(check).not.toContain(rule);
-    expect(reconcile).not.toContain(rule);
-  }
-  for (const example of COMMENT_VOICE_EXAMPLES) {
-    expect(check).not.toContain(example);
-    expect(reconcile).not.toContain(example);
+    expect(example).toMatch(/\bYou\b|^(Try|Be)\b/);
   }
 });
