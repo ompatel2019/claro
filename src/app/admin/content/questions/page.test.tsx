@@ -1,4 +1,4 @@
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
@@ -18,7 +18,15 @@ vi.mock("@/lib/admin-questions", () => ({
 }));
 vi.mock("@/components/filter-bar", () => ({ FilterBar: mocks.filterBar }));
 vi.mock("@/components/import-review", () => ({ ImportReview: () => null }));
-vi.mock("@/components/questions-table", () => ({ QuestionsTable: () => null }));
+vi.mock("@/app/admin/content/questions/actions", () => ({
+  bulkQuestions: vi.fn(),
+  undoQuestionChanges: vi.fn(),
+}));
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/admin/content/questions",
+  useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
+}));
 import QuestionsPage from "./page";
 
 const counts = { live: 1, draft: 0, retired: 0 };
@@ -47,6 +55,40 @@ it("loads the list and counts with normalised topic filters", async () => {
   expect(mocks.loadQuestionList).toHaveBeenCalledWith({ topic: undefined });
   expect(mocks.loadQuestionCounts).toHaveBeenCalledOnce();
   expect(mocks.filterBar.mock.calls.at(-1)![0].primary).toBe("type");
+});
+
+it("links the question source without an ID column", async () => {
+  mocks.loadQuestionList.mockResolvedValue({
+    rows: [
+      {
+        id: "question-1",
+        source: "HSC Q1",
+        year: 2026,
+        type: "short",
+        topic_id: "t3",
+        marks: 2,
+        verb: "Explain",
+        status: "live",
+        origin: "claro",
+        updated_at: "2026-01-01T00:00:00.000Z",
+        attempts: 0,
+        avg: null,
+        disagreements: 0,
+        reports: 0,
+      },
+    ],
+    pager: { ...pager, total: 1 },
+  });
+  render(await QuestionsPage({ searchParams: Promise.resolve({}) }));
+
+  const table = within(screen.getByRole("table", { name: "Questions" }));
+  expect(
+    table.queryByRole("columnheader", { name: "ID" }),
+  ).not.toBeInTheDocument();
+  expect(table.getByRole("link", { name: "HSC Q1" })).toHaveAttribute(
+    "href",
+    "/admin/content/questions/question-1",
+  );
 });
 
 it("filters imports by the selected subtopic and drops unrelated subtopics", async () => {

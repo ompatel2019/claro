@@ -119,12 +119,12 @@ export default async function AccuracyPage({
         disputes, with half unchanged or lowered). {data.excludedDisputes}{" "}
         disputes excluded.
       </p>
-      <div className="grid min-w-0 gap-4 lg:grid-cols-2">
+      <div className="card-row grid min-w-0 gap-4 lg:grid-cols-2">
         <WeeklyChart weeks={data.weeks} kind="agreement" />
         <WeeklyChart weeks={data.weeks} kind="disputes" />
       </div>
       <CategoryBar mix={data.mix} />
-      <div className="grid min-w-0 gap-4 xl:grid-cols-2">
+      <div className="card-row grid min-w-0 gap-4 xl:grid-cols-2">
         <BreakdownTable
           title="By type and marks"
           heading="Type / max marks"

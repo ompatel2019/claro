@@ -7,6 +7,7 @@ import {
   SHORT_PHOTO_PAGE_LIMIT,
 } from "@/lib/limits";
 import { BUDGET_USD } from "@/lib/ai/prices";
+import { openRouterSpend } from "@/lib/ai/spend";
 import { transcribeImage } from "@/lib/marking/engine";
 import { admin } from "@/utils/supabase/admin";
 import {
@@ -98,9 +99,8 @@ export async function POST(
   if (!limited.ok) return rateLimitedResponse(limited);
   try {
     return await withAiUsageReservation(limited, async () => {
-      const { data: spent, error: spendError } = await admin().rpc("ai_spend");
-      if (spendError) throw spendError;
-      if (Number(spent) >= BUDGET_USD)
+      // Same budget scope as the model call guard in src/lib/ai/openai.ts; throws (500) if spend can't be read.
+      if ((await openRouterSpend(admin())) >= BUDGET_USD)
         return Response.json(
           {
             error:

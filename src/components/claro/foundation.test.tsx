@@ -55,18 +55,12 @@ it.each(["metaKey", "ctrlKey"])(
     );
   },
 );
-it.each([false, true])(
-  "scopes search sizing to the student shell (%s)",
-  (student) => {
-    render(<CommandPalette routes={[]} student={student} />);
-    const trigger = screen.getByRole("button", { name: /Search pages/ });
-    expect(trigger).toHaveClass(student ? "md:h-10" : "sm:h-9");
-    expect(trigger).toHaveClass(student ? "md:max-w-[420px]" : "sm:w-[380px]");
-    expect(trigger.querySelector("span")).toHaveClass(
-      student ? "md:block" : "sm:block",
-    );
-  },
-);
+it("sizes the search trigger like the student shell", () => {
+  render(<CommandPalette routes={[]} />);
+  const trigger = screen.getByRole("button", { name: /Search pages/ });
+  expect(trigger).toHaveClass("md:h-10", "md:max-w-[420px]");
+  expect(trigger.querySelector("span")).toHaveClass("md:block");
+});
 it("shows a useful empty search result", async () => {
   render(<CommandPalette routes={[]} />);
   fireEvent.click(screen.getByRole("button", { name: /Search pages/ }));

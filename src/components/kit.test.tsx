@@ -322,29 +322,36 @@ it("opens the existing feedback dialog from the main nav and both account menus"
   }
 });
 
-it("retains the original admin navigation, top bar and footer classes", () => {
+it("gives admin the shared shell navigation, top bar and account footer", () => {
   const { container } = render(
     <AppShell kind="admin" name="Synthetic Admin" defaultOpen>
       Content
     </AppShell>,
   );
-  const dashboard = screen.getByRole("link", {
-    name: "Dashboard",
-  });
-  expect(dashboard).toHaveClass(
-    "h-9",
-    "data-active:font-semibold",
-    "data-active:before:bg-brand",
+  const dashboard = screen.getByRole("link", { name: "Dashboard" });
+  expect(dashboard).toHaveClass("shell-nav-button");
+  expect(dashboard.querySelector(".nav-label")).not.toBeNull();
+  expect(dashboard.querySelector("svg")).toHaveAttribute(
+    "data-icon",
+    "layout-grid",
   );
+  expect(container.querySelector(".shell-frame .shell-sidebar")).not.toBeNull();
   expect(container.querySelector('[data-component="TopBar"]')).toHaveClass(
-    "h-14",
-    "backdrop-blur-md",
+    "h-16",
+    "bg-background",
   );
-  expect(container.querySelector('[data-slot="sidebar-footer"]')).toHaveClass(
-    "border-t",
-    "px-3",
+  expect(screen.getByRole("button", { name: "Account menu" })).toHaveClass(
+    "shell-account-menu",
+    "md:hidden",
   );
-  expect(container.querySelector(".student-frame")).toBeNull();
+  expect(
+    screen.getByRole("button", { name: "User menu" }).querySelector("svg"),
+  ).toHaveAttribute("data-icon", "more");
+  expect(
+    screen.getByRole("navigation", { name: "Admin navigation" }),
+  ).toHaveTextContent(
+    "OverviewDashboardStudentsAll studentsContentQuestionsFlashcardsMarkingReview queueAccuracyEngineFeedbackInboxSpendAI spend",
+  );
 });
 
 it.each(["student", "admin"] as const)(

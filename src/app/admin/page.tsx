@@ -22,7 +22,7 @@ async function Dashboard() {
   if (!d)
     return (
       <>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="card-row grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             "Active students, 7 days",
             "Sessions, last 7 days",
@@ -41,7 +41,7 @@ async function Dashboard() {
             </Card>
           ))}
         </div>
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="card-row grid gap-4 xl:grid-cols-2">
           {[
             "Sessions per day",
             "AI spend, last 7 days",
@@ -103,7 +103,7 @@ async function Dashboard() {
   const rows = attention.filter(([n]) => n > 0);
   return (
     <>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="card-row grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           title="Active students, 7 days"
           value={d.active.now}
@@ -191,7 +191,7 @@ async function Dashboard() {
           )}
         </CardContent>
       </Card>
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="card-row grid gap-4 xl:grid-cols-2">
         <DailyChart
           title="Sessions per day"
           hero={plural(sessionTotal, "session")}
@@ -205,7 +205,7 @@ async function Dashboard() {
           kind="bars"
         />
       </div>
-      <div className="grid gap-4 xl:grid-cols-2">
+      <div className="card-row grid gap-4 xl:grid-cols-2">
         <Card className="min-w-0">
           <CardHeader className="grid-cols-[1fr_auto]">
             <CardTitle role="heading" aria-level={2}>
@@ -268,11 +268,11 @@ async function Dashboard() {
           </CardHeader>
           <CardContent className="space-y-5">
             <div className="flex items-center gap-3">
-              <span className="bg-brand-soft text-brand-text grid size-12 place-items-center rounded-xl">
+              <span className="bg-brand-soft text-brand-text grid size-12 place-items-center rounded-[12px]">
                 <PortalIcon name="pen-line" />
               </span>
               <div>
-                <p className="num-display text-[30px] leading-none font-bold">
+                <p className="num-display text-2xl leading-none font-bold sm:text-[28px]">
                   {d.openReviews.count}
                 </p>
                 <p className="text-muted-foreground mt-1 text-sm">

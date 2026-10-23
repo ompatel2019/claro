@@ -34,8 +34,7 @@ test.describe("Admin students list", () => {
       "Avg % (30 days)",
       "Streak",
       "Open disputes",
-      "AI spend (all time)",
-      "Blocked",
+      "AI cost (all providers)",
     ])
       await expect(
         table.getByRole("button", { name: header, exact: true }),
@@ -181,7 +180,7 @@ test.describe("Admin students list", () => {
       details.getByText("Sessions total", { exact: true }),
     ).toBeVisible();
     await expect(
-      details.getByText("AI spend (all time)", { exact: true }),
+      details.getByText("AI cost (all providers)", { exact: true }),
     ).toBeVisible();
     await expect
       .poll(() =>

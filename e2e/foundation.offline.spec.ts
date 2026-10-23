@@ -146,20 +146,21 @@ for (const width of [1440, 390])
     });
     expect(errors).toEqual([]);
   });
-test("admin search keeps the original 380 by 36 control from sm", async ({
-  page,
-}) => {
-  for (const width of [768, 1440]) {
+test("admin search uses the student shell control", async ({ page }) => {
+  for (const [width, size] of [
+    [640, { width: 40, height: 40 }],
+    [1440, { width: 420, height: 40 }],
+  ] as const) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("http://claro.test/admin?admin");
     const search = page.getByRole("button", { name: /Search pages/ });
     await expect(search).toBeVisible();
     const box = await search.boundingBox();
-    expect(box!.width).toBe(380);
-    expect(box!.height).toBe(36);
+    expect(box!.width).toBe(size.width);
+    expect(box!.height).toBe(size.height);
     await expect(
       search.getByText("Search questions, topics and cards"),
-    ).toBeVisible();
+    ).toBeVisible({ visible: width === 1440 });
   }
 });
 test("admin search includes real admin routes", async ({ page }) => {
