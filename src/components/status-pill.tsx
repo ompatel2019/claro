@@ -36,13 +36,20 @@ const pills = {
 } satisfies Record<string, [Icon, string]>;
 export type Pill = keyof typeof pills;
 
-export function StatusPill({ pill }: { pill: Pill }) {
+export function StatusPill({
+  pill,
+  className,
+}: {
+  pill: Pill;
+  className?: string;
+}) {
   const [Icon, tone] = pills[pill];
   return (
     <span
       className={cn(
         "inline-flex h-5 shrink-0 items-center gap-1 rounded-full border border-transparent px-2 text-xs font-medium whitespace-nowrap",
         tone,
+        className,
       )}
     >
       <Icon

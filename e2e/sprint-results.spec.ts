@@ -81,18 +81,17 @@ test.describe("Sprint results", () => {
       }),
     ).toBeVisible();
     await expect(
-      page.getByText(
-        /^\w{3} \d+ \w{3} · \d+:\d{2}( of \d+:\d{2}| over time)?$/,
-      ),
+      page.getByText(/^\w{3} \d+ \w{3}, \d+:\d{2} [ap]m · 5 questions$/),
     ).toBeVisible();
-    await expect(page.getByText(/^\d+ \/ 5 · \d+%$/)).toBeVisible();
-    await expect(page.getByText(/^[0-5] \/ 5$/)).toBeVisible();
+    const stats = page.getByRole("region", { name: "Summary" });
+    await expect(stats).toContainText("/5");
+    await expect(stats.getByText(/^\d+%$/)).toBeVisible();
     await expect(page.getByRole("progressbar")).toHaveCount(0);
     await expect(
       page.getByText("Overall feedback", { exact: true }),
     ).toBeVisible();
 
-    const strip = page.getByRole("navigation", { name: "Questions" });
+    const strip = page.getByRole("list", { name: "Questions" });
     const chips = strip.getByRole("button");
     await expect(chips).toHaveCount(5);
     const current = strip.locator('[aria-current="true"]');
@@ -101,7 +100,7 @@ test.describe("Sprint results", () => {
     // Opens on the first question below full marks (or Q1 when all are right).
     const below = await chips.evaluateAll((els) =>
       els.findIndex((e) =>
-        / 0 \/ 1 marks/.test(e.getAttribute("aria-label") ?? ""),
+        / 0 ?\/ ?1 marks/.test(e.getAttribute("aria-label") ?? ""),
       ),
     );
     expect(n).toBe(below === -1 ? 1 : below + 1);
@@ -132,7 +131,7 @@ test.describe("Sprint results", () => {
       page.getByRole("table", { name: "Questions" }).getByRole("row"),
     ).toHaveCount(6);
     await expect(
-      page.getByRole("columnheader", { name: "Status" }),
+      page.getByRole("columnheader", { name: "Result" }),
     ).toBeVisible();
 
     const mistakes = page.getByRole("link", {

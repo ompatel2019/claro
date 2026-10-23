@@ -8,24 +8,29 @@ import { markingState, type ReviewRow } from "@/lib/feedback";
 import {
   below,
   resultsState,
-  delta,
   kpis,
   markingInFlight,
   mcGridRows,
-  pct,
   sprintHref,
   timeMeta,
   visibleResults,
 } from "@/lib/results";
+import {
+  fullMarks,
+  lostMarks,
+  questionList,
+  scoreVsAverage,
+  timeVsAverage,
+} from "@/lib/results-stats";
 import { PageHeader } from "@/components/claro/layout";
 import { MarkingProgress } from "@/components/marking-progress";
 import { RetryAnswer } from "@/components/retry-answer";
 import { ResultsAnswers, OverallFeedback } from "@/components/results-report";
 import { SameSetup } from "@/components/sprint-setup";
-import { ResultStat } from "@/components/student/sprint/result-stat";
-import { ResultsNextStep } from "@/components/student/sprint/results-next-step";
 import { StatusPill } from "@/components/status-pill";
 import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 const when = (d: string) =>
   new Date(d)
@@ -34,6 +39,8 @@ const when = (d: string) =>
       weekday: "short",
       day: "numeric",
       month: "short",
+      hour: "numeric",
+      minute: "2-digit",
     })
     .replace(/^(\w{3}),/, "$1");
 const avg = (xs: (number | null)[]) => {
@@ -86,17 +93,10 @@ export async function SprintResults({ id }: { id: string }) {
   const topics = (topicRes.data ?? []) as Topic[];
   const rows = visibleResults(review.data as ReviewRow[]);
   const topicIds = [...new Set(rows.flatMap((r) => r.topic_id ?? []))];
-  const pastIds = past.data.map((p) => p.id);
-  const [cardRes, pastAttempts] = await Promise.all([
-    db.from("flashcards").select("topic_id").in("topic_id", topicIds),
-    pastIds.length
-      ? db
-          .from("attempts")
-          .select("session_id,mark,max_marks,question:questions(type)")
-          .in("session_id", pastIds)
-          .eq("status", "marked")
-      : { data: [] },
-  ]);
+  const cardRes = await db
+    .from("flashcards")
+    .select("topic_id")
+    .in("topic_id", topicIds);
   const cards: Record<string, number> = {};
   for (const c of cardRes.data ?? [])
     cards[c.topic_id] = (cards[c.topic_id] ?? 0) + 1;
@@ -115,30 +115,19 @@ export async function SprintResults({ id }: { id: string }) {
   const failed = rows.filter((r) => markingState(r) === "failed");
   const mistakes = rows.filter(below).length;
   const limit = timeLimit(s.config);
-  // Averages over past sprints of this type (per-type tallies from their marked attempts).
-  const pastRows = (pastAttempts.data ?? []) as unknown as {
-    mark: number;
-    max_marks: number;
-    question: { type: string } | null;
-  }[];
-  const typeAvg = (mc: boolean) => {
-    const xs = pastRows.filter((r) => (r.question?.type === "mcq") === mc);
-    const max = xs.reduce((n, r) => n + Number(r.max_marks), 0);
-    return max
-      ? (xs.reduce((n, r) => n + Number(r.mark), 0) / max) * 100
-      : null;
-  };
   const scorePct = total ? (k.score.mark / total) * 100 : null;
   const scoreAvg = avg(
     past.data.map((p) => (p.max_score ? (p.score / p.max_score) * 100 : null)),
   );
   const timeAvg = avg(past.data.map((p) => p.elapsed_s));
   const elapsed = s.elapsed_s ?? 0;
-  const minutes = (n: number | null) => (n == null ? null : n / 60);
   const places = s.config.subtopics?.length
     ? s.config.subtopics
     : s.config.topics;
-
+  const vsScore = scoreVsAverage(scorePct, scoreAvg);
+  const vsTime = timeVsAverage(elapsed, timeAvg);
+  const lost = rows.filter(lostMarks).map((r) => r.position);
+  const full = rows.filter(fullMarks).length;
   return (
     <div className="space-y-5">
       <Link
@@ -150,7 +139,7 @@ export async function SprintResults({ id }: { id: string }) {
         Activity
       </Link>
       <PageHeader
-        eyebrow={`${when(s.started_at)} · ${timeMeta(elapsed, limit)}`}
+        eyebrow={`${when(s.started_at)} · ${rows.length} ${rows.length === 1 ? "question" : "questions"}`}
         title={`${modeLabel(s.config.mode)} sprint · ${places?.length ? places.map(name).join(", ") : "All topics"}`}
         actions={
           <>
@@ -174,59 +163,52 @@ export async function SprintResults({ id }: { id: string }) {
         }
       />
       <MarkingProgress {...progress} />
-      <div className="grid grid-cols-3 gap-3 xl:grid-cols-[minmax(0,5fr)_repeat(3,minmax(0,2fr))] xl:gap-4">
-        <ResultStat
-          label={
-            <span className="flex items-center gap-2">
-              Score {provisional && <StatusPill pill="Provisional" />}
-            </span>
-          }
-          value={`${provisional ? "≈ " : ""}${scorePct == null ? "–" : `${Math.round(scorePct)}%`}`}
-          score={{ mark: k.score.mark, max: total }}
-          comparison={delta(scorePct, scoreAvg, " pts")}
-        />
-        <ResultStat
-          neutral
-          label="Time"
-          value={timeMeta(elapsed, null)}
-          comparison={delta(minutes(elapsed), minutes(timeAvg), " min")}
-        />
-        {k.mcCount > 0 && (
-          <ResultStat
-            label="Multiple choice"
-            value={
-              <>
-                {k.mc.mark}
-                <span className="text-muted-foreground text-base font-medium">
-                  /{k.mc.max}
-                </span>
-              </>
-            }
-            comparison={delta(pct(k.mc), typeAvg(true), " pts")}
+      <section aria-label="Summary" className="grid gap-3 sm:grid-cols-3">
+        <Stat
+          label="Score"
+          pill={provisional && <StatusPill pill="Provisional" />}
+        >
+          <StatValue
+            value={`${provisional ? "≈ " : ""}${k.score.mark}`}
+            unit={`/${total}`}
+            extra={scorePct == null ? null : `${Math.round(scorePct)}%`}
           />
-        )}
-        {k.writtenCount > 0 && (
-          <ResultStat
-            label="Written"
-            value={
-              <>
-                {k.written.mark}
-                <span className="text-muted-foreground text-base font-medium">
-                  /{k.written.max}
-                </span>
-              </>
-            }
-            comparison={delta(pct(k.written), typeAvg(false), " pts")}
+          {vsScore && <StatNote up={vsScore.up}>{vsScore.text}</StatNote>}
+        </Stat>
+        <Stat label="Time">
+          <StatValue
+            value={timeMeta(elapsed, null)}
+            unit={limit ? `of ${timeMeta(limit, null)}` : null}
           />
-        )}
-      </div>
-      <ResultsNextStep
-        rows={rows}
-        topics={topics}
-        config={s.config}
-        cards={cards}
-        note={s.summary?.improvements?.[0] ?? s.summary?.next_steps?.[0]}
-      />
+          {vsTime && <StatNote>{vsTime}</StatNote>}
+        </Stat>
+        <Stat label="Full marks">
+          <StatValue
+            value={String(full)}
+            unit={`of ${rows.length} ${rows.length === 1 ? "question" : "questions"}`}
+          />
+          {lost.length > 0 && (
+            <StatNote>
+              Review{" "}
+              {questionList(lost)
+                .split(/(Q\d+)/)
+                .map((part, i) =>
+                  /^Q\d+$/.test(part) ? (
+                    <a
+                      key={i}
+                      href={`#q-${part.slice(1)}`}
+                      className="text-brand-text font-semibold underline underline-offset-4"
+                    >
+                      {part}
+                    </a>
+                  ) : (
+                    part
+                  ),
+                )}
+            </StatNote>
+          )}
+        </Stat>
+      </section>
       <ResultsAnswers
         sprintLayout
         mcGrid={mcGridRows(rows)}
@@ -234,6 +216,7 @@ export async function SprintResults({ id }: { id: string }) {
         id={id}
         name={name}
         photos={url}
+        cards={cards}
       />
       <OverallFeedback
         summary={s.summary}
@@ -241,5 +224,82 @@ export async function SprintResults({ id }: { id: string }) {
         hideNextStep
       />
     </div>
+  );
+}
+
+function Stat({
+  label,
+  pill,
+  children,
+}: {
+  label: string;
+  pill?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card size="sm" className="min-w-0 gap-1.5 px-(--card-spacing)">
+      <p className="text-ink-2 flex items-center gap-2 text-[13px] font-semibold">
+        {label} {pill}
+      </p>
+      {children}
+    </Card>
+  );
+}
+
+function StatValue({
+  value,
+  unit,
+  extra,
+}: {
+  value: string;
+  /** "/15" sits flush against the value; "of 22:30" is spaced. */
+  unit?: string | null;
+  extra?: string | null;
+}) {
+  const flush = unit?.startsWith("/");
+  return (
+    <p className="text-ink flex flex-wrap items-baseline gap-x-1.5 tabular-nums">
+      <span>
+        <span className="num-display text-[28px] leading-none font-bold">
+          {value}
+        </span>
+        {flush && (
+          <span className="text-muted-foreground text-sm font-medium">
+            {unit}
+          </span>
+        )}
+      </span>
+      {unit && !flush && (
+        <span className="text-muted-foreground text-sm font-medium">
+          {unit}
+        </span>
+      )}
+      {extra && (
+        <span className="text-ink ml-1 text-base font-semibold">{extra}</span>
+      )}
+    </p>
+  );
+}
+
+function StatNote({
+  up = false,
+  children,
+}: {
+  /** Better than average: success text with an up arrow. */
+  up?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <p
+      className={cn(
+        "flex items-center gap-1 text-[13px]",
+        up ? "text-success-text" : "text-muted-foreground",
+      )}
+    >
+      {up && (
+        <PortalIcon name="arrow-up-right" aria-hidden className="size-3.5" />
+      )}
+      <span>{children}</span>
+    </p>
   );
 }
