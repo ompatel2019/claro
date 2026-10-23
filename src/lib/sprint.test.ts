@@ -230,6 +230,24 @@ it.each([
     target: 25,
   });
 });
+it.each([5, 6])(
+  "preserves a saved mixed sprint with %s MCs and zero shorts",
+  (count) => {
+    const saved = {
+      ...withMode(DEFAULTS, "mixed"),
+      target: count,
+      mcq_count: count,
+      short_count: 0,
+    };
+    const restored = restore(JSON.parse(JSON.stringify(saved)));
+    expect(restored).toMatchObject({
+      target: count,
+      mcq_count: count,
+      short_count: 0,
+    });
+    expect(restore(JSON.parse(JSON.stringify(restored)))).toEqual(restored);
+  },
+);
 it("saved counts survive reload and legacy mark budgets become approximate counts", () => {
   expect(
     restore({

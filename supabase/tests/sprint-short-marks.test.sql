@@ -46,6 +46,15 @@ begin
   if exists(select 1 from public.attempts a join public.questions q on q.id=a.question_id where a.session_id=session and q.marks<>2) then
     raise exception 'Short-only mark filter leaked';
   end if;
+  -- The attempt guard also rejects a mismatched short in an owned session.
+  insert into public.sessions(kind,config) values ('sprint',
+    '{"mode":"short","topics":["s9"],"marks_per_short":2}') returning id into session;
+  begin
+    insert into public.attempts(session_id,question_id,position) values (session,'s9-short-5-1',1);
+    raise exception 'Mismatched short mark insert accepted';
+  exception when insufficient_privilege then null; end;
+  -- A matching short is eligible under the same session configuration.
+  insert into public.attempts(session_id,question_id,position) values (session,'s9-short-2-1',1);
   -- Insufficient shorts do not become MC questions.
   session := public.start_sprint(cfg || '{"target":13,"short_count":10}');
   select config into saved from public.sessions where id=session;

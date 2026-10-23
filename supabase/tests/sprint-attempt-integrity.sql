@@ -99,7 +99,7 @@ begin
   -- Isolate individual eligibility filters (including history and no essays).
   for cfg,qid in select * from (values
     ('{"mode":"short","topics":["t1"]}'::jsonb,'d1-other'),
-    ('{"mode":"short","marks_per_short":5}'::jsonb,'d1-short-8'),
+    ('{"mode":"short","marks_per_short":2}'::jsonb,'d1-short-8'),
     ('{"mode":"short","difficulty":["foundation"]}'::jsonb,'d1-short-8'),
     ('{"mode":"short","verbs":["describe"]}'::jsonb,'d1-short-8'),
     ('{"mode":"short","origins":["nesa"]}'::jsonb,'d1-short-8'),

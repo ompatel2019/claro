@@ -304,10 +304,12 @@ export function restore(saved: unknown): SetupConfig {
     const shorts = legacy
       ? Math.round(Number(s.short_marks) / (c.marks_per_short ?? 3))
       : s.short_count;
+    // Normalize both buckets before enforcing the minimum total.
     if (typeof shorts === "number" && Number.isFinite(shorts))
-      c = withMixedCount(c, "short_count", shorts);
+      c.short_count = Math.min(15, Math.max(0, Math.round(shorts)));
     if (typeof s.mcq_count === "number" && Number.isFinite(s.mcq_count))
-      c = withMixedCount(c, "mcq_count", s.mcq_count);
+      c.mcq_count = Math.min(40, Math.max(0, Math.round(s.mcq_count)));
+    c = withMixedCount(c, "mcq_count", c.mcq_count);
   }
   return c;
 }
