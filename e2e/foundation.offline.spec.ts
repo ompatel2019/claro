@@ -21,7 +21,7 @@ test.beforeAll(async () => {
               path === "next/link"
                 ? `import React from 'react';export default function Link({href,prefetch,...props}){return <a href={href} {...props}/>}`
                 : path === "next/navigation"
-                  ? `export const usePathname=()=>location.pathname;export const useRouter=()=>({push:url=>{history.pushState({},'',url);window.dispatchEvent(new Event('navigated'));}});`
+                  ? `export const usePathname=()=>location.pathname; export const useSearchParams=()=>new URLSearchParams(location.search);export const useRouter=()=>({push:url=>{history.pushState({},'',url);window.dispatchEvent(new Event('navigated'));}});`
                   : `export const signOut=()=>{};`,
             loader: "tsx",
             resolveDir: process.cwd(),

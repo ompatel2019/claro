@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { ReviewRow } from "@/lib/feedback";
+import { markingState, type ReviewRow } from "@/lib/feedback";
 import type { SprintConfig, Topic } from "@/lib/practice";
 import { below, scored, sprintHref } from "@/lib/results";
 import { PortalIcon } from "@/components/icons";
@@ -35,6 +35,14 @@ export function ResultsNextStep({
   const needsWork = grouped.filter((t) => t.dropped > 0);
   const fullMarks = grouped.filter((t) => t.dropped === 0);
   const missed = rows.filter((r) => r.type === "mcq" && below(r));
+  const allFullMarks =
+    rows.length > 0 &&
+    rows.every(
+      (r) => scored(r) && Number(r.mark) === Number(r.max_marks ?? r.marks),
+    );
+  const needsAttention = rows.some(
+    (r) => !scored(r) && markingState(r) !== "marking",
+  );
   const name = (id: string) => topics.find((t) => t.id === id)?.name ?? "Topic";
   return (
     <section className="space-y-5" aria-label="Your next step">
@@ -46,9 +54,13 @@ export function ResultsNextStep({
             {note ??
               (needsWork.length
                 ? `Focus on ${name(needsWork[0].id)} — ${needsWork[0].dropped} marks dropped here.`
-                : rows.some(scored)
+                : allFullMarks
                   ? "You earned every available mark. Try another sprint to keep practising."
-                  : "Your next steps will appear once marking finishes.")}
+                  : needsAttention
+                    ? "Review the answers that couldn’t be marked and try again."
+                    : rows.some((r) => scored(r) && below(r))
+                      ? "Review the marks you dropped while they’re fresh."
+                      : "Your next steps will appear once marking finishes.")}
           </p>
           {!!missed.length && (
             <Link

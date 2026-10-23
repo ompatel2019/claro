@@ -78,3 +78,49 @@ it("shows the real summary advice and an honest pending state", () => {
     screen.getByText("Explain the mechanism before the example."),
   ).toBeVisible();
 });
+
+it("only celebrates full marks when every answer is scored at full marks", () => {
+  render(
+    <ResultsNextStep
+      rows={[row("child", 1, 1, 1), row("full", 4, 4, 2)]}
+      topics={topics}
+      config={{ mode: "mixed", topics: [] }}
+      cards={{}}
+    />,
+  );
+  expect(screen.getByText(/You earned every available mark/)).toBeVisible();
+});
+
+it.each([
+  ["pending", { status: "pending", mark: null }, "once marking finishes"],
+  ["pending check", { check_status: "pending" }, "once marking finishes"],
+  ["failed", { status: "failed", mark: null }, "couldn’t be marked"],
+  ["unreadable", { status: "unreadable", mark: null }, "couldn’t be marked"],
+  ["low confidence", { feedback: { confidence: "low" } }, "couldn’t be marked"],
+  ["missing mark", { mark: null }, "couldn’t be marked"],
+  [
+    "unanswered",
+    { mark: 0, feedback: { note: "No answer" } },
+    "Focus on Inflation",
+  ],
+  ["partial marks", { mark: 2 }, "Focus on Inflation"],
+] as const)(
+  "does not claim full marks with a %s answer",
+  (_, unresolved, advice) => {
+    render(
+      <ResultsNextStep
+        rows={[
+          row("full", 4, 4, 1),
+          { ...row("child", 4, 4, 2), ...unresolved } as ReviewRow,
+        ]}
+        topics={topics}
+        config={{ mode: "mixed", topics: [] }}
+        cards={{}}
+      />,
+    );
+    expect(
+      screen.queryByText(/You earned every available mark/),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText(new RegExp(advice))).toBeVisible();
+  },
+);

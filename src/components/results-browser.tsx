@@ -30,21 +30,24 @@ function AnswerState({ item }: { item: ResultItem }) {
   const score = item.mark?.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
   const earned = score && Number(score[1]) === Number(score[2]);
   const partly = score && Number(score[1]) > 0 && !earned;
-  const word = score
-    ? earned
-      ? "Earned"
-      : partly
-        ? "Part marks"
-        : "Missed"
-    : item.pill
+  const word =
+    item.pill === "Not answered"
       ? null
-      : item.mark
-        ? "Pending"
-        : "Not answered";
+      : score
+        ? earned
+          ? "Earned"
+          : partly
+            ? "Part marks"
+            : "Missed"
+        : item.pill
+          ? null
+          : item.mark
+            ? "Pending"
+            : "Not answered";
   return (
     <span className="flex flex-col items-start gap-1">
       {item.pill && <StatusPill pill={item.pill} />}
-      {word && item.pill !== "Not answered" && (
+      {word && (
         <span className="flex items-center gap-1 text-[11px] font-medium">
           <PortalIcon
             name={

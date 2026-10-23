@@ -156,7 +156,10 @@ export function ResultsAnswers({
                 : scored(r)
                   ? markTone(r.mark ?? 0, r.max_marks ?? r.marks)
                   : "",
-            pill: r.type === "mcq" ? null : statePill(state, r.review),
+            pill:
+              r.type === "mcq" && state !== "not_answered"
+                ? null
+                : statePill(state, r.review),
           };
         })}
       />
