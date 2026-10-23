@@ -553,7 +553,7 @@ export function SprintRunner({
                     data-q
                     disabled={busy}
                     aria-current={index === i ? "step" : undefined}
-                    aria-label={`Question ${i + 1}: ${answered(row) ? "Answered" : "Not answered"}${row.flagged ? ", Flagged" : ""}${row.status === "marked" ? `, ${row.mark}/${row.max_marks} marks` : ""}`}
+                    aria-label={`Question ${i + 1}: ${answered(row) ? "Answered" : "Not answered"}${row.flagged ? ", Flagged" : ""}${checkMode && row.status === "marked" ? `, ${row.mark}/${row.max_marks} marks` : ""}`}
                     onClick={() => go(i)}
                     className={cn(
                       "relative size-9 rounded-full border text-sm font-medium tabular-nums",
