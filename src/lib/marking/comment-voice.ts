@@ -54,13 +54,12 @@ const META_SENTENCE = [
   /\b(multiple[- ]choice|MCQs?|MC)\b(?=[^.]*\b(answers?|questions?|responses?|items?)\b)[^.]*\b(not|weren't|were not|aren't|are not)\b[^.]*\b(supplied|provided|included|available|assessed|shown|given)\b/i,
   /\bwithout (changing|affecting) (the|your) mark\b/i,
   /\b(not|never|won't|will not|without|doesn't|does not) (add|adding|change|changing|affect|affecting|earn|earning|cost|costing|lift|lifting) (a|the|your|any|another|an extra) (extra )?marks?\b/i,
-  /^(note|please note)\b/i,
   /\bas an ai\b/i,
 ];
 
 /** Sentences that are pure praise padding with no content. */
 const PADDING_SENTENCE =
-  /^(great|good|nice|excellent|fantastic|awesome|solid) (job|work|effort|start|attempt)\b[^.!?]*[.!?]?$|^well done\b[^.!?]{0,20}[.!?]?$|^keep (it )?up the (good|great) work\b[^.!?]*[.!?]?$/i;
+  /^(?:(?:great|good|nice|excellent|fantastic|awesome|solid) (?:job|work|effort|start|attempt)|well done|keep (?:it )?up the (?:good|great) work)(?: here| overall)?[.!]*$/i;
 
 /** Strength comments padded with a hedged improvement ("Adding X would deepen it."). */
 const STRENGTH_HEDGE_SENTENCE =
@@ -72,9 +71,11 @@ const OPENERS: RegExp[] = [
   /^(in summary|to summarise|to summarize|in conclusion),?\s+/i,
   /^it is (important|worth) (to note|noting) that\s+/i,
   /^it is (important|worth) (to note|noting),?\s+/i,
+  /^(please )?note that\s+/i,
   /^(note|notably),\s+/i,
-  /^(great|good|nice|excellent) (job|work)[,!;:]?\s+/i,
-  /^well done[,!;:]?\s+/i,
+  /^(perhaps|maybe),?\s+/i,
+  /^(great|good|nice|excellent) (job|work)[,!;:]\s+/i,
+  /^well done[,!;:]\s+/i,
   /^in this (answer|response),?\s+/i,
   /^this (demonstrates|shows) that\s+/i,
   /^already at full marks[;:,.]\s*/i,
@@ -130,10 +131,6 @@ const HEDGES: [RegExp, string][] = [
   ],
   [/\bwould benefit from\b/gi, "needs"],
   [/\bit might be (worth|helpful to)\s+/gi, ""],
-  [
-    /\b(perhaps|maybe|possibly|somewhat|arguably|slightly|a little|a bit) (?=[a-z])/gi,
-    "",
-  ],
 ];
 
 function stripOpeners(sentence: string): string {

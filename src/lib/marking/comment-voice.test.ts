@@ -100,7 +100,33 @@ describe("tightenText", () => {
     expect(body("This paragraph would benefit from a mechanism.")).toBe(
       "This paragraph needs a mechanism.",
     );
-    expect(body("It is perhaps slightly vague.")).toBe("It is vague.");
+    expect(body("Perhaps add the lag.")).toBe("Add the lag.");
+  });
+
+  it("keeps substantive content and economic qualifiers (codex review)", () => {
+    expect(
+      body(
+        "Your definition is wrong. Note that inflation is a rise in the general price level.",
+      ),
+    ).toBe(
+      "Your definition is wrong. Inflation is a rise in the general price level.",
+    );
+    expect(
+      body(
+        "Good work explaining how higher costs raise prices. Adding the transmission mechanism would strengthen it.",
+        true,
+      ),
+    ).toBe("Good work explaining how higher costs raise prices.");
+    expect(body("Well done linking costs to prices.")).toBe(
+      "Well done linking costs to prices.",
+    );
+    for (const text of [
+      "Explain why demand is only slightly elastic.",
+      "Prices rose a little, so say inflation stayed in the band.",
+      "The effect is possibly offset by a lower dollar, so name both.",
+      "Your claim is arguably true, but give the mechanism.",
+    ])
+      expect(body(text)).toBe(text);
   });
 
   it("drops meta sentences and praise padding", () => {
