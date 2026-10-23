@@ -34,6 +34,25 @@ it("keeps the default student activity navigation", () => {
   expect(activeItem("student", "/student/mark")?.label).toBe("Mark my answer");
 });
 
+it("groups student navigation with Home first, then Practice and Review", () => {
+  expect(
+    nav.student.map((group) => ({
+      label: group.label,
+      items: group.items.map((item) => item.label),
+    })),
+  ).toEqual([
+    { label: "", items: ["Home"] },
+    {
+      label: "Practice",
+      items: ["Topic Sprint", "Flashcards", "Mark my answer"],
+    },
+    { label: "Review", items: ["Activity", "Progress"] },
+  ]);
+  expect(nav.student[0].items[0].href).toBe("/student");
+  expect(activeItem("student", "/student")?.label).toBe("Home");
+  expect(activeItem("student", "/student/profile")).toBeUndefined();
+});
+
 import { cleanup, render, screen, fireEvent } from "@testing-library/react";
 import { afterEach } from "vitest";
 import { ActiveNav, ActiveNavProvider, useActiveNav } from "./claro/active-nav";
