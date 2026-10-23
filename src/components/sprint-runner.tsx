@@ -32,6 +32,7 @@ import type { McqExplanation } from "@/lib/mcq-explanation";
 import { QuestionView } from "./question-view";
 import { isTyping, type SaveState } from "./session-shell";
 import { WrittenAnswer } from "./written-answer";
+import { ScanToText } from "./scan-to-text";
 import { AnnotatedFeedback } from "./annotated-feedback";
 import { inlineSprintFeedback } from "@/lib/feedback";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
@@ -712,6 +713,16 @@ export function SprintRunner({
               }}
               flush={flush}
               local={(patch) => local(a.id, patch)}
+            />
+          )}
+          {a.question.type !== "mcq" && editable && !a.image_paths?.length && (
+            <ScanToText
+              key={a.id}
+              attemptId={a.id}
+              value={a.answer_text ?? ""}
+              disabled={busy}
+              onBusy={setBusy}
+              onText={(text) => edit(a.id, { answer_text: text })}
             />
           )}
           {backgroundAnswer(a) && (

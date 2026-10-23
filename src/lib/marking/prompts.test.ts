@@ -316,6 +316,25 @@ it("includes the image and exact transcription instructions", () => {
   expect(messages[0].content).toContain("crossed-out");
 });
 
+it("sets image detail only when asked", () => {
+  const url = "data:image/jpeg;base64,YQ==";
+  const image = (messages: ReturnType<typeof transcribeMessages>) =>
+    (messages[1].content as { type: string }[]).find(
+      (part) => part.type === "image_url",
+    );
+  expect(image(transcribeMessages(url, q.stem))).toStrictEqual({
+    type: "image_url",
+    image_url: { url },
+  });
+  expect(image(transcribeMessages(url, q.stem, "high"))).toStrictEqual({
+    type: "image_url",
+    image_url: { url, detail: "high" },
+  });
+  expect(transcribeMessages(url, q.stem, "high")[0]).toStrictEqual(
+    transcribeMessages(url, q.stem)[0],
+  );
+});
+
 it("uses different stat and term rules", () => {
   const card = { front: "Recall", back: "Reference" };
   expect(

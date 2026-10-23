@@ -115,6 +115,13 @@ export const ImagePlus = icon(
     d={`M21 12v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h8M3 16l5-5 5 5 2-2 6 6M18 3v6M15 6h6${dot(8.5, 8)}`}
   />,
 );
+export const Camera = icon(
+  "camera",
+  <>
+    <path d="M4 9c0-1.1.9-2 2-2h1.8l1.4-2h5.6l1.4 2H18c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2z" />
+    <circle cx="12" cy="13" r="3.25" />
+  </>,
+);
 export const Paperclip = icon(
   "paperclip",
   <path d="m20 11-8.6 8.6a5 5 0 0 1-7-7l8.8-8.8a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a1.7 1.7 0 0 1-2.4-2.4l8-8" />,

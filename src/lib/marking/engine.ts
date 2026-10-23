@@ -234,14 +234,15 @@ export async function transcribeImage(
   mime: string,
   stem: string,
   userId: string,
+  opts: { task?: string; detail?: "high" } = {},
 ) {
   const encoded = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes);
   const url = `data:${mime};base64,${encoded.toString("base64")}`;
   const result = await callJson({
-    task: "transcribe_answer",
+    task: opts.task ?? "transcribe_answer",
     model: MODELS.strong,
     schema: TranscriptSchema,
-    messages: transcribeMessages(url, stem),
+    messages: transcribeMessages(url, stem, opts.detail),
     effort: "low",
     userId,
   });
