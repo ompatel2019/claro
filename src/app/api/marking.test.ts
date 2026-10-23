@@ -999,6 +999,54 @@ it("handles an own-question photo without dereferencing a bank row", async () =>
     userId,
   );
 });
+it.each([
+  [89.99, 200],
+  [90, 503],
+])(
+  "gates transcription on OpenRouter spend only (%s)",
+  async (openRouter, status) => {
+    client([
+      {
+        session_id: singleSessionId,
+        question_id: null,
+        question: null,
+        status: "pending",
+        image_paths: [photo(1)],
+        session: {
+          kind: "single",
+          started_at: singleStarted,
+          config: { question: { stem: "Explain inflation." } },
+        },
+      },
+    ]);
+    vi.mocked((await createClient()).storage.from).mockReturnValue({
+      download: vi.fn().mockResolvedValue({
+        data: new Blob(["image"], { type: "image/png" }),
+        error: null,
+      }),
+    } as never);
+    vi.mocked(admin().from).mockReturnValue(adminQuery(null) as never);
+    // Direct OpenAI spend alone is far past the budget; only OpenRouter counts.
+    vi.mocked(admin().rpc).mockImplementation(
+      (fn: string) =>
+        Promise.resolve({
+          data: fn === "ai_spend_for_prefixes" ? openRouter : 1000,
+          error: null,
+        }) as never,
+    );
+    vi.mocked(transcribeImage).mockResolvedValue({
+      transcript: "Some answer",
+      lines: ["Some answer"],
+      notes: "",
+    });
+    expect((await transcribe(request(), ctx)).status).toBe(status);
+    expect(admin().rpc).toHaveBeenCalledExactlyOnceWith(
+      "ai_spend_for_prefixes",
+      { p_prefixes: ["anthropic/", "openai/"] },
+    );
+    expect(transcribeImage).toHaveBeenCalledTimes(status === 200 ? 1 : 0);
+  },
+);
 it("allows up to eight pages for a short single check", async () => {
   client([
     {
