@@ -93,6 +93,29 @@ it("renders range-scoped breakdowns and per-card empty states while keeping unto
   expect(mocks.eq).toHaveBeenCalledWith("user_id", "student");
   expect(mocks.eq).toHaveBeenCalledWith("flashcards.status", "live");
 });
+it("keeps extended response marks without offering an unsupported sprint", async () => {
+  mocks.load.mockResolvedValue({
+    ...empty,
+    types: [{ id: "extended", answered: 2, pct: 40 }],
+  });
+  render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
+  expect(screen.getByText("Extended response")).toBeVisible();
+  expect(
+    screen.getByRole("meter", { name: "Extended response average" }),
+  ).toHaveAttribute("aria-valuenow", "40");
+  expect(screen.getByText("2 answered")).toBeVisible();
+  expect(
+    screen.queryByRole("link", { name: /Practise\s*Extended response/ }),
+  ).toBeNull();
+  for (const [label, type] of [
+    ["Multiple choice", "mcq"],
+    ["Short answer", "short"],
+  ]) {
+    expect(
+      screen.getByRole("link", { name: new RegExp(`Practise\\s*${label}`) }),
+    ).toHaveAttribute("href", `/student/sprint?type=${type}`);
+  }
+});
 it("passes load failures to the route error boundary", async () => {
   mocks.load.mockRejectedValue(new Error("unavailable"));
   await expect(Progress({ searchParams: Promise.resolve({}) })).rejects.toThrow(

@@ -218,15 +218,17 @@ export default async function Progress({
                       <span className="text-muted-foreground text-xs tabular-nums">
                         {row?.answered ?? 0} answered
                       </span>
-                      <Link
-                        href={`/student/sprint?type=${id}`}
-                        className={buttonVariants({
-                          variant: "ghost",
-                          size: "sm",
-                        })}
-                      >
-                        Practise<span className="sr-only"> {label}</span>
-                      </Link>
+                      {id !== "extended" && (
+                        <Link
+                          href={`/student/sprint?type=${id}`}
+                          className={buttonVariants({
+                            variant: "ghost",
+                            size: "sm",
+                          })}
+                        >
+                          Practise<span className="sr-only"> {label}</span>
+                        </Link>
+                      )}
                     </div>
                   </li>
                 );

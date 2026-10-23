@@ -323,6 +323,22 @@ test("Progress: mobile topic rows and sprint actions stay within the page", asyn
   await expect(
     topics.getByRole("link", { name: "Sprint on Trade", exact: true }),
   ).toHaveAttribute("href", "/student/sprint?topics=t1&sub=trade");
+  const days = page
+    .getByRole("group", {
+      name: "Practice days over the last eight weeks",
+    })
+    .getByRole("link");
+  expect(await days.count()).toBeGreaterThan(0);
+  for (const day of await days.all()) {
+    const box = await day.boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(24);
+    expect(box!.height).toBeGreaterThanOrEqual(24);
+  }
+  await days.last().focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(days.last()).toBeFocused();
+  await expect(days.last()).toHaveCSS("outline-width", "2px");
   const overflow = await page.evaluate(() =>
     [...document.querySelectorAll("body *")]
       .filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1)
