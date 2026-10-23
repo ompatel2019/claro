@@ -152,8 +152,9 @@ export function AnnotatedFeedback({
   const visible = comments.filter((c) => filter === "all" || c.kind === filter);
   const anchored = comments.filter((c) => c.start !== null);
   const pill = statePill(state, row.review);
-  // Marked, read-only answers use the Docs-style view; editing keeps the margin layout.
-  const docView = !edit && showMark && !!text;
+  // Marked, read-only typed answers use the Docs-style view; editing and the photo keep the margin layout.
+  const docView =
+    !edit && showMark && !!text && (view === "typed" || !photos.length);
   const AnswerContainer =
     singleResult && !docView ? ResultAnswerCard : Fragment;
   const outline = Array.isArray(row.feedback?.better_answer_outline)

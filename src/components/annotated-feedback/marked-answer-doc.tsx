@@ -115,7 +115,7 @@ export function MarkedAnswerDoc({
       body.current
         ?.querySelector<HTMLElement>(`[data-card="${id}"]`)
         ?.focus({ preventScroll: true });
-    if (o.reveal && !wide) into(slider.current);
+    if (o.reveal) into(slider.current);
     if (o.showMark && wide) into(highlights(id)[0]);
   }
   /** Move the slider, then scroll or focus once the new comment is on show. */

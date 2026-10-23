@@ -872,3 +872,19 @@ it("anchors to the transcript before the typed answer", () => {
   );
   expect(screen.queryByText("Something else.")).not.toBeInTheDocument();
 });
+
+it("keeps the mark and next step when a marked photo answer switches to the photo", () => {
+  render(
+    <AnnotatedFeedback
+      row={{ ...row, transcript: text, image_paths: ["a.jpg"] }}
+      photos={["/a.jpg"]}
+    />,
+  );
+  expect(screen.getByLabelText("Your mark: 3/6")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Photo" }));
+  expect(screen.getByLabelText("Your mark: 3/6")).toBeVisible();
+  expect(screen.getByText("What gets you the next mark")).toBeVisible();
+  expect(
+    screen.queryByRole("region", { name: "Comments" }),
+  ).not.toBeInTheDocument();
+});
