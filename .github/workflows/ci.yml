@@ -57,7 +57,7 @@ jobs:
     needs: quality
     strategy:
       matrix:
-        config: [foundation, pages, admin-revamp]
+        config: [foundation, pages, admin-revamp, sprint-booklet]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
