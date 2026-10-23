@@ -64,7 +64,7 @@ vi.mock("./student/sprint/focus-shell", () => ({
     onExit: () => void;
   }) => (
     <>
-      <button onClick={onExit}>Save and exit</button>
+      <button onClick={onExit}>Exit sprint</button>
       {booklet}
       <nav aria-label="Question progress">{progress}</nav>
       {children}
@@ -146,16 +146,44 @@ it("checks an MC sprint answer and renders its feedback", async () => {
     expect.objectContaining({ method: "POST" }),
   );
 });
-it("persists sprint time on save and exit, and keeps the finish confirmation", async () => {
+const finishCall = () =>
+  expect(mocks.fetch).toHaveBeenCalledWith(
+    "/api/sessions/s/finish",
+    expect.objectContaining({ method: "POST" }),
+  );
+async function leave() {
+  fireEvent.click(screen.getByRole("button", { name: "Exit sprint" }));
+  const dialog = await screen.findByRole("alertdialog", {
+    name: "Leave this sprint?",
+  });
+  fireEvent.click(
+    within(dialog).getByRole("button", { name: "Leave and mark" }),
+  );
+  await waitFor(finishCall);
+}
+it("exit asks first, and leaving saves time and finishes the sprint", async () => {
+  vi.stubGlobal("fetch", mocks.fetch);
   show();
   fireEvent.click(screen.getByRole("button", { name: "Finish and mark" }));
   expect(
     await screen.findByRole("dialog", { name: "Finish and mark?" }),
   ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Keep working" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save and exit" }));
-  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/student"));
+  fireEvent.click(screen.getByRole("button", { name: "Exit sprint" }));
+  const dialog = await screen.findByRole("alertdialog", {
+    name: "Leave this sprint?",
+  });
+  expect(dialog).toHaveTextContent(
+    "Leaving ends this sprint. Your answered questions will be marked.",
+  );
+  fireEvent.click(within(dialog).getByRole("button", { name: "Keep working" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+  );
+  expect(mocks.fetch).not.toHaveBeenCalled();
+  await leave();
   expect(mocks.update).toHaveBeenCalledWith({ elapsed_s: 0 });
+  expect(mocks.push).not.toHaveBeenCalled();
 });
 
 it.each(["finish", "overtime"])(
@@ -759,8 +787,7 @@ it("saves a photo with only accepted answer fields and retries metadata without 
   expect(JSON.parse(localStorage.getItem("claro-draft-a")!)).toEqual(patch);
   expect(screen.getByText("Page 1")).toBeVisible();
   fail = false;
-  fireEvent.click(screen.getByRole("button", { name: "Save and exit" }));
-  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/student"));
+  await leave();
   expect(mocks.upload).toHaveBeenCalledOnce();
   expect(localStorage.getItem("claro-draft-a")).toBeNull();
 });
@@ -831,8 +858,7 @@ it("keeps a removed photo until the end-feedback metadata retry succeeds, then d
     transcript: null,
   });
   fail = false;
-  fireEvent.click(screen.getByRole("button", { name: "Save and exit" }));
-  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/student"));
+  await leave();
   expect(mocks.remove).toHaveBeenCalledWith([path]);
 });
 
@@ -1071,4 +1097,82 @@ it("View booklet blocks F and option keys, then jumps to the clicked question", 
       screen.getByRole("button", { name: "Question 1: Answered" }),
     ).toHaveAttribute("aria-current", "step"),
   );
+});
+
+it("a reload after a confirmed leave saves the restored draft, then finishes", async () => {
+  mocks.fetch.mockResolvedValue({
+    ok: true,
+    status: 200,
+    json: async () => ({ saved: true }),
+  });
+  vi.stubGlobal("fetch", mocks.fetch);
+  localStorage.setItem(
+    "claro-draft-a",
+    JSON.stringify({ answer_text: "Saved on return" }),
+  );
+  sessionStorage.setItem("claro-left-s", "1");
+  show(
+    [
+      {
+        ...attempt,
+        choice_index: null,
+        question: { ...attempt.question, type: "short" },
+      },
+    ],
+    { mode: "short", feedback: "end", topics: [] },
+  );
+  await waitFor(finishCall);
+  expect(sessionStorage.getItem("claro-left-s")).toBeNull();
+  expect(mocks.fetch.mock.calls[0]).toEqual([
+    "/api/attempts/a/mark",
+    expect.objectContaining({
+      method: "PATCH",
+      body: JSON.stringify({ answer_text: "Saved on return" }),
+    }),
+  ]);
+});
+
+it("never finishes on unload while a newer answer is still saving behind an older save", async () => {
+  const held: ((value: unknown) => void)[] = [];
+  mocks.fetch.mockImplementation(
+    () =>
+      new Promise((resolve) =>
+        held.push(() =>
+          resolve({ ok: true, status: 200, json: async () => ({}) }),
+        ),
+      ),
+  );
+  vi.stubGlobal("fetch", mocks.fetch);
+  const beacon = vi.fn();
+  Object.defineProperty(navigator, "sendBeacon", {
+    value: beacon,
+    configurable: true,
+  });
+  show(
+    [
+      {
+        ...attempt,
+        choice_index: null,
+        question: { ...attempt.question, type: "short" },
+      },
+    ],
+    { mode: "short", feedback: "end", topics: [] },
+  );
+  const box = screen.getByRole("textbox", { name: "Your answer" });
+  fireEvent.change(box, { target: { value: "First answer" } });
+  await waitFor(() => expect(held).toHaveLength(1), { timeout: 3000 });
+  fireEvent.change(box, { target: { value: "Second answer" } });
+  // The second save leaves the dirty map and queues behind the first.
+  await new Promise((resolve) => setTimeout(resolve, 900));
+  held[0](undefined);
+  await waitFor(() => expect(held).toHaveLength(2), { timeout: 3000 });
+  window.dispatchEvent(
+    new PageTransitionEvent("pagehide", { persisted: false }),
+  );
+  expect(beacon).not.toHaveBeenCalled();
+  expect(sessionStorage.getItem("claro-left-s")).toBe("1");
+  expect(JSON.parse(localStorage.getItem("claro-draft-a")!)).toEqual({
+    answer_text: "Second answer",
+  });
+  sessionStorage.clear();
 });

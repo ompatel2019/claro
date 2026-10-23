@@ -48,7 +48,7 @@ it("shows real progress, routes recovery controls and preserves timer hiding", (
     "aria-valuenow",
     "1",
   );
-  fireEvent.click(screen.getByRole("button", { name: "Save and exit" }));
+  fireEvent.click(screen.getByRole("button", { name: "Exit sprint" }));
   fireEvent.click(screen.getByRole("button", { name: "Finish" }));
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
   expect(actions.onExit).toHaveBeenCalledOnce();

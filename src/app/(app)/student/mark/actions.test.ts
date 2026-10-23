@@ -4,11 +4,15 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/utils/supabase/server", () => ({ createClient: vi.fn() }));
 vi.mock("@/utils/supabase/admin", () => ({ admin: vi.fn() }));
 vi.mock("@/lib/single-check-data", () => ({ bankQuestionAvailable: vi.fn() }));
+vi.mock("next/server", () => ({ after: vi.fn() }));
+vi.mock("@/lib/session-finish", () => ({ finishOpenSessions: vi.fn() }));
 import { createClient } from "@/utils/supabase/server";
 import { admin } from "@/utils/supabase/admin";
 import { singleSlotIds } from "@/lib/single-check";
 import { bankQuestionAvailable } from "@/lib/single-check-data";
 import { createCheck, restoreUnreadableCheck } from "./actions";
+import { after } from "next/server";
+import { finishOpenSessions } from "@/lib/session-finish";
 const sessions = new Map<string, Record<string, unknown>>();
 const attempts: Record<string, unknown>[] = [];
 let failAttempt = false;
@@ -83,6 +87,11 @@ it("stores the exact config and nullable question in one single session", async 
     question_id: null,
     position: 1,
     user_id: "u",
+  });
+  // No resume: the student's earlier open sprints and decks finish after the response.
+  await (vi.mocked(after).mock.calls[0][0] as () => Promise<unknown>)();
+  expect(finishOpenSessions).toHaveBeenCalledWith("u", {
+    keep: (result as { sessionId: string }).sessionId,
   });
 });
 it("reserves the last daily check atomically across concurrent requests", async () => {

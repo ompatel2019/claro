@@ -17,6 +17,8 @@ const mocks = vi.hoisted(() => {
     revalidate: vi.fn(),
   };
 });
+vi.mock("@/lib/session-finish", () => ({ finishOpenSessions: vi.fn() }));
+vi.mock("next/server", () => ({ after: vi.fn() }));
 vi.mock("@/utils/supabase/server", () => ({
   createClient: async () => ({
     from: mocks.from,

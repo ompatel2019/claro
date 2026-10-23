@@ -21,7 +21,7 @@ export async function loadFlashcards(id: string) {
   const db = await createClient();
   const { data: session } = await db
     .from("sessions")
-    .select("*")
+    .select("*,last_active_at:session_last_active_at")
     .eq("id", id)
     .eq("user_id", profile.id)
     .eq("kind", "flashcards")

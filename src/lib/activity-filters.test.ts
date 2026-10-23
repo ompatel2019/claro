@@ -11,6 +11,9 @@ const topics = [
   { id: "inflation", parent_id: "policy", name: "Inflation", sort: 1 },
 ];
 describe("Activity filters", () => {
+  it("has no In progress filter (no resume)", () => {
+    expect(parseActivityFilters({ status: "progress" }, today).status).toBe("");
+  });
   it("validates untrusted URL values and leap days", () => {
     expect(
       parseActivityFilters(

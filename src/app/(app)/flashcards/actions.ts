@@ -1,8 +1,10 @@
 "use server";
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { z } from "zod";
 import { flashcardRatingSchema } from "@/lib/flashcard-rating";
 import { requireProfile } from "@/lib/auth";
+import { finishOpenSessions } from "@/lib/session-finish";
 import { createClient } from "@/utils/supabase/server";
 import { sydneyToday, type FlashcardConfig } from "@/lib/flashcards";
 import {
@@ -82,6 +84,8 @@ export async function startFlashcards(
     .select("id")
     .single();
   if (error) return { error: "Could not start your deck. Please try again." };
+  // No resume: starting a session finishes the student's other open ones.
+  after(() => finishOpenSessions(profile.id, { keep: data.id }));
   redirect(`/student/flashcards/${data.id}`);
 }
 export async function rateFlashcard(

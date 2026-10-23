@@ -1,6 +1,5 @@
 import { addDays, type ActivityDay } from "./activity";
 import type { ProgressData, TopicProgress } from "./progress";
-import { timer } from "./practice";
 
 const SYDNEY = "Australia/Sydney";
 
@@ -30,31 +29,6 @@ export const longDate = (now = new Date()) =>
   })
     .format(now)
     .replace(",", "");
-
-/** Paused sessions retain saved elapsed time. Recency uses started_at because
- * the runner only persists elapsed_s; only recent sessions show a timer. */
-export function continueTime(
-  session: {
-    started_at: string;
-    elapsed_s: number | null;
-  },
-  limit: number | null,
-  now: Date,
-) {
-  const started = Date.parse(session.started_at);
-  const remaining = (limit ?? 0) - (session.elapsed_s ?? 0);
-  if (remaining > 0 && now.getTime() - started <= 30 * 60_000)
-    return `${timer(remaining)} left`;
-  const minutes = Math.max(0, Math.floor((now.getTime() - started) / 60_000));
-  if (minutes === 0) return "Started just now";
-  const relative =
-    minutes < 60
-      ? `${minutes}m`
-      : minutes < 1440
-        ? `${Math.floor(minutes / 60)}h`
-        : `${Math.floor(minutes / 1440)}d`;
-  return `Started ${relative} ago`;
-}
 
 // NSW Eastern division student dates. Week numbers follow Monday–Sunday school weeks.
 // Sources: https://education.nsw.gov.au/schooling/calendars/2026 and /2027 (23 Oct 2026).

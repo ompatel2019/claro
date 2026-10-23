@@ -1,5 +1,6 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { loadFlashcards, pages } from "@/lib/flashcard-data";
 import {
   firstReviews,
@@ -9,6 +10,7 @@ import {
 import { createClient } from "@/utils/supabase/server";
 import { dateLabel, timer, topicNames } from "@/lib/practice";
 import { FlashcardRunner } from "@/components/flashcard-runner";
+import { finishOpenSessions, sessionIdle } from "@/lib/session-finish";
 import { FlashcardStart } from "@/components/flashcard-start";
 import { PageHeader } from "@/components/claro/layout";
 import { StatCard } from "@/components/claro/data-display";
@@ -43,6 +45,15 @@ export default async function FlashcardSession({
             : session.config.topics,
           topics,
         );
+  // No resume: a deck idle for 30 minutes is finished and shows its results.
+  if (
+    !session.finished_at &&
+    sessionIdle((session as { last_active_at?: string }).last_active_at)
+  ) {
+    if (!(await finishOpenSessions(profile.id, { only: id })))
+      throw new Error("Couldn't end this deck. Try again.");
+    redirect(`/student/flashcards/${id}`);
+  }
   if (!session.finished_at)
     return (
       <FlashcardRunner

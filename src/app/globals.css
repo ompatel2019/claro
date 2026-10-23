@@ -1807,10 +1807,6 @@ body:has(.sprint-focus)
 .ac-row:hover .ac-ic {
   background: var(--card);
 }
-.ac-row.live .ac-ic {
-  background: var(--brand-soft);
-  color: var(--brand-text);
-}
 .ac-title {
   display: -webkit-box;
   overflow: hidden;
@@ -1860,13 +1856,6 @@ body:has(.sprint-focus)
 }
 .ac-go {
   color: var(--muted-foreground);
-}
-.ac-resume {
-  padding: 6px 12px;
-  border: 1px solid var(--input);
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
 }
 .ac-row > a:not(.ac-cover) {
   position: relative;

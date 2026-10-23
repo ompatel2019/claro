@@ -10,7 +10,6 @@ import {
 } from "@/app/(app)/flashcards/actions";
 import {
   nextQueue,
-  resumeQueue,
   skipQueue,
   type Flashcard,
   type FlashcardMark,
@@ -88,15 +87,10 @@ export function FlashcardRunner({
 }) {
   const router = useRouter();
   const [db] = useState(createClient);
+  // No resume: a deck always runs from its first card (reopened decks are finished server-side).
   const [queue, setQueue] = useState(() =>
-    resumeQueue(
-      session.config.card_ids.filter((id) => cards.some((c) => c.id === id)),
-      reviews,
-      session.config.repeat_missed !== false,
-    ),
+    session.config.card_ids.filter((id) => cards.some((c) => c.id === id)),
   );
-  const [welcome, setWelcome] = useState(reviews.length > 0);
-  const [left] = useState(queue.length);
   const [announcement, setAnnouncement] = useState("");
   const [finished, setFinished] = useState(false);
   const [marks, setMarks] = useState(
@@ -111,24 +105,7 @@ export function FlashcardRunner({
     ),
   );
   const [flipped, setFlipped] = useState(false);
-  const [draft] = useState(() => {
-    try {
-      const saved = JSON.parse(
-        localStorage.getItem(`claro.flashcard.draft.${session.id}`) ?? "null",
-      );
-      if (
-        saved?.cardId === queue[0] &&
-        typeof saved.answer === "string" &&
-        saved.answer.length <= 1000
-      )
-        return {
-          answer: saved.answer as string,
-          spoken: saved.spoken === true,
-        };
-    } catch {}
-    return { answer: "", spoken: false };
-  });
-  const [answer, setAnswer] = useState(draft.answer);
+  const [answer, setAnswer] = useState("");
   const [verdict, setVerdict] = useState<{
     mark: FlashcardMark;
     reason: string;
@@ -138,7 +115,7 @@ export function FlashcardRunner({
   const [exit, setExit] = useState(false);
   const [disagree, setDisagree] = useState(false);
   const [failedCheck, setFailedCheck] = useState(false);
-  const [spoken, setSpoken] = useState(draft.spoken);
+  const [spoken, setSpoken] = useState(false);
   const [listening, setListening] = useState(false);
   const [speechNote, setSpeechNote] = useState("");
   const speech = useRef<Recognition | null>(null);
@@ -190,17 +167,6 @@ export function FlashcardRunner({
   useEffect(() => {
     heading.current?.focus();
   }, [card?.id]);
-  useEffect(() => {
-    try {
-      const key = `claro.flashcard.draft.${session.id}`;
-      if (answer && !verdict)
-        localStorage.setItem(
-          key,
-          JSON.stringify({ cardId: card?.id, answer, spoken }),
-        );
-      else localStorage.removeItem(key);
-    } catch {}
-  }, [answer, spoken, verdict, card?.id, session.id]);
   function act(fn: () => Promise<void>) {
     if (lock.current) return;
     lock.current = true;
@@ -293,6 +259,12 @@ export function FlashcardRunner({
       removePersistRating(item.sessionId, item.cardId);
     }
   }
+  function stopSpeech() {
+    speech.current?.stop();
+    speech.current = null;
+    if (silence.current) clearTimeout(silence.current);
+    setListening(false);
+  }
   async function finish() {
     if (finished) return;
     stopSpeech();
@@ -303,7 +275,6 @@ export function FlashcardRunner({
     router.refresh();
   }
   async function advance(mark: FlashcardMark) {
-    setWelcome(false);
     if (!card) return;
     const next = nextQueue(
       queue,
@@ -325,7 +296,6 @@ export function FlashcardRunner({
     if (!next.length) await finish();
   }
   async function rate(mark: FlashcardMark) {
-    setWelcome(false);
     setAnnouncement(
       mark === 1 ? "Knew it" : mark === 0.5 ? "Mostly" : "Missed it",
     );
@@ -448,19 +418,13 @@ export function FlashcardRunner({
     }
   }
 
-  const resumed = useRef(false);
+  const emptyChecked = useRef(false);
   useEffect(() => {
-    if (resumed.current) return;
-    resumed.current = true;
+    if (emptyChecked.current) return;
+    emptyChecked.current = true;
     if (!queue.length) act(finish);
   });
 
-  function stopSpeech() {
-    speech.current?.stop();
-    speech.current = null;
-    if (silence.current) clearTimeout(silence.current);
-    setListening(false);
-  }
   function mic() {
     if (listening) {
       stopSpeech();
@@ -520,7 +484,6 @@ export function FlashcardRunner({
     }
   }
   async function skip() {
-    setWelcome(false);
     stopSpeech();
     const next = skipQueue(queue);
     setQueue(next);
@@ -726,8 +689,7 @@ export function FlashcardRunner({
       busy={busy}
       onExit={() =>
         act(async () => {
-          stopSpeech();
-          await saveTime();
+          await finish();
           router.push("/student/flashcards");
         })
       }
@@ -740,11 +702,6 @@ export function FlashcardRunner({
       <div className="mx-auto grid max-w-[680px] gap-5">
         {offline && (
           <p role="status">{"You're offline. We'll save when you're back."}</p>
-        )}
-        {welcome && (
-          <p role="status" className="sr-only">
-            Welcome back, {left} {left === 1 ? "card" : "cards"} left
-          </p>
         )}
         <div className="flex items-center justify-between gap-3">
           <ToggleGroup
@@ -964,14 +921,14 @@ export function FlashcardRunner({
       >
         <DialogContent>
           <DialogTitle>Sign in to continue</DialogTitle>
-          <p>Your answer is saved in this browser.</p>
+          <p>Your ratings so far are saved.</p>
           <Button render={<Link href="/sign-in" />}>Sign in</Button>
         </DialogContent>
       </Dialog>
       <Dialog open={exit} onOpenChange={setExit}>
         <DialogContent>
           <DialogTitle>Save and exit?</DialogTitle>
-          <p>You can continue this deck from Home.</p>
+          <p>This deck ends here. Your ratings so far are saved.</p>
           <Button onClick={() => setExit(false)} variant="outline">
             Keep working
           </Button>
@@ -979,8 +936,7 @@ export function FlashcardRunner({
             disabled={busy}
             onClick={() =>
               act(async () => {
-                stopSpeech();
-                await saveTime();
+                await finish();
                 router.push("/student/flashcards");
               })
             }

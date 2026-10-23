@@ -59,18 +59,20 @@ test.describe("Student practice", () => {
       page.getByText("Your answer", { exact: true }).first(),
     ).toBeVisible();
   });
-  test("exit and resume at the first unanswered question", async ({ page }) => {
+  test("exit asks first and ends the sprint (no resume)", async ({ page }) => {
     const id = await start(page, "Multiple choice", ids);
     await pick(page, "A");
-    await page
-      .getByRole("button", { name: "Save and exit", exact: true })
-      .click();
-    await expect(page).toHaveURL(/\/student$/);
-    await page.locator(`a[href="/student/sprint/${id}"]`).click();
-    await expect(page).toHaveURL(new RegExp(`/student/sprint/${id}$`));
-    await expect(page.getByText(/^Q 2 of \d+$/)).toBeVisible();
-    await page.getByRole("button", { name: "Previous question" }).click();
-    await expect(page.getByRole("radio", { name: /^Option A:/ })).toBeChecked();
+    await page.getByRole("button", { name: "Exit sprint" }).click();
+    const dialog = page.getByRole("alertdialog", {
+      name: "Leave this sprint?",
+    });
+    await expect(dialog).toContainText(
+      "Leaving ends this sprint. Your answered questions will be marked.",
+    );
+    await dialog.getByRole("button", { name: "Leave and mark" }).click();
+    await expect(page).toHaveURL(new RegExp(`/student/activity/${id}$`));
+    await page.goto(`/student/sprint/${id}`);
+    await expect(page).toHaveURL(new RegExp(`/student/activity/${id}$`));
   });
   test("activity kind filter links to the finished sprint", async ({
     page,
@@ -128,7 +130,11 @@ test.describe("AI backed written practice", () => {
       .update({ question_id: "2024-q22a" }) // Outline ONE cause of inflation in Australia. (2)
       .eq("id", first.id)
       .throwOnError();
+    // No resume: a real reload ends the sprint, so simulate a lost tab instead.
+    await page.route("**/api/sessions/*/finish", (route) => route.abort());
+    await page.addInitScript(() => sessionStorage.clear());
     await page.reload();
+    await page.unroute("**/api/sessions/*/finish");
     await expect(
       page.getByText("Outline ONE cause of inflation in Australia."),
     ).toBeVisible();
@@ -167,9 +173,11 @@ test.describe("AI backed written practice", () => {
       .getByRole("button", { name: "Confirm transcript", exact: true })
       .click();
     await expect(page.getByText("Transcript confirmed.")).toBeVisible();
+    await page.getByRole("button", { name: "Exit sprint" }).click();
     await page
-      .getByRole("button", { name: "Save and exit", exact: true })
+      .getByRole("alertdialog", { name: "Leave this sprint?" })
+      .getByRole("button", { name: "Leave and mark" })
       .click();
-    await expect(page).toHaveURL(/\/student$/);
+    await expect(page).toHaveURL(/\/student\/activity\//);
   });
 });

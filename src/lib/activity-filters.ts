@@ -40,7 +40,7 @@ export function parseActivityFilters(params: SearchParams, today: string) {
   const page = Number(one(params.page));
   return {
     kind: pick("kind", Object.keys(kindLabels)),
-    status: pick("status", ["progress", "marking", "finished", "provisional"]),
+    status: pick("status", ["marking", "finished", "provisional"]),
     topic: one(params.topic).slice(0, 100),
     q: one(params.q).trim().slice(0, 200),
     sort: pick("sort", ["newest", "oldest", "highest", "lowest"], "newest"),

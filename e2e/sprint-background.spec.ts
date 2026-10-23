@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Locator, type Page } from "@playwright/test";
 import { build } from "esbuild";
 
 // Render the real runner with synthetic auth/storage. All marking/finish HTTP is
@@ -35,9 +35,8 @@ test.beforeAll(async () => {
     stdin: {
       contents: `import React from 'react'; import { createRoot } from 'react-dom/client';
       import { SprintRunner } from './src/components/sprint-runner';
-      import { FinishSprint } from './src/components/finish-sprint';
       import { MarkMyAnswer } from './src/components/mark-my-answer';
-      createRoot(document.getElementById('root')).render(location.pathname === '/__mark-test' ? <MarkMyAnswer questions={[{id:'q',type:'short',stem:'Explain inflation.',marks:4,source:'Synthetic',year:2025,topic_id:'t',stimulus:null,options:null,verb:'explain'}]} topics={[]} userId='synthetic' left={20}/> : location.pathname === '/__finish-test' ? <FinishSprint id='s'/> : <SprintRunner
+      createRoot(document.getElementById('root')).render(location.pathname === '/__mark-test' ? <MarkMyAnswer questions={[{id:'q',type:'short',stem:'Explain inflation.',marks:4,source:'Synthetic',year:2025,topic_id:'t',stimulus:null,options:null,verb:'explain'}]} topics={[]} userId='synthetic' left={20}/> : <SprintRunner
         session={{id:'s',kind:'sprint',config:{mode:'short',feedback:'end'},elapsed_s:0}}
         initial={${JSON.stringify(attempts)}} userId="u" title="Synthetic sprint" />);`,
       resolveDir: process.cwd(),
@@ -175,64 +174,79 @@ test("queues background marks, keeps edits usable, and waits at Finish", async (
   await expect(page.getByText("Synthetic results")).toBeVisible();
 });
 
-for (const outcome of ["success", "error", "recovered", "network"] as const) {
-  test(`banner Finish: ${outcome}`, async ({ page }) => {
-    let release!: () => Promise<void>;
-    let calls = 0;
-    await page.route("**/api/sessions/s/finish", (route) => {
-      calls++;
-      return new Promise<void>((resolve) => {
-        release = async () => {
-          if (outcome === "network") await route.abort("failed");
-          else
-            await route.fulfill({
-              status: outcome === "success" ? 200 : 500,
-              json:
-                outcome === "success"
-                  ? { finished: true }
-                  : { error: "Answers changed while finishing" },
-            });
-          resolve();
-        };
-      });
-    });
-    await page.route("**/student/activity/s", (route) =>
-      route.fulfill({ contentType: "text/html", body: "Synthetic results" }),
-    );
-    await page.route("**/__finish-test", (route) =>
-      route.fulfill({
-        contentType: "text/html",
-        body: '<!doctype html><div id="root"></div>',
-      }),
-    );
-    await page.goto("/__finish-test");
-    if (outcome === "recovered")
-      await page.evaluate(() => {
-        Object.assign(window, { __finished: true });
-      });
-    await page.addScriptTag({ content: runner });
-    await page
-      .getByRole("button", { name: "Finish and mark", exact: true })
-      .focus();
-    await page.keyboard.press("Enter");
-    await expect(page.getByRole("button")).toBeDisabled();
-    await expect.poll(() => calls).toBe(1);
-    await release();
-    if (outcome === "success" || outcome === "recovered") {
-      await expect(page).toHaveURL(/\/student\/activity\/s$/);
-    } else {
-      await expect(page.getByRole("alert")).toContainText(
-        outcome === "network"
-          ? "Failed to fetch"
-          : "Answers changed while finishing",
-      );
-      await expect(page.getByRole("button")).toBeEnabled();
-      await expect(
-        page.getByRole("link", { name: "View results" }),
-      ).toHaveAttribute("href", "/student/activity/s");
-    }
+const LEAVE =
+  "Leaving ends this sprint. Your answered questions will be marked.";
+
+// No resume: leaving an active sprint asks first, and confirming finishes it.
+async function openGuarded(page: Page, finished: { calls: number }) {
+  await page.route("**/api/attempts/**", (route) =>
+    route.fulfill({ json: { saved: true, status: "marked" } }),
+  );
+  await page.route("**/api/sessions/s/finish", async (route) => {
+    finished.calls++;
+    await route.fulfill({ json: { finished: true } });
   });
+  await page.route("**/student/activity/s", (route) =>
+    route.fulfill({ contentType: "text/html", body: "Synthetic results" }),
+  );
+  await page.route("**/__leave-guard", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: '<!doctype html><a href="/student">Synthetic home</a><div id="root"></div>',
+    }),
+  );
+  await page.goto("/__leave-guard");
+  await page.addScriptTag({ content: runner });
+  await page.getByRole("textbox", { name: "Your answer" }).fill("Answered");
 }
+
+// The harness has no stylesheet, so the dialog backdrop overlaps its buttons: use the keyboard.
+async function press(button: Locator) {
+  await button.focus();
+  await button.press("Enter");
+}
+
+test("Exit asks first; Keep working stays, Leave and mark finishes", async ({
+  page,
+}) => {
+  const finished = { calls: 0 };
+  await openGuarded(page, finished);
+  await page.getByRole("button", { name: "Exit sprint" }).click();
+  const dialog = page.getByRole("alertdialog", { name: "Leave this sprint?" });
+  await expect(dialog).toContainText(LEAVE);
+  await press(dialog.getByRole("button", { name: "Keep working" }));
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(/__leave-guard$/);
+  expect(finished.calls).toBe(0);
+  await page.getByRole("button", { name: "Exit sprint" }).click();
+  await press(dialog.getByRole("button", { name: "Leave and mark" }));
+  await expect.poll(() => finished.calls).toBe(1);
+  await expect(page).toHaveURL(/\/student\/activity\/s$/);
+});
+
+test("in-app links and Back ask before leaving", async ({ page }) => {
+  const finished = { calls: 0 };
+  await openGuarded(page, finished);
+  const dialog = page.getByRole("alertdialog", { name: "Leave this sprint?" });
+  await page.getByRole("link", { name: "Synthetic home" }).click();
+  await expect(dialog).toContainText(LEAVE);
+  await expect(page).toHaveURL(/__leave-guard$/);
+  await press(dialog.getByRole("button", { name: "Keep working" }));
+  await page.goBack();
+  await expect(dialog).toContainText(LEAVE);
+  await expect(page).toHaveURL(/__leave-guard$/);
+  expect(finished.calls).toBe(0);
+});
+
+test("closing the tab asks with the browser prompt", async ({ page }) => {
+  const finished = { calls: 0 };
+  await openGuarded(page, finished);
+  const prompt = page.waitForEvent("dialog");
+  await page.close({ runBeforeUnload: true });
+  const dialog = await prompt;
+  expect(dialog.type()).toBe("beforeunload");
+  await dialog.dismiss();
+});
 
 for (const outcome of ["error", "recovered", "network"] as const)
   test(`runner Finish recovery: ${outcome}`, async ({ page }) => {

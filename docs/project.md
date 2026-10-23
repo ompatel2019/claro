@@ -254,6 +254,16 @@ Validation: `Q_MIN_GB=3 Q_SLOTS=1 q-run npm run check`; offline browser coverage
 - Results page stuck blank after marking (follow-up to the above): in exam mode (`feedback: end`) the in-progress state holds until `finished_at` is set, but the progress card only polled while an answer was still `marking`, so a second tab went blank once all answers were marked and stayed so until manual reload. The in-progress card now keeps refreshing (every 2 s, 5 s after 30 s, stopping after 10 min) until the server render is no longer in progress, refreshes immediately when marked reaches total, and shows "Finishing your results…". If every answer is marked but `finished_at` is still unset after 15 s (marking tab closed), the page calls the existing idempotent `POST /api/sessions/[id]/finish` once, which finalises the session. No schema change. Tests: Vitest (`marking-progress.test.tsx`) and offline Playwright (`sprint-feedback.spec.ts` with timed mock sessions 0007/0008 in `e2e/sprint-results-mock.mjs`).
 - Admin flashcards Add, Edit and Move dialogs: review found the single "Topic · Subtopic" list was ordered by raw `sort`, which restarts per topic, so subtopics from different topics interleaved. `subtopicOptions` now groups them by topic order. Selecting, saving and moving were otherwise correct (server validates a subtopic). Covered by Vitest (ordering, Add save, Edit save/change topic, Move); the admin page needs the service role, so no offline Playwright exists for it, and no production data was written to verify.
 
+## Iteration 3 — no session resume
+
+Sessions can't be resumed. The unfinished-sprint banner, Activity's In progress filter, Resume link and Unfinished sessions list, Home's Continue action, the flashcard resume queue and Mark my answer drafts (and its Draft pill) are removed; `src/lib/no-resume-guard.test.ts` keeps them removed. Spaced-repetition scheduling is unchanged.
+
+- Leave guard: while a sprint is active, Exit, in-app links and Back open the "Leave this sprint?" dialog ("Leaving ends this sprint. Your answered questions will be marked."). Leave and mark runs the normal Finish and opens results. Reload or tab close shows the browser's own prompt; a confirmed unload finishes the sprint with a beacon to `POST /api/sessions/[id]/finish` once every answer is saved. If an answer is still saving, the unload never finishes early. A reload then saves the restored draft and finishes; otherwise the 30-minute sweep does. Flashcard Exit finishes the deck.
+- Auto-finish: starting a sprint, deck or Mark my answer check finishes the student's earlier open sprints and decks after the response, only those started before the new session (`finishOpenSessions` in `src/lib/session-finish.ts`, service role, always filtered by the student's own `user_id`, same AI allowance checks as the finish route). There is no scheduler in this repo (no cron in `vercel.json`), so the 30-minute inactivity sweep is lazy: every signed-in app page finishes that student's idle sessions after the response, and opening an idle sprint or deck finishes it and shows results.
+- Last activity is `public.session_last_active_at(session)` (migration `0084_session_last_active.sql`): the latest of start + saved time, a marked answer, or a flashcard rating. `activity_stats` now counts finished sessions only.
+- Unanswered questions score 0 and show Not answered on results (existing engine rules).
+- Backfill: `supabase/backfills/0084_finish_open_sessions.sql` is run by hand after the migration and never auto-runs. It finishes idle sessions that need no AI and rolls back unless edited to commit. Sprints with written answers to mark are left for the app's lazy sweep.
+
 ## Mixed allocation contract
 
 The two inputs are `mcq_count` and `short_marks`; their sum is `target`. Zero is
@@ -335,7 +345,7 @@ logged usage rather than atomic reservations.
 ## Additional contracts
 
 The S keyboard shortcut and first-visit welcome flow remain. Activity lists
-unfinished sessions and uses canonical report links. Historical lane descriptions
+finished sessions only and uses canonical report links. Historical lane descriptions
 of a four-tile Home, rotating daily line and standalone resume card are superseded
 by the current Home sections described above.
 

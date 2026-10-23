@@ -3,6 +3,12 @@ const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   requireProfile: vi.fn(),
   redirect: vi.fn(),
+  after: vi.fn(),
+  finishOpenSessions: vi.fn(),
+}));
+vi.mock("next/server", () => ({ after: mocks.after }));
+vi.mock("@/lib/session-finish", () => ({
+  finishOpenSessions: mocks.finishOpenSessions,
 }));
 vi.mock("@/lib/auth", () => ({ requireProfile: mocks.requireProfile }));
 vi.mock("@/utils/supabase/server", () => ({
@@ -19,7 +25,17 @@ const form = (config: unknown) => {
 };
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.requireProfile.mockResolvedValue({ id: "synthetic-student" });
   mocks.rpc.mockResolvedValue({ data: "synthetic-session", error: null });
+});
+it("finishes the student's other open sessions after starting (no resume)", async () => {
+  await startSprint({}, form(DEFAULTS));
+  expect(mocks.after).toHaveBeenCalledOnce();
+  expect(mocks.finishOpenSessions).not.toHaveBeenCalled();
+  await mocks.after.mock.calls[0][0]();
+  expect(mocks.finishOpenSessions).toHaveBeenCalledWith("synthetic-student", {
+    keep: "synthetic-session",
+  });
 });
 it("rejects essay mode before selection", async () => {
   expect(
@@ -47,6 +63,7 @@ it.each([
   mocks.rpc.mockResolvedValue({ error: { message } });
   expect(await startSprint({}, form(DEFAULTS))).toEqual({ error });
   expect(mocks.redirect).not.toHaveBeenCalled();
+  expect(mocks.after).not.toHaveBeenCalled();
 });
 it("rejects unreadable settings and authenticates first", async () => {
   const f = new FormData();

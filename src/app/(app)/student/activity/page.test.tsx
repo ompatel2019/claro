@@ -76,6 +76,9 @@ function responses(
       in() {
         return this;
       },
+      not() {
+        return this;
+      },
       is() {
         return this;
       },

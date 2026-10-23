@@ -120,7 +120,6 @@ export function ActivityBrowser({
             label: "Status",
             all: "Any status",
             options: [
-              { value: "progress", label: "In progress" },
               { value: "marking", label: "Marking" },
               { value: "finished", label: "Finished" },
               { value: "provisional", label: "Has provisional marks" },

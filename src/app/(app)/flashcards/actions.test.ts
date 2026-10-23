@@ -6,9 +6,13 @@ vi.mock("next/navigation", () => ({
     throw new Error(`redirect:${url}`);
   }),
 }));
+vi.mock("@/lib/session-finish", () => ({ finishOpenSessions: vi.fn() }));
+vi.mock("next/server", () => ({ after: vi.fn() }));
 vi.mock("@/lib/auth", () => ({ requireProfile: vi.fn() }));
 vi.mock("@/utils/supabase/server", () => ({ createClient: vi.fn() }));
 import { requireProfile } from "@/lib/auth";
+import { after } from "next/server";
+import { finishOpenSessions } from "@/lib/session-finish";
 import { createClient } from "@/utils/supabase/server";
 import { drainPersistRating, rateFlashcard, startFlashcards } from "./actions";
 function query(data: unknown, error: unknown = null) {
@@ -90,6 +94,9 @@ it("starts a default study deck without legacy mode, type or topic fields", asyn
     kinds: ["term", "stat"],
   });
   expect(session.insert.mock.calls[0][0].config.card_ids).toHaveLength(20);
+  // No resume: the student's other open sessions are finished after the response.
+  await (vi.mocked(after).mock.calls[0][0] as () => Promise<unknown>)();
+  expect(finishOpenSessions).toHaveBeenCalledWith("user", { keep: sessionId });
 });
 it("keeps the home due path and filters out future progress", async () => {
   const session = query({ id: sessionId });

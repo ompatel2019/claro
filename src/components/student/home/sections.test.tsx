@@ -113,6 +113,7 @@ it("counts fully known reviews only for the finished flashcard sessions in the r
     select: vi.fn().mockReturnThis(),
     eq: vi.fn().mockReturnThis(),
     in: vi.fn().mockReturnThis(),
+    not: vi.fn().mockReturnThis(),
     order: vi.fn().mockReturnThis(),
     limit: vi.fn().mockResolvedValue({ data: rows }),
   };
@@ -123,6 +124,8 @@ it("counts fully known reviews only for the finished flashcard sessions in the r
     { ...rows[0], recall: { knew: 1, total: 3 } },
   ]);
   expect(sessions.limit).toHaveBeenCalledWith(3);
+  // No resume: open sessions never reach Home.
+  expect(sessions.not).toHaveBeenCalledWith("finished_at", "is", null);
   expect(sessions.eq).toHaveBeenCalledWith("user_id", "student");
   expect(reviews.eq).toHaveBeenCalledWith("user_id", "student");
   expect(reviews.in).toHaveBeenCalledWith("session_id", ["cards"]);
@@ -240,7 +243,7 @@ it("shows weekly activity from cards as well as questions, and an honest marks-o
   );
   expect(screen.getByRole("meter")).toHaveAttribute("aria-valuenow", "30");
 });
-it("preserves mark states, unfinished routes, and recall without inventing a mark", async () => {
+it("preserves mark states and recall without inventing a mark, and never offers Continue", async () => {
   mocks.from.mockReturnValue({
     select: () => ({ order: async () => ({ data: [topic] }) }),
   });
@@ -276,19 +279,16 @@ it("preserves mark states, unfinished routes, and recall without inventing a mar
           finished_at: "2026-10-01T01:00:00Z",
           recall: { knew: 2, total: 3 },
         },
-        session,
       ]),
     }),
   );
-  for (const label of ["Earned", "Missed", "Continue", "knew"])
+  for (const label of ["Earned", "Missed", "knew"])
     expect(screen.getByText(label)).toBeVisible();
   expect(screen.getAllByText("Partly there")).toHaveLength(2);
   expect(screen.getByRole("link", { name: /2\/3knew/ })).toHaveAttribute(
     "href",
     "/student/flashcards/recall",
   );
-  expect(screen.getByRole("link", { name: /Continue/ })).toHaveAttribute(
-    "href",
-    "/student/sprint/old-open",
-  );
+  expect(screen.queryByText("Continue")).toBeNull();
+  expect(screen.queryByRole("link", { name: /Continue/ })).toBeNull();
 });

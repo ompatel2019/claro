@@ -126,22 +126,27 @@ it("flips, recycles missed cards and finishes without any AI request", async () 
     expect.objectContaining({ method: "POST" }),
   );
 });
-it("resumes with only cards whose latest rating is below one", () => {
+it("never resumes: a reopened deck starts at its first card with no welcome back", () => {
   const reviews = [
     { flashcard_id: "a", mark: 1 },
     { flashcard_id: "b", mark: 0.5 },
   ] as FlashcardReview[];
+  localStorage.setItem(
+    "claro.flashcard.draft.session",
+    JSON.stringify({ cardId: "a", answer: "Saved answer", spoken: true }),
+  );
   render(
     <FlashcardRunner
-      session={session}
+      session={{ ...session, config: { ...session.config, mode: "test" } }}
       cards={cards}
       reviews={reviews}
       topics={[]}
       deckName="Deck"
     />,
   );
-  expect(screen.getByRole("heading", { name: "Deflation" })).toBeVisible();
-  expect(screen.getByText("Card 2 of 2")).toBeVisible();
+  expect(screen.getByText("Card 1 of 2")).toBeVisible();
+  expect(screen.getByRole("textbox")).toHaveValue("");
+  expect(screen.queryByText(/Welcome back/)).toBeNull();
 });
 it("checks one typed answer, displays the verdict and can finish immediately", async () => {
   fetchMock.mockResolvedValueOnce({
@@ -440,7 +445,7 @@ it("renders speech interim text, stops after silence and submits spoken mode", a
     answer: cards[0].back,
   });
 });
-it("opens the exit dialog with Escape and saves back to Flashcards", async () => {
+it("opens the exit dialog with Escape, ends the deck and returns to Flashcards", async () => {
   render(
     <FlashcardRunner
       session={session}
@@ -452,28 +457,17 @@ it("opens the exit dialog with Escape and saves back to Flashcards", async () =>
   );
   fireEvent.keyDown(window, { key: "Escape" });
   const dialog = await screen.findByRole("dialog");
+  expect(dialog).toHaveTextContent("This deck ends here.");
   fireEvent.click(
     within(dialog).getByRole("button", { name: "Save and exit" }),
   );
   await waitFor(() => expect(push).toHaveBeenCalledWith("/student/flashcards"));
+  expect(fetchMock).toHaveBeenCalledWith(
+    "/api/sessions/session/finish",
+    expect.objectContaining({ method: "POST" }),
+  );
 });
 
-it("restores an unsaved spoken answer after reopening the session", () => {
-  localStorage.setItem(
-    "claro.flashcard.draft.session",
-    JSON.stringify({ cardId: "a", answer: "Saved answer", spoken: true }),
-  );
-  render(
-    <FlashcardRunner
-      session={{ ...session, config: { ...session.config, mode: "test" } }}
-      cards={cards}
-      reviews={[]}
-      topics={[]}
-      deckName="Deck"
-    />,
-  );
-  expect(screen.getByRole("textbox")).toHaveValue("Saved answer");
-});
 it.each([
   "not-allowed",
   "service-not-allowed",
@@ -651,22 +645,6 @@ it("does not roll back a saved rating when saving time fails", async () => {
   expect(screen.getByRole("heading", { name: "Deflation" })).toBeVisible();
   expect(loadPersistQueue()).toEqual([]);
   expect(screen.queryByRole("alert")).toBeNull();
-});
-it.each(["s", "3"])("dismisses the welcome message on %s", async (key) => {
-  render(
-    <FlashcardRunner
-      session={session}
-      cards={cards}
-      reviews={[{ flashcard_id: "a", mark: 0 }] as FlashcardReview[]}
-      topics={[]}
-      deckName="Deck"
-    />,
-  );
-  expect(screen.getByText("Welcome back, 2 cards left")).toBeInTheDocument();
-  if (key === "3")
-    fireEvent.click(screen.getByRole("button", { name: "Flip card" }));
-  fireEvent.keyDown(window, { key });
-  await waitFor(() => expect(screen.queryByText(/Welcome back/)).toBeNull());
 });
 it("keeps the verdict live region mounted and exposes disagreement expansion", async () => {
   fetchMock.mockResolvedValueOnce({

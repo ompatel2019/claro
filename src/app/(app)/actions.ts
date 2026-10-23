@@ -1,12 +1,14 @@
 "use server";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { z } from "zod";
 import { createClient as createAuthClient } from "@supabase/supabase-js";
 import { clientEnv } from "@/env/client";
 import { profileSchema, passwordSchema } from "@/lib/profile";
 import { welcomeProfileSchema } from "@/lib/welcome";
 import { requireProfile } from "@/lib/auth";
+import { finishOpenSessions } from "@/lib/session-finish";
 import { createClient } from "@/utils/supabase/server";
 export type FormState = {
   error?: string;
@@ -71,7 +73,7 @@ export async function startSprint(
   _: FormState,
   form: FormData,
 ): Promise<FormState> {
-  await requireProfile();
+  const profile = await requireProfile();
   let raw: unknown;
   try {
     raw = JSON.parse(String(form.get("config")));
@@ -92,6 +94,8 @@ export async function startSprint(
           ? "Check your sprint settings."
           : "Try again.",
     };
+  // No resume: starting a session finishes the student's other open ones.
+  after(() => finishOpenSessions(profile.id, { keep: String(data) }));
   redirect(`/student/sprint/${data}`);
 }
 export async function saveProfile(
