@@ -251,10 +251,7 @@ it("keeps one line per point with its question links on the right", () => {
     "#q-3",
   );
   const fix = screen.getByText(/^Q4 and Q5: link hours/);
-  expect(fix).toHaveClass(
-    "sm:truncate",
-    "sm:group-focus-within:whitespace-normal",
-  );
+  expect(fix).toHaveClass("sm:truncate");
   expect(fix).toHaveAttribute("title", fix.textContent);
   expect(
     Array.from(fix.closest("li")!.querySelectorAll("a"), (a) =>
@@ -301,7 +298,7 @@ it("keeps unanswered MC rows distinct from incorrect answers in sprint tiles and
   const unanswered = screen.getByRole("button", {
     name: "Question 1, 0/1 marks, Not answered",
   });
-  expect(unanswered).toHaveTextContent("—");
+  expect(unanswered).toHaveTextContent(/^Q1$/);
   expect(unanswered.querySelector("svg")).toBeTruthy();
   // Q1 is open (the first lost mark), so its colour is brand-soft; Q2 shows dropped marks.
   expect(unanswered).toHaveAttribute("aria-current", "true");

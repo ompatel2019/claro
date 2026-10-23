@@ -40,3 +40,12 @@ it("still formats maths that follows an opening bracket", () => {
     "Real GDP (840 ÷ 105 × 100 = 800)",
   );
 });
+
+it("never pulls a unit across a line break", () => {
+  expect(formatSampleMaths("Total is 2*3 = 6\nm is the multiplier.")).toBe(
+    "Total is 2 × 3 = 6\nm is the multiplier.",
+  );
+  expect(formatSampleMaths("840/105 x 100 = 800 m.")).toBe(
+    "840 ÷ 105 × 100 = 800m.",
+  );
+});

@@ -15,6 +15,7 @@ import { cn } from "@/lib/utils";
 import { isTyping } from "./session-shell";
 import { StatusPill, type Pill } from "./status-pill";
 import { Toggle } from "./ui/toggle";
+import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import {
   Table,
   TableBody,
@@ -406,91 +407,93 @@ function SprintAnswers({
         className="flex scroll-mt-20 flex-wrap items-end justify-between gap-3"
       >
         <h2 className="text-xl font-[650] tracking-tight">Your answers</h2>
-        <div role="group" aria-label="Show questions as" className="flex gap-1">
-          {(
-            [
-              ["Review", false, undefined],
-              ["Table", true, "Table view"],
-            ] as const
-          ).map(([text, value, aria]) => (
-            <button
-              key={text}
-              type="button"
-              aria-label={aria}
-              aria-pressed={table === value}
-              onClick={() => setTable(value)}
-              className="text-muted-foreground hover:text-foreground aria-pressed:border-foreground aria-pressed:text-foreground focus-visible:ring-ring h-9 border-b-2 border-transparent px-2.5 text-sm font-semibold outline-none focus-visible:ring-2"
-            >
-              {text}
-            </button>
-          ))}
-        </div>
+        <ToggleGroup
+          aria-label="Show questions as"
+          className="bg-muted rounded-full p-0.5"
+          size="sm"
+          variant="default"
+          value={[table ? "table" : "review"]}
+          onValueChange={(v) => v[0] && setTable(v[0] === "table")}
+        >
+          <ToggleGroupItem value="review">Review</ToggleGroupItem>
+          <ToggleGroupItem value="table" aria-label="Table view">
+            Table
+          </ToggleGroupItem>
+        </ToggleGroup>
       </div>
       {table ? (
         <div className="space-y-4">
           {mcTable}
-          <Table
-            aria-label="Questions"
-            className="bg-card border-foreground [&_td]:border-foreground [&_th]:border-foreground border-collapse border [&_td]:border [&_th]:border"
-          >
-            <TableHeader>
-              <TableRow>
-                {["Question", "Topic", "Source", "Mark", "Result"].map((h) => (
-                  <TableHead key={h} scope="col" className="text-foreground">
-                    {h}
-                  </TableHead>
-                ))}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((it, i) => {
-                const state = it.state ?? "pending";
-                return (
-                  <TableRow
-                    key={i}
-                    data-open={i === index || undefined}
-                    className="data-open:[&_td]:bg-brand-soft cursor-pointer"
-                    onClick={() => setIndex(i)}
-                  >
-                    <TableCell className="w-px whitespace-nowrap">
-                      <button
-                        type="button"
-                        aria-label={label(it, i)}
-                        aria-current={i === index ? "true" : undefined}
-                        className="font-semibold underline underline-offset-3"
+          <div className="bg-card shadow-card overflow-hidden rounded-xl border">
+            <Table
+              aria-label="Questions"
+              className="[&_td]:border-foreground/70 [&_th]:border-foreground/70 border-collapse [&_tbody_tr:last-child>td]:border-b-0 [&_td]:border [&_th]:border [&_tr:first-child>*]:border-t-0 [&_tr>*:first-child]:border-l-0 [&_tr>*:last-child]:border-r-0"
+            >
+              <TableHeader>
+                <TableRow>
+                  {["Question", "Topic", "Source", "Mark", "Result"].map(
+                    (h) => (
+                      <TableHead
+                        key={h}
+                        scope="col"
+                        className="text-foreground"
                       >
-                        Q{it.position ?? i + 1}
-                      </button>
-                    </TableCell>
-                    <TableCell>{it.topic}</TableCell>
-                    <TableCell>{it.source}</TableCell>
-                    <TableCell className="w-px font-semibold whitespace-nowrap">
-                      {shown(it)}
-                    </TableCell>
-                    <TableCell>
-                      <span className="flex flex-wrap items-center gap-2">
-                        <span
-                          aria-hidden
-                          className={cn(
-                            "size-2.5 rounded-[1px]",
-                            RESULT_SWATCH[state],
-                          )}
-                        />
-                        {/* A terminal status pill ("Couldn't mark") already says it. */}
-                        {!(state === "unmarked" && it.pill) &&
-                          RESULT_WORD[state]}
-                        {it.pill &&
-                          it.pill !== "Marked" &&
-                          it.pill !== "Not answered" && (
-                            <StatusPill pill={it.pill} />
-                          )}
-                      </span>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                        {h}
+                      </TableHead>
+                    ),
+                  )}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {items.map((it, i) => {
+                  const state = it.state ?? "pending";
+                  return (
+                    <TableRow
+                      key={i}
+                      data-open={i === index || undefined}
+                      className="data-open:[&_td]:bg-brand-soft cursor-pointer"
+                      onClick={() => setIndex(i)}
+                    >
+                      <TableCell className="w-px whitespace-nowrap">
+                        <button
+                          type="button"
+                          aria-label={label(it, i)}
+                          aria-current={i === index ? "true" : undefined}
+                          className="font-semibold underline underline-offset-3"
+                        >
+                          Q{it.position ?? i + 1}
+                        </button>
+                      </TableCell>
+                      <TableCell>{it.topic}</TableCell>
+                      <TableCell>{it.source}</TableCell>
+                      <TableCell className="w-px font-semibold whitespace-nowrap">
+                        {shown(it)}
+                      </TableCell>
+                      <TableCell>
+                        <span className="flex flex-wrap items-center gap-2">
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "size-2.5 rounded-full",
+                              RESULT_SWATCH[state],
+                            )}
+                          />
+                          {/* A terminal status pill ("Couldn't mark") already says it. */}
+                          {!(state === "unmarked" && it.pill) &&
+                            RESULT_WORD[state]}
+                          {it.pill &&
+                            it.pill !== "Marked" &&
+                            it.pill !== "Not answered" && (
+                              <StatusPill pill={it.pill} />
+                            )}
+                        </span>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       ) : (
         <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
@@ -506,21 +509,19 @@ function SprintAnswers({
                     aria-current={i === index ? "true" : undefined}
                     onClick={() => setIndex(i)}
                     className={cn(
-                      "focus-visible:ring-ring grid h-14 w-[72px] grid-cols-[1fr_auto] content-between rounded-sm px-2.5 pt-1.5 pb-1.5 text-left outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+                      "focus-visible:ring-ring inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold tabular-nums transition-colors outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
                       i === index ? RESULT_TILE.open : RESULT_TILE[state],
                     )}
                   >
-                    <span className="text-[13px] leading-[18px] font-[650]">
-                      Q{it.position ?? i + 1}
-                    </span>
+                    <span>Q{it.position ?? i + 1}</span>
                     <PortalIcon
                       name={RESULT_ICON[state]}
                       aria-hidden
-                      className="mt-px size-4"
+                      className="size-3.5"
                     />
-                    <span className="col-span-full text-base leading-5 font-bold tabular-nums">
-                      {shown(it)}
-                    </span>
+                    {state !== "not_answered" && (
+                      <span className="font-bold">{shown(it)}</span>
+                    )}
                   </button>
                 </li>
               );
@@ -534,7 +535,7 @@ function SprintAnswers({
               <li key={text} className="flex items-center gap-1.5">
                 <span
                   aria-hidden
-                  className={cn("size-2.5 rounded-[1px]", swatch)}
+                  className={cn("size-2.5 rounded-full", swatch)}
                 />
                 {text}
               </li>
@@ -545,7 +546,7 @@ function SprintAnswers({
       <div key={index}>{view}</div>
       <nav
         aria-label="Previous and next question"
-        className="bg-card grid grid-cols-2 divide-x rounded-sm border"
+        className="grid grid-cols-2 gap-3"
       >
         {near.map((i, side) =>
           i === undefined ? (
@@ -561,7 +562,7 @@ function SprintAnswers({
                   ?.scrollIntoView({ block: "start" });
               }}
               className={cn(
-                "hover:bg-muted focus-visible:ring-ring flex min-w-0 items-center gap-3 px-4 py-3 outline-none focus-visible:ring-2",
+                "bg-card shadow-card hover:bg-muted/50 focus-visible:ring-ring flex min-w-0 items-center gap-3 rounded-xl border px-4 py-3 transition-colors outline-none focus-visible:ring-2",
                 side ? "justify-end text-right" : "text-left",
               )}
             >

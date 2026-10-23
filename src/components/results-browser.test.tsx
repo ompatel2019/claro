@@ -184,7 +184,7 @@ it("draws sprint tiles from the result state, with the open tile in brand-soft",
   expect(tile(2)).toHaveAttribute("aria-current", "true");
   expect(tile(2)).toHaveTextContent("1.5/4");
   expect(tile(3)).toHaveClass("bg-muted");
-  expect(tile(3)).toHaveTextContent("—");
+  expect(tile(3)).toHaveTextContent(/^Q3$/);
   for (const n of [1, 2, 3, 4]) {
     expect(tile(n).querySelector("svg")).toBeTruthy();
     expect(tile(n).className).not.toMatch(/(^|\s)ring-/);

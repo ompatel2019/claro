@@ -5,7 +5,7 @@
 const NUM = String.raw`\$?\d[\d,]*(?:\.\d+)?%?`;
 const OP = String.raw`(?:\s*[/*×÷+]\s*|\s+[xX-]\s+|(?<=\d)[xX](?=\d))`;
 const EXPR = new RegExp(
-  String.raw`(?<![\w/:.$-])(${NUM}(?:${OP}${NUM})+)(\s*=\s*)(${NUM})(\s?(?:m|bn|b|k)\b)?`,
+  String.raw`(?<![\w/:.$-])(${NUM}(?:${OP}${NUM})+)(\s*=\s*)(${NUM})([ \t]?(?:m|bn|b|k)(?!\w))?`,
   "g",
 );
 
@@ -23,7 +23,6 @@ function tidy(expr: string) {
     .replace(/\s+-\s+/g, " − ");
 }
 
-// Absolute URLs, www. links and relative paths ("/resources?calc=2*3=6").
 // Absolute, www., bare-domain ("example.com/...") and relative URL spans are left alone.
 const URL_SPAN =
   /(\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}\/\S*|(?<![^\s([{"'])\/\S+)/i;

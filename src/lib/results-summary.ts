@@ -16,8 +16,8 @@ const META = [
   /\b(?:only|just) (?:covers?|includes?|looks at) (?:your )?written\b/i,
   /\bmakes? no claims? about (?:your )?(?:mc|multiple[- ]choice)\b/i,
   // Model self-reference only at the start of a sentence, not "use ChatGPT as an AI tool".
-  /(?:^|[.!?]\s+)as an ai\b/i,
-  /\b(?:as a language model|i am an ai|i'm an ai|i am a language model|i'm a language model)\b/i,
+  /(?:^|[.!?]\s+)as an? (?:ai|language model)\b/i,
+  /\b(?:i am|i'm) an? (?:ai|language model)\b/i,
 ];
 
 export function isMetaLine(text: string) {

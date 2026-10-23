@@ -550,8 +550,13 @@ export function AnnotatedFeedback({
           </Card>
         </div>
       ) : (
-        <Card>
-          <CardContent className="space-y-4">
+        // In a host card (flush), the photo / unmarked fallback is a flat section, not a nested card.
+        <Card
+          className={
+            flush ? "border-0 bg-transparent py-0 shadow-none" : undefined
+          }
+        >
+          <CardContent className={cn("space-y-4", flush && "px-0")}>
             <div className="flex flex-wrap items-center gap-3">
               {showMark ? (
                 <p

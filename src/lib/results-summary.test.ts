@@ -19,6 +19,7 @@ describe("isMetaLine", () => {
     "You supplied two relevant examples in Q5.",
     "Q6 covers multiple-choice style recall well.",
     "In Q2, units were not included.",
+    "In Q2, describe ChatGPT as a language model rather than a search engine.",
     "In Q2, explain how firms use ChatGPT as an AI tool to improve labour productivity.",
     "In Q2, explain how a language model can raise labour productivity.",
     "The summary in Q1 covers both causes of inflation accurately.",

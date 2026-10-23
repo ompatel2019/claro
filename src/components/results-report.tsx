@@ -357,19 +357,23 @@ export function OverallFeedback({
         summary &&
         !view.strengths.length &&
         !view.fixes.length ? (
-          <p className="bg-card text-ink-2 rounded-xl border p-4 text-[13px]">
+          <p className="bg-card text-ink-2 shadow-card rounded-xl border p-4 text-[13px]">
             {summary.next_steps?.find((t) => t.trim() && !isMetaLine(t)) ??
               "No overall strengths or fixes for this sprint. Review each answer above."}
           </p>
         ) : summary ? (
-          <div className="bg-card grid overflow-hidden rounded-xl border max-sm:divide-y sm:grid-cols-2 sm:divide-x">
+          <div className="grid gap-3 sm:grid-cols-2">
             {(
               [
                 ["Strengths", view.strengths, "check"],
                 ["Fixes", view.fixes, "arrow-up-right"],
               ] as const
             ).map(([label, lines, icon]) => (
-              <section key={label} aria-label={label} className="min-w-0">
+              <section
+                key={label}
+                aria-label={label}
+                className="bg-card shadow-card min-w-0 overflow-hidden rounded-xl border"
+              >
                 <h3 className="text-ink flex items-center gap-2 border-b px-4 py-3 text-sm font-semibold">
                   <PortalIcon
                     name={icon}
@@ -387,14 +391,13 @@ export function OverallFeedback({
                   {lines.map((text, i) => (
                     <li
                       key={i}
-                      className="group flex items-baseline gap-4 px-4 py-2.5 text-[13px]"
+                      className="flex items-baseline gap-4 px-4 py-2.5 text-[13px]"
                     >
-                      {/* Sprint: one line on desktop, opened in full on hover or when its Q link has focus. */}
+                      {/* Sprint: one line on desktop; the full text stays in the DOM for assistive tech and in the title. */}
                       <span
                         className={cn(
                           "text-ink-2 min-w-0 flex-1",
-                          hideNextStep &&
-                            "sm:truncate sm:group-focus-within:whitespace-normal sm:group-hover:whitespace-normal",
+                          hideNextStep && "sm:truncate",
                         )}
                         title={text}
                       >
@@ -419,7 +422,7 @@ export function OverallFeedback({
             ))}
           </div>
         ) : (
-          <div className="bg-card space-y-3 rounded-xl border p-4">
+          <div className="bg-card shadow-card space-y-3 rounded-xl border p-4">
             <p role="status" className="text-muted-foreground text-[13px]">
               {pending
                 ? "Your overall feedback will appear here once marking finishes."

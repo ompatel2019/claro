@@ -29,6 +29,7 @@ import { ResultsAnswers, OverallFeedback } from "@/components/results-report";
 import { SameSetup } from "@/components/sprint-setup";
 import { StatusPill } from "@/components/status-pill";
 import { buttonVariants } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 const when = (d: string) =>
@@ -162,10 +163,7 @@ export async function SprintResults({ id }: { id: string }) {
         }
       />
       <MarkingProgress {...progress} />
-      <section
-        aria-label="Summary"
-        className="bg-card grid overflow-hidden rounded-xl border max-sm:divide-y sm:grid-cols-3 sm:divide-x"
-      >
+      <section aria-label="Summary" className="grid gap-3 sm:grid-cols-3">
         <Stat
           label="Score"
           pill={provisional && <StatusPill pill="Provisional" />}
@@ -239,12 +237,12 @@ function Stat({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-1.5 px-5 py-4">
+    <Card size="sm" className="min-w-0 gap-1.5 px-(--card-spacing)">
       <p className="text-ink-2 flex items-center gap-2 text-[13px] font-semibold">
         {label} {pill}
       </p>
       {children}
-    </div>
+    </Card>
   );
 }
 
