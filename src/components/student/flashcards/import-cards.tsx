@@ -175,15 +175,33 @@ function ImportDialog({
               aria-label="Import source"
               className="grid grid-cols-2 gap-3"
             >
-              {(["quizlet", "anki"] as const).map((value) => (
+              {(["quizlet", "anki"] as const).map((value, index, all) => (
                 <button
                   key={value}
                   type="button"
                   role="radio"
                   aria-checked={source === value}
+                  tabIndex={(source ?? "quizlet") === value ? 0 : -1}
                   onClick={() => {
                     setSource(value);
                     setError("");
+                  }}
+                  onKeyDown={(event) => {
+                    const step = {
+                      ArrowRight: 1,
+                      ArrowDown: 1,
+                      ArrowLeft: -1,
+                      ArrowUp: -1,
+                    }[event.key];
+                    if (!step) return;
+                    event.preventDefault();
+                    const next = all[(index + step + all.length) % all.length];
+                    setSource(next);
+                    setError("");
+                    const group = event.currentTarget.parentElement;
+                    group
+                      ?.querySelectorAll<HTMLButtonElement>('[role="radio"]')
+                      [all.indexOf(next)]?.focus();
                   }}
                   className={cn(
                     "bg-card rounded-2xl border p-4 text-left font-semibold focus-visible:ring-2",

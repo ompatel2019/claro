@@ -133,3 +133,15 @@ it("reports failure to load existing fronts", async () => {
     "Couldn't load your cards. Try again.",
   );
 });
+
+it("moves between import sources with the arrow keys", () => {
+  render(<ImportCards topics={topics} />);
+  fireEvent.click(screen.getByRole("button", { name: "Import" }));
+  const quizlet = screen.getByRole("radio", { name: "Quizlet" });
+  expect(quizlet).toHaveAttribute("tabindex", "0");
+  fireEvent.keyDown(quizlet, { key: "ArrowRight" });
+  const anki = screen.getByRole("radio", { name: "Anki" });
+  expect(anki).toHaveAttribute("aria-checked", "true");
+  expect(anki).toHaveFocus();
+  expect(quizlet).toHaveAttribute("tabindex", "-1");
+});

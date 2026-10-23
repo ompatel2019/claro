@@ -49,6 +49,7 @@ export function parseCardText(text: string, source: CardTextSource) {
   text = text.replace(/^\uFEFF/, "").replace(/\r\n|\r/g, "\n");
   const cards: TextCard[] = [];
   const errors: LineError[] = [];
+  let unclosed = false;
   const excluded = new Set<number>();
   let html = source === "anki";
   let headers = true;
@@ -87,7 +88,7 @@ export function parseCardText(text: string, source: CardTextSource) {
     const fields: string[] = [];
     while (true) {
       let field = "";
-      if (source === "anki" && text[i] === '"') {
+      if (source === "anki" && !unclosed && text[i] === '"') {
         let cursor = i + 1;
         while (cursor < text.length) {
           if (text[cursor] !== '"') {
@@ -102,7 +103,10 @@ export function parseCardText(text: string, source: CardTextSource) {
             break;
           cursor++;
         }
-        if (cursor < text.length) {
+        // Once a quote never closes, later quotes can't either: read them
+        // literally rather than rescanning the rest of the paste each time.
+        if (cursor >= text.length) unclosed = true;
+        else {
           field = text.slice(i + 1, cursor).replace(/""/g, '"');
           line += (field.match(/\n/g) ?? []).length;
           i = cursor + 1;

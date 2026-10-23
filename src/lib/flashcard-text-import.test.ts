@@ -111,3 +111,10 @@ it("parses quoted tabs, multiline fields, escaped quotes and starting lines", ()
     errors: [{ line: 5, message: "Front is empty" }],
   });
 });
+
+it("reads an unclosed Anki quote literally without rescanning the paste", () => {
+  const started = performance.now();
+  const { errors } = parseCardText('"a\t'.repeat(200000), "anki");
+  expect(errors).toEqual([]);
+  expect(performance.now() - started).toBeLessThan(2000);
+});
