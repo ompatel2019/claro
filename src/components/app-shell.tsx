@@ -67,16 +67,19 @@ export const nav: Record<
 > = {
   student: [
     {
-      label: "Practise",
+      label: "",
+      items: [{ label: "Home", href: "/student", icon: Dashboard }],
+    },
+    {
+      label: "Practice",
       items: [
-        { label: "Home", href: "/student", icon: Dashboard },
         { label: "Topic Sprint", href: "/student/sprint", icon: Sprint },
         { label: "Flashcards", href: "/student/flashcards", icon: Cards },
         { label: "Mark my answer", href: "/student/mark", icon: Pen },
       ],
     },
     {
-      label: "Track",
+      label: "Review",
       items: [
         { label: "Activity", href: "/student/activity", icon: History },
         { label: "Progress", href: "/student/progress", icon: Target },
@@ -232,11 +235,15 @@ function AppShellContent({
           >
             {nav[kind].map((group) => (
               <SidebarGroup key={group.label} className="mb-2">
-                <SidebarGroupLabel
-                  className={kind === "student" ? "sr-only" : "mt-0"}
-                >
-                  {group.label}
-                </SidebarGroupLabel>
+                {group.label && (
+                  <SidebarGroupLabel
+                    className={
+                      kind === "student" ? "mt-0 tracking-[0.01em]" : "mt-0"
+                    }
+                  >
+                    {group.label}
+                  </SidebarGroupLabel>
+                )}
                 <SidebarMenu className="gap-0.5">
                   {group.items.map((item) => {
                     const isActive = item === active;

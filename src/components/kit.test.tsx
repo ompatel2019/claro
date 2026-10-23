@@ -20,7 +20,7 @@ import { PageHeader } from "./page-header";
 afterEach(cleanup);
 
 it("groups student and admin navigation without homework", () => {
-  expect(nav.student.map((g) => g.label)).toEqual(["Practise", "Track"]);
+  expect(nav.student.map((g) => g.label)).toEqual(["", "Practice", "Review"]);
   expect(nav.admin.map((g) => g.label)).toEqual([
     "Overview",
     "Students",
