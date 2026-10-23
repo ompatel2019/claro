@@ -48,7 +48,12 @@ export function CommandPalette({ routes }: { routes: CommandRoute[] }) {
         }}
         className="text-muted-foreground md:bg-card flex size-10 min-w-0 shrink-0 items-center justify-center gap-2.5 rounded-full text-sm md:h-10 md:w-full md:max-w-[420px] md:shrink md:justify-start md:border md:px-3.5"
       >
-        <PortalIcon name="search" className="size-4 shrink-0" />
+        <PortalIcon
+          size={20}
+          strokeWidth={1.5}
+          name="search"
+          className="size-4 shrink-0"
+        />
         <span className="hidden flex-1 truncate text-left md:block">
           Search questions, topics and cards
         </span>
@@ -70,6 +75,8 @@ export function CommandPalette({ routes }: { routes: CommandRoute[] }) {
           </DialogDescription>
           <div className="flex items-center gap-2 border-b px-4">
             <PortalIcon
+              size={20}
+              strokeWidth={1.5}
               name="search"
               className="text-muted-foreground size-4"
             />
@@ -130,6 +137,8 @@ export function CommandPalette({ routes }: { routes: CommandRoute[] }) {
                   <span className="flex-1">{r.label}</span>
                   {i === selected && (
                     <PortalIcon
+                      size={20}
+                      strokeWidth={1.5}
                       name="corner-down-left"
                       className="text-muted-foreground size-3.5"
                     />

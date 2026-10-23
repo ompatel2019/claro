@@ -253,7 +253,11 @@ function AppShellContent({
                           }
                         >
                           {kind === "student" ? (
-                            <PortalIcon name={studentIcons[item.label]} />
+                            <PortalIcon
+                              size={20}
+                              strokeWidth={1.5}
+                              name={studentIcons[item.label]}
+                            />
                           ) : (
                             <item.icon strokeWidth={1.75} />
                           )}
@@ -330,16 +334,20 @@ function AppShellContent({
                   aria-label="User menu"
                   className="text-muted-foreground hover:bg-muted grid size-7 shrink-0 place-items-center rounded-full group-data-[collapsible=icon]:hidden"
                 >
-                  <PortalIcon name="more" />
+                  <PortalIcon size={20} strokeWidth={1.5} name="more" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" align="end" className="w-48">
                   <DropdownMenuItem render={<Link href="/student/profile" />}>
-                    <User />
+                    <PortalIcon size={20} name="user" strokeWidth={1.5} />
                     Profile
                   </DropdownMenuItem>
                   {kind === "student" && (
                     <DropdownMenuItem onClick={() => feedback()}>
-                      <Message />
+                      <PortalIcon
+                        size={20}
+                        name="message-circle"
+                        strokeWidth={1.5}
+                      />
                       Feedback
                     </DropdownMenuItem>
                   )}
@@ -352,7 +360,7 @@ function AppShellContent({
                       )
                     }
                   >
-                    <PortalIcon name="moon" />
+                    <PortalIcon size={20} strokeWidth={1.5} name="moon" />
                     Toggle theme
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setTheme("system")}>
@@ -361,7 +369,7 @@ function AppShellContent({
                   <DropdownMenuItem
                     onClick={() => signOutForm.current?.requestSubmit()}
                   >
-                    <SignOut />
+                    <SignOut strokeWidth={1.5} />
                     Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -393,7 +401,7 @@ function AppShellContent({
             <form ref={signOutForm} action={signOut} className="hidden" />
             <DropdownMenu>
               <DropdownMenuTrigger
-                className={`ml-auto rounded-full ${kind === "student" ? "md:hidden" : ""}`}
+                className={`ml-auto rounded-full ${kind === "student" ? "shell-account-menu md:hidden" : ""}`}
                 aria-label="Account menu"
               >
                 <Avatar className="size-8 after:border-0">
@@ -405,7 +413,11 @@ function AppShellContent({
               <DropdownMenuContent align="end" className="w-44">
                 {kind === "student" && (
                   <DropdownMenuItem onClick={() => feedback()}>
-                    <Message />
+                    <PortalIcon
+                      size={20}
+                      name="message-circle"
+                      strokeWidth={1.5}
+                    />
                     Feedback
                   </DropdownMenuItem>
                 )}
@@ -413,13 +425,13 @@ function AppShellContent({
                   Use system theme
                 </DropdownMenuItem>
                 <DropdownMenuItem render={<Link href="/student/profile" />}>
-                  <User />
+                  <PortalIcon size={20} name="user" strokeWidth={1.5} />
                   Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => signOutForm.current?.requestSubmit()}
                 >
-                  <SignOut />
+                  <SignOut strokeWidth={1.5} />
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -460,7 +472,7 @@ function FeedbackNavItem() {
               feedback();
             }}
           >
-            <PortalIcon name="message-circle" />
+            <PortalIcon size={20} strokeWidth={1.5} name="message-circle" />
             <span>Feedback</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
@@ -494,7 +506,7 @@ function SidebarHeaderToggle() {
   );
 }
 
-/** Reuse the approved wordmark without the marketing tile in the portal chrome. */
+/** Approved logo lockup, with the icon alone in the collapsed rail. */
 function ShellLogo({ mobile = false }: { mobile?: boolean }) {
   return (
     <span role="img" aria-label="Claro" className="inline-flex shrink-0">
@@ -507,17 +519,17 @@ function ShellLogo({ mobile = false }: { mobile?: boolean }) {
         className="hidden shrink-0 group-data-[collapsible=icon]:block"
       />
       <img
-        src="/logos/claro-wordmark-on-light.svg"
+        src="/logos/claro-logo-primary-on-light.svg"
         alt=""
-        width={mobile ? 64 : 70}
-        height={(mobile ? 64 : 70) * (99.9 / 317.96)}
+        width={mobile ? 96 : 110}
+        height={(mobile ? 96 : 110) * (135.8 / 489.61)}
         className="group-data-[collapsible=icon]:hidden dark:hidden"
       />
       <img
-        src="/logos/claro-wordmark-on-dark.svg"
+        src="/logos/claro-logo-primary-on-dark.svg"
         alt=""
-        width={mobile ? 64 : 70}
-        height={(mobile ? 64 : 70) * (99.9 / 317.96)}
+        width={mobile ? 96 : 110}
+        height={(mobile ? 96 : 110) * (135.8 / 489.61)}
         className="hidden group-data-[collapsible=icon]:hidden dark:block"
       />
       {/* eslint-enable @next/next/no-img-element */}
@@ -565,7 +577,11 @@ export function MobileTabs({
           href={item.href}
           aria-current={activeHref === item.href ? "page" : undefined}
         >
-          <PortalIcon name={studentIcons[item.label]} />
+          <PortalIcon
+            size={20}
+            strokeWidth={1.5}
+            name={studentIcons[item.label]}
+          />
           <span className="nav-label">
             {item.label === "Topic Sprint" ? "Sprint" : item.label}
             {activeHref === item.href && <NavUnderline />}
@@ -581,7 +597,7 @@ export function MobileTabs({
         aria-expanded={openMobile}
         onClick={() => setOpenMobile(true)}
       >
-        <PortalIcon name="more" />
+        <PortalIcon size={20} strokeWidth={1.5} name="more" />
         <span>More</span>
       </button>
     </nav>

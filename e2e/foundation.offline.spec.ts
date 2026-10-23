@@ -85,7 +85,7 @@ for (const width of [1440, 390])
     ).toContainText("Select");
     expect(
       await page
-        .locator('img[src="/logos/claro-wordmark-on-light.svg"]')
+        .locator('img[src="/logos/claro-logo-primary-on-light.svg"]')
         .first()
         .evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
     ).toBe(true);
