@@ -364,7 +364,9 @@ it("renders full written comments and an outline inline with one mark request", 
   });
   expect(within(feedback).getByLabelText("Your mark: 2/4")).toBeVisible();
   expect(
-    within(feedback).getByText("What gets you the next mark"),
+    within(feedback).getByRole("button", {
+      name: "Your next mark: Explain spare capacity.",
+    }),
   ).toBeVisible();
   expect(
     within(feedback).getByRole("button", { name: /^Strength 1/ }),

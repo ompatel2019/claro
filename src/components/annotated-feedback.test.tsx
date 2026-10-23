@@ -93,6 +93,13 @@ const row: ReviewRow = {
   review: null,
 };
 
+const editLayout = (): FeedbackEdit => ({
+  comments: readComments(row.feedback, text),
+  nextMark: "Quote the 2022 CPI.",
+  onChange: vi.fn(),
+  onUndo: vi.fn(),
+});
+
 it("shows the summary, numbered highlights and an Overall group", () => {
   render(<AnnotatedFeedback row={row} />);
   expect(screen.getByLabelText("Your mark: 3/6")).toBeTruthy();
@@ -111,8 +118,8 @@ it("shows the summary, numbered highlights and an Overall group", () => {
   ).toBe("lagg[?]");
 });
 
-it("filters to strengths and moves through comments with J", () => {
-  render(<AnnotatedFeedback row={row} />);
+it("filters to strengths and moves through comments with J in edit mode", () => {
+  render(<AnnotatedFeedback row={row} edit={editLayout()} />);
   fireEvent.click(screen.getByRole("button", { name: "Strengths (1)" }));
   expect(screen.queryByRole("button", { name: /^Fix 1/ })).toBeNull();
   expect(screen.queryByText("Overall")).toBeNull();
@@ -124,11 +131,14 @@ it("filters to strengths and moves through comments with J", () => {
   );
 });
 
-it("opens the comment in a popover when a highlight is tapped on narrow screens", async () => {
-  render(<AnnotatedFeedback row={row} />);
-  expect(screen.getAllByText("Give a CPI figure.")).toHaveLength(1);
+it("opens the editable comment in a popover when a highlight is tapped on narrow screens", async () => {
+  render(<AnnotatedFeedback row={row} edit={editLayout()} />);
+  expect(screen.getAllByLabelText("Comment")).toHaveLength(3);
   fireEvent.click(screen.getByRole("button", { name: /^Fix 1/ }));
-  expect(await screen.findAllByText("Give a CPI figure.")).toHaveLength(2);
+  expect(await screen.findByRole("dialog")).toBeVisible();
+  expect(
+    within(screen.getByRole("dialog")).getByLabelText("Comment"),
+  ).toHaveValue("Give a CPI figure.");
 });
 
 it("reads old-shape comments without tags", () => {
@@ -371,7 +381,7 @@ it.each([
 );
 
 it.each(["answer_text", "transcript"] as const)(
-  "reflows %s across highlight boundaries without changing source quotes or paragraphs",
+  "renders %s paragraphs across highlight boundaries without changing source quotes",
   (source) => {
     const answer = "First\r\nclaim\n\nLast\npoint.";
     const quote = "First\r\nclaim\n";
@@ -391,18 +401,20 @@ it.each(["answer_text", "transcript"] as const)(
       },
     };
     const { container } = render(<AnnotatedFeedback row={fixture} />);
-    expect(
-      screen.getByRole("button", { name: /^Strength 1/ }).textContent,
-    ).toBe("First  claim\n");
-    expect(screen.getByRole("button", { name: /^Fix 2/ }).textContent).toBe(
+    const paragraphs = [...container.querySelectorAll(".cma-text > p")];
+    expect(paragraphs.map((p) => p.textContent)).toEqual(
+      source === "transcript"
+        ? ["First  claim", "Last point."]
+        : ["First", "claim", "Last", "point."],
+    );
+    const pieces = [...container.querySelectorAll('mark[data-anchors~="0"]')];
+    expect(pieces.map((p) => p.textContent)).toEqual(
+      source === "transcript" ? ["First  claim"] : ["First", "claim"],
+    );
+    expect(pieces[0]).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("button", { name: /^Fix 2/ })).toHaveTextContent(
       "point",
     );
-    const doc = container
-      .querySelector(".whitespace-pre-wrap")!
-      .cloneNode(true) as HTMLElement;
-    doc.querySelectorAll("sup").forEach((el) => el.remove());
-    expect(doc.textContent).toBe(displayAnswer(answer));
-    expect(doc.textContent!.length).toBe(answer.length);
     expect(fixture[source]).toBe(answer);
     expect(fixture.feedback.comments[0].quote).toBe(quote);
   },
@@ -445,29 +457,22 @@ it("keeps original line breaks in quotes selected for editing", async () => {
   );
 });
 
-it("uses neutral examiner note cards with semantic pills in the narrow list and popover", () => {
+it("uses semantic strength and fix bands in the comment slider", () => {
   const { container } = render(<AnnotatedFeedback row={row} />);
   const strength = container.querySelector('[data-card="0"]')!;
   const fix = container.querySelector('[data-card="1"]')!;
-  expect(strength).toHaveClass("bg-card", "border");
-  expect(strength.querySelector(".pen")).toBeTruthy();
-  expect(fix).toHaveClass("bg-card", "border");
-  expect(fix.querySelector(".pen")).toBeTruthy();
-  expect(screen.getByText("Strength")).toHaveClass(
-    "text-success",
-    "rounded-full",
-  );
-  expect(screen.getAllByText("Fix")[0]).toHaveClass(
-    "text-destructive",
-    "rounded-full",
-  );
-  fireEvent.click(screen.getByRole("button", { name: /^Fix 1/ }));
-  expect(screen.getByRole("dialog").querySelector("[data-card]")).toHaveClass(
-    "bg-card",
-  );
+  expect(strength).toHaveClass("cma-slide--earned");
+  expect(fix).toHaveClass("cma-slide--missed");
+  expect(
+    within(strength as HTMLElement).getByText("Strength"),
+  ).toBeInTheDocument();
+  expect(within(fix as HTMLElement).getByText("Fix")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: /^Strength 2/ }));
+  expect(strength).not.toHaveAttribute("aria-hidden");
+  expect(fix).toHaveAttribute("aria-hidden", "true");
 });
 
-it("stacks filtered wide cards in normal flow and restores highlight alignment for All", () => {
+it("stacks filtered wide edit cards in normal flow and restores highlight alignment for All", () => {
   vi.stubGlobal(
     "ResizeObserver",
     class {
@@ -495,7 +500,9 @@ it("stacks filtered wide cards in normal flow and restores highlight alignment f
     },
   );
   vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockReturnValue(100);
-  const { container } = render(<AnnotatedFeedback row={row} />);
+  const { container } = render(
+    <AnnotatedFeedback row={row} edit={editLayout()} />,
+  );
   const anchored = () => [
     ...container.querySelectorAll<HTMLElement>("[data-anchored]"),
   ];
@@ -545,27 +552,28 @@ it.each(["short", "extended"] as const)(
       <AnnotatedFeedback row={{ ...row, type, mark: 6, feedback }} />,
     );
     expect(screen.queryByText("How to reach full marks")).toBeNull();
-    expect(screen.getByText("Full marks. Nothing missing.")).toBeVisible();
+    expect(screen.getByText("Full marks")).toBeVisible();
     rerender(<AnnotatedFeedback row={{ ...row, type, mark: 5, feedback }} />);
     expect(screen.getByText("How to reach full marks")).toBeVisible();
   },
 );
 
-it("opts into standalone score, criteria, next steps and annotated-answer cards", () => {
+it("uses the document score, criteria and next-mark row in standalone results", () => {
   render(<AnnotatedFeedback row={row} singleResult />);
-  for (const name of [
-    "Marking criteria",
-    "Your next mark",
-    "Your answer, marked",
-  ]) {
+  for (const name of ["Marking criteria", "Your answer, marked"]) {
     expect(screen.getByRole("heading", { name })).toBeVisible();
   }
-  expect(screen.getByRole("img", { name: "3 out of 6" })).toBeVisible();
-  expect(screen.getByText("Your band")).toBeVisible();
+  expect(
+    screen.getByRole("complementary", { name: "Your mark: 3/6" }),
+  ).toBeVisible();
+  expect(screen.getByText("Band: 3–4 marks")).toBeVisible();
   expect(
     screen.getByRole("button", { name: "Fix 1, Evidence: Give a CPI figure." }),
   ).toBeVisible();
-  expect(screen.getByText("3 marks from full marks")).toBeVisible();
+  expect(screen.getByText("3 to gain")).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Your next mark: Quote the 2022 CPI." }),
+  ).toHaveAttribute("aria-pressed", "true");
   expect(screen.queryByText("What gets you the next mark")).toBeNull();
 });
 
@@ -593,8 +601,10 @@ it.each([
   [false, true, 1100, true],
   [true, false, 759, false],
   [true, false, 900, true],
+  [true, true, 759, false],
+  [true, true, 900, true],
 ] as const)(
-  "keeps desktop comments beside the answer and stacks below 760px (single=%s edit=%s width=%s)",
+  "uses the document in read-only mode and responsive margin layout in edit mode (single=%s edit=%s width=%s)",
   (singleResult, editing, width, wide) => {
     vi.stubGlobal(
       "ResizeObserver",
@@ -617,6 +627,17 @@ it.each([
     const { container } = render(
       <AnnotatedFeedback row={row} singleResult={singleResult} edit={edit} />,
     );
+    if (!editing) {
+      expect(container.querySelector(".cma-text")).toHaveTextContent(
+        "Inflation rose",
+      );
+      expect(screen.getByRole("region", { name: "Comments" })).toHaveAttribute(
+        "aria-roledescription",
+        "carousel",
+      );
+      expect(container.querySelector(".grid.gap-6")).toBeNull();
+      return;
+    }
     expect(container.querySelector(".whitespace-pre-wrap")).toHaveClass(
       "relative",
     );
@@ -637,7 +658,7 @@ it.each([
   },
 );
 
-it("shows criteria, answer with semantic numbered notes, then an open sample answer", () => {
+it("shows criteria, answer with semantic highlights and slides, then an open sample answer", () => {
   localStorage.setItem("claro-feedback-model", "0");
   const { container } = render(<AnnotatedFeedback row={row} />);
   const criteria = screen.getByRole("region", { name: "Marking criteria" });
@@ -652,34 +673,27 @@ it("shows criteria, answer with semantic numbered notes, then an open sample ans
   expect(screen.getByText("Model text.")).toBeVisible();
   expect(sample.closest("details")).toBeNull();
   expect(screen.queryByRole("heading", { name: "Top fixes" })).toBeNull();
-  for (const [kind, colour] of [
-    ["Strength", "success"],
-    ["Fix", "destructive"],
+  for (const [kind, tone, id] of [
+    ["Strength", "earned", "0"],
+    ["Fix", "missed", "1"],
   ]) {
     const highlight = screen.getByRole("button", {
       name: new RegExp(`^${kind} [12],`),
     });
-    expect(highlight).toHaveClass(`decoration-${colour}`, "decoration-wavy");
-    expect(highlight.parentElement?.querySelector("sup")).toHaveClass(
-      `text-${colour}`,
-    );
-    const number = highlight.parentElement?.querySelector("sup")?.textContent;
-    const note = [...container.querySelectorAll("[data-card]")].find(
-      (el) => el.querySelector("span")?.textContent === number,
-    )!;
-    expect(note.querySelector("span")).toHaveClass(`text-${colour}`);
-    expect(note.querySelector("svg")).toHaveClass(`text-${colour}`);
+    expect(highlight).toHaveClass("cma-hl", `cma-hl--${tone}`);
+    const note = container.querySelector(`[data-card="${id}"]`)!;
+    expect(note).toHaveClass(`cma-slide--${tone}`);
     expect(note).toHaveTextContent(kind);
   }
   localStorage.clear();
 });
 
-it("keeps every fix's next-mark instruction beneath its numbered comment", () => {
+it("keeps every fix's next-mark instruction in its slide and the summary in the score row", () => {
   const comments = readComments(row.feedback, text).map((c, i) => ({
     ...c,
     next_mark: i === 2 ? "Link the conclusion to inflation." : c.next_mark,
   }));
-  render(
+  const { container } = render(
     <AnnotatedFeedback
       singleResult
       readOnly
@@ -693,14 +707,202 @@ it("keeps every fix's next-mark instruction beneath its numbered comment", () =>
       }}
     />,
   );
-  for (const [body, instruction, number] of [
-    ["Give a CPI figure.", "Quote the 2022 CPI.", "1"],
-    ["Add a conclusion.", "Link the conclusion to inflation.", "3"],
+  for (const [body, instruction, title] of [
+    ["Give a CPI figure.", "Quote the 2022 CPI.", "Your next mark"],
+    [
+      "Add a conclusion.",
+      "Link the conclusion to inflation.",
+      "How to get this mark",
+    ],
   ]) {
     const card = screen.getByText(body).closest("[data-card]") as HTMLElement;
-    expect(within(card).getByText(number)).toBeVisible();
-    expect(within(card).getByText("Your next mark:")).toBeVisible();
+    const highlightOrNext =
+      title === "Your next mark"
+        ? screen.getByRole("button", { name: /^Fix 1/ })
+        : screen.getByRole("button", { name: "Next comment" });
+    fireEvent.click(highlightOrNext);
+    if (title !== "Your next mark") fireEvent.click(highlightOrNext);
+    expect(card).not.toHaveAttribute("aria-hidden");
+    expect(within(card).getByText(title)).toBeVisible();
     expect(within(card).getByText(instruction)).toBeVisible();
   }
-  expect(screen.getByText("Focus on evidence and structure.")).toBeVisible();
+  expect(
+    within(container.querySelector("aside")!).getByText(
+      "Focus on evidence and structure.",
+    ),
+  ).toBeVisible();
+});
+
+it.each([
+  ["Demand falls", "falls as prices", 7],
+  ["Demand falls as prices", "falls", 7],
+])(
+  "keeps overlapping or nested quotes %j and %j focusable",
+  (outer, inner, start) => {
+    const { container } = render(
+      <AnnotatedFeedback
+        row={{
+          ...row,
+          answer_text: "Demand falls as prices rise.",
+          feedback: {
+            comments: [
+              {
+                quote: outer,
+                start: 0,
+                kind: "strength",
+                body: "Clear demand link.",
+              },
+              {
+                quote: inner,
+                start,
+                kind: "fix",
+                body: "Explain the price link.",
+              },
+            ],
+          },
+        }}
+      />,
+    );
+    for (const [name, id, number, body] of [
+      [/^Strength 1/, "0", "1", "Clear demand link."],
+      [/^Fix 2/, "1", "2", "Explain the price link."],
+    ] as const) {
+      const highlight = screen.getByRole("button", { name });
+      expect(highlight.tagName).toBe("MARK");
+      expect(highlight).toHaveAttribute("tabindex", "0");
+      expect(highlight.getAttribute("data-anchors")?.split(" ")).toContain(id);
+      highlight.focus();
+      expect(highlight).toHaveFocus();
+      const card = container.querySelector(`[data-card="${id}"]`)!;
+      expect(card).toHaveAttribute("aria-label", `Comment ${number} of 2`);
+      expect(card).toHaveTextContent(body);
+    }
+    expect(
+      screen.queryByRole("heading", { name: "Overall" }),
+    ).not.toBeInTheDocument();
+  },
+);
+
+it("keeps typed lines as paragraphs and reflows transcript single breaks unless requested", () => {
+  const fixture = { ...row, answer_text: "a\nb", feedback: null };
+  const { container, rerender } = render(<AnnotatedFeedback row={fixture} />);
+  const paragraphs = () =>
+    [...container.querySelectorAll(".cma-text > p")].map((p) => p.textContent);
+  expect(paragraphs()).toEqual(["a", "b"]);
+  rerender(<AnnotatedFeedback row={{ ...fixture, transcript: "a\nb" }} />);
+  expect(paragraphs()).toEqual(["a b"]);
+  rerender(
+    <AnnotatedFeedback
+      row={{ ...fixture, transcript: "a\nb" }}
+      keepLineBreaks
+    />,
+  );
+  expect(paragraphs()).toEqual(["a", "b"]);
+});
+
+it.each([false, true])(
+  "answerOnly hides host-owned sections (singleResult=%s)",
+  (singleResult) => {
+    render(
+      <AnnotatedFeedback
+        row={{
+          ...row,
+          feedback: {
+            ...row.feedback,
+            better_answer_outline: ["Add evidence."],
+          },
+        }}
+        singleResult={singleResult}
+        answerOnly
+        actions={<button>Host action</button>}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Your answer, marked" }),
+    ).toBeVisible();
+    expect(screen.getByRole("region", { name: "Comments" })).toBeVisible();
+    expect(
+      screen.queryByRole("region", { name: "Marking criteria" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("What gets you the next mark"),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText("Your next mark")).toBeVisible();
+    expect(
+      screen.queryByRole("complementary", { name: "Your mark: 3/6" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("How to reach full marks"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Sample answer" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Practise similar" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Host action" }),
+    ).not.toBeInTheDocument();
+  },
+);
+
+it("anchors to the transcript before the typed answer", () => {
+  render(
+    <AnnotatedFeedback
+      row={{
+        ...row,
+        transcript: "Prices rose.",
+        answer_text: "Something else.",
+        feedback: {
+          comments: [
+            {
+              quote: "Prices",
+              start: 0,
+              kind: "strength",
+              body: "Clear trend.",
+            },
+          ],
+        },
+      }}
+    />,
+  );
+  expect(screen.getByRole("button", { name: /^Strength 1/ })).toHaveTextContent(
+    "Prices",
+  );
+  expect(screen.queryByText("Something else.")).not.toBeInTheDocument();
+});
+
+it("keeps the mark and next step when a marked photo answer switches to the photo", () => {
+  render(
+    <AnnotatedFeedback
+      row={{ ...row, transcript: text, image_paths: ["a.jpg"] }}
+      photos={["/a.jpg"]}
+    />,
+  );
+  expect(screen.getByLabelText("Your mark: 3/6")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Photo" }));
+  expect(screen.getByLabelText("Your mark: 3/6")).toBeVisible();
+  expect(screen.getByText("What gets you the next mark")).toBeVisible();
+  expect(
+    screen.queryByRole("region", { name: "Comments" }),
+  ).not.toBeInTheDocument();
+});
+
+it("starts the marked answer afresh when the attempt changes", () => {
+  const selected = () =>
+    [...document.querySelectorAll("mark[data-selected]")].map((m) =>
+      m.getAttribute("data-anchors"),
+    );
+  const { rerender } = render(<AnnotatedFeedback row={row} />);
+  const first = selected();
+  expect(first.length).toBeGreaterThan(0);
+  fireEvent.click(screen.getByRole("button", { name: /next comment/i }));
+  expect(selected()).not.toEqual(first);
+  rerender(
+    <AnnotatedFeedback
+      row={{ ...row, attempt_id: "other", answer_text: `${text} More.` }}
+    />,
+  );
+  expect(selected()).toEqual(first);
 });

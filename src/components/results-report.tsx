@@ -12,6 +12,7 @@ import { QuestionView } from "./question-view";
 import { Badge } from "./claro/controls";
 import { PenTick, PenCaret } from "./claro/markup-answer";
 import { AnnotatedFeedback } from "./annotated-feedback";
+import { AI_NOTE } from "./annotated-feedback/ai-note";
 import { ReportProblem } from "./feedback-widget";
 import { QuestionMark } from "./question-mark";
 import { McReview } from "./mc-review";
@@ -77,7 +78,11 @@ export function ResultsAnswers({
   const views = rows.map((r) => {
     const state = markingState(r);
     return (
-      <Card key={r.attempt_id} id={`q-${r.position}`} className="scroll-mt-20">
+      <Card
+        key={r.attempt_id}
+        id={`q-${r.position}`}
+        className="scroll-mt-20 overflow-visible [--cma-sticky-top:72px]"
+      >
         <CardHeader className="space-y-2">
           <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
             <Badge variant="outline">Question {r.position}</Badge>
@@ -108,6 +113,8 @@ export function ResultsAnswers({
           ) : (
             <AnnotatedFeedback
               readOnly={readOnly}
+              aiNote={false}
+              flush
               row={r}
               photos={(r.image_paths ?? []).flatMap((p) => photos.get(p) ?? [])}
               actions={
@@ -131,42 +138,47 @@ export function ResultsAnswers({
 
   return (
     rows.length > 0 && (
-      <ResultsBrowser
-        sprintLayout={sprintLayout}
-        initial={firstBelow(rows)}
-        views={views}
-        mcGrid={mcGrid}
-        items={rows.map((r) => {
-          // MC marking stores a null choice without a "No answer" note.
-          const state =
-            r.type === "mcq" && r.choice_index == null
-              ? "not_answered"
-              : markingState(r);
-          return {
-            position: r.position,
-            type: TYPE_LABEL[r.type],
-            topic: name(r.topic_id),
-            source: r.source,
-            mark: scored(r)
-              ? markLabel(r)
-              : r.feedback?.confidence === "low"
-                ? "Needs review"
-                : r.status === "marked" && r.mark == null
-                  ? "No mark available"
-                  : null,
-            tone:
-              state === "not_answered"
-                ? "bg-card border-muted-foreground/45 border-dashed text-muted-foreground"
-                : scored(r)
-                  ? markTone(r.mark ?? 0, r.max_marks ?? r.marks)
-                  : "",
-            pill:
-              r.type === "mcq" && state !== "not_answered"
-                ? null
-                : statePill(state, r.review),
-          };
-        })}
-      />
+      <>
+        <ResultsBrowser
+          sprintLayout={sprintLayout}
+          initial={firstBelow(rows)}
+          views={views}
+          mcGrid={mcGrid}
+          items={rows.map((r) => {
+            // MC marking stores a null choice without a "No answer" note.
+            const state =
+              r.type === "mcq" && r.choice_index == null
+                ? "not_answered"
+                : markingState(r);
+            return {
+              position: r.position,
+              type: TYPE_LABEL[r.type],
+              topic: name(r.topic_id),
+              source: r.source,
+              mark: scored(r)
+                ? markLabel(r)
+                : r.feedback?.confidence === "low"
+                  ? "Needs review"
+                  : r.status === "marked" && r.mark == null
+                    ? "No mark available"
+                    : null,
+              tone:
+                state === "not_answered"
+                  ? "bg-card border-muted-foreground/45 border-dashed text-muted-foreground"
+                  : scored(r)
+                    ? markTone(r.mark ?? 0, r.max_marks ?? r.marks)
+                    : "",
+              pill:
+                r.type === "mcq" && state !== "not_answered"
+                  ? null
+                  : statePill(state, r.review),
+            };
+          })}
+        />
+        {rows.some((r) => r.type !== "mcq") && (
+          <p className="text-muted-foreground mt-4 text-xs">{AI_NOTE}</p>
+        )}
+      </>
     )
   );
 }

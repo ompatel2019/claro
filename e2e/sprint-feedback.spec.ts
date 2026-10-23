@@ -264,12 +264,20 @@ test.describe("Local results feedback", () => {
       ).toBeVisible();
       await page.getByRole("button", { name: /^Question 2,/ }).click();
       await expect(page.getByText("Question 2", { exact: true })).toBeVisible();
-      await expect(page.getByText("Next mark:", { exact: true })).toHaveCount(
-        0,
+      const score = page
+        .locator("#q-2")
+        .getByRole("complementary", { name: "Your mark: 3/5" });
+      await expect(score).toContainText("3/5 marks");
+      await expect(score).toContainText("2 to gain");
+      await expect(score).toContainText(
+        "Your next mark: Aggregate advice stays visible.",
       );
+      const slider = page
+        .locator("#q-2")
+        .getByRole("region", { name: "Comments", exact: true });
       await expect(
-        page.getByText("Aggregate advice stays visible.", { exact: true }),
-      ).toBeVisible();
+        slider.getByRole("group", { name: "Comment 1 of 2" }),
+      ).toContainText("Your next mark: Stored per-comment advice.");
       await expect(
         page.getByRole("heading", { name: "Marking criteria" }),
       ).toBeVisible();
@@ -321,23 +329,57 @@ test.describe("Local results feedback", () => {
     await page.getByRole("button", { name: /^Question 2,/ }).click();
     const review = page.locator("#q-2");
     await expect(review.getByRole("table")).toBeVisible();
+    const score = review.getByRole("complementary", {
+      name: "Your mark: 3/5",
+      exact: true,
+    });
+    await expect(score).toContainText("3/5 marks");
+    await expect(score).toContainText("2 to gain");
+    await expect(score).toContainText("Band: 3–5 marks");
+    const points = score.getByRole("list", { name: "Marking points" });
     await expect(
-      review.getByLabel("Your mark: 3/5", { exact: true }),
-    ).toBeVisible();
+      points
+        .getByRole("listitem")
+        .filter({ hasText: "Identifies price pressure." }),
+    ).toContainText("Earned");
+    await expect(
+      points
+        .getByRole("listitem")
+        .filter({ hasText: "Explains the supply constraint." }),
+    ).toContainText("Missed");
     await expect(review.getByRole("button", { name: /^Fix 1,/ })).toHaveClass(
-      /decoration-destructive/,
+      /cma-hl--missed/,
     );
     await expect(
       review.getByRole("button", { name: /^Strength 2,/ }),
-    ).toHaveClass(/decoration-success/);
+    ).toHaveClass(/cma-hl--earned/);
     await expect(
       review.getByRole("region", { name: "Sample answer" }),
     ).toBeVisible();
+    const slider = review.getByRole("region", {
+      name: "Comments",
+      exact: true,
+    });
+    const fixSlide = slider.getByRole("group", { name: "Comment 1 of 2" });
+    await expect(fixSlide).toContainText("Explain the link to supply.");
+    await expect(fixSlide).toContainText(
+      "Your next mark: Stored per-comment advice.",
+    );
+    const fix = review.getByRole("button", { name: /^Fix 1,/ });
+    await expect(fix).toHaveAttribute("data-selected", "true");
+    await slider.getByRole("button", { name: "Next comment" }).click();
     await expect(
-      review
-        .locator("[data-card]")
-        .filter({ hasText: "Explain the link to supply." }),
-    ).toContainText("Your next mark: Stored per-comment advice.");
+      slider.getByRole("group", { name: "Comment 2 of 2" }),
+    ).toContainText("You identify the effect on prices.");
+    await expect(
+      review.getByRole("button", { name: /^Strength 2,/ }),
+    ).toHaveAttribute("data-selected", "true");
+    await expect(slider.locator('[data-card="1"]')).toHaveAttribute(
+      "inert",
+      "",
+    );
+    await slider.getByRole("button", { name: "Previous comment" }).click();
+    await expect(fixSlide).toContainText("Explain the link to supply.");
     await page.getByRole("link", { name: "Q3", exact: true }).click();
     await expect(page.locator("#q-3")).toBeInViewport();
     await page.getByRole("button", { name: /^Question 2,/ }).click();
@@ -359,7 +401,20 @@ test.describe("Local results feedback", () => {
     await expect(
       page.getByText("How to reach full marks", { exact: true }),
     ).toHaveCount(0);
-    await expect(page.getByText("Full marks", { exact: true })).toBeVisible();
+    const scoreCard = page.locator('[data-slot="card"]').filter({
+      has: page.getByRole("img", { name: "5 out of 5", exact: true }),
+    });
+    await expect(
+      scoreCard.getByText("Full marks", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("complementary", { name: /^Your mark:/ }),
+    ).toHaveCount(0);
+    await expect(
+      page
+        .getByRole("region", { name: "Comments", exact: true })
+        .getByRole("group"),
+    ).toContainText("Stored per-comment advice.");
     await expect(
       page.getByText("Keep building on these strengths", { exact: true }),
     ).toBeVisible();
@@ -371,7 +426,9 @@ test.describe("Local results feedback", () => {
       page.getByText("2 marks from full marks", { exact: true }),
     ).toBeVisible();
     const next = page.locator('[data-slot="card"]').filter({
-      has: page.getByText("Your next mark", { exact: true }),
+      has: page
+        .locator('[data-slot="card-title"]')
+        .filter({ hasText: /^Your next mark$/ }),
     });
     await expect(
       next.getByText("Stored per-comment advice.", { exact: true }),
@@ -382,7 +439,14 @@ test.describe("Local results feedback", () => {
     await expect(
       page.getByText("How to reach full marks", { exact: true }),
     ).toHaveCount(0);
-    await expect(page.getByText("Next mark:", { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole("complementary", { name: /^Your mark:/ }),
+    ).toHaveCount(0);
+    await expect(
+      page
+        .getByRole("region", { name: "Comments", exact: true })
+        .getByRole("group"),
+    ).toContainText("Your next mark: Stored per-comment advice.");
   });
   for (const [suffix, message] of [
     [4, "An overall summary isn’t available"],

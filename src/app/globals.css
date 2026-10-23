@@ -1898,3 +1898,588 @@ body:has(.sprint-focus)
     flex: 1 1 100%;
   }
 }
+
+/* ===== Marked answer (Docs-style, score card + comment slider). Scoped to .cma; component tokens only. ===== */
+.cma {
+  container: cma / inline-size;
+  color: var(--foreground);
+  font-size: 14px;
+  line-height: 22px;
+  -webkit-font-smoothing: antialiased;
+  --cma-r: 2px;
+  /* --cma-sticky-top: set by hosts (top bar + 16px); falls back to 84px, which
+     clears the app top bar (56px) and the sprint focus bar (68px). */
+  --cma-col: 360px;
+  --cma-gap: 48px;
+
+  --cma-earned: var(--success-soft);
+  --cma-missed: var(--destructive-soft);
+  /* "Fix"/"Missed" text: the app's error red, lifted to the kit's error text in dark (AA). */
+  --cma-missed-text: var(--destructive);
+
+  --cma-earned-on: color-mix(in srgb, var(--success) 22%, var(--success-soft));
+  --cma-missed-on: color-mix(
+    in srgb,
+    var(--destructive) 18%,
+    var(--destructive-soft)
+  );
+}
+.dark .cma {
+  --cma-missed-text: #ff8a80;
+  --cma-earned: color-mix(in srgb, var(--success) 18%, var(--success-soft));
+  --cma-missed: color-mix(
+    in srgb,
+    var(--destructive) 18%,
+    var(--destructive-soft)
+  );
+  --cma-earned-on: color-mix(in srgb, var(--success) 40%, var(--success-soft));
+  --cma-missed-on: color-mix(
+    in srgb,
+    var(--destructive) 40%,
+    var(--destructive-soft)
+  );
+}
+.cma *,
+.cma *::before,
+.cma *::after {
+  box-sizing: border-box;
+}
+.cma :where(p, h2, h3, ol, ul) {
+  margin: 0;
+}
+.cma :where(ol, ul) {
+  padding: 0;
+  list-style: none;
+}
+.cma :where(button) {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+  text-align: start;
+  border-radius: var(--cma-r);
+}
+.cma .ic {
+  display: block;
+  flex: none;
+}
+.cma :focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--cma-r);
+}
+.cma .cma-body {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--cma-r);
+}
+.cma .cma-page,
+.cma .cma-rail {
+  display: contents;
+}
+.cma .cma-score {
+  order: 1;
+  margin-top: 0;
+}
+.cma .cma-answer {
+  order: 2;
+  margin-top: 20px;
+}
+.cma .cma-slider {
+  order: 3;
+  margin-top: 16px;
+}
+.cma .cma-foot {
+  order: 4;
+  margin-top: 16px;
+}
+.cma .cma-tag {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: var(--cma-r);
+  background: var(--muted);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.cma .cma-answer-hd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+}
+.cma .cma-answer-hd h2 {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+.cma .cma-key {
+  display: flex;
+  gap: 6px;
+}
+.cma .cma-key-earned,
+.cma .cma-key-missed {
+  padding: 1px 6px;
+  border-radius: var(--cma-r);
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 600;
+}
+.cma .cma-key-earned {
+  background: var(--cma-earned);
+  color: var(--success-text);
+}
+.cma .cma-key-missed {
+  background: var(--cma-missed);
+  color: var(--cma-missed-text);
+}
+/* Dark: the key sits on the kit's flat soft tones so its small text stays AA. */
+.dark .cma .cma-key-earned {
+  background: var(--success-soft);
+}
+.dark .cma .cma-key-missed {
+  background: var(--destructive-soft);
+}
+.cma .cma-hint {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted-foreground);
+}
+.cma .cma-text {
+  margin-top: 14px;
+  font-size: 16px;
+  line-height: 28px;
+  color: var(--foreground);
+}
+.cma .cma-text p + p {
+  margin-top: 16px;
+}
+.cma .cma-hl {
+  cursor: pointer;
+  --t0: var(--cma-earned);
+  --t1: var(--cma-earned-on);
+  color: inherit;
+  background: var(--t0);
+  padding: 2px 1px;
+  margin: 0 -1px;
+  border-radius: var(--cma-r);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+  transition: background-color 160ms;
+}
+.cma .cma-hl--missed {
+  --t0: var(--cma-missed);
+  --t1: var(--cma-missed-on);
+}
+.cma .cma-hl:hover {
+  background: color-mix(in srgb, var(--t0) 45%, var(--t1));
+}
+.cma .cma-hl[data-selected],
+.cma .cma-hl[data-selected]:hover {
+  background: var(--t1);
+}
+.cma .cma-score {
+  padding: 14px 16px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--cma-r);
+  background: var(--background);
+}
+.cma .cma-score-hd {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cma .cma-total {
+  font-size: 32px;
+  line-height: 36px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.cma .cma-total span {
+  font-size: 16px;
+  line-height: 20px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: var(--muted-foreground);
+}
+.cma .cma-gain {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink-2);
+}
+.cma .cma-crit {
+  margin-top: 6px;
+}
+.cma .cma-crit li + li {
+  border-top: 1px solid var(--border);
+}
+.cma .cma-crit .is-next,
+.cma .cma-crit .is-next + li {
+  border-top-color: transparent;
+}
+.cma .cma-crit-row {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  width: 100%;
+  padding: 4px 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: var(--foreground);
+}
+.cma button.cma-crit-row:hover .cma-crit-t {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.cma .cma-crit .ic {
+  width: 18px;
+  height: 18px;
+}
+.cma .cma-crit-earned .ic,
+.cma .cma-crit-earned .cma-crit-s {
+  color: var(--success-text);
+}
+.cma .cma-crit-missed .ic,
+.cma .cma-crit-missed .cma-crit-s {
+  color: var(--cma-missed-text);
+}
+.cma .cma-crit-s {
+  font-size: 13px;
+  font-weight: 650;
+  font-variant-numeric: tabular-nums;
+}
+.cma .cma-crit .is-next .cma-crit-row {
+  width: calc(100% + 16px);
+  margin-inline: -8px;
+  padding: 5px 8px;
+  background: var(--brand-soft);
+}
+.cma .cma-slider {
+  border: 1px solid var(--border);
+  border-radius: var(--cma-r);
+  background: var(--card);
+}
+.cma .cma-slider,
+.cma .cma-hl {
+  scroll-margin: calc(var(--cma-sticky-top, 84px) + 8px) 16px 16px;
+}
+.cma .cma-sl-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 4px 4px 14px;
+  border-bottom: 1px solid var(--border);
+}
+.cma .cma-sl-count {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+.cma .cma-sl-count b {
+  font-weight: 650;
+  color: var(--foreground);
+}
+.cma .cma-sl-nav {
+  display: flex;
+  gap: 2px;
+}
+.cma .cma-sl-nav button {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  color: var(--foreground);
+}
+.cma .cma-sl-nav button:hover {
+  background: var(--muted);
+}
+.cma .cma-sl-nav button[aria-disabled="true"] {
+  opacity: 0.4;
+  background: none;
+  cursor: default;
+}
+.cma .cma-sl-nav .ic {
+  width: 20px;
+  height: 20px;
+}
+.cma .cma-sl-view {
+  overflow: hidden;
+  touch-action: pan-y;
+  transition: height 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.cma .cma-sl-track {
+  display: flex;
+  align-items: flex-start;
+  transition: transform 280ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+.cma .cma-slide {
+  flex: 0 0 100%;
+  min-width: 0;
+}
+.cma .cma-slide:focus-visible {
+  outline-offset: -2px;
+}
+.cma .cma-slide--earned {
+  --cma-tone: var(--cma-earned);
+  --cma-tone-ink: var(--success-text);
+}
+.cma .cma-slide--missed {
+  --cma-tone: var(--cma-missed);
+  --cma-tone-ink: var(--cma-missed-text);
+}
+.cma .cma-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 10px;
+  padding: 10px 14px;
+  background: var(--cma-tone);
+}
+.cma .cma-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 650;
+  color: var(--cma-tone-ink);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cma .cma-state .ic {
+  width: 14px;
+  height: 14px;
+}
+.cma .cma-cm-title {
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+.cma .cma-cm-body {
+  padding: 12px 14px 14px;
+}
+.cma .cma-cm-quote {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted-foreground);
+}
+.cma .cma-cm-text {
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--ink-2);
+}
+.cma .cma-fix {
+  margin-top: 12px;
+  padding: 10px 12px 11px;
+  border-radius: var(--cma-r);
+  background: var(--brand-soft);
+}
+.cma .cma-fix-hd {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--brand-text);
+}
+.cma .cma-fix-hd .ic {
+  width: 14px;
+  height: 14px;
+}
+.cma .cma-fix-tx {
+  margin-top: 4px;
+  font-size: 14px;
+  line-height: 21px;
+  color: var(--foreground);
+}
+.cma .cma-foot {
+  font-size: 12px;
+  line-height: 17px;
+  color: var(--muted-foreground);
+}
+.cma .cma-link {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.cma .cma-link path {
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linejoin: miter;
+  stroke-linecap: butt;
+}
+.cma .cma-link path.is-earned {
+  stroke: var(--success);
+}
+.cma .cma-link path.is-missed {
+  stroke: var(--destructive);
+}
+.cma .cma-link circle.is-earned {
+  fill: var(--success);
+}
+.cma .cma-link circle.is-missed {
+  fill: var(--destructive);
+}
+.cma .cma-score-meta {
+  display: flex;
+  flex-wrap: wrap;
+  margin-top: 6px;
+  gap: 6px;
+}
+.cma .cma-score-note {
+  margin-top: 6px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--ink-2);
+}
+.cma .cma-note {
+  margin-top: 4px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted-foreground);
+}
+/* The next-mark row whose comment is on show: a bar at its edge, not a colour change. */
+.cma .cma-crit .is-next[data-selected] .cma-crit-row {
+  box-shadow: inset 2px 0 0 var(--brand-text);
+}
+.cma .cma-crit .is-next .ic {
+  width: 14px;
+  height: 14px;
+  justify-self: center;
+  align-self: start;
+  margin-top: 3px;
+  color: var(--brand-text);
+}
+.cma .cma-crit .is-next .cma-crit-t {
+  grid-column: 2 / -1;
+  margin-top: 1px;
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--foreground);
+  text-wrap: pretty;
+}
+.cma .cma-crit .is-next b {
+  font-weight: 650;
+  color: var(--brand-text);
+}
+.cma .cma-link path.cma-link-tail {
+  stroke-width: 1;
+  stroke-dasharray: 1 3;
+  opacity: 0.55;
+}
+
+@container cma (min-width: 800px) {
+  .cma .cma-body {
+    --cma-wide: 1;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--cma-col);
+    column-gap: var(--cma-gap);
+    align-items: start;
+    padding: 0;
+    background: none;
+    border: 0;
+    border-radius: 0;
+  }
+  .cma .cma-page {
+    display: block;
+    padding: 32px 40px 36px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--cma-r);
+  }
+  .cma .cma-rail {
+    display: block;
+  }
+  /* Long answers: the column sticks, score card scrolled away above the slider,
+     only when it fits the screen (the component sets data-sticky and --cma-rail-top). */
+  .cma[data-sticky] .cma-rail {
+    position: sticky;
+    top: var(--cma-rail-top, 84px);
+  }
+  .cma .cma-answer {
+    margin-top: 0;
+  }
+  .cma .cma-score {
+    margin-top: 0;
+    background: var(--card);
+  }
+  .cma .cma-slider {
+    margin-top: 12px;
+  }
+  .cma .cma-link {
+    display: block;
+  }
+  .cma .cma-foot {
+    margin-top: 14px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cma,
+  .cma::before,
+  .cma::after,
+  .cma *,
+  .cma *::before,
+  .cma *::after {
+    transition: none !important;
+  }
+}
+@media print {
+  .cma .cma-link,
+  .cma .cma-sl-bar {
+    display: none;
+  }
+  .cma .cma-sl-view {
+    height: auto !important;
+    overflow: visible;
+  }
+  .cma .cma-sl-track {
+    display: block;
+    transform: none !important;
+  }
+  .cma .cma-slide {
+    break-inside: avoid;
+  }
+}
+/* No score card (the host shows the mark): the slider tops the column. */
+@container cma (min-width: 800px) {
+  .cma .cma-rail > .cma-slider:first-child {
+    margin-top: 0;
+  }
+}
+/* Flush: inside a host card (Mark my answer), no sheet or page box of its own. */
+.cma.cma--flush .cma-body,
+.cma.cma--flush .cma-page {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}

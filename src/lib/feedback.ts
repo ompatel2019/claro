@@ -64,6 +64,13 @@ export type ReviewRow = {
   review: MarkReview | null;
 };
 
+/** Matches the engine's anchoring order: transcript first, then the typed answer. */
+export function answerTextOf(
+  row: Pick<ReviewRow, "transcript" | "answer_text">,
+): string {
+  return row.transcript ?? row.answer_text ?? "";
+}
+
 export type MarkingState =
   | "marking"
   | "marked"
