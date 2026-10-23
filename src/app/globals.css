@@ -1253,6 +1253,10 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   box-shadow: none;
 }
 .sprint-focus .session-writing {
+  min-height: 288px;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 32px;
   padding: 16px 20px 16px 72px;
   border-radius: var(--radius);
   background-color: var(--card);
@@ -1292,4 +1296,14 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   border: 1px dashed var(--input);
   border-radius: var(--radius);
   background: var(--card);
+}
+body:has(.sprint-focus)
+  :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
+  backdrop-filter: none;
+}
+body:has(.sprint-focus)
+  :is([data-slot="dialog-title"], [data-slot="alert-dialog-title"]) {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 650;
 }

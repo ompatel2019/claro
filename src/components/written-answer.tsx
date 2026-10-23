@@ -264,7 +264,7 @@ export function WrittenAnswer({
                   rows={6}
                   className={cn(
                     "text-base font-normal",
-                    "session-writing min-h-72 font-sans text-base leading-8",
+                    "session-writing min-h-60 text-[15px] leading-7",
                   )}
                   aria-describedby={`answer-guide-${a.id}`}
                   value={text}

@@ -12,6 +12,7 @@ import {
   delta,
   kpis,
   markingInFlight,
+  mcGridRows,
   pct,
   sprintHref,
   timeMeta,
@@ -155,30 +156,30 @@ export default async function Results({
         <PortalIcon name="arrow-left" className="size-3.5" />
         Activity
       </Link>
-      <div className="[&>[data-component=PageHeader]]:flex-col [&>[data-component=PageHeader]]:items-start">
-        <PageHeader
-          eyebrow={`${when(s.started_at)} · ${timeMeta(elapsed, limit)}`}
-          title={`${modeLabel(s.config.mode)} sprint · ${places?.length ? places.map(name).join(", ") : "All topics"}`}
-        />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <SameSetup config={s.config} />
-        {failed.length > 0 && (
-          <RetryAnswer
-            ids={failed.map((r) => r.attempt_id)}
-            label={`Retry all failed (${failed.length})`}
-          />
-        )}
-        {mistakes > 0 && (
-          <Link
-            href={sprintHref(s.config, { history: "mistakes" })}
-            className={buttonVariants()}
-          >
-            <PortalIcon name="target" className="size-4" />
-            Retry mistakes ({mistakes})
-          </Link>
-        )}
-      </div>
+      <PageHeader
+        eyebrow={`${when(s.started_at)} · ${timeMeta(elapsed, limit)}`}
+        title={`${modeLabel(s.config.mode)} sprint · ${places?.length ? places.map(name).join(", ") : "All topics"}`}
+        actions={
+          <>
+            {mistakes > 0 && (
+              <Link
+                href={sprintHref(s.config, { history: "mistakes" })}
+                className={buttonVariants()}
+              >
+                <PortalIcon name="target" className="size-4" />
+                Retry mistakes ({mistakes})
+              </Link>
+            )}
+            <SameSetup config={s.config} />
+            {failed.length > 0 && (
+              <RetryAnswer
+                ids={failed.map((r) => r.attempt_id)}
+                label={`Retry all failed (${failed.length})`}
+              />
+            )}
+          </>
+        }
+      />
       <MarkingProgress {...progress} />
       <div className="grid grid-cols-3 gap-3 xl:grid-cols-[minmax(0,5fr)_repeat(3,minmax(0,2fr))] xl:gap-4">
         <ResultStat
@@ -235,6 +236,7 @@ export default async function Results({
       />
       <ResultsAnswers
         sprintLayout
+        mcGrid={mcGridRows(rows)}
         rows={rows}
         id={id}
         name={name}

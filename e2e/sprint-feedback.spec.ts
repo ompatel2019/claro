@@ -395,7 +395,7 @@ test.describe("Local results feedback", () => {
       await expect(page.getByText(message, { exact: false })).toBeVisible();
       await expect(
         page
-          .getByRole("region", { name: "Overall feedback", exact: true })
+          .getByRole("region", { name: "Your next step", exact: true })
           .getByRole("link", { name: "Practise", exact: true }),
       ).toBeVisible();
     });

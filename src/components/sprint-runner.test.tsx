@@ -699,7 +699,7 @@ it("saves a photo with only accepted answer fields and retries metadata without 
     ],
     { mode: "short", feedback: "end", topics: [] },
   );
-  fireEvent.click(screen.getByRole("button", { name: "Photo", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Photo" }));
   fireEvent.change(screen.getByLabelText("Take photo / Upload"), {
     target: {
       files: [new File(["photo"], "answer.png", { type: "image/png" })],
@@ -743,7 +743,7 @@ it("retries failed photo metadata automatically despite the one-second session c
     ],
     { mode: "short", feedback: "end", topics: [] },
   );
-  fireEvent.click(screen.getByRole("button", { name: "Photo", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Photo" }));
   await act(async () => {
     fireEvent.change(screen.getByLabelText("Take photo / Upload"), {
       target: {
@@ -845,7 +845,7 @@ it("deletes a fresh upload when the student removes it after its metadata save f
     ],
     { mode: "short", feedback: "end", topics: [] },
   );
-  fireEvent.click(screen.getByRole("button", { name: "Photo", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Photo" }));
   fireEvent.change(screen.getByLabelText("Take photo / Upload"), {
     target: {
       files: [new File(["photo"], "answer.png", { type: "image/png" })],
@@ -926,9 +926,9 @@ it("switches between typing and photo without losing the typed draft", () => {
   show([written()]);
   expect(screen.getByLabelText("Your answer")).toHaveValue("Demand grows.");
   expect(screen.queryByLabelText("Take photo / Upload")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Photo", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Photo" }));
   expect(screen.getByLabelText("Take photo / Upload")).toBeVisible();
   expect(screen.queryByLabelText("Your answer")).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Type", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Type" }));
   expect(screen.getByLabelText("Your answer")).toHaveValue("Demand grows.");
 });

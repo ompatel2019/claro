@@ -76,7 +76,7 @@ export function SprintFocusShell(
   }, []);
   return (
     <div className="sprint-focus flex min-h-svh flex-col">
-      <FocusBar className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 md:h-[68px] md:flex-nowrap md:py-0 lg:gap-4 lg:px-8 [&>[data-component=MobileFocusFeedback]]:hidden">
+      <FocusBar className="bg-background flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 backdrop-blur-none md:h-[68px] md:flex-nowrap md:py-0 lg:gap-4 lg:px-8 [&>[data-component=MobileFocusFeedback]]:hidden">
         <Button
           variant="ghost"
           size="sm"
@@ -86,7 +86,7 @@ export function SprintFocusShell(
           onClick={onExit}
         >
           <PortalIcon name="arrow-left" className="size-4" />
-          Save and exit
+          <span className="hidden sm:inline">Save and exit</span>
         </Button>
         <div className="min-w-0 flex-1 sm:border-l sm:pl-4">
           <p className="truncate text-sm font-semibold">{title}</p>
@@ -169,7 +169,7 @@ export function SprintFocusShell(
             onClick={() => feedback()}
           >
             <PortalIcon name="message-circle" />
-            Send feedback
+            <span className="hidden sm:inline">Send feedback</span>
           </Button>
         </div>
         <Button variant="outline" size="sm" disabled={busy} onClick={onFinish}>

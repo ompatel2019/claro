@@ -132,7 +132,7 @@ test("queues background marks, keeps edits usable, and waits at Finish", async (
   const move = async (question: number) => {
     await page
       .getByRole("navigation", { name: "Question progress" })
-      .getByRole("button", { name: new RegExp(`^Question ${question}:`) })
+      .getByRole("button", { name: new RegExp(`^Question ${question},`) })
       .click();
     await expect(
       page.getByText(`Explain effect ${question}.`, { exact: true }),

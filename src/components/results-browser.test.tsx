@@ -144,3 +144,41 @@ it("reselects and scrolls to a summary question after manual navigation with the
   fireEvent.click(screen.getByRole("link", { name: "Q3" }));
   await waitFor(() => expect(scroll).toHaveBeenCalledTimes(3));
 });
+
+it("shows an icon and word for every sprint answer, including spaced and decimal marks", () => {
+  const scores = ["4 / 4", "1.5 / 4", "0 / 1", null];
+  const sprintItems = scores.map((mark, i) => ({
+    ...items[0],
+    position: i + 1,
+    mark,
+  }));
+  render(
+    <ResultsBrowser
+      sprintLayout
+      items={sprintItems}
+      views={scores.map((_, i) => (
+        <p key={i}>Review {i + 1}</p>
+      ))}
+      initial={0}
+    />,
+  );
+  for (const [i, word] of [
+    "Earned",
+    "Part marks",
+    "Missed",
+    "Not answered",
+  ].entries()) {
+    const tile = screen.getByRole("button", {
+      name: new RegExp(`^Question ${i + 1}(,|$)`),
+    });
+    expect(tile).toHaveTextContent(word);
+    expect(tile.querySelector("svg")).toBeTruthy();
+  }
+  expect(
+    screen.getByRole("button", { name: "Question 2, 1.5/4 marks" }),
+  ).toHaveTextContent("1.5/4");
+  fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+  expect(screen.getByRole("table", { name: "Questions" })).toHaveTextContent(
+    "Part marks",
+  );
+});

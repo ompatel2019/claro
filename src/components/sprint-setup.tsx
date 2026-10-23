@@ -225,52 +225,97 @@ export function SprintSetup({
               title="Topics"
               hint="Choose up to two topics, or practise the whole course."
             >
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid items-start gap-3 sm:grid-cols-2">
                 {[{ id: "all", name: "All topics" }, ...parents].map((t) => {
                   const on =
                     t.id === "all"
                       ? c.topics.length === 0
                       : c.topics.includes(t.id);
+                  const subs = topics.filter((sub) => sub.parent_id === t.id);
                   return (
-                    <button
+                    <div
                       key={t.id}
-                      type="button"
-                      aria-label={t.name}
-                      aria-pressed={on}
-                      onClick={() => {
-                        if (t.id === "all") {
-                          set({ topics: [], subtopics: [] });
-                          setLimitHit(false);
-                        } else toggleTopic(t.id);
-                      }}
                       className={cn(
-                        "focus-visible:ring-ring flex min-h-20 items-center gap-3 rounded-xl border p-4 text-left text-sm font-semibold focus-visible:ring-2",
-                        on ? "border-primary bg-muted" : "hover:bg-muted",
+                        "rounded-2xl border p-3",
+                        on && "border-primary ring-primary ring-1",
                       )}
                     >
-                      <PortalIcon
-                        name={t.id === "all" ? "layers" : "book-open"}
-                        className="text-muted-foreground size-5 shrink-0"
-                      />
-                      <span className="min-w-0 flex-1">
-                        {t.name}
-                        <span className="text-muted-foreground mt-1 block text-xs font-normal">
-                          {n(
-                            t.id === "all"
-                              ? pool?.questions
-                              : pool?.topics[t.id],
-                          )}{" "}
-                          questions available
+                      <button
+                        type="button"
+                        aria-label={t.name}
+                        aria-pressed={on}
+                        onClick={() => {
+                          if (t.id === "all") {
+                            set({ topics: [], subtopics: [] });
+                            setLimitHit(false);
+                          } else toggleTopic(t.id);
+                        }}
+                        className="focus-visible:outline-ring flex min-h-14 w-full items-start gap-3 rounded-2xl text-left text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
+                      >
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "border-input mt-0.5 grid size-5 shrink-0 place-items-center rounded border",
+                            on &&
+                              "bg-primary border-primary text-primary-foreground",
+                          )}
+                        >
+                          {on && <PortalIcon name="check" className="size-4" />}
                         </span>
-                      </span>
-                      {t.id !== "all" && (
-                        <span className="text-muted-foreground text-xs font-medium tabular-nums">
-                          {mastery[t.id] == null
-                            ? "Not practised"
-                            : `${Math.round(mastery[t.id]!)}% mastery`}
+                        <span className="min-w-0 flex-1">
+                          {t.name}
+                          <span className="text-muted-foreground mt-1 block text-xs font-normal">
+                            {n(
+                              t.id === "all"
+                                ? pool?.questions
+                                : pool?.topics[t.id],
+                            )}{" "}
+                            questions available
+                          </span>
+                          {t.id !== "all" && (
+                            <span className="text-muted-foreground mt-1 block text-xs font-normal tabular-nums">
+                              {mastery[t.id] == null
+                                ? "Not practised"
+                                : `${Math.round(mastery[t.id]!)}% mastery`}
+                            </span>
+                          )}
                         </span>
+                      </button>
+                      {on && subs.length > 0 && (
+                        <div className="mt-3 space-y-2 border-t pt-3">
+                          <h3 className="sr-only">{t.name} subtopics</h3>
+                          <p className="text-muted-foreground text-xs">
+                            Optional: narrow your practice. No selection uses
+                            all subtopics.
+                          </p>
+                          <div
+                            className="flex flex-wrap gap-2"
+                            role="group"
+                            aria-label={`${t.name} subtopics`}
+                          >
+                            {subs.map((sub) => (
+                              <Chip
+                                key={sub.id}
+                                on={c.subtopics.includes(sub.id)}
+                                disabled={
+                                  !!pool && (pool.subtopics[sub.id] ?? 0) === 0
+                                }
+                                onClick={() =>
+                                  set({
+                                    subtopics: toggle(c.subtopics, sub.id),
+                                  })
+                                }
+                              >
+                                {sub.name}{" "}
+                                <span className="tabular-nums opacity-65">
+                                  {n(pool?.subtopics[sub.id])}
+                                </span>
+                              </Chip>
+                            ))}
+                          </div>
+                        </div>
                       )}
-                    </button>
+                    </div>
                   );
                 })}
               </div>
@@ -279,47 +324,6 @@ export function SprintSetup({
                   Up to 2 topics. Deselect one first.
                 </p>
               )}
-              {parents
-                .filter((t) => c.topics.includes(t.id))
-                .map((t) => {
-                  const subs = topics.filter((sub) => sub.parent_id === t.id);
-                  return (
-                    subs.length > 0 && (
-                      <div key={t.id} className="space-y-2 border-t pt-4">
-                        <h3 className="text-sm font-semibold">
-                          {t.name} subtopics
-                        </h3>
-                        <p className="text-muted-foreground text-xs">
-                          Optional: narrow your practice. No selection uses all
-                          subtopics.
-                        </p>
-                        <div
-                          className="flex flex-wrap gap-2"
-                          role="group"
-                          aria-label={`${t.name} subtopics`}
-                        >
-                          {subs.map((sub) => (
-                            <Chip
-                              key={sub.id}
-                              on={c.subtopics.includes(sub.id)}
-                              disabled={
-                                !!pool && (pool.subtopics[sub.id] ?? 0) === 0
-                              }
-                              onClick={() =>
-                                set({ subtopics: toggle(c.subtopics, sub.id) })
-                              }
-                            >
-                              {sub.name}{" "}
-                              <span className="opacity-65">
-                                {n(pool?.subtopics[sub.id])}
-                              </span>
-                            </Chip>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  );
-                })}
             </Section>
           </div>
           <div>

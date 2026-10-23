@@ -42,7 +42,7 @@ it("prioritises marks dropped, retains every topic and collapses full marks", ()
   expect(screen.getByText("4/4 · Full marks")).toBeVisible();
   expect(
     screen
-      .getAllByRole("link", { name: "Practise", exact: true })
+      .getAllByRole("link", { name: "Practise" })
       .map((a) => a.getAttribute("href")),
   ).toEqual([
     "/student/sprint?type=mixed&topics=parent",
