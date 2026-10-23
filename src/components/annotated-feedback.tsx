@@ -35,6 +35,7 @@ import { Popover, PopoverContent } from "./ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
+import { MarkedAnswerDoc } from "./annotated-feedback/marked-answer-doc";
 import {
   FeedbackDetails,
   CommentFields,
@@ -86,7 +87,6 @@ export function AnnotatedFeedback({
   /** Render only the marked answer (heading, filter, highlights, comments); the host page owns score, criteria, next steps and references. */
   answerOnly?: boolean;
 }) {
-  const AnswerContainer = singleResult ? ResultAnswerCard : Fragment;
   const nextCommentId = useRef(
     Math.min(0, ...(edit?.comments.map((c) => c.id) ?? [])) - 1,
   );
@@ -152,6 +152,10 @@ export function AnnotatedFeedback({
   const visible = comments.filter((c) => filter === "all" || c.kind === filter);
   const anchored = comments.filter((c) => c.start !== null);
   const pill = statePill(state, row.review);
+  // Marked, read-only answers use the Docs-style view; editing keeps the margin layout.
+  const docView = !edit && showMark && !!text;
+  const AnswerContainer =
+    singleResult && !docView ? ResultAnswerCard : Fragment;
   const outline = Array.isArray(row.feedback?.better_answer_outline)
     ? (row.feedback.better_answer_outline as string[])
     : [];
@@ -456,7 +460,7 @@ export function AnnotatedFeedback({
       ref={root}
       data-comment-navigation
       className={cn("space-y-4", singleResult && "min-w-0")}
-      onKeyDown={onKey}
+      onKeyDown={docView ? undefined : onKey}
     >
       {!answerOnly && showReferences && !!row.criteria?.length && (
         <section
@@ -505,7 +509,7 @@ export function AnnotatedFeedback({
         </section>
       )}
 
-      {answerOnly ? null : singleResult && showMark ? (
+      {answerOnly || docView ? null : singleResult && showMark ? (
         <div className="grid gap-5">
           <Card className="min-w-0 p-5">
             <div className="flex items-center gap-5">
@@ -601,7 +605,7 @@ export function AnnotatedFeedback({
         </Card>
       )}
       <AnswerContainer>
-        {(text || photos.length > 0) && (
+        {!docView && (text || photos.length > 0) && (
           <div>
             <h2 className="text-sm font-semibold">
               {showMark ? "Your answer, marked" : "Your answer"}
@@ -615,7 +619,7 @@ export function AnnotatedFeedback({
         )}
         {(filterBar || (photos.length > 0 && text)) && (
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {view === "typed" && filterBar}
+            {view === "typed" && !docView && filterBar}
             {photos.length > 0 && text && (
               <ToggleGroup
                 aria-label="Answer view"
@@ -632,6 +636,37 @@ export function AnnotatedFeedback({
         )}
         {(view === "photo" || !text) && photos.length > 0 ? (
           <Photos photos={photos} />
+        ) : docView ? (
+          <MarkedAnswerDoc
+            text={
+              keepLineBreaks || !row.transcript ? text : displayAnswer(text)
+            }
+            comments={comments}
+            note={
+              photos.length > 0
+                ? "Highlights show on the typed copy of your photo."
+                : undefined
+            }
+            score={
+              answerOnly
+                ? undefined
+                : {
+                    label: `Your mark: ${markLabel(row).replaceAll(" ", "")}`,
+                    mark: markLabel(row).split(" / ")[0],
+                    max,
+                    gain: Math.max(0, max - Number(row.mark)),
+                    tags: [band?.label, pill].filter((t): t is string => !!t),
+                    note:
+                      state === "in_review" &&
+                      row.review?.reason !== "student_dispute"
+                        ? "Our team is double-checking this mark."
+                        : null,
+                    earned: strings(row.feedback?.earned),
+                    missing: strings(row.feedback?.missing_points),
+                    next,
+                  }
+            }
+          />
         ) : text ? (
           <div
             className={cn(
@@ -716,7 +751,7 @@ export function AnnotatedFeedback({
           </PopoverContent>
         </Popover>
 
-        {!answerOnly && showMark && (edit || next) && (
+        {!answerOnly && !docView && showMark && (edit || next) && (
           <div>
             <h3 className="text-sm font-semibold">
               {singleResult ? "Your next mark" : "What gets you the next mark"}
@@ -780,3 +815,8 @@ export function AnnotatedFeedback({
     </div>
   );
 }
+
+const strings = (value: unknown) =>
+  Array.isArray(value)
+    ? value.filter((v): v is string => typeof v === "string" && !!v.trim())
+    : [];

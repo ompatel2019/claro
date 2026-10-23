@@ -1,7 +1,7 @@
 /**
  * Unstyled groundwork for the score-card-first comment slider: one comment at a
  * time, prev/next and arrow keys, synced both ways with answer highlights
- * (`mark[data-anchors]`). Not wired into AnnotatedFeedback yet.
+ * (`mark[data-anchors]`). Used by the marked-answer doc.
  */
 import { useEffect, useRef, useState } from "react";
 
@@ -76,11 +76,9 @@ export function useCommentSlider<T extends { id: number }>(
 
     switch (e.key) {
       case "ArrowLeft":
-      case "ArrowUp":
         prev();
         break;
       case "ArrowRight":
-      case "ArrowDown":
         next();
         break;
       case "Home":
@@ -112,6 +110,7 @@ export function useHighlightSync(
   doc: React.RefObject<HTMLElement | null>,
   selectedId: number | null,
   onSelect: (id: number) => void,
+  { scroll = true }: { scroll?: boolean } = {},
 ) {
   const onSelectRef = useRef(onSelect);
   const previousId = useRef(selectedId);
@@ -156,7 +155,7 @@ export function useHighlightSync(
         anchor.removeAttribute("data-selected");
       }
     });
-    if (previousId.current !== selectedId) {
+    if (scroll && previousId.current !== selectedId) {
       const reduced = window.matchMedia?.(
         "(prefers-reduced-motion: reduce)",
       ).matches;
@@ -166,5 +165,5 @@ export function useHighlightSync(
       });
     }
     previousId.current = selectedId;
-  }, [doc, selectedId]);
+  }, [doc, selectedId, scroll]);
 }

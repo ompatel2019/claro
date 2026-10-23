@@ -242,11 +242,11 @@ describe("useCommentSlider", () => {
     const slider = screen.getByTestId("slider");
     const cases: [string, number][] = [
       ["ArrowRight", 22],
-      ["ArrowDown", 33],
-      ["ArrowDown", 33],
+      ["ArrowRight", 33],
+      ["ArrowRight", 33],
       ["ArrowLeft", 22],
-      ["ArrowUp", 11],
-      ["ArrowUp", 11],
+      ["ArrowLeft", 11],
+      ["ArrowLeft", 11],
       ["End", 33],
       ["Home", 11],
     ];
@@ -256,9 +256,11 @@ describe("useCommentSlider", () => {
       expect(event.defaultPrevented).toBe(true);
       expect(screen.getByRole("status")).toHaveTextContent(String(id));
     }
-    const event = createEvent.keyDown(slider, { key: "Enter" });
-    fireEvent(slider, event);
-    expect(event.defaultPrevented).toBe(false);
+    for (const key of ["Enter", "ArrowDown", "ArrowUp"]) {
+      const event = createEvent.keyDown(slider, { key });
+      fireEvent(slider, event);
+      expect(event.defaultPrevented).toBe(false);
+    }
   });
 
   it("ignores form controls, editable descendants, and modifier keys", () => {
