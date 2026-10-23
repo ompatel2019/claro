@@ -19,6 +19,7 @@ describe("isMetaLine", () => {
     "You supplied two relevant examples in Q5.",
     "Q6 covers multiple-choice style recall well.",
     "In Q2, units were not included.",
+    "In Q2, explain that marginal cost (MC) is not included in fixed costs.",
     "As an AI tool, ChatGPT can raise productivity; you explain this well in Q2.",
     "In Q2, describe ChatGPT as a language model rather than a search engine.",
     "In Q2, explain how firms use ChatGPT as an AI tool to improve labour productivity.",

@@ -25,7 +25,7 @@ function tidy(expr: string) {
 
 // Absolute, www., bare-domain ("example.com/...") and relative URL spans are left alone.
 const URL_SPAN =
-  /(\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}[/?#]\S*|(?<![^\s([{"'])\/(?=[a-z_~.?#]|\d+\/)\S+)/i;
+  /(\b(?:https?:\/\/|www\.)\S+|\b[a-z0-9-]+(?:\.[a-z0-9-]+)*\.[a-z]{2,}[/?#]\S*|(?<![^\s([{"'])(?:\/(?=[a-z_~.?#]|\d+\/)|\.{1,2}\/|#)\S+|[\w./-]+\?\S*)/i;
 
 export function formatSampleMaths(text: string) {
   // Odd indexes are URL spans, which are never rewritten.
