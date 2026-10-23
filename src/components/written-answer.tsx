@@ -2,6 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowUp, ArrowDown } from "@/components/icons";
 import { createClient } from "@/utils/supabase/client";
+import { cleanupAnswerPhotos } from "@/lib/answer-photo-cleanup";
 import { withAuthRetry } from "@/lib/auth-client";
 import { plural, type Attempt } from "@/lib/practice";
 import { cn } from "@/lib/utils";
@@ -58,6 +59,11 @@ export function WrittenAnswer({
   const [confirmed, setConfirmed] = useState(false);
   const [replacement, setReplacement] = useState<File[] | null>(null);
   const [notes, setNotes] = useState("");
+  useEffect(() => {
+    void cleanupAnswerPhotos(userId).catch((error: Error) =>
+      setError(error.message),
+    );
+  }, [userId]);
   useEffect(() => {
     onConfirmed?.(confirmed && !confirm);
   }, [confirmed, confirm, onConfirmed]);
@@ -174,17 +180,26 @@ export function WrittenAnswer({
     await flush();
     const paths = [...(a.image_paths ?? [])];
     const batch = Date.now();
-    for (const [index, file] of ready.entries()) {
-      const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
-      const path = `${userId}/${a.id}-${batch}-${index}.${ext}`;
-      const db = createClient();
-      await withAuthRetry(db, async () => {
-        const { error } = await db.storage
-          .from("answers")
-          .upload(path, file, { contentType: file.type });
-        if (error) throw new Error(error.message);
-      });
-      paths.push(path);
+    const uploaded: string[] = [];
+    try {
+      for (const [index, file] of ready.entries()) {
+        const ext =
+          file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
+        const path = `${userId}/${a.id}-${batch}-${index}.${ext}`;
+        const db = createClient();
+        // Include the in-flight key: a lost response may follow a stored object.
+        uploaded.push(path);
+        await withAuthRetry(db, async () => {
+          const { error } = await db.storage
+            .from("answers")
+            .upload(path, file, { contentType: file.type });
+          if (error) throw new Error(error.message);
+        });
+        paths.push(path);
+      }
+    } catch (error) {
+      await cleanupAnswerPhotos(userId, uploaded);
+      throw error;
     }
     const patch = {
       image_paths: paths,
@@ -509,6 +524,15 @@ export function WrittenAnswer({
             Type it instead
           </Button>
         </div>
+      )}
+      {error.includes("Retry photo cleanup") && (
+        <Button
+          variant="outline"
+          disabled={busy || disabled}
+          onClick={() => void act(() => cleanupAnswerPhotos(userId))}
+        >
+          Retry photo cleanup
+        </Button>
       )}
       {error && (
         <p role="alert" className="text-destructive break-words">

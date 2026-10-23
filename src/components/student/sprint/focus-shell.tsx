@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState, type ComponentProps } from "react";
+import { useEffect, useRef, useState, useId, type ComponentProps } from "react";
 import { toast } from "sonner";
 import { PortalIcon } from "@/components/icons";
 import { FocusBar } from "@/components/claro/layout";
@@ -36,6 +36,7 @@ export function SprintFocusShell(
     booklet,
     children,
   } = props;
+  const bookletId = useId();
   const [rail, setRail] = useState(true);
   const [sheet, setSheet] = useState(false);
   const [calc, setCalc] = useState(false);
@@ -125,14 +126,26 @@ export function SprintFocusShell(
             aria-valuenow={answered}
           />
         </div>
-        <div className="order-last flex w-full shrink-0 items-center justify-between gap-1 md:order-none md:ml-auto md:w-auto">
+        <div className="order-last flex w-full shrink-0 flex-wrap items-center justify-between gap-1 md:order-none md:ml-auto md:w-auto md:flex-nowrap">
           <Button
             variant="ghost"
             size="icon-sm"
             aria-label="Booklet (B)"
+            className="hidden md:inline-flex"
             aria-pressed={rail}
             title="Booklet"
             onClick={toggleBooklet}
+          >
+            <PortalIcon name="book-open" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="md:hidden"
+            aria-label="Booklet (B)"
+            aria-expanded={sheet}
+            aria-controls={bookletId}
+            onClick={() => setSheet((open) => !open)}
           >
             <PortalIcon name="book-open" />
           </Button>
@@ -179,7 +192,11 @@ export function SprintFocusShell(
         </main>
       </div>
       <Sheet open={sheet} onOpenChange={setSheet}>
-        <SheetContent side="left" className="w-72 overflow-y-auto p-4">
+        <SheetContent
+          id={bookletId}
+          side="left"
+          className="w-72 overflow-y-auto p-4"
+        >
           <SheetTitle>Booklet</SheetTitle>
           <div
             onClick={(e) => {
@@ -248,7 +265,7 @@ function SprintTimer({
             : `Time used ${timer(seconds)}`
       }
       className={cn(
-        "bg-card mx-1 inline-flex h-8 items-center gap-1.5 rounded-full border px-3 text-[13px] tabular-nums",
+        "bg-card mx-1 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[13px] whitespace-nowrap tabular-nums",
         mode === "up" && "text-muted-foreground",
         mode === "down" && seconds <= 300 && "bg-warning-soft text-warning",
         mode === "down" &&

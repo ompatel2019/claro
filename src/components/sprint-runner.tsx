@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { PortalIcon, Flag, Spinner } from "@/components/icons";
 import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
+import { cleanupAnswerPhotos } from "@/lib/answer-photo-cleanup";
 import { ensureSession, withAuthRetry } from "@/lib/auth-client";
 import {
   answered,
@@ -61,6 +62,9 @@ export function SprintRunner({
   const [db] = useState(createClient);
   const [attempts, setAttempts] = useState(initial);
   const rows = useRef(initial);
+  const photoPaths = useRef(
+    new Map(initial.map((a) => [a.id, a.image_paths ?? []])),
+  );
   const first = initial.findIndex((a) => !answered(a));
   const [index, setIndex] = useState(first < 0 ? 0 : first);
   const [elapsed, setElapsed] = useState(session.elapsed_s ?? 0);
@@ -137,6 +141,14 @@ export function SprintRunner({
     setSaveState("saving");
     const operation = queue.current.then(() =>
       withAuthRetry(db, async () => {
+        if (patch.image_paths) {
+          photoPaths.current.set(id, [
+            ...new Set([
+              ...(photoPaths.current.get(id) ?? []),
+              ...patch.image_paths,
+            ]),
+          ]);
+        }
         if (backgroundAnswer(rows.current.find((a) => a.id === id)!)) {
           const response = await fetch(`/api/attempts/${id}/mark`, {
             method: "PATCH",
@@ -164,8 +176,18 @@ export function SprintRunner({
           );
       }),
     );
-    queue.current = operation.catch(() => {});
-    return operation.then(
+    const cleaned = operation.then(async () => {
+      if ("image_paths" in patch) {
+        const paths = patch.image_paths ?? [];
+        const removed = (photoPaths.current.get(id) ?? []).filter(
+          (path) => !paths.includes(path),
+        );
+        await cleanupAnswerPhotos(userId, removed);
+        photoPaths.current.set(id, paths);
+      }
+    });
+    queue.current = cleaned.catch(() => {});
+    return cleaned.then(
       () => {
         if (!dirty.current.has(id)) localStorage.removeItem(draftKey(id));
         if (!dirty.current.size) setSaveState("saved");
@@ -187,6 +209,7 @@ export function SprintRunner({
       }
     }
     await queue.current;
+    await cleanupAnswerPhotos(userId);
   }
   async function persistTime() {
     await withAuthRetry(db, async () => {
@@ -212,9 +235,16 @@ export function SprintRunner({
     for (const a of rows.current) {
       const draft = localStorage.getItem(draftKey(a.id));
       if (!draft) continue;
-      if (backgroundAnswer(a) || ["pending", "transcribed"].includes(a.status))
-        edit(a.id, JSON.parse(draft));
-      else localStorage.removeItem(draftKey(a.id));
+      if (
+        backgroundAnswer(a) ||
+        ["pending", "transcribed"].includes(a.status)
+      ) {
+        const patch: Partial<Attempt> = JSON.parse(draft);
+        photoPaths.current.set(a.id, [
+          ...new Set([...(a.image_paths ?? []), ...(patch.image_paths ?? [])]),
+        ]);
+        edit(a.id, patch);
+      } else localStorage.removeItem(draftKey(a.id));
     }
     if (initial.some(answered))
       toast(

@@ -81,3 +81,19 @@ it("labels calculator and feedback separately from flagging", () => {
   fireEvent.click(trigger);
   expect(feedback).toHaveBeenCalledOnce();
 });
+
+it("announces the mobile booklet sheet state independently of the desktop rail", () => {
+  show();
+  const mobile = screen
+    .getAllByRole("button", { name: "Booklet (B)" })
+    .find((button) => button.hasAttribute("aria-expanded"))!;
+  expect(mobile).toHaveAttribute("aria-expanded", "false");
+  expect(mobile).not.toHaveAttribute("aria-pressed");
+  fireEvent.click(mobile);
+  expect(mobile).toHaveAttribute("aria-expanded", "true");
+  expect(
+    document.getElementById(mobile.getAttribute("aria-controls")!),
+  ).toHaveAttribute("role", "dialog");
+  fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+  expect(mobile).toHaveAttribute("aria-expanded", "false");
+});
