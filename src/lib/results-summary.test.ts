@@ -9,6 +9,8 @@ describe("isMetaLine", () => {
     "As a language model, I cannot see your diagrams.",
     "The feedback only covers written answers.",
     "Your MC answers were not provided.",
+    "This summary only covers your written answers.",
+    "This summary is based on your short answers.",
   ])("drops %s", (line) => expect(isMetaLine(line)).toBe(true));
 
   it.each([
@@ -25,6 +27,9 @@ describe("isMetaLine", () => {
     "In Q2, explain how firms use ChatGPT as an AI tool to improve labour productivity.",
     "In Q2, explain how a language model can raise labour productivity.",
     "The summary in Q1 covers both causes of inflation accurately.",
+    "This summary of fiscal policy in Q2 covers its effect on demand accurately.",
+    "This summary covers both causes of inflation in Q1.",
+    "This summary only looks at short-run effects; add the long run in Q4.",
     "In Q2, your answer makes no claim about the effect on employment.",
     "Your multiple-choice answers were accurate.",
     "The feedback on Q3 identifies a tariff-revenue point as inaccurate.",
