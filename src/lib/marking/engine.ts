@@ -7,6 +7,7 @@ import { AiUsageGuardError } from "@/lib/ai/rate-limit";
 import { MODELS, type Model } from "@/lib/ai/prices";
 import { admin } from "@/utils/supabase/admin";
 import { markingPayload } from "./payload";
+import { tightenComments, tightenSummary } from "./comment-voice";
 import { firstReviews, type FlashcardReview } from "@/lib/flashcards";
 import {
   anchorComments,
@@ -219,7 +220,7 @@ export async function markWritten(
       analysis: grade.analysis,
       justification: final.grade.justification,
       why_not_higher: grade.why_not_higher,
-      comments: anchorComments(answer, grade.comments),
+      comments: tightenComments(anchorComments(answer, grade.comments)),
       earned: grade.earned,
       missing_points: grade.missing_points,
       next_band: grade.next_band,
@@ -268,7 +269,7 @@ export async function summariseSession(
   items: Parameters<typeof summaryMessages>[0],
   userId: string,
 ) {
-  return callJson({
+  const summary = await callJson({
     task: "session_summary",
     model: MODELS.cheap,
     schema: SummarySchema,
@@ -276,6 +277,7 @@ export async function summariseSession(
     effort: "low",
     userId,
   });
+  return tightenSummary(summary);
 }
 
 type Attempt = {

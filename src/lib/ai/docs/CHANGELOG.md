@@ -1,5 +1,9 @@
 # Engine changelog
 
+## 23 Oct 2026: Airo 5.3 (comment voice tweak; unit-tested only)
+
+Comments read like a top HSC state ranker: 1-2 short sentences naming the exact gap and fix, strengths in one line, `next_mark` one imperative line, no hedging, filler, praise padding or meta lines. Only comment-writing text in the full grading prompt changed; the marking prefix, check and reconcile prompts are byte-identical to 5.2, but comments share the first-pass call, so first-pass marks can shift. The session summary gives at most 3 one-line points per list with question numbers and no meta lines. A deterministic post-filter (`comment-voice.ts`) strips banned openers, hedges and meta sentences and caps sentences without touching quote, start, kind, tag or marks, keeping the original text if filtering would empty it. Unit-tested only: no paid eval or benchmark run. See [AIRO-5-3](/admin/marking/engine?tab=docs&doc=AIRO-5-3).
+
 ## 23 Oct 2026: S16 scan-to-text (transcription options)
 
 `transcribeImage` takes optional `task` and `detail` options, and `transcribeMessages` sets `image_url.detail` only when given. Defaults are unchanged (`transcribe_answer`, no detail), so the photo-answer flow and the prompt baseline are untouched. The new sprint-only `POST /api/attempts/[id]/scan` uses them (`transcribe_answer:scan`, `detail: "high"`, gpt-6.1-sol) to type a photo into `answer_text`; the photo is never stored and the route writes nothing to attempts. See [TRANSCRIPTION](/admin/marking/engine?tab=docs&doc=TRANSCRIPTION).
