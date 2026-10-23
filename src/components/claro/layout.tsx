@@ -85,28 +85,6 @@ export function TopBar({
     </header>
   );
 }
-export function SubjectSwitcher() {
-  return (
-    <div
-      data-component="SubjectSwitcher"
-      className="bg-card mx-4 flex items-center gap-2.5 rounded-2xl border px-3 py-2.5"
-    >
-      <span className="text-muted-foreground grid shrink-0 place-items-center">
-        <PortalIcon size={20} strokeWidth={1.5} name="book-open" />
-      </span>
-      <span className="grid flex-1 text-sm">
-        <span className="font-semibold">Economics</span>
-        <span className="text-muted-foreground text-xs">HSC · Year 12</span>
-      </span>
-      <PortalIcon
-        size={20}
-        strokeWidth={1.5}
-        name="chevron-down"
-        className="text-muted-foreground mr-0.5 size-4"
-      />
-    </div>
-  );
-}
 export function ExamCountdown({
   name,
   days,

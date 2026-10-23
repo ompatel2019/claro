@@ -1,11 +1,7 @@
 "use client";
 import { ActiveNavProvider, useActiveNav } from "@/components/claro/active-nav";
 import { CommandPalette } from "@/components/claro/command-palette";
-import {
-  ExamCountdown,
-  SubjectSwitcher,
-  TopBar,
-} from "@/components/claro/layout";
+import { ExamCountdown, TopBar } from "@/components/claro/layout";
 import { ThemeToggle, setTheme } from "./theme-toggle";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
@@ -220,13 +216,8 @@ function AppShellContent({
           >
             {kind === "student" ? <ShellLogo /> : <Logo collapsible />}
           </Link>
-          {kind === "admin" && <SidebarHeaderToggle />}
+          <SidebarHeaderToggle />
         </SidebarHeader>
-        {kind === "student" && (
-          <div className="my-3 group-data-[collapsible=icon]:hidden">
-            <SubjectSwitcher />
-          </div>
-        )}
         <SidebarContent className="pt-3 pb-2">
           <nav
             aria-label={
@@ -435,13 +426,7 @@ function AppShellContent({
               : undefined
           }
         >
-          {kind === "admin" ? (
-            <SidebarTrigger className="max-sm:size-9 md:hidden" />
-          ) : (
-            <div className="hidden md:block">
-              <SidebarHeaderToggle />
-            </div>
-          )}
+          <SidebarTrigger className="size-9 md:hidden" />
           <Link
             href={home}
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}

@@ -220,3 +220,69 @@ test("phone feedback and secondary-route tabs stay distinct", async ({
     drawer.getByRole("button", { name: "Send feedback", exact: true }),
   ).toBeVisible();
 });
+
+for (const kind of ["student", "admin"])
+  test(`${kind} sidebar toggle follows the logo and stays out of the desktop top bar`, async ({
+    page,
+  }) => {
+    const url = `http://claro.test/${kind}${kind === "admin" ? "?admin" : ""}`;
+    for (const width of [640, 1440]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.goto(url);
+      const header = page.locator('[data-slot="sidebar-header"]');
+      const toggle = header.getByRole("button", { name: "Toggle Sidebar" });
+      const topBarToggle = page
+        .locator('[data-component="TopBar"]')
+        .getByRole("button", { name: "Toggle Sidebar" });
+      await expect(toggle).toBeVisible();
+      await expect(topBarToggle).toBeHidden();
+      const logo = header.getByRole("link");
+      const logoBox = (await logo.boundingBox())!;
+      const toggleBox = (await toggle.boundingBox())!;
+      expect(toggleBox.x).toBeGreaterThan(logoBox.x + logoBox.width);
+      expect(
+        Math.abs(
+          toggleBox.y + toggleBox.height / 2 - logoBox.y - logoBox.height / 2,
+        ),
+      ).toBeLessThan(2);
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-expanded", "false");
+      await expect
+        .poll(async () => {
+          const collapsedLogo = (await logo.boundingBox())!;
+          const collapsedToggle = (await toggle.boundingBox())!;
+          expect(collapsedToggle.y).toBeGreaterThanOrEqual(
+            collapsedLogo.y + collapsedLogo.height,
+          );
+          return Math.abs(
+            collapsedToggle.x +
+              collapsedToggle.width / 2 -
+              collapsedLogo.x -
+              collapsedLogo.width / 2,
+          );
+        })
+        .toBeLessThan(2);
+      await expect(
+        page.locator('[data-component="SubjectSwitcher"]'),
+      ).toHaveCount(0);
+      await expect(
+        page.getByText("HSC · Year 12", { exact: true }),
+      ).toHaveCount(0);
+      await page.keyboard.press("Control+b");
+      await expect(toggle).toHaveAttribute("aria-expanded", "true");
+    }
+    for (const width of [390, 767]) {
+      await page.setViewportSize({ width, height: 1000 });
+      await page.goto(url);
+      const menu = page.getByRole("button", { name: "Toggle Sidebar" });
+      await expect(menu).toBeVisible();
+      await menu.click();
+      const drawer = page.getByRole("dialog", { name: "Sidebar" });
+      await expect(drawer).toBeVisible();
+      await expect(
+        drawer.getByRole("button", { name: "Toggle Sidebar" }),
+      ).toHaveCount(0);
+      await page.keyboard.press("Escape");
+      await expect(drawer).toBeHidden();
+    }
+  });

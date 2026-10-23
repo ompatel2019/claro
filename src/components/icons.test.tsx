@@ -113,6 +113,7 @@ it("covers the supported portal glyph vocabulary", () => {
     "table-2",
     "target",
     "timer",
+    "tray",
     "trending-up",
     "user",
     "zap",

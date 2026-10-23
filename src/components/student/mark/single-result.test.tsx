@@ -108,3 +108,20 @@ it("keeps explanations and disputes inside the final card's More disclosure", ()
     screen.getByRole("button", { name: "Question this mark" }),
   ).toBeVisible();
 });
+
+it("keeps a wrapped stem together in the result heading", () => {
+  render(
+    <SingleResult
+      row={{
+        ...row,
+        stem: "Explain a market-\nbased policy used by\ngovernment.",
+      }}
+      sessionId="session"
+      when="2026-10-19T00:00:00Z"
+      topic="Economic growth"
+    />,
+  );
+  expect(screen.getByRole("heading", { level: 1 }).textContent).toBe(
+    "Explain a market-based policy used by government.",
+  );
+});

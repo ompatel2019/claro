@@ -153,7 +153,7 @@ test.describe("AI backed written practice", () => {
   }) => {
     await start(page, "Short answer", ids);
     await page
-      .getByLabel("Upload a photo", { exact: true })
+      .getByLabel("Take photo / Upload", { exact: true })
       .setInputFiles(path.join(process.cwd(), "e2e/fixtures/answer.jpg"));
     const transcript = page.getByRole("textbox", {
       name: "Check your transcript",

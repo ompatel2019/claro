@@ -92,6 +92,7 @@ it("updates only the authenticated user's allowed columns and confirms a row was
     year_level: 12,
     school: "School",
   });
+  expect(mocks.updateUser).not.toHaveBeenCalled();
   mocks.single.mockResolvedValue({ data: null, error: { message: "no row" } });
   expect(
     await saveProfile(

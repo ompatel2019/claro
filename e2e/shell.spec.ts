@@ -27,7 +27,10 @@ test.describe("App shell", () => {
     await expect.poll(() => sidebarWidth(page)).toBe(248);
     await expect(async () => {
       if ((await sidebarWidth(page)) !== 72)
-        await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+        await page
+          .locator('[data-slot="sidebar-header"]')
+          .getByRole("button", { name: "Toggle Sidebar" })
+          .click();
       await expect.poll(() => sidebarWidth(page), { timeout: 1500 }).toBe(72);
     }).toPass({ timeout: 15000 });
     await nav.getByRole("link", { name: "Flashcards" }).hover();

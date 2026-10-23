@@ -72,6 +72,7 @@ vi.mock("./student/sprint/focus-shell", () => ({
   ),
 }));
 import { SprintRunner } from "./sprint-runner";
+import { questionPillState } from "./student/sprint/question-pill";
 const session = {
   id: "s",
   kind: "sprint",
@@ -203,7 +204,9 @@ it("flags from the fixed footer and updates the question booklet", async () => {
   fireEvent.click(flag);
   await waitFor(() => expect(flag).toHaveAttribute("aria-pressed", "true"));
   expect(
-    screen.getByRole("button", { name: "Question 1: Answered, Flagged" }),
+    within(
+      screen.getByRole("navigation", { name: "Question booklet" }),
+    ).getByRole("button", { name: "Question 1, answered, flagged, current" }),
   ).toBeVisible();
   expect(mocks.update).toHaveBeenCalledWith({ flagged: true });
   fireEvent.click(flag);
@@ -589,9 +592,15 @@ it("saves before background marking, keeps a resumed mark editable and hides fai
   expect(box).toBeEnabled();
   fireEvent.change(box, { target: { value: "Edited final answer" } });
   expect(
-    screen.getByRole("button", { name: /^Question 1:/ }),
+    within(
+      screen.getByRole("navigation", { name: "Question booklet" }),
+    ).getByRole("button", { name: /^Question 1,/ }),
   ).not.toHaveAccessibleName(/marks/);
-  fireEvent.click(screen.getByRole("button", { name: /^Question 2:/ }));
+  fireEvent.click(
+    within(
+      screen.getByRole("navigation", { name: "Question booklet" }),
+    ).getByRole("button", { name: /^Question 2,/ }),
+  );
   await waitFor(() =>
     expect(mocks.fetch).toHaveBeenCalledWith(
       "/api/attempts/a/mark",
@@ -606,7 +615,11 @@ it("saves before background marking, keeps a resumed mark editable and hides fai
     }),
   ]);
   expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: /^Question 1:/ }));
+  fireEvent.click(
+    within(
+      screen.getByRole("navigation", { name: "Question booklet" }),
+    ).getByRole("button", { name: /^Question 1,/ }),
+  );
   expect(
     await screen.findByRole("textbox", { name: "Your answer" }),
   ).toHaveValue("Edited final answer");
@@ -891,7 +904,11 @@ it("scans a written answer into the typed box and saves it as answer_text", asyn
   expect(screen.getByRole("textbox", { name: "Your answer" })).toHaveValue(
     "Tariffs raise import prices.",
   );
-  fireEvent.click(screen.getByRole("button", { name: /^Question 2:/ }));
+  fireEvent.click(
+    within(
+      screen.getByRole("navigation", { name: "Question booklet" }),
+    ).getByRole("button", { name: /^Question 2,/ }),
+  );
   await waitFor(() =>
     expect(mocks.fetch).toHaveBeenCalledWith(
       "/api/attempts/a/mark",
@@ -949,11 +966,61 @@ it("keeps long-sprint progress targets usable and preserves answered and flagged
   const nav = screen.getByRole("navigation", { name: "Question progress" });
   const buttons = within(nav).getAllByRole("button");
   expect(buttons).toHaveLength(55);
-  expect(buttons[54]).toHaveAccessibleName("Question 55, flagged, answered");
+  expect(buttons[54]).toHaveAccessibleName("Question 55, answered, flagged");
   expect(buttons[54]).toHaveClass("h-8", "min-w-8");
-  expect(buttons[54].querySelector(".bg-brand")).toBeTruthy();
+  expect(buttons[54].firstElementChild).toHaveClass(
+    "bg-brand",
+    "after:bg-[var(--pill-flag)]",
+  );
+  const booklet = screen.getByRole("navigation", { name: "Question booklet" });
+  const bookletPill = within(booklet).getByRole("button", {
+    name: "Question 55, answered, flagged",
+  });
+  expect(bookletPill).toHaveClass("bg-brand", "after:bg-[var(--pill-flag)]");
+  expect(buttons[54]).toHaveClass("focus-visible:outline-2");
+  expect(bookletPill).toHaveClass("focus-visible:outline-2");
+  expect(screen.getByText("Current").firstElementChild).toHaveClass(
+    "bg-brand-soft",
+  );
+  expect(
+    screen.getByText("Flagged", { selector: "li" }).firstElementChild,
+  ).toHaveClass("bg-muted", "after:bg-[var(--pill-flag)]");
+  expect(
+    screen
+      .getByRole("button", { name: "Flag for review" })
+      .closest(".sprint-session-footer"),
+  ).toHaveClass("left-[var(--sprint-rail)]");
   fireEvent.click(buttons[54]);
   await waitFor(() =>
     expect(buttons[54]).toHaveAttribute("aria-current", "step"),
+  );
+  expect(buttons[54]).toHaveAccessibleName(
+    "Question 55, answered, flagged, current",
+  );
+  expect(bookletPill).toHaveClass(
+    "bg-brand",
+    "scale-110",
+    "after:bg-[var(--pill-flag)]",
+  );
+});
+
+it.each(
+  [false, true].flatMap((active) =>
+    [false, true].flatMap((answered) =>
+      [false, true].map((flagged) => ({ active, answered, flagged })),
+    ),
+  ),
+)("maps question pill states: %o", ({ active, answered, flagged }) => {
+  const pill = questionPillState({ active, answered, flagged });
+  expect(pill.className.split(" ")).toContain(
+    answered ? "bg-brand" : active ? "bg-brand-soft" : "bg-muted",
+  );
+  expect(pill.className.includes("text-brand-foreground")).toBe(answered);
+  expect(pill.className.includes("scale-110")).toBe(active);
+  expect(pill.className.includes("after:bg-[var(--pill-flag)]")).toBe(flagged);
+  expect(pill.className).not.toMatch(/ring-/);
+  expect(pill["aria-current"]).toBe(active ? "step" : undefined);
+  expect(pill.label).toBe(
+    `${answered ? "answered" : "not answered"}${flagged ? ", flagged" : ""}${active ? ", current" : ""}`,
   );
 });

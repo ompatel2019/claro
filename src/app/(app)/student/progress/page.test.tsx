@@ -70,14 +70,12 @@ it("renders range-scoped breakdowns and per-card empty states while keeping unto
     ),
   );
   expect(mocks.load).toHaveBeenCalledWith("year", "2026-10-09");
-  expect(screen.getAllByText("No activity in this range")).toHaveLength(1);
   expect(
     screen.getByRole("link", { name: "Sprint on Global economy" }),
   ).toHaveAttribute("href", "/student/sprint?topics=t1");
   expect(
     screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
   ).toEqual([
-    "Practice average",
     "Marks by topic",
     "Your practice",
     "Where your marks go",
@@ -138,67 +136,6 @@ it("provides a route retry and card-shaped loading skeletons", () => {
   ).toBeGreaterThan(10);
 });
 
-it("excludes flashcard recall from mixed score history and scopes type chips to marked answers", async () => {
-  const base = {
-    config: { mode: "short" },
-    finished_at: "2026-10-09T01:00:00Z",
-    elapsed_s: 100,
-    pct: 80,
-    by_type: { short: 60 },
-  };
-  mocks.load.mockResolvedValue({
-    ...empty,
-    history: [
-      { ...base, id: "sprint", kind: "sprint" },
-      {
-        ...base,
-        id: "sit",
-        kind: "paper",
-      },
-      { ...base, id: "cards", kind: "flashcards", pct: 20, by_type: {} },
-      { ...base, id: "single", kind: "single" },
-    ],
-  });
-  const view = render(
-    await resolve(
-      await Progress({ searchParams: Promise.resolve({ range: "all" }) }),
-    ),
-  );
-  fireEvent.click(
-    screen.getAllByRole("button", { name: "Show chart data" })[0],
-  );
-  expect(
-    screen.getAllByRole("link", { name: /Short answer sprint/ })[0],
-  ).toHaveAttribute("href", "/student/sprint/sprint/results");
-  expect(screen.queryByRole("link", { name: /Flashcards/ })).toBeNull();
-  expect(screen.getByRole("cell", { name: "80%" })).toBeVisible();
-  expect(
-    screen.getAllByRole("link", { name: /Mark my answer/ })[0],
-  ).toHaveAttribute("href", "/student/activity/single");
-  view.unmount();
-  render(
-    await resolve(
-      await Progress({
-        searchParams: Promise.resolve({
-          range: "all",
-          type: "short",
-          kind: "sprint",
-        }),
-      }),
-    ),
-  );
-  fireEvent.click(
-    screen.getAllByRole("button", { name: "Show chart data" })[0],
-  );
-  expect(
-    screen.getAllByRole("link", { name: /Short answer sprint/ })[0],
-  ).toHaveAttribute("href", "/student/sprint/sprint/results");
-  expect(
-    screen.getAllByRole("link", { name: /Short answer sprint/ })[0],
-  ).toHaveAccessibleName(/60%/);
-  expect(screen.queryByRole("link", { name: /Flashcards/ })).toBeNull();
-});
-
 it("derives the practice summary from parent topic marks without counting subtopics twice", async () => {
   mocks.load.mockResolvedValue({
     ...empty,
@@ -217,12 +154,16 @@ it("derives the practice summary from parent topic marks without counting subtop
   });
   render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
   expect(
-    screen.getByText("70% across 4 marked answers · Your target is 80%"),
-  ).toBeVisible();
+    screen.getByText("Questions answered").nextElementSibling,
+  ).toHaveTextContent("4");
+  expect(
+    screen.queryByRole("heading", { name: "Practice average" }),
+  ).toBeNull();
+  expect(screen.queryByRole("button", { name: "Show chart data" })).toBeNull();
   expect(screen.getAllByText("7/10").length).toBeGreaterThan(0);
 });
 
-it("rejects missing finish dates before converting them to Sydney dates", async () => {
+it("excludes unfinished sessions from study time", async () => {
   const session = {
     id: "valid",
     kind: "sprint",
@@ -237,12 +178,6 @@ it("rejects missing finish dates before converting them to Sydney dates", async 
     history: [session, { ...session, id: "unfinished", finished_at: null }],
   });
   render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
-  fireEvent.click(
-    screen.getAllByRole("button", { name: "Show chart data" })[0],
-  );
-  expect(screen.getAllByRole("link", { name: /75%/ })).toHaveLength(1);
-  expect(screen.queryByText(/1970/)).toBeNull();
-  expect(screen.queryByRole("link", { name: /unfinished/ })).toBeNull();
   expect(screen.getByText("Study time").nextElementSibling).toHaveTextContent(
     "0h 1m",
   );
@@ -280,7 +215,7 @@ it("counts only active days and handles an unavailable activity summary", async 
   );
 });
 
-it("keeps the practice chart empty for flashcard-only history", async () => {
+it("includes flashcard sessions in study time without a practice chart", async () => {
   mocks.load.mockResolvedValue({
     ...empty,
     history: [
@@ -297,12 +232,8 @@ it("keeps the practice chart empty for flashcard-only history", async () => {
   });
   render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
   expect(
-    screen.getByText("No marked answers yet · Your target is 80%"),
-  ).toBeVisible();
-  expect(screen.getByText("No activity in this range")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "Show chart data" }));
-  expect(screen.queryByRole("cell", { name: "90%" })).toBeNull();
-  expect(screen.queryByRole("link", { name: /Flashcards/ })).toBeNull();
+    screen.queryByRole("img", { name: /Weekly practice average/ }),
+  ).toBeNull();
   expect(screen.getByText("Study time").nextElementSibling).toHaveTextContent(
     "0h 2m",
   );

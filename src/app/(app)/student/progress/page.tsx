@@ -2,13 +2,12 @@ import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { requireProfile } from "@/lib/auth";
 import { loadProgress, progressToday } from "@/lib/progress-data";
-import { parseRange, rangeFrom, PRACTICE_TARGET } from "@/lib/progress";
+import { parseRange, rangeFrom } from "@/lib/progress";
 import type { ActivityDay } from "@/lib/activity";
 import { createClient } from "@/utils/supabase/server";
 import { PageHeader } from "@/components/claro/layout";
 import { ProgressControls } from "@/components/progress-controls";
 import { TopicProgressTable } from "@/components/progress-tables";
-import { ProgressChart } from "@/components/student/progress/charts";
 import { PracticeDays } from "@/components/student/progress/practice-days";
 import { Meter } from "@/components/claro/data-display";
 import { buttonVariants } from "@/components/ui/button";
@@ -71,18 +70,6 @@ export default async function Progress({
   const earned = parents.reduce((n, t) => n + t.earned, 0),
     possible = parents.reduce((n, t) => n + t.possible, 0),
     answered = parents.reduce((n, t) => n + t.answered, 0);
-  const pct = possible ? Math.round((earned / possible) * 100) : 0;
-  const history = d.history
-    .filter(
-      (s) =>
-        s.kind !== "flashcards" &&
-        (!p.kind || s.kind === p.kind) &&
-        (!p.type || s.by_type[String(p.type)] != null),
-    )
-    .map((s) =>
-      typeof p.type === "string" ? { ...s, pct: s.by_type[p.type] ?? null } : s,
-    );
-
   const days = volume.error ? null : ((volume.data ?? []) as ActivityDay[]);
   const seconds = d.history
     .filter(
@@ -117,27 +104,6 @@ export default async function Progress({
         eyebrow="From your marked answers"
         actions={<ProgressControls range={range} />}
       />
-      <Section
-        title="Practice average"
-        caption={`${answered ? `${pct}% across ${answered} marked answers` : "No marked answers yet"} · Your target is ${PRACTICE_TARGET}%`}
-      >
-        <ProgressChart history={history}>
-          <details className="text-muted-foreground mt-2 text-xs">
-            <summary className="cursor-pointer">Filter score history</summary>
-            <div className="mt-3">
-              <ProgressControls range={range} filters />
-            </div>
-          </details>
-        </ProgressChart>
-        {answered === 0 && (
-          <Link
-            href="/student/sprint"
-            className={buttonVariants({ className: "mt-4" })}
-          >
-            Start a sprint
-          </Link>
-        )}
-      </Section>
       <Section
         title="Marks by topic"
         caption="Share of marks earned, weakest first. Open a topic for its dot points."
@@ -176,65 +142,65 @@ export default async function Progress({
           count is for today.
         </p>
       </Section>
-      <div className="grid items-start gap-6 xl:grid-cols-[7fr_5fr]">
-        <div className="progress-loss">
+      <div className="grid gap-6 xl:grid-cols-[7fr_5fr]">
+        <div className="progress-loss grid">
           <HomeLostMarks
             progress={Promise.resolve(d)}
             caption="Marks dropped in this range, by dot point. Practise a dot point to improve it."
           />
         </div>
-        <div className="min-w-0 space-y-6">
-          <Section
-            title="By question type"
-            caption="Share of marks earned in this range"
-          >
-            <ul className="divide-y">
-              {(
-                [
-                  ["mcq", "Multiple choice"],
-                  ["short", "Short answer"],
-                  ["extended", "Extended response"],
-                ] as const
-              ).map(([id, label]) => {
-                const row = d.types.find((r) => r.id === id);
-                return (
-                  <li key={id} className="py-3 first:pt-0 last:pb-0">
-                    <div className="flex items-baseline justify-between gap-3 text-sm">
-                      <span className="font-semibold">{label}</span>
-                      <span className="tabular-nums">
-                        {row?.pct == null
-                          ? "Not started"
-                          : `${Math.round(row.pct)}%`}
-                      </span>
-                    </div>
-                    {row?.pct != null && (
-                      <Meter
-                        value={row.pct}
-                        label={`${label} average`}
-                        className="mt-2"
-                      />
+        <Section
+          title="By question type"
+          caption="Share of marks earned in this range"
+        >
+          <ul className="divide-y">
+            {(
+              [
+                ["mcq", "Multiple choice"],
+                ["short", "Short answer"],
+                ["extended", "Extended response"],
+              ] as const
+            ).map(([id, label]) => {
+              const row = d.types.find((r) => r.id === id);
+              return (
+                <li key={id} className="py-3 first:pt-0 last:pb-0">
+                  <div className="flex items-baseline justify-between gap-3 text-sm">
+                    <span className="font-semibold">{label}</span>
+                    <span className="tabular-nums">
+                      {row?.pct == null
+                        ? "Not started"
+                        : `${Math.round(row.pct)}%`}
+                    </span>
+                  </div>
+                  {row?.pct != null && (
+                    <Meter
+                      value={row.pct}
+                      label={`${label} average`}
+                      className="mt-2"
+                    />
+                  )}
+                  <div className="mt-2 flex items-center justify-between gap-3">
+                    <span className="text-muted-foreground text-xs tabular-nums">
+                      {row?.answered ?? 0} answered
+                    </span>
+                    {id !== "extended" && (
+                      <Link
+                        href={`/student/sprint?type=${id}`}
+                        className={buttonVariants({
+                          variant: "ghost",
+                          size: "sm",
+                        })}
+                      >
+                        Practise<span className="sr-only"> {label}</span>
+                      </Link>
                     )}
-                    <div className="mt-2 flex items-center justify-between gap-3">
-                      <span className="text-muted-foreground text-xs tabular-nums">
-                        {row?.answered ?? 0} answered
-                      </span>
-                      {id !== "extended" && (
-                        <Link
-                          href={`/student/sprint?type=${id}`}
-                          className={buttonVariants({
-                            variant: "ghost",
-                            size: "sm",
-                          })}
-                        >
-                          Practise<span className="sr-only"> {label}</span>
-                        </Link>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </Section>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </Section>
+        <div className="min-w-0 xl:col-span-2">
           <Section title="Practice days" caption="Small sessions add up">
             <PracticeDays
               days={days}

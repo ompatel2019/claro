@@ -9,7 +9,7 @@ import {
   AlertDialogTitle,
   Button,
 } from "@/components/claro/controls";
-import { Camera, Spinner } from "@/components/icons";
+import { FilePicker } from "@/components/ui/file-picker";
 import { useScanToText, type ScanResult } from "@/hooks/use-scan-to-text";
 import { capWords } from "@/lib/limits";
 
@@ -34,7 +34,6 @@ export function ScanToText({
   disabled?: boolean;
 }) {
   const { scan, state, error, retryAt } = useScanToText(attemptId);
-  const input = useRef<HTMLInputElement>(null);
   const [pending, setPending] = useState<ScanResult | null>(null);
   const [typing, setTyping] = useState(false);
   const [result, setResult] = useState<ScanResult | null>(null);
@@ -117,30 +116,19 @@ export function ScanToText({
 
   return (
     <div className="space-y-2">
-      <input
-        ref={input}
-        type="file"
+      <FilePicker
+        label="Scan written answer"
+        icon="camera"
         accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
         capture="environment"
-        className="sr-only"
-        tabIndex={-1}
-        aria-hidden
+        disabled={disabled || busy || waiting}
+        aria-busy={busy || undefined}
         onChange={(event) => {
           const file = event.target.files?.[0];
           event.target.value = "";
           if (file) void choose(file);
         }}
       />
-      <Button
-        type="button"
-        variant="outline"
-        disabled={disabled || busy || waiting}
-        aria-busy={busy || undefined}
-        onClick={() => input.current?.click()}
-      >
-        {busy ? <Spinner className="animate-spin" /> : <Camera />}
-        Scan written answer
-      </Button>
       <p role="status" className="text-muted-foreground text-sm">
         {status}
         {!busy && !!result?.uncertain && "Check any words marked [?]."}

@@ -14,6 +14,7 @@ import { PenCaret, PenTick, PenWave } from "@/components/claro/markup-answer";
 import { MarkedAnswer } from "./marked-answer";
 import { MarkReportProblem } from "./report-problem";
 import { cn } from "@/lib/utils";
+import { normaliseStem } from "@/lib/stem-text";
 import { QuestionMark } from "@/components/question-mark";
 import { PortalIcon } from "@/components/icons";
 import {
@@ -40,6 +41,7 @@ export function SingleResult({
   const comments = readComments(row.feedback, text);
   const score = row.mark ?? 0;
   const of = row.max_marks ?? row.marks;
+  const [lead, ...rest] = normaliseStem(row.stem).split("\n");
   const provisional = markingState(row) !== "reviewed";
   const fixes = comments.filter((c) => c.kind === "fix");
   const next = nextMarkLine(comments, row.feedback, score === of);
@@ -98,10 +100,8 @@ export function SingleResult({
           Marked {dateLabel(when, true)}
           {topic ? ` · ${topic}` : ""} · {of} marks
         </p>
-        <h1>{row.stem.split("\n")[0]}</h1>
-        {row.stem.includes("\n") && (
-          <RichText text={row.stem.slice(row.stem.indexOf("\n") + 1)} />
-        )}
+        <h1>{lead}</h1>
+        {rest.length > 0 && <RichText text={rest.join("\n")} />}
         {row.stimulus && <RichText text={row.stimulus} />}
         <div className="mt-4 flex flex-wrap items-center gap-2">
           {row.question_id && (

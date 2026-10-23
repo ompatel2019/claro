@@ -109,19 +109,6 @@ export const Plus = icon("plus", <path d="M5 12h14M12 5v14" />);
 export const ArrowUp = icon("arrow-up", <path d="M12 19V5m-6 6 6-6 6 6" />);
 export const ArrowDown = icon("arrow-down", <path d="M12 5v14m-6-6 6 6 6-6" />);
 export const Flag = icon("flag", <path d="M5 21V4h11l-2 4 2 4H5" />);
-export const ImagePlus = icon(
-  "image-plus",
-  <path
-    d={`M21 12v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h8M3 16l5-5 5 5 2-2 6 6M18 3v6M15 6h6${dot(8.5, 8)}`}
-  />,
-);
-export const Camera = icon(
-  "camera",
-  <>
-    <path d="M4 9c0-1.1.9-2 2-2h1.8l1.4-2h5.6l1.4 2H18c1.1 0 2 .9 2 2v8c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2z" />
-    <circle cx="12" cy="13" r="3.25" />
-  </>,
-);
 export const Paperclip = icon(
   "paperclip",
   <path d="m20 11-8.6 8.6a5 5 0 0 1-7-7l8.8-8.8a3.3 3.3 0 0 1 4.7 4.7l-8.9 8.9a1.7 1.7 0 0 1-2.4-2.4l8-8" />,
@@ -269,6 +256,8 @@ const portalPaths = {
   "table-2": "M3 3h18v18H3ZM3 9h18M9 3v18",
   target:
     "M22 12a10 10 0 1 0-20 0 10 10 0 0 0 20 0m-4 0a6 6 0 1 0-12 0 6 6 0 0 0 12 0m-4 0a2 2 0 1 0-4 0 2 2 0 0 0 4 0",
+  upload: "M12 16V3m-5 5 5-5 5 5M4 15v6h16v-6",
+  tray: "m4 13.5 2.4-7h11.2l2.4 7M4 13.5V18c0 .8.7 1.5 1.5 1.5h13c.8 0 1.5-.7 1.5-1.5v-4.5M4 13.5h4.5l1.4 2.2h4.2l1.4-2.2H20",
   timer: "M9 2h6M12 6a8 8 0 1 0 0 16 8 8 0 0 0 0-16m0 8 3-3",
   "trending-up": "m3 17 6-6 5 4 7-9m-6 0h6v6",
   user: "M16 7a4 4 0 1 0-8 0 4 4 0 0 0 8 0M4 21v-2a5 5 0 0 1 5-5h6a5 5 0 0 1 5 5v2",

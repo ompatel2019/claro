@@ -7,6 +7,7 @@ test.beforeAll(async () => {
   css = await offlineCss();
   bundle = await offlineBundle(
     `import React from 'react'; import {createRoot} from 'react-dom/client';
+        import {ImportCards} from './src/components/student/flashcards/import-cards';
         import Home from './src/app/(app)/student/page';
         import Admin from './src/app/admin/page';
         import Flashcards from './src/app/admin/content/flashcards/page';
@@ -18,7 +19,7 @@ test.beforeAll(async () => {
         const f=Object.fromEntries(new URLSearchParams(location.search));
         const activity={rows:[{id:'s',kind:'sprint',title:'Mixed sprint · Inflation',status:'Finished',provisional:false,study:false,pct:75,items:8,answered:8,elapsed_s:125,started_at:'2026-10-19T00:00:00Z',finished_at:'2026-10-19T00:02:00Z'}],page:1,total:1,all_total:1,kinds:{sprint:1},kind_total:1,stats:{sessions:1,questions:8,average:75,best:75}};
         const path=location.pathname;
-        const page=path.includes('progress') ? await Progress({searchParams:Promise.resolve(f)}) : path.includes('flashcards') ? await Flashcards({searchParams:Promise.resolve(f)}) : path.includes('admin') ? Admin() : path.includes('activity') ? <ActivityBrowser data={activity} filters={{kind:'',status:'',topic:'',range:'',q:'',sort:'newest',date:'',from:'',to:'',page:1}} topics={[]} today="2026-10-19"/> : await Home();
+        const page=path.endsWith('/flashcards/import') ? <ImportCards topics={[{id:'inflation',name:'Inflation',parent_id:'t3',sort:1}]}/> : path.includes('progress') ? await Progress({searchParams:Promise.resolve(f)}) : path.includes('flashcards') ? await Flashcards({searchParams:Promise.resolve(f)}) : path.includes('admin') ? Admin() : path.includes('activity') ? <ActivityBrowser data={activity} filters={{kind:'',status:'',topic:'',range:'',q:'',sort:'newest',date:'',from:'',to:'',page:1}} topics={[]} today="2026-10-19"/> : await Home();
         const resolved=await resolve(page);
         createRoot(document.getElementById('root')).render(<FeedbackWidget userId="student"><header className="h-16 border-b px-4 py-5">Claro<FeedbackTrigger/></header><main className="mx-auto max-w-[1280px] px-4 py-6 md:px-6"><div className="pb-0 lg:pb-12">{resolved}</div></main></FeedbackWidget>);`,
     [
@@ -28,7 +29,7 @@ test.beforeAll(async () => {
           builder.onResolve(
             {
               filter:
-                /^(server-only|next\/(link|navigation|form)|@\/lib\/(auth|admin-data|admin-flashcards|admin-content)|@\/utils\/supabase\/(server|client)|@\/components\/(welcome-dialog|shortcut|flashcard-import|flashcards-table|flashcard-start))$/,
+                /^(server-only|@\/app\/\(app\)\/flashcards\/my-card-actions|next\/(link|navigation|form)|@\/lib\/(auth|admin-data|admin-flashcards|admin-content)|@\/utils\/supabase\/(server|client)|@\/components\/(welcome-dialog|shortcut|flashcard-import|flashcards-table|flashcard-start))$/,
             },
             ({ path }) => ({ path, namespace: "synthetic" }),
           );
@@ -63,6 +64,11 @@ test.beforeAll(async () => {
                   sort: 4,
                 },
               ];
+              if (path === "@/app/(app)/flashcards/my-card-actions")
+                return {
+                  contents: `export const loadMyCardFronts=async()=>({fronts:[]});export const importMyCards=async(cards)=>{window.importedCards=cards;return {ids:cards.map((_,i)=>String(i))}};export const deleteMyCards=async(ids)=>({ids});export const saveMyCard=async()=>({ids:[]});`,
+                  loader: "tsx",
+                };
               const contents =
                 path === "next/link"
                   ? `import React from 'react'; export default function Link({href,prefetch,...props}){return <a href={href} {...props}/>}`
@@ -305,8 +311,14 @@ test("Progress: mobile topic rows and sprint actions stay within the page", asyn
     page.getByRole("heading", { name: "Marks by topic", exact: true }),
   ).toBeVisible();
   await expect(page.getByRole("heading", { level: 2 }).first()).toHaveText(
-    "Practice average",
+    "Marks by topic",
   );
+  await expect(
+    page.getByRole("heading", { name: "Practice average", exact: true }),
+  ).toHaveCount(0);
+  await expect(
+    page.getByRole("button", { name: "Show chart data" }),
+  ).toHaveCount(0);
   const topics = page.getByRole("table", {
     name: "Marks by topic",
     exact: true,
@@ -347,4 +359,109 @@ test("Progress: mobile topic rows and sprint actions stay within the page", asyn
     await page.evaluate(() => document.documentElement.scrollWidth),
     JSON.stringify(overflow),
   ).toBe(390);
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const loss = await page
+    .getByRole("heading", { name: "Where your marks go" })
+    .locator('xpath=ancestor::*[@data-slot="card"][1]')
+    .boundingBox();
+  const types = await page
+    .getByRole("heading", { name: "By question type" })
+    .locator('xpath=ancestor::*[@data-slot="card"][1]')
+    .boundingBox();
+  expect(loss!.y).toBe(types!.y);
+  expect(loss!.height).toBe(types!.height);
+});
+
+test("Feedback chips have individual borders and no outer tray in both themes", async ({
+  page,
+}) => {
+  await page.goto("http://claro.test/student/progress");
+  await page.getByRole("button", { name: "Feedback", exact: true }).click();
+  const group = page.getByRole("group", { name: "Feedback type" });
+  const general = group.getByRole("button", { name: "General", exact: true });
+  const bug = group.getByRole("button", { name: "Bug", exact: true });
+  for (const dark of [false, true]) {
+    await page.evaluate(
+      (dark) => document.documentElement.classList.toggle("dark", dark),
+      dark,
+    );
+    await expect(group).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+    await expect(group).toHaveCSS("border-width", "0px");
+    await expect(group).toHaveCSS("padding", "0px");
+    await general.click();
+    await expect(general).toHaveAttribute("aria-pressed", "true");
+    await expect(bug).toHaveAttribute("aria-pressed", "false");
+    await expect(general).toHaveCSS("border-width", "1px");
+    await expect(bug).toHaveCSS("border-width", "1px");
+    await expect(async () => {
+      const selected = await general.evaluate(
+        (el) => getComputedStyle(el).borderColor,
+      );
+      const unselected = await bug.evaluate(
+        (el) => getComputedStyle(el).borderColor,
+      );
+      expect(selected).not.toBe(unselected);
+    }).toPass();
+    await bug.click();
+    await expect(bug).toHaveAttribute("aria-pressed", "true");
+    await expect(general).toHaveAttribute("aria-pressed", "false");
+  }
+});
+
+test("Flashcard import: Quizlet guide, preview and cleaned submission", async ({
+  page,
+}) => {
+  await page.goto("http://claro.test/student/flashcards/import");
+  await page.getByRole("button", { name: "Import", exact: true }).click();
+  await page.getByRole("radio", { name: "Quizlet", exact: true }).click();
+  await expect(
+    page.getByText("Select Copy text, then paste it below."),
+  ).toBeVisible();
+  await page.screenshot({
+    path: test.info().outputPath("flashcard-import-guide.png"),
+    fullPage: true,
+  });
+  await page
+    .getByLabel("Paste text")
+    .fill(
+      "Inflation\tRising prices\nGDP\tOutput\nBad line\nTariff\tImport tax",
+    );
+  await page.getByRole("button", { name: "Preview" }).click();
+  await expect(page.getByText("3 cards ready · 1 line skipped")).toBeVisible();
+  await expect(
+    page.getByText("Line 3: No tab between front and back"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("table").getByText("Rising prices"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Import 3 cards" }),
+  ).toBeDisabled();
+  await page.getByRole("combobox", { name: "Subtopic" }).click();
+  await page.getByRole("option", { name: "Inflation", exact: true }).click();
+  await page.screenshot({
+    path: test.info().outputPath("flashcard-import-preview.png"),
+    fullPage: true,
+  });
+  await page.getByRole("button", { name: "Import 3 cards" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(
+    await page.evaluate(
+      () => (window as Window & { importedCards?: unknown[] }).importedCards,
+    ),
+  ).toEqual([
+    {
+      front: "Inflation",
+      back: "Rising prices",
+      topic_id: "inflation",
+      kind: "term",
+    },
+    { front: "GDP", back: "Output", topic_id: "inflation", kind: "term" },
+    {
+      front: "Tariff",
+      back: "Import tax",
+      topic_id: "inflation",
+      kind: "term",
+    },
+  ]);
 });

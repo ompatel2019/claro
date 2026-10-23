@@ -64,6 +64,9 @@ vi.mock("@/components/student/flashcards/new-card", () => ({
     <button>{label}</button>
   ),
 }));
+vi.mock("@/components/student/flashcards/import-cards", () => ({
+  ImportCards: () => <button>Import</button>,
+}));
 import Flashcards from "./page";
 
 beforeEach(() => {
@@ -76,6 +79,7 @@ afterEach(cleanup);
 
 it("renders honest empty counts and the personal-card creation entry point", async () => {
   render(await Flashcards({ searchParams: Promise.resolve({}) }));
+  expect(screen.getByRole("button", { name: "Import" })).toBeInTheDocument();
   expect(
     screen.getByText("Nothing due. Start a deck below."),
   ).toBeInTheDocument();

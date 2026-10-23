@@ -81,7 +81,12 @@ export function SprintFocusShell(
     return () => window.removeEventListener("keydown", key);
   }, []);
   return (
-    <div className="sprint-focus flex min-h-svh flex-col">
+    <div
+      className={cn(
+        "sprint-focus flex min-h-svh flex-col [--sprint-rail:0px]",
+        rail && "md:[--sprint-rail:272px]",
+      )}
+    >
       <FocusBar className="bg-background flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 backdrop-blur-none md:h-[68px] md:flex-nowrap md:py-0 lg:gap-4 lg:px-8 [&>[data-component=MobileFocusFeedback]]:hidden">
         <Button
           variant="ghost"
@@ -182,33 +187,35 @@ export function SprintFocusShell(
           Finish
         </Button>
       </FocusBar>
-      <nav
-        aria-label="Question progress"
-        className="bg-background border-b px-4 py-3 sm:px-8"
-      >
-        <div
-          ref={progressRef}
-          className="mx-auto flex max-w-5xl gap-1.5 overflow-x-auto p-1"
-        >
-          {progress}
-        </div>
-      </nav>
       <div className="flex flex-1">
         {rail && (
-          <aside className="bg-card sticky top-[68px] hidden h-[calc(100svh-68px)] w-[272px] shrink-0 overflow-y-auto border-r p-5 md:block">
+          <aside className="bg-card sticky top-[68px] hidden h-[calc(100svh-68px)] w-[272px] shrink-0 flex-col overflow-y-auto border-r p-5 md:flex">
             <h2 className="mb-5 text-sm font-semibold">Booklet</h2>
             {booklet}
           </aside>
         )}
-        <main
-          id="main"
-          className={cn(
-            "mx-auto w-full max-w-[824px] min-w-0 flex-1 space-y-5 px-4 pt-6 pb-32 sm:px-8 sm:pt-10",
-            wide && "max-w-7xl",
-          )}
-        >
-          {children}
-        </main>
+        <div className="min-w-0 flex-1">
+          <nav
+            aria-label="Question progress"
+            className="bg-background border-b px-4 py-3 sm:px-8"
+          >
+            <div
+              ref={progressRef}
+              className="mx-auto flex max-w-5xl gap-1.5 overflow-x-auto p-1"
+            >
+              {progress}
+            </div>
+          </nav>
+          <main
+            id="main"
+            className={cn(
+              "mx-auto w-full max-w-[824px] min-w-0 flex-1 space-y-5 px-4 pt-6 pb-32 sm:px-8 sm:pt-10",
+              wide && "max-w-7xl",
+            )}
+          >
+            {children}
+          </main>
+        </div>
       </div>
       <Sheet open={sheet} onOpenChange={setSheet}>
         <SheetContent

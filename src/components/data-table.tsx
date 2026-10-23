@@ -131,7 +131,7 @@ function TableView<T extends { id: string }>({
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const selectable = selectRows || !!bulk;
   return (
-    <div className="bg-card min-w-0 overflow-hidden rounded-2xl border">
+    <div className="bg-card min-w-0">
       {selectable && selected.size > 0 && (
         <div
           role="status"
@@ -146,7 +146,7 @@ function TableView<T extends { id: string }>({
       )}
       <Table aria-label={label}>
         <TableHeader>
-          <TableRow className="hover:bg-transparent">
+          <TableRow>
             {selectable && (
               <TableHead className="w-10">
                 <input

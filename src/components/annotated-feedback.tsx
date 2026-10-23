@@ -24,6 +24,7 @@ import { criteriaCoverMarks } from "@/lib/marking/own-criteria";
 import { highlightSegments } from "@/lib/practice";
 import { ScoreRing } from "./claro/data-display";
 import { cn } from "@/lib/utils";
+import { RichText } from "./rich-text";
 import { RetryAnswer } from "./retry-answer";
 import { StatusPill, statePill } from "./status-pill";
 import { Badge } from "./ui/badge";
@@ -746,9 +747,10 @@ export function AnnotatedFeedback({
                 className="bg-muted/40 space-y-3 rounded-xl border p-5"
               >
                 <h2 className="text-lg font-semibold">Sample answer</h2>
-                <p className="max-w-prose text-base leading-relaxed whitespace-pre-wrap">
-                  {row.sample_answer}
-                </p>
+                <RichText
+                  className="max-w-prose text-base leading-relaxed"
+                  text={row.sample_answer}
+                />
                 <p className="text-muted-foreground text-[13px]">
                   One strong answer. Other answers can earn the same marks.
                 </p>
