@@ -431,7 +431,7 @@ function SprintAnswers({
           {mcTable}
           <Table
             aria-label="Questions"
-            className="bg-card border-foreground [&_td]:border-foreground [&_th]:border-foreground border-collapse border [&_td]:border [&_th]:border [&_th]:tracking-normal [&_th]:normal-case"
+            className="bg-card border-foreground [&_td]:border-foreground [&_th]:border-foreground border-collapse border [&_td]:border [&_th]:border"
           >
             <TableHeader>
               <TableRow>

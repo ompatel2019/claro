@@ -29,3 +29,10 @@ it("uses the tracker states plus result-only full and dropped tones, with no rin
   ]);
   for (const [, dot] of RESULT_LEGEND) expect(dot).toMatch(/border/);
 });
+
+it("takes the open and unanswered tiles from the shared tracker map", async () => {
+  const { TRACKER_STATE } = await import("@/components/sprint/tracker-state");
+  const { RESULT_TILE } = await import("./answer-pill");
+  expect(RESULT_TILE.open).toBe(TRACKER_STATE.active);
+  expect(RESULT_TILE.not_answered).toBe(TRACKER_STATE.unanswered);
+});
