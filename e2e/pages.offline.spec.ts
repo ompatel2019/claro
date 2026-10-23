@@ -158,6 +158,8 @@ test("S1: feedback trigger opens the shared dialog", async ({ page }) => {
 for (const [width, height] of [
   [1440, 900],
   [1280, 720],
+  [768, 900],
+  [1024, 900],
   [390, 844],
 ]) {
   test(`Home: next step, recent feedback and this week at ${width}px`, async ({
@@ -187,6 +189,17 @@ for (const [width, height] of [
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBe(width);
+    const recent = await page.locator(".home-card").first().boundingBox();
+    const week = await page.locator(".home-week").boundingBox();
+    if (width === 768 || width === 1024) {
+      expect(week!.y).toBeGreaterThanOrEqual(recent!.y + recent!.height);
+    }
+    const weekdays = page.getByRole("list", {
+      name: "Practice days this week",
+    });
+    expect(
+      await weekdays.evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
     if (width === 1440)
       expect(
         await page.evaluate(

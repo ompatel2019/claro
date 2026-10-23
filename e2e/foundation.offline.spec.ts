@@ -146,6 +146,22 @@ for (const width of [1440, 390])
     });
     expect(errors).toEqual([]);
   });
+test("admin search keeps the original 380 by 36 control from sm", async ({
+  page,
+}) => {
+  for (const width of [640, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("http://claro.test/admin?admin");
+    const search = page.getByRole("button", { name: /Search pages/ });
+    await expect(search).toBeVisible();
+    const box = await search.boundingBox();
+    expect(box!.width).toBe(380);
+    expect(box!.height).toBe(36);
+    await expect(
+      search.getByText("Search questions, topics and cards"),
+    ).toBeVisible();
+  }
+});
 test("admin search includes real admin routes", async ({ page }) => {
   await page.goto("http://claro.test/admin?admin");
   await page.keyboard.press("Meta+k");

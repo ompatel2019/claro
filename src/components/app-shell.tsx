@@ -442,7 +442,7 @@ function AppShellContent({
           >
             {kind === "student" ? <ShellLogo mobile /> : <Logo height={22} />}
           </Link>
-          <CommandPalette routes={commands} />
+          <CommandPalette routes={commands} student={kind === "student"} />
           <div className="flex shrink-0 items-center gap-1 sm:ml-auto">
             {kind === "student" ? (
               <ThemeToggle />

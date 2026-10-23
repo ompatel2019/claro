@@ -9,7 +9,7 @@ vi.mock("@/utils/supabase/server", () => ({
   createClient: async () => ({ from: mocks.from }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-import { HomeRecent, readHomeSessions, readHasMarkedAnswers } from "./sections";
+import { HomeRecent, readHomeSessions } from "./sections";
 
 const topic: TopicProgress = {
   id: "economic-growth",
@@ -130,7 +130,12 @@ it("counts fully known reviews only for the finished flashcard sessions in the r
 
 import { HomeNextStep, HomeWeek } from "./sections";
 it("uses the existing topic URL contract and explains actual lost marks", async () => {
-  render(await HomeNextStep({ progress: Promise.resolve(progress()) }));
+  render(
+    await HomeNextStep({
+      progress: Promise.resolve(progress()),
+      sessions: Promise.resolve([session]),
+    }),
+  );
   expect(
     screen.getByRole("heading", { name: /A sprint on Economic growth/ }),
   ).toBeVisible();
@@ -145,7 +150,12 @@ it("uses the existing topic URL contract and explains actual lost marks", async 
   );
 });
 it("keeps the sprint actions and offers retry when progress is unavailable", async () => {
-  render(await HomeNextStep({ progress: Promise.resolve(null) }));
+  render(
+    await HomeNextStep({
+      progress: Promise.resolve(null),
+      sessions: Promise.resolve([]),
+    }),
+  );
   expect(
     screen.getByRole("heading", { name: "Pick a topic for today's sprint" }),
   ).toBeVisible();
@@ -154,42 +164,47 @@ it("keeps the sprint actions and offers retry when progress is unavailable", asy
     "/student/sprint",
   );
   expect(
-    screen.getByRole("link", { name: "Choose another topic" }),
-  ).toBeVisible();
+    screen.queryByRole("link", { name: "Choose another topic" }),
+  ).not.toBeInTheDocument();
   expect(screen.getByRole("alert")).toHaveTextContent(
     "Couldn't load your recommendation.",
   );
   expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
   expect(screen.queryByText("Start your first Topic Sprint")).toBeNull();
 });
-it.each([true, false, null])(
-  "distinguishes sparse returning history, first visit and failed history (%s)",
-  async (hasMarks) => {
+it.each([{ sessions: [session] }, { sessions: [] }, { sessions: null }])(
+  "distinguishes unfinished unmarked sprint, first visit and failed sessions (%j)",
+  async ({ sessions }) => {
     render(
       await HomeNextStep({
         progress: Promise.resolve(progress([])),
-        markedHistory: Promise.resolve(hasMarks),
+        sessions: Promise.resolve(sessions),
       }),
     );
     expect(
       screen.getByRole("heading", {
         name:
-          hasMarks === false
+          sessions?.length === 0
             ? "Start your first Topic Sprint"
             : "Pick a topic for today's sprint",
       }),
     ).toBeVisible();
-    if (hasMarks === true)
+    if (sessions?.length)
       expect(
         screen.getByText(/Answer a few more marked questions/),
       ).toBeVisible();
-    if (hasMarks === null) expect(screen.getByRole("alert")).toBeVisible();
+    expect(screen.getAllByRole("link")).toHaveLength(2);
+    expect(
+      screen.queryByRole("link", { name: "Choose another topic" }),
+    ).toBeNull();
+    if (sessions === null) expect(screen.getByRole("alert")).toBeVisible();
   },
 );
 it("uses loaded sparse marked progress without treating it as a first visit", async () => {
   render(
     await HomeNextStep({
       progress: Promise.resolve(progress([{ ...topic, answered: 1 }])),
+      sessions: Promise.resolve([session]),
     }),
   );
   expect(screen.getByText(/Answer a few more marked questions/)).toBeVisible();
@@ -207,28 +222,6 @@ it("shows retry instead of empty-average copy when progress fails", async () => 
   );
   expect(screen.queryByText(/No marked answers/)).toBeNull();
 });
-it.each([[], [{ id: "synthetic-attempt" }], null])(
-  "checks marked history with one scoped, bounded lookup (%j)",
-  async (data) => {
-    const query = {
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      limit: vi.fn().mockReturnThis(),
-      returns: vi
-        .fn()
-        .mockResolvedValue({ data, error: data === null ? {} : null }),
-    };
-    mocks.from.mockReturnValue(query);
-    expect(await readHasMarkedAnswers("synthetic-user")).toBe(
-      data === null ? null : data.length > 0,
-    );
-    expect(mocks.from).toHaveBeenCalledWith("attempts");
-    expect(query.select).toHaveBeenCalledWith("id");
-    expect(query.eq).toHaveBeenCalledWith("user_id", "synthetic-user");
-    expect(query.eq).toHaveBeenCalledWith("status", "marked");
-    expect(query.limit).toHaveBeenCalledWith(1);
-  },
-);
 it("shows weekly activity from cards as well as questions, and an honest marks-only average", async () => {
   render(
     await HomeWeek({

@@ -12,7 +12,6 @@ import {
   HomeNextStep,
   HomeWeek,
   readHomeSessions,
-  readHasMarkedAnswers,
 } from "@/components/student/home/sections";
 import { PageHeader } from "@/components/claro/layout";
 import { Shortcut } from "@/components/shortcut";
@@ -50,11 +49,6 @@ export default async function Home() {
     })
     .catch(() => null);
   const progress = loadProgress("30", today).catch(() => null);
-  const markedHistory = progress.then((data) =>
-    data === null || data.topics.some((t) => t.answered > 0)
-      ? null
-      : readHasMarkedAnswers(id),
-  );
   const sessions = readHomeSessions(id);
   const week = schoolWeek(today);
   return (
@@ -79,9 +73,9 @@ export default async function Home() {
         title={`${greeting()}${first ? `, ${first}` : ""}`}
       />
       <Suspense fallback={<Card aria-hidden className="h-64 animate-pulse" />}>
-        <HomeNextStep progress={progress} markedHistory={markedHistory} />
+        <HomeNextStep progress={progress} sessions={sessions} />
       </Suspense>
-      <div className="grid min-w-0 grid-cols-1 items-start gap-6 md:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <Suspense
           fallback={<Card aria-hidden className="h-72 animate-pulse" />}
         >

@@ -13,7 +13,7 @@ test.describe("Student Home quick launches", () => {
       const launches = page.locator(".home-next");
       const checkLaunches = async () => {
         await expect(launches).toBeVisible();
-        await expect(launches.getByRole("link")).toHaveCount(3);
+        await expect(launches.getByRole("link")).toHaveCount(2);
         for (const [name, href] of [
           ["Start sprint", "/student/sprint"],
           ["Flashcards", "/student/flashcards"],

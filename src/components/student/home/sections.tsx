@@ -95,12 +95,10 @@ async function readHomeTopics(): Promise<Topic[] | null> {
 function HomeCard({
   title,
   description,
-  href,
   children,
 }: {
   title: string;
   description?: string;
-  href?: string;
   children: ReactNode;
 }) {
   return (
@@ -114,21 +112,6 @@ function HomeCard({
             </p>
           )}
         </div>
-        {href && (
-          <Link
-            href={href}
-            aria-label={`Open ${title}`}
-            className="text-muted-foreground flex shrink-0 items-center gap-1 text-[13px]"
-          >
-            {href.includes("activity") ? "Activity" : "Progress"}
-            <PortalIcon
-              size={20}
-              strokeWidth={1.5}
-              name="arrow-up-right"
-              className="size-3.5"
-            />
-          </Link>
-        )}
       </div>
       {children}
     </Card>
@@ -258,44 +241,17 @@ export async function HomeRecent({
   );
 }
 
-export async function readHasMarkedAnswers(
-  userId: string,
-): Promise<boolean | null> {
-  try {
-    const db = await createClient();
-    const { data, error } = await db
-      .from("attempts")
-      .select("id")
-      .eq("user_id", userId)
-      .eq("status", "marked")
-      .limit(1)
-      .returns<{ id: string }[]>();
-    if (
-      error ||
-      !Array.isArray(data) ||
-      data.some((row) => typeof row.id !== "string")
-    )
-      return null;
-    return data.length > 0;
-  } catch {
-    return null;
-  }
-}
-
 export async function HomeNextStep({
   progress,
-  markedHistory,
+  sessions,
 }: {
   progress: HomeProgress;
-  markedHistory?: Promise<boolean | null>;
+  sessions: HomeSessions;
 }) {
-  const data = await progress;
+  const [data, rows] = await Promise.all([progress, sessions]);
   const topic = nextStepTopic(data);
-  const hasMarks = data?.topics.some((t) => t.answered > 0)
-    ? true
-    : await markedHistory;
-  const unavailable = data === null || hasMarks == null;
-  const firstVisit = !unavailable && hasMarks === false;
+  const unavailable = data === null || rows === null;
+  const firstVisit = !unavailable && rows.length === 0;
   return (
     <section className="home-next" aria-labelledby="next-step-title">
       <p className="text-ink-2 flex items-center gap-2 text-sm font-semibold">
@@ -353,15 +309,17 @@ export async function HomeNextStep({
           Start sprint{" "}
           <PortalIcon size={20} strokeWidth={1.5} name="arrow-right" />
         </Link>
-        <Link
-          className={cn(
-            buttonVariants({ variant: "outline" }),
-            "h-12 bg-transparent px-5 shadow-none",
-          )}
-          href="/student/sprint"
-        >
-          Choose another topic
-        </Link>
+        {topic && (
+          <Link
+            className={cn(
+              buttonVariants({ variant: "outline" }),
+              "h-12 bg-transparent px-5 shadow-none",
+            )}
+            href="/student/sprint"
+          >
+            Choose another topic
+          </Link>
+        )}
         <Link className="home-row-link text-ink-2" href="/student/flashcards">
           Flashcards{" "}
           <PortalIcon strokeWidth={1.5} name="arrow-right" size={16} />
