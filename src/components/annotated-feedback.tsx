@@ -10,6 +10,7 @@ import {
 } from "react";
 import { Alert } from "@/components/icons";
 import {
+  answerTextOf,
   bandOf,
   layoutCards,
   markLabel,
@@ -69,6 +70,8 @@ export function AnnotatedFeedback({
   edit,
   showReferences = true,
   singleResult = false,
+  keepLineBreaks = false,
+  answerOnly = false,
 }: {
   row: ReviewRow;
   photos?: string[];
@@ -78,14 +81,18 @@ export function AnnotatedFeedback({
   showReferences?: boolean;
   /** Standalone student result cards; defaults preserve embedded/admin rendering. */
   singleResult?: boolean;
+  /** Typed answers: keep every line break instead of joining single ones. */
+  keepLineBreaks?: boolean;
+  /** Render only the marked answer (heading, filter, highlights, comments); the host page owns score, criteria, next steps and references. */
+  answerOnly?: boolean;
 }) {
   const AnswerContainer = singleResult ? ResultAnswerCard : Fragment;
   const nextCommentId = useRef(
     Math.min(0, ...(edit?.comments.map((c) => c.id) ?? [])) - 1,
   );
   const state = markingState(row);
-  const text = row.transcript ?? row.answer_text ?? "";
-  const displayedText = displayAnswer(text);
+  const text = answerTextOf(row);
+  const displayedText = keepLineBreaks ? text : displayAnswer(text);
   const comments = useMemo(
     () =>
       edit
@@ -451,7 +458,7 @@ export function AnnotatedFeedback({
       className={cn("space-y-4", singleResult && "min-w-0")}
       onKeyDown={onKey}
     >
-      {showReferences && !!row.criteria?.length && (
+      {!answerOnly && showReferences && !!row.criteria?.length && (
         <section
           aria-label="Marking criteria"
           className="space-y-3 rounded-xl border p-4"
@@ -498,7 +505,7 @@ export function AnnotatedFeedback({
         </section>
       )}
 
-      {singleResult && showMark ? (
+      {answerOnly ? null : singleResult && showMark ? (
         <div className="grid gap-5">
           <Card className="min-w-0 p-5">
             <div className="flex items-center gap-5">
@@ -709,7 +716,7 @@ export function AnnotatedFeedback({
           </PopoverContent>
         </Popover>
 
-        {showMark && (edit || next) && (
+        {!answerOnly && showMark && (edit || next) && (
           <div>
             <h3 className="text-sm font-semibold">
               {singleResult ? "Your next mark" : "What gets you the next mark"}
@@ -729,7 +736,7 @@ export function AnnotatedFeedback({
           </div>
         )}
 
-        {showMark && (
+        {!answerOnly && showMark && (
           <div className="space-y-2">
             {Number(row.mark) < max && outline.length > 0 && (
               <FeedbackDetails name="outline" title="How to reach full marks">
@@ -757,17 +764,19 @@ export function AnnotatedFeedback({
           </div>
         )}
       </AnswerContainer>
-      <div className="flex flex-wrap gap-2">
-        {!edit && !singleResult && row.topic_id && (
-          <Link
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-            href={`/student/sprint?type=${row.type}&sub=${encodeURIComponent(row.topic_id)}`}
-          >
-            Practise similar
-          </Link>
-        )}
-        {actions}
-      </div>
+      {!answerOnly && (
+        <div className="flex flex-wrap gap-2">
+          {!edit && !singleResult && row.topic_id && (
+            <Link
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+              href={`/student/sprint?type=${row.type}&sub=${encodeURIComponent(row.topic_id)}`}
+            >
+              Practise similar
+            </Link>
+          )}
+          {actions}
+        </div>
+      )}
     </div>
   );
 }

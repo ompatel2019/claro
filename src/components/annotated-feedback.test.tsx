@@ -704,3 +704,137 @@ it("keeps every fix's next-mark instruction beneath its numbered comment", () =>
   }
   expect(screen.getByText("Focus on evidence and structure.")).toBeVisible();
 });
+
+it.each([
+  ["Demand falls", "falls as prices", 7],
+  ["Demand falls as prices", "falls", 7],
+])(
+  "keeps overlapping or nested quotes %j and %j focusable",
+  (outer, inner, start) => {
+    const { container } = render(
+      <AnnotatedFeedback
+        row={{
+          ...row,
+          answer_text: "Demand falls as prices rise.",
+          feedback: {
+            comments: [
+              {
+                quote: outer,
+                start: 0,
+                kind: "strength",
+                body: "Clear demand link.",
+              },
+              {
+                quote: inner,
+                start,
+                kind: "fix",
+                body: "Explain the price link.",
+              },
+            ],
+          },
+        }}
+      />,
+    );
+    for (const [name, id, number, body] of [
+      [/^Strength 1/, "0", "1", "Clear demand link."],
+      [/^Fix 2/, "1", "2", "Explain the price link."],
+    ] as const) {
+      const highlight = screen.getByRole("button", { name });
+      expect(highlight.tagName).toBe("MARK");
+      expect(highlight).toHaveAttribute("tabindex", "0");
+      expect(highlight).toHaveAttribute("data-anchors", id);
+      highlight.focus();
+      expect(highlight).toHaveFocus();
+      const card = container.querySelector(`[data-card="${id}"]`)!;
+      expect(card).toHaveTextContent(number);
+      expect(card).toHaveTextContent(body);
+    }
+    expect(
+      screen.queryByRole("heading", { name: "Overall" }),
+    ).not.toBeInTheDocument();
+  },
+);
+
+it("joins single line breaks by default and keeps them when requested", () => {
+  const fixture = { ...row, answer_text: "a\nb", feedback: null };
+  const { container, rerender } = render(<AnnotatedFeedback row={fixture} />);
+  expect(container.querySelector(".whitespace-pre-wrap")?.textContent).toBe(
+    "a b",
+  );
+  rerender(<AnnotatedFeedback row={fixture} keepLineBreaks />);
+  expect(container.querySelector(".whitespace-pre-wrap")?.textContent).toBe(
+    "a\nb",
+  );
+});
+
+it.each([false, true])(
+  "answerOnly hides host-owned sections (singleResult=%s)",
+  (singleResult) => {
+    render(
+      <AnnotatedFeedback
+        row={{
+          ...row,
+          feedback: {
+            ...row.feedback,
+            better_answer_outline: ["Add evidence."],
+          },
+        }}
+        singleResult={singleResult}
+        answerOnly
+        actions={<button>Host action</button>}
+      />,
+    );
+    expect(
+      screen.getByRole("heading", { name: "Your answer, marked" }),
+    ).toBeVisible();
+    expect(
+      screen.getByRole("group", { name: "Filter comments" }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole("region", { name: "Marking criteria" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("What gets you the next mark"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Your next mark")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("How to reach full marks"),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("region", { name: "Sample answer" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: "Practise similar" }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Host action" }),
+    ).not.toBeInTheDocument();
+  },
+);
+
+it("anchors to the transcript before the typed answer", () => {
+  render(
+    <AnnotatedFeedback
+      row={{
+        ...row,
+        transcript: "Prices rose.",
+        answer_text: "Something else.",
+        feedback: {
+          comments: [
+            {
+              quote: "Prices",
+              start: 0,
+              kind: "strength",
+              body: "Clear trend.",
+            },
+          ],
+        },
+      }}
+    />,
+  );
+  expect(screen.getByRole("button", { name: /^Strength 1/ })).toHaveTextContent(
+    "Prices",
+  );
+  expect(screen.queryByText("Something else.")).not.toBeInTheDocument();
+});
