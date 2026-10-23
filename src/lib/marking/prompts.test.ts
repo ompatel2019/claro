@@ -404,6 +404,9 @@ it("requests transferable writing feedback using the five relevant criteria", ()
   expect(system).not.toContain("State that this summary covers");
   expect(system).toContain("Give at most 3 points per list, each one line");
   expect(system).toContain(
+    "The first next_steps item is the single most valuable action; do not repeat a Top fix word for word.",
+  );
+  expect(system).toContain(
     'Avoid stock openers such as "In this answer, your..."',
   );
   expect(system).toContain("Never invent a question number if it is absent");

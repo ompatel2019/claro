@@ -1,6 +1,6 @@
 # Airo 5.3
 
-23 Oct 2026. **Voice-only prompt tweak plus a deterministic post-filter. Built and unit-tested only: no paid eval or benchmark run yet, and no accuracy or feedback-quality claims.**
+23 Oct 2026. **Voice-only prompt tweak plus a deterministic post-filter. Evaluated on 23 Oct (runs 2120 and 2122): mark agreement and judge scores fell versus 5.2; see Results.**
 
 Source: Om, 23 Oct (7:43pm): comments should "sound like a 21 state ranker gave em... to the point... SAME QUALITY... not woozy waazy." Judgement stays the same (marks, anchors, criteria coverage); only voice and length change.
 
@@ -46,6 +46,42 @@ The filter is idempotent and leaves already-direct comments byte-identical. Offl
 
 Comments come from the same first-pass grader call as the first mark, so a voice change **can still shift first-pass marks** (and final marks when the passes agree). Risk is reduced: the marking prefix, check and reconcile prompts are byte-identical, the tail keeps every marking-relevant sentence, and the post-filter runs after marking. Expect a small number of ±1 first-pass changes from sampling and wording, as in 5.2.
 
-## Proposed benchmark (needs Om's approval; not run)
+## Results (23 Oct, runs 2120 and 2122)
 
-Same marker (`anthropic/claude-sonnet-5.5`, low / low / medium) and judge (`gpt-6-astra`, low) as runs 1414 and 1417, compared with them as the 5.2 baseline. Estimated cost: held-out 196 about $11.6 (range $11-12.5), A1 comment check about $1.8, so about $13.4 in total. Metrics: exact, within-1, signed error and marks changed against 1417; judge mean, pros kept and cons fixed against 1414; median comment length and stock-phrase counts.
+Marker `anthropic/claude-sonnet-5.5` (low / low / medium), judge `gpt-6-astra` (low), commit f509599, clean tree. Baseline is Airo 5.2 (runs 1417 and 1414, commit cf6867f), so these deltas isolate 5.3. Result files stay local (they quote student answers).
+
+**Mark agreement is worse than 5.2: held-out exact fell 2.6 points (52.6% to 50.0%), and the A1 judge mean fell from 6.28 to 5.50. Not recommended to ship as is.**
+
+### Held-out (run 2120, 196 answers, 41 questions)
+
+| Metric                    | 5.2 (1417) | 5.3 (2120) |
+| ------------------------- | ---------- | ---------- |
+| Exact                     | 52.6%      | 50.0%      |
+| Within-1                  | 95.4%      | 94.9%      |
+| Mean signed (+ = lenient) | -0.01      | +0.01      |
+| First-pass exact          | 50.0%      | 47.4%      |
+| Blind-check agreement     | 80.6%      | 81.6%      |
+| Reconciled / in review    | 38 / 0     | 35 / 1     |
+| Errors                    | 0          | 0          |
+| Median comment body       | 113 chars  | 106 chars  |
+| Median next_mark          | 81 chars   | 77 chars   |
+| Comments per answer       | 3.71       | 3.82       |
+
+Paired on the same 196 answers: 18 marks changed (11 up by 1, 7 down by 1), 6 moved closer to the tutor mark and 12 further. Total marks 406 to 410. 21 first-pass calls needed a schema retry for `better_answer_outline` counts (logged warnings, retried successfully).
+
+### A1 comment check (run 2122, items 0-19, judge on; headline n = 18)
+
+| Metric            | 5.2 (1414) | 5.3 (2122) |
+| ----------------- | ---------- | ---------- |
+| Judge mean (1-10) | 6.28       | 5.50       |
+| Pros kept         | 73.3%      | 50.0%      |
+| Cons fixed        | 45.5%      | 36.4%      |
+| Exact             | 66.7%      | 66.7%      |
+| Within-1          | 94.4%      | 94.4%      |
+| Median comment    | 98 chars   | 95 chars   |
+
+Largest judge drops: fm-2 (9 to 5), fm-5 (10 to 6), ei-5 (5 to 2, mark 2 to 1). Some 5.3 comments get shorter by dropping the exact fix (e.g. "You assert this without showing how."), which the judge penalises.
+
+### Cost
+
+Held-out $10.87 ($0.0555 per answer, 20.6 s per answer). A1 check $1.67 ($0.83 marking + $0.84 judge). Total $12.55 against Om's $15 ceiling. OpenRouter eval-cap total moved from $32.85 to $44.55; the judge model has no `openai/` prefix, so its spend is outside that total.
