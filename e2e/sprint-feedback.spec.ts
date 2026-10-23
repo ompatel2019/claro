@@ -401,11 +401,9 @@ test.describe("Local results feedback", () => {
     await expect(
       page.getByText("How to reach full marks", { exact: true }),
     ).toHaveCount(0);
-    const scoreCard = page
-      .locator('[data-slot="card"]')
-      .filter({
-        has: page.getByRole("img", { name: "5 out of 5", exact: true }),
-      });
+    const scoreCard = page.locator('[data-slot="card"]').filter({
+      has: page.getByRole("img", { name: "5 out of 5", exact: true }),
+    });
     await expect(
       scoreCard.getByText("Full marks", { exact: true }),
     ).toBeVisible();
