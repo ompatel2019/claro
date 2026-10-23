@@ -63,7 +63,7 @@ const PADDING_SENTENCE =
 
 /** Strength comments padded with a hedged improvement ("Adding X would deepen it."). */
 const STRENGTH_HEDGE_SENTENCE =
-  /\bwould (also )?(deepen|sharpen|strengthen|improve|enhance|lift|polish|make (it|this|the answer|your answer) (even )?(more|stronger|clearer|sharper))\b/i;
+  /^(?:adding|naming|explaining|including|linking|stating|showing|using|giving|defining|mentioning|citing|quoting|specifying|clarifying|tying|connecting|developing|expanding)\b.*\bwould (?:also )?(?:deepen|sharpen|strengthen|improve|enhance|lift|polish|make) (?:it|this|that|the answer|your answer|the point|your point|the link|your link|the explanation|your explanation|the definition|your definition|the response)\b/i;
 
 /** Opener prefixes removed from the start of a sentence (the rest is kept). */
 const OPENERS: RegExp[] = [

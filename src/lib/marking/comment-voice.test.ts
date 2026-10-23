@@ -177,6 +177,16 @@ describe("tightenText", () => {
       "You trace the cost-push chain clearly. Adding why oil matters would deepen it.";
     expect(body(text, true)).toBe("You trace the cost-push chain clearly.");
     expect(body(text, false)).toBe(text);
+    expect(
+      body(
+        "You correctly identify government support for exporters. Naming subsidies or tax concessions would make it more precise.",
+        true,
+      ),
+    ).toBe("You correctly identify government support for exporters.");
+    // An economic outcome is content, not padding (codex review).
+    const economic =
+      "You correctly identify expansionary fiscal policy. Higher government spending would strengthen aggregate demand.";
+    expect(body(economic, true)).toBe(economic);
   });
 
   it("keeps the original when filtering would empty it", () => {
