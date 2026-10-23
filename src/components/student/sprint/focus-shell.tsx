@@ -9,12 +9,6 @@ import { isTyping, type SessionShell } from "@/components/session-shell";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { timer } from "@/lib/practice";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +73,7 @@ export function SprintFocusShell(
   }, []);
   return (
     <div className="flex min-h-svh flex-col">
-      <FocusBar className="flex h-[68px] items-center gap-3 px-4 sm:gap-4 sm:px-8">
+      <FocusBar className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 md:h-[68px] md:flex-nowrap md:py-0 lg:gap-4 lg:px-8 [&>[data-component=MobileFocusFeedback]]:hidden">
         <Button
           variant="ghost"
           size="sm"
@@ -94,18 +88,21 @@ export function SprintFocusShell(
         <div className="min-w-0 flex-1 sm:border-l sm:pl-4">
           <p className="truncate text-sm font-semibold">{title}</p>
           <div className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
-            <p className="truncate">
+            <p className="hidden truncate sm:block">
               Question {position} of {total} · {answered} answered ·
             </p>
             <p
               role="status"
               className={cn(
-                "hidden shrink-0 items-center gap-1 sm:flex",
+                "flex shrink-0 items-center gap-1",
                 saveState === "error" && "text-destructive",
               )}
             >
-              {saveState === "saved" && (
-                <PortalIcon name="check" className="size-3" />
+              {saveState !== "saving" && (
+                <PortalIcon
+                  name={saveState === "saved" ? "check" : "circle-alert"}
+                  className="size-3"
+                />
               )}
               {saveState === "saved"
                 ? "Saved"
@@ -128,60 +125,41 @@ export function SprintFocusShell(
             aria-valuenow={answered}
           />
         </div>
-        <div className="ml-auto flex shrink-0 items-center gap-1">
+        <div className="order-last flex w-full shrink-0 items-center justify-between gap-1 md:order-none md:ml-auto md:w-auto">
           <Button
             variant="ghost"
             size="icon-sm"
-            className="hidden md:inline-flex"
             aria-label="Booklet (B)"
             aria-pressed={rail}
+            title="Booklet"
             onClick={toggleBooklet}
           >
             <PortalIcon name="book-open" />
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              className="inline-flex size-8 items-center justify-center rounded-full md:hidden"
-              aria-label="More tools"
-            >
-              <PortalIcon name="calculator" className="size-4" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={toggleBooklet}>
-                Booklet
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setCalc(!calc)}>
-                Calculator
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => feedback()}>
-                Send feedback
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
           <Button
             variant="ghost"
-            size="icon-sm"
-            className="hidden md:inline-flex"
+            size="sm"
             aria-label="Calculator (C)"
             aria-pressed={calc}
             onClick={() => setCalc(!calc)}
           >
             <PortalIcon name="calculator" />
+            Calculator
           </Button>
           <SprintTimer {...clock} />
           <Button
             variant="ghost"
-            size="icon-sm"
-            className="hidden sm:inline-flex"
+            size="sm"
             aria-label="Send feedback"
             onClick={() => feedback()}
           >
-            <PortalIcon name="flag" />
-          </Button>
-          <Button size="sm" className="ml-1" disabled={busy} onClick={onFinish}>
-            Finish
+            <PortalIcon name="message-circle" />
+            Feedback
           </Button>
         </div>
+        <Button size="sm" disabled={busy} onClick={onFinish}>
+          Finish
+        </Button>
       </FocusBar>
       <div className="flex flex-1">
         {rail && (

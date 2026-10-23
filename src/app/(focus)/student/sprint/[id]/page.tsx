@@ -38,7 +38,6 @@ export default async function Sprint({
       initialExplanations={explanations}
       userId={profile.id}
       title={`${modeLabel(session.config.mode)} sprint · ${topicNames(session.config.topics, list)}`}
-      topicNames={Object.fromEntries(list.map((t) => [t.id, t.name]))}
       seen={[...new Set((before ?? []).map((r) => r.question_id as string))]}
     />
   );

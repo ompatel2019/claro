@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   push: vi.fn(),
   update: vi.fn(),
   fetch: vi.fn(),
+  upload: vi.fn(),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
 vi.mock("sonner", () => ({ toast: vi.fn() }));
@@ -22,6 +23,7 @@ vi.mock("@/lib/auth-client", () => ({
 }));
 vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({
+    storage: { from: () => ({ upload: mocks.upload }) },
     from: () => ({
       update: mocks.update,
       eq() {
@@ -103,6 +105,7 @@ afterEach(() => {
   cleanup();
   vi.clearAllMocks();
   vi.restoreAllMocks();
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   localStorage.clear();
 });
@@ -644,4 +647,102 @@ it("queues a new photo version even when its transcript is unchanged", async () 
       mocks.fetch.mock.calls.filter(([, options]) => options.method === "POST"),
     ).toHaveLength(2),
   );
+});
+
+it.each(["HSC", "2019 HSC"])("shows paper year once for %s", (source) => {
+  show([{ ...attempt, question: { ...attempt.question, year: 2019, source } }]);
+  expect(screen.getByText("2019 HSC")).toBeVisible();
+});
+it("renders a question without paper metadata", () => {
+  show([
+    { ...attempt, question: { ...attempt.question, year: null, source: "" } },
+  ]);
+  expect(screen.getByText("What is inflation?")).toBeVisible();
+  expect(screen.queryByText(/No source|undefined|null/)).toBeNull();
+});
+
+it("saves a photo with only accepted answer fields and retries metadata without reuploading", async () => {
+  mocks.upload.mockResolvedValue({ error: null });
+  let fail = true;
+  mocks.fetch.mockImplementation(async (_url, options) => {
+    const patch = JSON.parse(options.body);
+    // The real PATCH route is strict: status is server-owned.
+    const accepted = Object.keys(patch).every((key) =>
+      ["answer_text", "transcript", "image_paths", "flagged"].includes(key),
+    );
+    return {
+      ok: accepted && !fail,
+      json: async () => ({
+        error: accepted ? "Connection lost" : "Invalid answer",
+      }),
+    };
+  });
+  vi.stubGlobal("fetch", mocks.fetch);
+  show(
+    [
+      {
+        ...attempt,
+        choice_index: null,
+        question: { ...attempt.question, type: "short" },
+      },
+    ],
+    { mode: "short", feedback: "end", topics: [] },
+  );
+  fireEvent.change(screen.getByLabelText("Take photo / Upload"), {
+    target: {
+      files: [new File(["photo"], "answer.png", { type: "image/png" })],
+    },
+  });
+  expect(await screen.findByRole("alert")).toHaveTextContent("Connection lost");
+  const patch = {
+    image_paths: [mocks.upload.mock.calls[0][0]],
+    answer_text: null,
+    transcript: null,
+  };
+  expect(JSON.parse(mocks.fetch.mock.calls[0][1].body)).toEqual(patch);
+  expect(JSON.parse(localStorage.getItem("claro-draft-a")!)).toEqual(patch);
+  expect(screen.getByText("Page 1")).toBeVisible();
+  fail = false;
+  fireEvent.click(screen.getByRole("button", { name: "Save and exit" }));
+  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/student"));
+  expect(mocks.upload).toHaveBeenCalledOnce();
+  expect(localStorage.getItem("claro-draft-a")).toBeNull();
+});
+
+it("retries failed photo metadata automatically despite the one-second session clock", async () => {
+  vi.useFakeTimers();
+  mocks.upload.mockResolvedValue({ error: null });
+  mocks.fetch
+    .mockResolvedValueOnce({
+      ok: false,
+      json: async () => ({ error: "Offline" }),
+    })
+    .mockResolvedValue({ ok: true, json: async () => ({ saved: true }) });
+  vi.stubGlobal("fetch", mocks.fetch);
+  show(
+    [
+      {
+        ...attempt,
+        choice_index: null,
+        question: { ...attempt.question, type: "short" },
+      },
+    ],
+    { mode: "short", feedback: "end", topics: [] },
+  );
+  await act(async () => {
+    fireEvent.change(screen.getByLabelText("Take photo / Upload"), {
+      target: {
+        files: [new File(["photo"], "answer.png", { type: "image/png" })],
+      },
+    });
+  });
+  expect(mocks.fetch).toHaveBeenCalledTimes(1);
+  for (let second = 0; second < 6; second++) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
+    });
+  }
+  expect(mocks.fetch).toHaveBeenCalledTimes(2);
+  expect(mocks.upload).toHaveBeenCalledOnce();
+  expect(localStorage.getItem("claro-draft-a")).toBeNull();
 });

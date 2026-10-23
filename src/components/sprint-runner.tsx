@@ -48,7 +48,6 @@ export function SprintRunner({
   initialExplanations = {},
   userId,
   title,
-  topicNames = {},
   seen = [],
 }: {
   session: Session;
@@ -56,7 +55,6 @@ export function SprintRunner({
   initialExplanations?: Record<string, string>;
   userId: string;
   title: string;
-  topicNames?: Record<string, string>;
   seen?: string[];
 }) {
   const router = useRouter();
@@ -268,14 +266,18 @@ export function SprintRunner({
       document.removeEventListener("visibilitychange", hide);
     };
   }, [db, session.id, userId]);
+  const flushRef = useRef(flush);
   useEffect(() => {
-    // Debounced autosave; after a failure, retry every 5 s.
+    flushRef.current = flush;
+  });
+  useEffect(() => {
+    // Clock ticks must not restart the five-second retry delay.
     const timeout = setTimeout(
-      () => void flush().catch((e) => setError(e.message)),
+      () => void flushRef.current().catch((e) => setError(e.message)),
       saveState === "error" ? 5000 : 650,
     );
     return () => clearTimeout(timeout);
-  });
+  }, [saveState, attempts]);
   async function act(fn: () => Promise<void>) {
     setBusy(true);
     setError("");
@@ -608,7 +610,14 @@ export function SprintRunner({
               <Badge variant="secondary">
                 {plural(a.question.marks, "mark")}
               </Badge>
-              <span>{topicNames[a.question.topic_id]}</span>
+              {(a.question.year || a.question.source) && (
+                <span>
+                  {a.question.year &&
+                    !a.question.source.includes(String(a.question.year)) &&
+                    `${a.question.year} `}
+                  {a.question.source}
+                </span>
+              )}
               {seen.includes(a.question_id) && (
                 <Badge variant="outline" className="ml-2 align-middle">
                   Seen before
@@ -667,7 +676,10 @@ export function SprintRunner({
               attempt={backgroundAnswer(a) ? { ...a, status: "pending" } : a}
               userId={userId}
               edit={(patch) => edit(a.id, patch)}
-              save={(patch) => save(a.id, patch)}
+              save={async (patch) => {
+                edit(a.id, patch);
+                await flush();
+              }}
               flush={flush}
               local={(patch) => local(a.id, patch)}
             />

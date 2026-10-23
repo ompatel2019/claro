@@ -190,7 +190,6 @@ export function WrittenAnswer({
       image_paths: paths,
       answer_text: null,
       transcript: null,
-      status: "pending" as const,
     };
     await save(patch);
     local(patch);
