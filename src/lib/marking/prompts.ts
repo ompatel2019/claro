@@ -136,6 +136,7 @@ export function bandCorrection(
 export function transcribeMessages(
   imageDataUrl: string,
   stem: string,
+  detail?: "high",
 ): Message[] {
   return [
     {
@@ -146,7 +147,10 @@ export function transcribeMessages(
       role: "user",
       content: [
         { type: "text", text: `Question for context: ${stem}` },
-        { type: "image_url", image_url: { url: imageDataUrl } },
+        {
+          type: "image_url",
+          image_url: { url: imageDataUrl, ...(detail && { detail }) },
+        },
       ],
     },
   ];

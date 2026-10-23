@@ -1,5 +1,9 @@
 # Engine changelog
 
+## 23 Oct 2026: S16 scan-to-text (transcription options)
+
+`transcribeImage` takes optional `task` and `detail` options, and `transcribeMessages` sets `image_url.detail` only when given. Defaults are unchanged (`transcribe_answer`, no detail), so the photo-answer flow and the prompt baseline are untouched. The new sprint-only `POST /api/attempts/[id]/scan` uses them (`transcribe_answer:scan`, `detail: "high"`, gpt-6.1-sol) to type a photo into `answer_text`; the photo is never stored and the route writes nothing to attempts. See [TRANSCRIPTION](/admin/marking/engine?tab=docs&doc=TRANSCRIPTION).
+
 ## 23 Oct 2026: Airo 5.2 (comment prompt tweak)
 
 S22: full-grading comments follow tutor-style rules taken from Karan's A1 critiques: correct for the question, usually one short sentence, naming the exact fix; statistics only when the question or guideline requires them; keep needed definitions; flag waffle, wrong ideas and over-length short answers; verb-specific advice; syllabus content only. Check and reconcile prompts are unchanged, but comments share the first-pass call, so first-pass marks can shift. Against run 1415 (9 Oct, before Airo 5.0, so deltas combine 5.0, 5.1 and 5.2): A1 judge mean 5.11 to 6.28, cons fixed 33.3% to 45.5%; held-out exact 45.9% to 52.6%, within-1 96.9% to 95.4%, signed +0.07 to -0.01. Runs 1414 ($1.76) and 1417 ($11.55). Comments are not yet shorter. See [AIRO-5-2](/admin/marking/engine?tab=docs&doc=AIRO-5-2).

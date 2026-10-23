@@ -42,6 +42,14 @@ An empty combined transcript sets `unreadable: true`. Single checks are saved as
 
 Invalid image size/type returns 400; rate limiting returns 429; budget exhaustion returns 503 with saved-photo/retry-later wording. Download, model or structured-output failures return 500 “Could not transcribe answer”. There is no route-level transcription retry or failure-status update in the catch block. A failed later page does not save a partial combined transcript, though earlier page calls can already have incurred spend.
 
+## Scan-to-text (sprints)
+
+`src/app/api/attempts/[id]/scan/route.ts` turns one photo into typed text for the answer box. The photo is input only: it is never stored, and the route writes nothing to `attempts`. The client saves the returned text through the normal autosave path as `answer_text`, so the answer stays a typed answer.
+
+Checks run cheapest first: sign-in; the student's own sprint attempt on a non-MCQ question (404 otherwise); editable (409 for a finished sprint, a locked each-feedback answer, or a photo answer); one `file` of at most 4 MiB that is JPEG, PNG or WebP by both MIME type and magic bytes (400/413); the shared rate limit (429); total `ai_spend()` below `BUDGET_USD` (503, also when spend can't be read). Only then is `transcribeImage` called with `task: "transcribe_answer:scan"` and `detail: "high"`. The response is `{ text, uncertain, notes }`, with text capped at the written word limit; empty text returns 422 `unreadable`.
+
+`src/hooks/use-scan-to-text.ts` converts HEIC and shrinks the photo to a 2048 px long edge as JPEG (q 0.85) before posting. `src/components/scan-to-text.tsx` fills an empty box, or asks Replace / Add below / Cancel, then reveals the text with a short simulated type-out (skipped under reduced motion). `src/components/sprint-runner.tsx` mounts it under the answer box for editable typed written answers only (not MCQ, not photo answers); the answer box is locked while a scan runs. Leftover `[?]` markers stay in the text with a hint to check them; submit is not blocked. One scan costs about 1.5 US cents.
+
 ## Rate limits
 
 `src/lib/ai/rate-limit.ts` checks recent `ai_usage` rows per student: **20 per minute**, **200 per hour**. A recognised admin role is exempt. A returned profile-query error is ignored: counting continues with a null role, so even an admin can be limited if role lookup fails. Thrown errors (including profile lookup throws) and usage-count errors fail open. These are heuristic operational thresholds, counting usage rows across tasks rather than only transcription requests. A limited response includes `Retry-After` of 60 or 3,600 seconds.

@@ -17,7 +17,19 @@ export function wordGuide(marks: number): [number, number] {
   const m = Math.max(1, Math.round(marks));
   return short[m] ?? [m * 35, m * 50];
 }
+/** Keep the first `limit` words, preserving the original spacing and line breaks. */
+export function capWords(text: string, limit = WRITTEN_WORD_LIMIT) {
+  let words = 0;
+  const kept: string[] = [];
+  for (const part of text.split(/(\s+)/)) {
+    if (part.trim() && ++words > limit) break;
+    kept.push(part);
+  }
+  return kept.join("").trimEnd();
+}
 export const ANSWER_PHOTO_BYTE_LIMIT = 10 * 1024 * 1024;
+/** Scan-to-text photos are posted to a function, so they must fit Vercel's ~4.5 MB body cap. */
+export const SCAN_PHOTO_BYTE_LIMIT = 4 * 1024 * 1024;
 export const SHORT_PHOTO_PAGE_LIMIT = 3;
 export const LONG_PHOTO_PAGE_LIMIT = 8;
 export const OPEN_DISPUTES_PER_ANSWER = 1;
