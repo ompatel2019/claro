@@ -4,6 +4,7 @@ import { Check, Close, PortalIcon } from "@/components/icons";
 import type { NumberedComment } from "@/lib/feedback";
 import { highlightSegments } from "@/lib/practice";
 import { cn } from "@/lib/utils";
+import { AI_NOTE } from "./ai-note";
 import { useCommentSlider, useHighlightSync } from "./comment-slider";
 import { Uncertain } from "./parts";
 
@@ -22,10 +23,6 @@ export type MarkedScore = {
 
 type Intent = { reveal?: boolean; showMark?: boolean; focus?: boolean };
 type Piece = { text: string; start: number; comments: number[] };
-
-/** The kit's AI line: once per marked answer, or once per results page. */
-export const AI_NOTE =
-  "Claro’s feedback is AI-assisted and criteria-based. AI can make mistakes, so use it alongside your teacher’s guidance; your teacher has the final say.";
 
 const LINE_BREAKS = /((?:\r\n|\r|\n)+)/;
 const calm = () =>

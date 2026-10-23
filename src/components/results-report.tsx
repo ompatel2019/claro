@@ -12,7 +12,7 @@ import { QuestionView } from "./question-view";
 import { Badge } from "./claro/controls";
 import { PenTick, PenCaret } from "./claro/markup-answer";
 import { AnnotatedFeedback } from "./annotated-feedback";
-import { AI_NOTE } from "./annotated-feedback/marked-answer-doc";
+import { AI_NOTE } from "./annotated-feedback/ai-note";
 import { ReportProblem } from "./feedback-widget";
 import { QuestionMark } from "./question-mark";
 import { McReview } from "./mc-review";

@@ -1308,7 +1308,7 @@ html[data-theme-motion="instant"] .theme-toggle:active {
 }
 .home-state-destructive {
   background: var(--destructive-soft);
-  color: var(--cma-missed-text);
+  color: var(--destructive);
 }
 .home-week {
   display: flex;
@@ -1610,7 +1610,7 @@ body:has(.sprint-focus)
 .ma-note-error {
   border-color: transparent;
   background: var(--destructive-soft);
-  color: var(--cma-missed-text);
+  color: var(--destructive);
 }
 @media (max-width: 767px) {
   .ma-field {
