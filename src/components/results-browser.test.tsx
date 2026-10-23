@@ -237,7 +237,7 @@ it("preserves unanswered and review states alongside scores in sprint tiles and 
       i === 0
         ? "text-muted-foreground"
         : i === 3
-          ? "text-navy-deep"
+          ? "text-brand-foreground"
           : "text-brand-text",
     );
     expect(tile).not.toHaveClass("ring-primary");
@@ -270,7 +270,7 @@ it("drops the redundant Marked chip on coloured sprint tiles but keeps it in the
     />,
   );
   const tile = screen.getByRole("button", { name: /^Question 1,/ });
-  expect(tile).toHaveClass("bg-brand", "text-navy-deep");
+  expect(tile).toHaveClass("bg-brand", "text-brand-foreground");
   expect(tile).not.toHaveTextContent("Marked");
   expect(tile).toHaveAttribute("aria-current", "true");
   fireEvent.click(screen.getByRole("button", { name: "Table view" }));

@@ -20,9 +20,11 @@ it.each([
   expect(answerPillState(input)).toBe(state);
 });
 
-it("keeps every state on brand tokens and never uses a dark ring when selected", () => {
-  expect(ANSWER_PILL_TONE.full).toBe("bg-brand text-navy-deep");
+it("uses the sprint tracker states and never uses a dark ring when selected", () => {
+  expect(ANSWER_PILL_TONE.full).toBe("bg-brand text-brand-foreground");
   expect(ANSWER_PILL_TONE.part).toBe("bg-brand-soft text-brand-text");
+  expect(ANSWER_PILL_TONE.none).toBe("bg-muted text-muted-foreground");
+  expect(ANSWER_PILL_TONE.not_answered).toMatch(/border-dashed/);
   expect(ANSWER_PILL_SELECTED).not.toMatch(/ring/);
   for (const [, dot] of ANSWER_LEGEND) expect(dot).toMatch(/border/);
 });
