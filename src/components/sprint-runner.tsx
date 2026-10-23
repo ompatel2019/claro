@@ -515,7 +515,7 @@ export function SprintRunner({
   const qLabel = (i: number) => `Q${i + 1}`;
   const sprintBooklet = (
     <div className="flex min-h-[calc(100svh-9rem)] flex-1 flex-col gap-5 md:min-h-0">
-      <p className="text-muted-foreground absolute top-6 right-5 text-xs">
+      <p className="text-muted-foreground text-xs md:absolute md:top-6 md:right-5">
         {attempts.filter(answered).length} of {attempts.length} answered
       </p>
       {/* Top of the rail: the bottom sits under the fixed answer footer.
@@ -561,7 +561,7 @@ export function SprintRunner({
                       data-q
                       disabled={busy}
                       aria-current={pill["aria-current"]}
-                      aria-label={`Question ${i + 1}: ${pill.label}${row.status === "marked" ? `, ${row.mark}/${row.max_marks} marks` : ""}`}
+                      aria-label={`Question ${i + 1}: ${pill.label}${checkMode && row.status === "marked" ? `, ${row.mark}/${row.max_marks} marks` : ""}`}
                       onClick={() => go(i)}
                       className={cn(
                         "focus-visible:outline-ring size-9 text-sm font-medium tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2",
