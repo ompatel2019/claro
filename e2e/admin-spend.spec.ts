@@ -27,7 +27,7 @@ async function expectWindow(page: Page, range: Range = "month") {
       )
       .filter({
         hasText: new RegExp(
-          `^${dates} \\(Sydney, ${to === today ? "through now" : "inclusive"}\\) · \\d+ calls(?: · Those dates aren't valid, showing this month)?$`,
+          `^${dates} \\(Sydney, ${to === today ? "through now" : "inclusive"}\\) · \\d+ OpenRouter calls(?: · Those dates aren't valid, showing this month)?$`,
         ),
       }),
   ).toBeVisible({ timeout: 30000 });
@@ -68,7 +68,7 @@ test.describe("admin spend", () => {
     );
     await expect(
       page.getByText(
-        /^\d{1,2} \w{3,4} \d{4} to \d{1,2} \w{3,4} \d{4} \(Sydney, through now\) · \d+ calls$/,
+        /^\d{1,2} \w{3,4} \d{4} to \d{1,2} \w{3,4} \d{4} \(Sydney, through now\) · \d+ OpenRouter calls$/,
       ),
     ).toBeVisible();
     for (const label of kpis)

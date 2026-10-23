@@ -10,7 +10,7 @@ const now = new Date("2026-10-09T03:00:00Z");
 const usage = (extra: Partial<Usage> = {}): Usage => ({
   created_at: "2026-10-09T02:30:00Z",
   user_id: "fake-student-a",
-  model: "Model A",
+  model: "anthropic/model-a",
   task: "mark_written",
   input_tokens: 100,
   cached_tokens: 20,
@@ -116,7 +116,7 @@ it("aggregates model tokens, task groups and daily model stacks; averages only w
     usage({ task: "flashcard_mark" }),
     usage({ task: "admin_test" }),
     usage({ task: "eval" }),
-    usage({ task: "unknown", model: "Model B" }),
+    usage({ task: "unknown", model: "openai/model-b" }),
   ];
   const result = computeSpend(
     { month: 0, all: 0 },
@@ -135,7 +135,7 @@ it("aggregates model tokens, task groups and daily model stacks; averages only w
   );
   expect(result.byModel).toEqual([
     {
-      model: "Model A",
+      model: "anthropic/model-a",
       calls: 8,
       input_tokens: 800,
       cached_tokens: 160,
@@ -143,7 +143,7 @@ it("aggregates model tokens, task groups and daily model stacks; averages only w
       usd: 8,
     },
     {
-      model: "Model B",
+      model: "openai/model-b",
       calls: 1,
       input_tokens: 100,
       cached_tokens: 20,
@@ -168,7 +168,7 @@ it("aggregates model tokens, task groups and daily model stacks; averages only w
   expect(result.perDay[0]).toEqual({ day: "2026-10-01", models: {}, usd: 0 });
   expect(result.perDay[8]).toEqual({
     day: "2026-10-09",
-    models: { "Model A": 8, "Model B": 1 },
+    models: { "anthropic/model-a": 8, "openai/model-b": 1 },
     usd: 9,
   });
 });
@@ -454,4 +454,35 @@ it("excludes null-mark results from marked-answer averages while retaining costs
     ),
   ).toBe(true);
   expect(result.unattributedWrittenUsd).toBeCloseTo(0.03);
+});
+it("counts only OpenRouter models in Today, by model and by task, like the SQL month and all-time totals", () => {
+  const rows = [
+    usage({ model: "anthropic/model-a", usd: 1 }),
+    usage({ model: "openai/model-b", task: "eval", usd: 2 }),
+    usage({ model: "gpt-direct", usd: 4 }),
+    usage({ model: "xanthropic/look-alike", task: "eval", usd: 8 }),
+  ];
+  const result = computeSpend(
+    { month: 3, all: 3 },
+    rows,
+    [],
+    students,
+    "month",
+    now,
+  );
+  expect(result.today).toBe(3);
+  expect(result.byModel.map((m) => [m.model, m.calls, m.usd])).toEqual([
+    ["openai/model-b", 1, 2],
+    ["anthropic/model-a", 1, 1],
+  ]);
+  expect(
+    result.byTask.map(({ name, calls, usd }) => [name, calls, usd]),
+  ).toEqual([
+    ["Marking", 1, 1],
+    ["Admin and evals", 1, 2],
+  ]);
+  // Out of scope: the daily chart, written-cost allocation and students stay all-provider.
+  expect(result.perDay.at(-1)?.usd).toBe(15);
+  expect(result.unattributedWrittenUsd).toBe(5);
+  expect(result.topStudents[0]).toMatchObject({ calls: 4, usd: 15 });
 });
