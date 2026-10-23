@@ -245,6 +245,8 @@ const portalPaths = {
   clock: "M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0M12 7v5l3 2",
   copy: "M8 8h13v13H8ZM16 4V3H3v13h1",
   "corner-down-left": "M20 4v9H4m5-5-5 5 5 5",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+  "chevron-down": "m5 9 7 7 7-7",
   ellipsis: "M5 12h.01M12 12h.01M19 12h.01",
   flag: "M5 21V3h14l-3 5 3 5H5",
   "graduation-cap": "m2 9 10-5 10 5-10 5Zm4 3v5q6 5 12 0v-5m4-3v8",

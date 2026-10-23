@@ -17,7 +17,7 @@ export function PageHeader({
 }: {
   title: string;
   description?: string;
-  eyebrow?: string;
+  eyebrow?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
@@ -27,11 +27,11 @@ export function PageHeader({
     >
       <div className="min-w-0">
         {eyebrow && (
-          <p className="text-muted-foreground mb-1 text-sm font-medium">
+          <p className="text-muted-foreground mb-1 text-[13px] leading-[18px]">
             {eyebrow}
           </p>
         )}
-        <h1 className="text-[26px] leading-tight font-bold tracking-[-0.025em] sm:text-[28px]">
+        <h1 className="text-[30px] leading-9 font-bold tracking-[-0.02em]">
           {title}
         </h1>
         {description && (
@@ -76,7 +76,7 @@ export function TopBar({
     <header
       data-component="TopBar"
       className={cn(
-        "bg-background/90 sticky top-0 z-30 flex h-14 items-center gap-1.5 border-b px-4 backdrop-blur-md sm:px-8",
+        "bg-background sticky top-0 z-30 flex h-16 items-center gap-3 border-b px-4 md:px-10",
         className,
       )}
       {...props}
@@ -125,17 +125,17 @@ export function SubjectSwitcher() {
   return (
     <div
       data-component="SubjectSwitcher"
-      className="bg-card mx-3 flex items-center gap-3 rounded-xl border p-2 shadow-xs"
+      className="bg-card mx-4 flex items-center gap-2.5 rounded-2xl border px-3 py-2.5"
     >
-      <span className="bg-primary text-primary-foreground grid size-8 shrink-0 place-items-center rounded-lg">
-        <PortalIcon name="graduation-cap" size={18} />
+      <span className="text-muted-foreground grid shrink-0 place-items-center">
+        <PortalIcon name="book-open" />
       </span>
-      <span className="grid flex-1 text-[13px]">
+      <span className="grid flex-1 text-sm">
         <span className="font-semibold">Economics</span>
         <span className="text-muted-foreground text-xs">HSC · Year 12</span>
       </span>
       <PortalIcon
-        name="chevrons-up-down"
+        name="chevron-down"
         className="text-muted-foreground mr-0.5 size-4"
       />
     </div>
@@ -153,26 +153,19 @@ export function ExamCountdown({
   return (
     <div
       data-component="ExamCountdown"
-      className="bg-navy relative overflow-hidden rounded-2xl p-4 text-white ring-1 ring-white/5"
+      className="bg-navy-deep relative overflow-hidden rounded-2xl border border-white/5 px-4 py-3.5 text-white"
     >
-      <svg
-        className="pointer-events-none absolute inset-y-0 right-0 h-full w-[72px]"
-        viewBox="0 0 72 100"
-        preserveAspectRatio="none"
-        aria-hidden
-      >
-        <polygon points="30,0 44,0 24,100 10,100" fill="#f54f1b" />
-        <polygon points="52,0 72,0 72,100 32,100" fill="#d63c0e" />
-      </svg>
       <div className="relative">
-        <p className="text-xs font-medium text-white/65">{name}</p>
+        <p className="text-xs leading-4 font-semibold text-white/78">{name}</p>
         <p className="mt-1.5 flex items-baseline gap-1.5">
-          <span className="text-[30px] leading-none font-bold tracking-[-0.03em] tabular-nums">
+          <span className="text-[28px] leading-8 font-bold tracking-[-0.02em] tabular-nums">
             {days}
           </span>
-          <span className="text-[13px] text-white/80">days to go</span>
+          <span className="text-sm font-semibold text-white/86">
+            days to go
+          </span>
         </p>
-        <p className="mt-1.5 text-xs text-white/55">{when}</p>
+        <p className="mt-1 text-xs leading-4 text-white/78">{when}</p>
       </div>
     </div>
   );

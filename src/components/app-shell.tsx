@@ -1,7 +1,11 @@
 "use client";
 import { ActiveNavProvider, useActiveNav } from "@/components/claro/active-nav";
 import { CommandPalette } from "@/components/claro/command-palette";
-import { ExamCountdown, TopBar } from "@/components/claro/layout";
+import {
+  ExamCountdown,
+  SubjectSwitcher,
+  TopBar,
+} from "@/components/claro/layout";
 import { ThemeToggle, setTheme } from "./theme-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -129,8 +133,7 @@ export function activeItem(kind: keyof typeof nav, path: string) {
   );
 }
 
-const navButtonClassName =
-  "data-active:before:bg-brand h-9 overflow-visible rounded-xl font-medium data-active:font-semibold data-active:before:absolute data-active:before:-left-3 data-active:before:h-5 data-active:before:w-[3px] data-active:before:rounded-r";
+const navButtonClassName = "shell-nav-button";
 
 const studentIcons: Record<
   string,
@@ -197,7 +200,10 @@ function AppShellContent({
       >
         Skip to content
       </a>
-      <Sidebar collapsible="icon">
+      <Sidebar
+        collapsible="icon"
+        className={kind === "student" ? "student-sidebar" : undefined}
+      >
         <SidebarHeader className="h-16 flex-row items-center justify-between gap-2 pr-3 pl-5 group-data-[collapsible=icon]:h-auto group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:gap-3 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:pt-4 group-data-[collapsible=icon]:pb-2">
           <Link
             href={home}
@@ -206,8 +212,13 @@ function AppShellContent({
           >
             {kind === "student" ? <ShellLogo /> : <Logo collapsible />}
           </Link>
-          <SidebarHeaderToggle />
+          {kind === "admin" && <SidebarHeaderToggle />}
         </SidebarHeader>
+        {kind === "student" && (
+          <div className="my-3 group-data-[collapsible=icon]:hidden">
+            <SubjectSwitcher />
+          </div>
+        )}
         <SidebarContent className="pt-3 pb-2">
           <nav
             aria-label={
@@ -216,7 +227,9 @@ function AppShellContent({
           >
             {nav[kind].map((group) => (
               <SidebarGroup key={group.label} className="mb-2">
-                <SidebarGroupLabel className="mt-0">
+                <SidebarGroupLabel
+                  className={kind === "student" ? "sr-only" : "mt-0"}
+                >
                   {group.label}
                 </SidebarGroupLabel>
                 <SidebarMenu className="gap-0.5">
@@ -226,7 +239,9 @@ function AppShellContent({
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
-                          className={navButtonClassName}
+                          className={
+                            kind === "student" ? navButtonClassName : undefined
+                          }
                           isActive={isActive}
                           tooltip={item.label}
                           render={
@@ -242,7 +257,10 @@ function AppShellContent({
                           ) : (
                             <item.icon strokeWidth={1.75} />
                           )}
-                          <span>{item.label}</span>
+                          <span className="nav-label">
+                            {item.label}
+                            {kind === "student" && isActive && <NavUnderline />}
+                          </span>
                         </SidebarMenuButton>
                         {!!badge && (
                           <SidebarMenuBadge
@@ -260,7 +278,7 @@ function AppShellContent({
             {kind === "student" && <FeedbackNavItem />}
           </nav>
         </SidebarContent>
-        <SidebarFooter className="border-sidebar-border gap-2 border-t px-3 pt-3 pb-4">
+        <SidebarFooter className="gap-3 px-4 pt-3 pb-4">
           {kind === "student" && examDays !== null && (
             <div className="group-data-[collapsible=icon]:hidden">
               <ExamCountdown
@@ -294,7 +312,7 @@ function AppShellContent({
                 render={<Link href="/student/profile" aria-label="Profile" />}
               >
                 <Avatar className="after:border-0">
-                  <AvatarFallback className="bg-brand-soft text-brand-text text-xs font-medium">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                     {initials(name)}
                   </AvatarFallback>
                 </Avatar>
@@ -312,9 +330,7 @@ function AppShellContent({
                   aria-label="User menu"
                   className="text-muted-foreground hover:bg-muted grid size-7 shrink-0 place-items-center rounded-full group-data-[collapsible=icon]:hidden"
                 >
-                  <span aria-hidden className="text-lg leading-none">
-                    ⋯
-                  </span>
+                  <PortalIcon name="more" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" align="end" className="w-48">
                   <DropdownMenuItem render={<Link href="/student/profile" />}>
@@ -339,6 +355,9 @@ function AppShellContent({
                     <PortalIcon name="moon" />
                     Toggle theme
                   </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("system")}>
+                    Use system theme
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => signOutForm.current?.requestSubmit()}
                   >
@@ -354,7 +373,13 @@ function AppShellContent({
       {/* Collapsing hands the rail's freed width to the content column. */}
       <SidebarInset className="min-w-0 md:peer-data-[state=collapsed]:[--shell-reclaim:calc(var(--sidebar-width)-var(--sidebar-width-icon))]">
         <TopBar>
-          <SidebarTrigger className="max-sm:size-9 md:hidden" />
+          {kind === "admin" ? (
+            <SidebarTrigger className="md:hidden" />
+          ) : (
+            <div className="hidden md:block">
+              <SidebarHeaderToggle />
+            </div>
+          )}
           <Link
             href={home}
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
@@ -364,25 +389,15 @@ function AppShellContent({
           </Link>
           <CommandPalette routes={commands} />
           <div className="flex shrink-0 items-center gap-1 sm:ml-auto">
-            <span className="relative grid place-items-center [&_button>svg]:hidden">
-              <ThemeToggle />
-              <PortalIcon
-                name="moon"
-                className="pointer-events-none absolute size-4 dark:hidden"
-              />
-              <PortalIcon
-                name="sun"
-                className="pointer-events-none absolute hidden size-4 dark:block"
-              />
-            </span>
+            <ThemeToggle />
             <form ref={signOutForm} action={signOut} className="hidden" />
             <DropdownMenu>
               <DropdownMenuTrigger
-                className={`ml-auto rounded-full ${kind === "student" ? "max-lg:ml-0" : ""}`}
+                className={`ml-auto rounded-full ${kind === "student" ? "md:hidden" : ""}`}
                 aria-label="Account menu"
               >
                 <Avatar className="size-8 after:border-0">
-                  <AvatarFallback className="bg-brand-soft text-brand-text text-xs font-medium">
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                     {initials(name)}
                   </AvatarFallback>
                 </Avatar>
@@ -415,13 +430,16 @@ function AppShellContent({
           id="main"
           className={
             kind === "student"
-              ? "mx-auto w-full max-w-[calc(1400px+var(--shell-reclaim,0px))] min-w-0 flex-1 px-4 pt-6 pb-24 transition-[max-width] duration-200 ease-linear sm:px-8 sm:pt-8"
+              ? "mx-auto w-full max-w-[1088px] min-w-0 flex-1 px-4 pt-6 pb-[calc(96px+env(safe-area-inset-bottom))] md:px-10 md:pb-10"
               : "mx-auto w-full max-w-[calc(1464px+var(--shell-reclaim,0px))] min-w-0 flex-1 px-4 py-6 transition-[max-width] duration-200 ease-linear sm:px-8 sm:py-8"
           }
         >
           {children}
         </div>
       </SidebarInset>
+      {kind === "student" && (
+        <MobileTabs activeHref={active?.href} badges={badges} />
+      )}
     </SidebarProvider>
   );
 }
@@ -504,5 +522,68 @@ function ShellLogo({ mobile = false }: { mobile?: boolean }) {
       />
       {/* eslint-enable @next/next/no-img-element */}
     </span>
+  );
+}
+
+function NavUnderline() {
+  return (
+    <svg
+      className="nav-pen pen"
+      viewBox="0 0 240 14"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 9.5C42 5.2 90 10.8 138 7.2S212 9.6 237 6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function MobileTabs({
+  activeHref,
+  badges = {},
+}: {
+  activeHref?: string;
+  badges?: Record<string, number>;
+}) {
+  const { setOpenMobile, openMobile } = useSidebar();
+  const items = nav.student
+    .flatMap((g) => g.items)
+    .filter((i) =>
+      ["Home", "Topic Sprint", "Flashcards", "Progress"].includes(i.label),
+    );
+  return (
+    <nav className="student-tabbar" aria-label="Phone navigation">
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          aria-current={activeHref === item.href ? "page" : undefined}
+        >
+          <PortalIcon name={studentIcons[item.label]} />
+          <span className="nav-label">
+            {item.label === "Topic Sprint" ? "Sprint" : item.label}
+            {activeHref === item.href && <NavUnderline />}
+          </span>
+          {!!badges[item.href] && (
+            <span className="sr-only">{badges[item.href]} due</span>
+          )}
+        </Link>
+      ))}
+      <button
+        type="button"
+        aria-label="More navigation"
+        aria-expanded={openMobile}
+        onClick={() => setOpenMobile(true)}
+      >
+        <PortalIcon name="more" />
+        <span>More</span>
+      </button>
+    </nav>
   );
 }

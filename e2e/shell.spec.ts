@@ -20,8 +20,6 @@ test.describe("App shell", () => {
     page,
   }) => {
     const nav = page.getByRole("navigation", { name: "Main navigation" });
-    await expect(nav.getByText("Practise", { exact: true })).toBeVisible();
-    await expect(nav.getByText("Track", { exact: true })).toBeVisible();
     await expect(nav.getByRole("link", { name: "Home" })).toHaveAttribute(
       "aria-current",
       "page",
@@ -84,7 +82,7 @@ test.describe("App shell", () => {
           .getByRole("navigation", { name: "Main navigation" })
           .isVisible())
       )
-        await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+        await page.getByRole("button", { name: "More navigation" }).click();
       await expect(
         page.getByRole("navigation", { name: "Main navigation" }),
       ).toBeVisible({ timeout: 1500 });

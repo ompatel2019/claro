@@ -90,7 +90,7 @@ for (const width of [1440, 390])
         .evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0),
     ).toBe(true);
     if (width === 390) {
-      await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+      await page.getByRole("button", { name: "More navigation" }).click();
       await expect(
         page.getByRole("navigation", { name: "Main navigation" }),
       ).toBeVisible();
@@ -112,7 +112,7 @@ for (const width of [1440, 390])
     await expect(page.getByRole("option")).toHaveCount(0);
     await page.keyboard.press("Escape");
     if (width === 390)
-      await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+      await page.getByRole("button", { name: "More navigation" }).click();
     await page
       .getByRole("navigation", { name: "Main navigation" })
       .getByRole("button", { name: "Feedback", exact: true })
