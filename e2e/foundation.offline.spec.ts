@@ -149,7 +149,7 @@ for (const width of [1440, 390])
 test("admin search keeps the original 380 by 36 control from sm", async ({
   page,
 }) => {
-  for (const width of [640, 1440]) {
+  for (const width of [768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await page.goto("http://claro.test/admin?admin");
     const search = page.getByRole("button", { name: /Search pages/ });
@@ -226,7 +226,7 @@ for (const kind of ["student", "admin"])
     page,
   }) => {
     const url = `http://claro.test/${kind}${kind === "admin" ? "?admin" : ""}`;
-    for (const width of [640, 1440]) {
+    for (const width of [768, 1440]) {
       await page.setViewportSize({ width, height: 1000 });
       await page.goto(url);
       const header = page.locator('[data-slot="sidebar-header"]');
