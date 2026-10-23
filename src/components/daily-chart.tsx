@@ -11,7 +11,13 @@ import {
 import { monotonePath } from "@/lib/chart-path";
 import { PortalIcon } from "@/components/icons";
 import { dateLabel } from "@/lib/practice";
-import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "./ui/card";
 import {
   Table,
   TableBody,
@@ -32,11 +38,13 @@ const modelOpacity = [1, 0.78, 0.58, 0.4, 0.25];
 /** K10 ChartCard: title, hero number, an area or stacked bars per Sydney day. */
 export function DailyChart({
   title,
+  description,
   hero,
   points,
   kind,
 }: {
   title: string;
+  description?: string;
   hero: string;
   points: { day: string; value: number; models?: Record<string, number> }[];
   kind: "area" | "bars";
@@ -67,6 +75,7 @@ export function DailyChart({
           <CardTitle role="heading" aria-level={2}>
             {title}
           </CardTitle>
+          {description && <CardDescription>{description}</CardDescription>}
           <p className="num-display mt-2 text-[30px] leading-none font-bold">
             {hero}
           </p>

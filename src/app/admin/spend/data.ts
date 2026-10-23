@@ -109,7 +109,7 @@ function normaliseTask(task: string) {
 
 /**
  * SQL dashboard totals, usage covering range and fixed 30 days, marked attempts and student profiles.
- * Today, byModel and byTask count OpenRouter models only, like the SQL month/all totals (0083).
+ * Today, perDay, byModel and byTask count OpenRouter models only, like the SQL month/all totals (0083).
  */
 export function computeSpend(
   totals: { month: number; all: number },
@@ -162,11 +162,11 @@ export function computeSpend(
   for (const r of rows) {
     const usd = finiteCost(r.usd);
     const name = normaliseTask(r.task);
+    if (writtenTasks.includes(name)) writtenUsd += usd;
+    if (!isOpenRouterModel(r.model)) continue;
     const day = days.get(sydneyDay(r.created_at))!;
     day.usd += usd;
     day.models[r.model] = (day.models[r.model] ?? 0) + usd;
-    if (writtenTasks.includes(name)) writtenUsd += usd;
-    if (!isOpenRouterModel(r.model)) continue;
     const model = byModel.get(r.model) ?? {
       model: r.model,
       calls: 0,

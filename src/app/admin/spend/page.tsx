@@ -142,6 +142,7 @@ export default async function SpendPage({
         {total > 0 ? (
           <DailyChart
             title="Spend per day"
+            description="OpenRouter only"
             hero={usd(total)}
             kind="bars"
             points={spend.perDay.map((p) => ({
@@ -153,7 +154,7 @@ export default async function SpendPage({
         ) : (
           <EmptyState
             title="No spend in this range"
-            description="Daily spend by model will appear after an AI call."
+            description="Daily OpenRouter spend by model will appear after an AI call."
           />
         )}
         <Card className="min-w-0">
