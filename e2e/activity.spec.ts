@@ -111,9 +111,7 @@ test.describe("Activity browser", () => {
       .first();
     test.skip((await row.count()) === 0, "No existing reports to view");
     const href = await row.getAttribute("href");
-    expect(href).toMatch(
-      /^\/student\/(?:sprint\/[^/]+\/results|flashcards\/[^/]+|activity\/[^/]+)$/,
-    );
+    expect(href).toMatch(/^\/student\/(?:flashcards\/[^/]+|activity\/[^/]+)$/);
     await row.click();
     await expect(page).toHaveURL(new URL(href!, page.url()).href);
     await expect(page.getByText("This page could not be found.")).toHaveCount(

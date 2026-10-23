@@ -114,7 +114,7 @@ test("queues background marks, keeps edits usable, and waits at Finish", async (
     finishCalls++;
     await route.fulfill({ json: { finished: true } });
   });
-  await page.route("**/student/sprint/s/results", (route) =>
+  await page.route("**/student/activity/s", (route) =>
     route.fulfill({
       contentType: "text/html",
       body: "Synthetic results",
@@ -171,7 +171,7 @@ test("queues background marks, keeps edits usable, and waits at Finish", async (
   await held.shift()!();
   await expect.poll(() => finishCalls).toBe(1);
   expect(marks).toEqual(["a0", "a1", "a0"]);
-  await expect(page).toHaveURL(/\/student\/sprint\/s\/results$/);
+  await expect(page).toHaveURL(/\/student\/activity\/s$/);
   await expect(page.getByText("Synthetic results")).toBeVisible();
 });
 
@@ -196,7 +196,7 @@ for (const outcome of ["success", "error", "recovered", "network"] as const) {
         };
       });
     });
-    await page.route("**/student/sprint/s/results", (route) =>
+    await page.route("**/student/activity/s", (route) =>
       route.fulfill({ contentType: "text/html", body: "Synthetic results" }),
     );
     await page.route("**/__finish-test", (route) =>
@@ -219,7 +219,7 @@ for (const outcome of ["success", "error", "recovered", "network"] as const) {
     await expect.poll(() => calls).toBe(1);
     await release();
     if (outcome === "success" || outcome === "recovered") {
-      await expect(page).toHaveURL(/\/student\/sprint\/s\/results$/);
+      await expect(page).toHaveURL(/\/student\/activity\/s$/);
     } else {
       await expect(page.getByRole("alert")).toContainText(
         outcome === "network"
@@ -229,7 +229,7 @@ for (const outcome of ["success", "error", "recovered", "network"] as const) {
       await expect(page.getByRole("button")).toBeEnabled();
       await expect(
         page.getByRole("link", { name: "View results" }),
-      ).toHaveAttribute("href", "/student/sprint/s/results");
+      ).toHaveAttribute("href", "/student/activity/s");
     }
   });
 }
@@ -244,7 +244,7 @@ for (const outcome of ["error", "recovered", "network"] as const)
         ? route.abort("failed")
         : route.fulfill({ status: 500, json: { error: "Finish timed out" } }),
     );
-    await page.route("**/student/sprint/s/results", (route) =>
+    await page.route("**/student/activity/s", (route) =>
       route.fulfill({ contentType: "text/html", body: "Synthetic results" }),
     );
     await page.route("**/__runner-recovery", (route) =>
@@ -269,7 +269,7 @@ for (const outcome of ["error", "recovered", "network"] as const)
       .focus();
     await page.keyboard.press("Enter");
     if (outcome === "recovered")
-      await expect(page).toHaveURL(/\/student\/sprint\/s\/results$/);
+      await expect(page).toHaveURL(/\/student\/activity\/s$/);
     else {
       await expect(page.getByRole("alert")).toContainText(
         outcome === "network" ? "Failed to fetch" : "Finish timed out",
@@ -277,7 +277,7 @@ for (const outcome of ["error", "recovered", "network"] as const)
       await expect(answer).toBeEnabled();
       await expect(answer).toHaveValue("My saved answer");
       await page.getByRole("link", { name: "View results" }).click();
-      await expect(page).toHaveURL(/\/student\/sprint\/s\/results$/);
+      await expect(page).toHaveURL(/\/student\/activity\/s$/);
     }
   });
 

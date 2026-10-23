@@ -119,7 +119,7 @@ describe("Shared session summary", () => {
 
 it.each([
   ["sprint", null, null, "/student/sprint/s"],
-  ["sprint", null, today, "/student/sprint/s/results"],
+  ["sprint", null, today, "/student/activity/s"],
   ["flashcards", null, null, "/student/flashcards/s"],
   ["flashcards", null, today, "/student/flashcards/s"],
   ["single", null, null, "/student/activity/s"],

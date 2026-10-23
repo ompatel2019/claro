@@ -234,7 +234,7 @@ test("S11: activity row shows result, date, and opens the session", async ({
   await expect(row.getByText("11:00am")).toBeVisible();
   await capture(page, list, "11", "Activity result + date", "s11-activity.png");
   await row.click();
-  await expect(page).toHaveURL("http://claro.test/student/sprint/s/results");
+  await expect(page).toHaveURL("http://claro.test/student/activity/s");
 });
 test("A1: attention precedes charts, mini-list has three working report links", async ({
   page,

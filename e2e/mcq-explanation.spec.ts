@@ -99,7 +99,7 @@ for (const width of [390, 1600]) {
           await page
             .getByRole("button", { name: "Finish and mark", exact: true })
             .click();
-          await expect(page).toHaveURL(/\/results$/);
+          await expect(page).toHaveURL(/\/student\/activity\/[^/]+$/);
           // Results open the explanation by default for wrong/unanswered choices.
           const conclusion = page.getByText("Thus the answer is C.");
           const details = page.locator("details").filter({ has: conclusion });

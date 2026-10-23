@@ -368,7 +368,7 @@ export function SprintRunner({
           result.error ?? "Could not finish your session. Please try again.",
         );
       // Hard navigation so no cached "unfinished" redirect can bounce us back.
-      window.location.assign(`/student/sprint/${session.id}/results`);
+      window.location.assign(`/student/activity/${session.id}`);
     } catch (error) {
       try {
         const { data } = await db
@@ -377,7 +377,7 @@ export function SprintRunner({
           .eq("id", session.id)
           .maybeSingle();
         if (data?.finished_at) {
-          window.location.assign(`/student/sprint/${session.id}/results`);
+          window.location.assign(`/student/activity/${session.id}`);
           return;
         }
       } catch {}
@@ -643,10 +643,7 @@ export function SprintRunner({
           >
             <p>{error}</p>
             {finishFailed && (
-              <a
-                href={`/student/sprint/${session.id}/results`}
-                className="underline"
-              >
+              <a href={`/student/activity/${session.id}`} className="underline">
                 View results
               </a>
             )}

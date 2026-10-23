@@ -52,7 +52,7 @@ it("links rows to canonical reports and preserves filters in pagination", () => 
   show(data, { ...filters, kind: "sprint" });
   expect(screen.getByRole("link", { name: row.title })).toHaveAttribute(
     "href",
-    "/student/sprint/s/results",
+    "/student/activity/s",
   );
   expect(screen.getByRole("link", { name: "Load more" })).toHaveAttribute(
     "href",
@@ -172,7 +172,7 @@ it("ignores a legacy paper session alongside supported activity", () => {
   expect(screen.queryByText("Removed session")).toBeNull();
   expect(screen.getAllByRole("link", { name: row.title })[0]).toHaveAttribute(
     "href",
-    "/student/sprint/s/results",
+    "/student/activity/s",
   );
 });
 

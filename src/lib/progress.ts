@@ -65,13 +65,11 @@ export type ProgressData = {
   due: { day: string; count: number }[];
 };
 export function reportHref(s: Pick<HistoryScore, "id" | "kind">) {
-  return s.kind === "single"
+  return s.kind === "single" || s.kind === "sprint"
     ? `/student/activity/${s.id}`
     : s.kind === "flashcards"
       ? `/student/flashcards/${s.id}`
-      : s.kind === "sprint"
-        ? `/student/sprint/${s.id}/results`
-        : null;
+      : null;
 }
 export function practiseHref(
   t: Pick<Topic, "id" | "parent_id">,

@@ -51,7 +51,7 @@ it("disables repeated submissions and opens results after success", async () => 
   expect(mocks.fetch).toHaveBeenCalledTimes(1);
   resolve({ ok: true, json: async () => ({ finished: true }) });
   await waitFor(() =>
-    expect(mocks.assign).toHaveBeenCalledWith("/student/sprint/s/results"),
+    expect(mocks.assign).toHaveBeenCalledWith("/student/activity/s"),
   );
 });
 for (const status of [409, 500])
@@ -68,7 +68,7 @@ for (const status of [409, 500])
     );
     expect(screen.getByRole("link", { name: "View results" })).toHaveAttribute(
       "href",
-      "/student/sprint/s/results",
+      "/student/activity/s",
     );
     expect(screen.getByRole("button")).toBeEnabled();
     fireEvent.click(screen.getByRole("button"));
@@ -107,7 +107,7 @@ for (const failure of ["http", "network"])
     render(<FinishSprint id="s" />);
     fireEvent.click(screen.getByRole("button"));
     await waitFor(() =>
-      expect(mocks.assign).toHaveBeenCalledWith("/student/sprint/s/results"),
+      expect(mocks.assign).toHaveBeenCalledWith("/student/activity/s"),
     );
     expect(screen.queryByRole("alert")).toBeNull();
   });
@@ -177,6 +177,6 @@ for (const [statuses, label] of [
     render(await SprintPage({ searchParams: Promise.resolve({}) }));
     expect(screen.getByRole("link", { name: label })).toHaveAttribute(
       "href",
-      `/student/sprint/s${label === "View results" ? "/results" : ""}`,
+      label === "View results" ? "/student/activity/s" : "/student/sprint/s",
     );
   });

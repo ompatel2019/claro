@@ -25,10 +25,11 @@ import { RichText } from "@/components/rich-text";
 import { ReportProblem } from "@/components/feedback-widget";
 import { QuestionMark } from "@/components/question-mark";
 import { Card } from "@/components/ui/card";
+import { SprintResults } from "./sprint-results";
 
-export const metadata = pageMetadata("Answer results");
+export const metadata = pageMetadata("Results");
 
-/** Single-session report until §3.13 supplies the canonical report for every kind. */
+/** Canonical results page for sprint and single sessions (old /student/sprint/[id]/results 308s here). */
 export default async function Page({
   params,
 }: {
@@ -50,7 +51,7 @@ export default async function Page({
   if (error) throw error;
   if (!s) notFound();
   if (s.kind !== "single") {
-    if (s.kind === "sprint") redirect(`/student/sprint/${id}/results`);
+    if (s.kind === "sprint") return <SprintResults id={id} />;
     if (s.kind === "flashcards") redirect(`/student/flashcards/${id}`);
     notFound();
   }

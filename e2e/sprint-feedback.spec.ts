@@ -187,8 +187,17 @@ test.describe("Local results feedback", () => {
   test("results of a session still being marked show progress, not the question page", async ({
     page,
   }) => {
+    // Old sprint results links permanently redirect to Activity.
+    const old = await page.request.get(
+      `/student/sprint/${sessionId(6)}/results`,
+      { maxRedirects: 0 },
+    );
+    expect(old.status()).toBe(308);
+    expect(old.headers().location).toBe(`/student/activity/${sessionId(6)}`);
     await page.goto(`/student/sprint/${sessionId(6)}/results`);
-    await expect(page).toHaveURL(/\/results$/);
+    await expect(page).toHaveURL(
+      new RegExp(`/student/activity/${sessionId(6)}$`),
+    );
     await expect(page.getByText("Marking in progress")).toBeVisible();
     await expect(
       page.getByText("1 of 2 marked", { exact: true }),
@@ -203,7 +212,7 @@ test.describe("Local results feedback", () => {
     page,
   }) => {
     await control("reset", 7);
-    await page.goto(`/student/sprint/${sessionId(7)}/results`);
+    await page.goto(`/student/activity/${sessionId(7)}`);
     await expect(page.getByText("Marking in progress")).toBeVisible();
     // All marked but not finished: still the card, never a blank page.
     await expect(page.getByText("Finishing your results…")).toBeVisible({
@@ -227,7 +236,7 @@ test.describe("Local results feedback", () => {
       await route.fulfill({ json: { finished: true } });
     });
     const start = Date.now();
-    await page.goto(`/student/sprint/${sessionId(8)}/results`);
+    await page.goto(`/student/activity/${sessionId(8)}`);
     await expect(page.getByText("Finishing your results…")).toBeVisible({
       timeout: 10_000,
     });
@@ -243,7 +252,7 @@ test.describe("Local results feedback", () => {
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 });
-      await page.goto(`/student/sprint/${sessionId(1)}/results`);
+      await page.goto(`/student/activity/${sessionId(1)}`);
       const next = page.getByRole("region", { name: "Your next step" });
       await expect(next).toBeVisible();
       await expect(
@@ -325,7 +334,7 @@ test.describe("Local results feedback", () => {
   test("partial-mark comparison keeps criteria, semantic notes and sample visible", async ({
     page,
   }) => {
-    await page.goto(`/student/sprint/${sessionId(9)}/results`);
+    await page.goto(`/student/activity/${sessionId(9)}`);
     await page.getByRole("button", { name: /^Question 2,/ }).click();
     const review = page.locator("#q-2");
     await expect(review.getByRole("table")).toBeVisible();
@@ -455,7 +464,7 @@ test.describe("Local results feedback", () => {
     test(`keeps topic actions when the summary is ${suffix === 4 ? "unavailable" : "pending"}`, async ({
       page,
     }) => {
-      await page.goto(`/student/sprint/${sessionId(suffix)}/results`);
+      await page.goto(`/student/activity/${sessionId(suffix)}`);
       await expect(page.getByText(message, { exact: false })).toBeVisible();
       await expect(
         page

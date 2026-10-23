@@ -33,6 +33,11 @@ vi.mock("@/components/results-report", () => ({
     <div data-testid="results" data-single={String(singleResult)} />
   ),
 }));
+vi.mock("./sprint-results", () => ({
+  SprintResults: ({ id }: { id: string }) => (
+    <div data-testid="sprint-results" data-id={id} />
+  ),
+}));
 vi.mock("@/components/marking-progress", () => ({
   MarkingProgress: () => null,
 }));
@@ -68,14 +73,45 @@ it("returns not found for an existing paper row without reading its attempts", a
   );
   expect(mocks.from).toHaveBeenCalledExactlyOnceWith("sessions");
 });
-it.each([
-  ["sprint", `/student/sprint/${id}/results`],
-  ["flashcards", `/student/flashcards/${id}`],
-])("preserves %s report redirects", async (kind, url) => {
-  mocks.kind = kind;
+it("preserves the flashcards report redirect", async () => {
+  mocks.kind = "flashcards";
   await expect(Page({ params: Promise.resolve({ id }) })).rejects.toThrow(
-    `redirect:${url}`,
+    `redirect:/student/flashcards/${id}`,
   );
+});
+
+it("renders sprint results here for the owner", async () => {
+  mocks.kind = "sprint";
+  render(await resolve(await Page({ params: Promise.resolve({ id }) })));
+  expect(screen.getByTestId("sprint-results")).toHaveAttribute("data-id", id);
+});
+
+it("returns not found for another user's session without reading its attempts", async () => {
+  const filters: [string, unknown][] = [];
+  mocks.from.mockImplementation(() => ({
+    select() {
+      return this;
+    },
+    eq(column: string, value: unknown) {
+      filters.push([column, value]);
+      return this;
+    },
+    // RLS and the owner filter both hide another student's row.
+    maybeSingle: async () => ({ data: null, error: null }),
+  }));
+  await expect(Page({ params: Promise.resolve({ id }) })).rejects.toThrow(
+    "404",
+  );
+  expect(filters).toContainEqual(["user_id", "u"]);
+  expect(mocks.from).toHaveBeenCalledExactlyOnceWith("sessions");
+  expect(mocks.rpc).not.toHaveBeenCalled();
+});
+
+it("returns not found for a malformed id before querying", async () => {
+  await expect(
+    Page({ params: Promise.resolve({ id: "not-a-uuid" }) }),
+  ).rejects.toThrow("404");
+  expect(mocks.from).not.toHaveBeenCalled();
 });
 
 it.each([

@@ -42,9 +42,7 @@ it.each([
 );
 it("builds existing report and setup routes including single-answer sessions", () => {
   expect(reportHref({ id: "a", kind: "single" })).toBe("/student/activity/a");
-  expect(reportHref({ id: "a", kind: "sprint" })).toBe(
-    "/student/sprint/a/results",
-  );
+  expect(reportHref({ id: "a", kind: "sprint" })).toBe("/student/activity/a");
   expect(reportHref({ id: "a", kind: "paper" })).toBeNull();
   expect(reportHref({ id: "a", kind: "flashcards" })).toBe(
     "/student/flashcards/a",

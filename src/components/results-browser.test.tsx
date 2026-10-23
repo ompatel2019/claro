@@ -111,7 +111,7 @@ it("ignores consumed keys and keys within comment navigation", () => {
 });
 
 it("opens the questioned mark from a report hash and responds to hash changes", async () => {
-  window.history.replaceState(null, "", "/student/sprint/sit/results#q-26");
+  window.history.replaceState(null, "", "/student/activity/sit#q-26");
   render(<ResultsBrowser items={items} views={views} initial={0} />);
   expect(await screen.findByText("Answer to Q26")).toBeVisible();
   window.history.replaceState(null, "", "#q-24");

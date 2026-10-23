@@ -41,9 +41,5 @@ export function reviewHref(
   session: { id: string; kind: string },
   position: number,
 ) {
-  const path =
-    session.kind === "sprint"
-      ? `sprint/${session.id}/results`
-      : `activity/${session.id}`;
-  return `/student/${path}#q-${position}`;
+  return `/student/activity/${session.id}#q-${position}`;
 }
