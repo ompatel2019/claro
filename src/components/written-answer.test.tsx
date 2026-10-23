@@ -1,11 +1,13 @@
 import {
   cleanup,
+  act,
   render,
   screen,
   fireEvent,
   waitFor,
 } from "@testing-library/react";
 import { afterEach, it, expect, vi } from "vitest";
+import { createClient } from "@/utils/supabase/client";
 import { WrittenAnswer } from "./written-answer";
 import { type Attempt } from "@/lib/practice";
 vi.mock("@/lib/auth-client", () => ({
@@ -38,6 +40,8 @@ function answer(disabled = false) {
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
+  vi.useRealTimers();
+  localStorage.clear();
 });
 it("polls the server status route and applies its student feedback", async () => {
   const marked = {
@@ -207,4 +211,34 @@ it("removes already uploaded objects if a later page in the batch fails", async 
     upload.mock.calls[1][0],
   ]);
   expect(save).not.toHaveBeenCalled();
+});
+
+it("keeps cleanup failures invisible and retries the queue after a minute", async () => {
+  vi.useFakeTimers();
+  const path = "u/11111111-1111-4111-8111-111111111111-1729000000000-0.png";
+  localStorage.setItem("claro-photo-cleanup-u", JSON.stringify([path]));
+  const remove = vi
+    .fn()
+    .mockResolvedValueOnce({ error: { message: "Storage unavailable" } })
+    .mockResolvedValue({ error: null });
+  vi.mocked(createClient).mockReturnValue({
+    storage: { from: () => ({ remove }) },
+  } as unknown as ReturnType<typeof createClient>);
+  const view = answer();
+  await act(async () => {});
+  expect(remove).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByRole("button", { name: /cleanup/i })).toBeNull();
+  expect(localStorage.getItem("claro-photo-cleanup-u")).not.toBeNull();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60_000);
+  });
+  expect(remove).toHaveBeenCalledTimes(2);
+  expect(localStorage.getItem("claro-photo-cleanup-u")).toBeNull();
+  view.unmount();
+  localStorage.setItem("claro-photo-cleanup-u", JSON.stringify([path]));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(60_000);
+  });
+  expect(remove).toHaveBeenCalledTimes(2);
 });

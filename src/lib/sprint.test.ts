@@ -3,6 +3,7 @@ import {
   clampTarget,
   DEFAULTS,
   estimateMinutes,
+  estimatedMarks,
   validPace,
   clampPace,
   filtersOn,
@@ -28,7 +29,7 @@ it("switching type resets size to that type's default and range", () => {
     target: 30,
   });
   const mixed = withMode(DEFAULTS, "mixed");
-  expect(mixed).toMatchObject({ size_by: "marks", target: 45 });
+  expect(mixed).toMatchObject({ size_by: "questions", target: 15 });
   expect(withSizeBy(withMode(DEFAULTS, "short"), "questions").target).toBe(5);
   const short = { ...withMode(DEFAULTS, "short"), difficulty: ["standard"] };
   expect(withMode(short as typeof DEFAULTS, "mcq").difficulty).toEqual([]);
@@ -52,7 +53,7 @@ it("estimates editable pace for each question type and untimed sessions", () => 
       mcq_min_per_q: 2,
       short_min_per_mark: 1,
     }),
-  ).toBe(68);
+  ).toBe(35);
   expect(estimateMinutes({ ...DEFAULTS, timed: false })).toBeNull();
 });
 it.each([0, -1, 11, NaN, Infinity, "2", null, undefined])(
@@ -137,14 +138,13 @@ it("summarises the setup in one line and counts extra filters", () => {
     topics: ["t3"],
     subtopics: ["t3-inflation", "t3-unemployment"],
     difficulty: ["foundation" as const],
-    year_from: 2022,
   };
-  expect(summary(c, names, [2018, 2025])).toBe(
-    "30 marks · 45 min · Economic Issues (Inflation, Unemployment) · 2022–2025 · Prefer new",
+  expect(summary(c, names)).toBe(
+    "30 marks · 45 min · Economic Issues (Inflation, Unemployment) · Prefer new",
   );
-  expect(filtersOn(c)).toBe(2);
+  expect(filtersOn(c)).toBe(1);
   expect(
-    summary({ ...DEFAULTS, timed: false, history: "mistakes" }, names, null),
+    summary({ ...DEFAULTS, timed: false, history: "mistakes" }, names),
   ).toBe("20 questions · 20 marks · Untimed · Whole course · Mistakes only");
 });
 
@@ -192,79 +192,96 @@ it("legacy shuffled setups restore exam order", () => {
   expect(restore({ ...DEFAULTS, order: "shuffled" }).order).toBe("exam");
 });
 
-it("mixed totals default to an even split, including odd totals and URL presets", () => {
+it("mixed presets use question counts with independent limits", () => {
   expect(withMode(DEFAULTS, "mixed")).toMatchObject({
-    target: 45,
-    mcq_count: 23,
-    short_marks: 22,
-  });
-  expect(withTarget(withMode(DEFAULTS, "mixed"), 30)).toMatchObject({
-    target: 30,
-    mcq_count: 15,
-    short_marks: 15,
-  });
-  expect(fromParams({ type: "mixed", size: "31" }, DEFAULTS)).toMatchObject({
-    target: 31,
-    mcq_count: 16,
-    short_marks: 15,
+    target: 15,
+    mcq_count: 10,
+    short_count: 5,
   });
   expect(withTarget(withMode(DEFAULTS, "mixed"), 1000)).toMatchObject({
-    target: 100,
-    mcq_count: 50,
-    short_marks: 50,
+    target: 55,
+    mcq_count: 40,
+    short_count: 15,
+  });
+  expect(fromParams({ type: "mixed", size: "5" }, DEFAULTS)).toMatchObject({
+    target: 5,
+    mcq_count: 4,
+    short_count: 1,
   });
 });
 it.each([
   [-5, 0],
   [0, 0],
   [15, 15],
-  [30, 30],
-  [99, 30],
+  [99, 40],
   [1.6, 2],
   [NaN, 0],
   [Infinity, 0],
-])("linked bucket clamps %s to %s and keeps the total", (value, count) => {
-  const c = withTarget(withMode(DEFAULTS, "mixed"), 30);
+])("independent MC bucket clamps %s to %s", (value, count) => {
+  const c = withMode(DEFAULTS, "mixed");
   expect(withMixedCount(c, "mcq_count", value)).toMatchObject({
     mcq_count: count,
-    short_marks: 30 - count,
+    short_count: 5,
+    target: count + 5,
   });
-  expect(withMixedCount(c, "short_marks", value)).toMatchObject({
-    short_marks: count,
-    mcq_count: 30 - count,
+  expect(withMixedCount(c, "short_count", 99)).toMatchObject({
+    mcq_count: 10,
+    short_count: 15,
+    target: 25,
   });
 });
-it("saved split survives reload while inconsistent and legacy splits are repaired", () => {
+it.each([5, 6])(
+  "preserves a saved mixed sprint with %s MCs and zero shorts",
+  (count) => {
+    const saved = {
+      ...withMode(DEFAULTS, "mixed"),
+      target: count,
+      mcq_count: count,
+      short_count: 0,
+    };
+    const restored = restore(JSON.parse(JSON.stringify(saved)));
+    expect(restored).toMatchObject({
+      target: count,
+      mcq_count: count,
+      short_count: 0,
+    });
+    expect(restore(JSON.parse(JSON.stringify(restored)))).toEqual(restored);
+  },
+);
+it("saved counts survive reload and legacy mark budgets become approximate counts", () => {
+  expect(
+    restore({
+      mode: "mixed",
+      size_by: "questions",
+      target: 17,
+      mcq_count: 12,
+      short_count: 5,
+    }),
+  ).toMatchObject({ mcq_count: 12, short_count: 5, target: 17 });
   expect(
     restore({ mode: "mixed", target: 30, mcq_count: 12, short_marks: 18 }),
-  ).toMatchObject({ mcq_count: 12, short_marks: 18 });
-  expect(
-    restore({ mode: "mixed", target: 30, mcq_count: 12, short_marks: 99 }),
-  ).toMatchObject({ mcq_count: 12, short_marks: 18 });
-  expect(restore({ mode: "mixed", target: 30 })).toMatchObject({
-    mcq_count: 15,
-    short_marks: 15,
-  });
-  expect(restore({ mode: "mixed", target: 30, short_marks: 30 })).toMatchObject(
-    { mcq_count: 0, short_marks: 30 },
-  );
-  expect(
-    restore({ mode: "mixed", target: 30, mcq_count: Infinity }),
-  ).toMatchObject({ mcq_count: 15, short_marks: 15 });
+  ).toMatchObject({ mcq_count: 12, short_count: 6, target: 18 });
+  expect(restore({ marks_per_short: 2.5 }).marks_per_short).toBeNull();
+  expect(restore({ marks_per_short: 101 }).marks_per_short).toBeNull();
+  expect(restore({ marks_per_short: 5 }).marks_per_short).toBe(5);
 });
-it("mixed estimate and summary follow the requested buckets, including zero-sized buckets", () => {
-  const c = withMixedCount(
-    withTarget(withMode(DEFAULTS, "mixed"), 30),
-    "mcq_count",
-    12,
+it("mixed estimates and summaries use the mark filter and actual question counts", () => {
+  const c = { ...withMode(DEFAULTS, "mixed"), marks_per_short: 5 };
+  expect(estimatedMarks(c)).toBe(35);
+  expect(estimateMinutes(c)).toBe(48);
+  expect(summary(c, {})).toContain(
+    "15 questions · 10 multis + 5 shorts · 35 marks",
   );
-  expect(estimateMinutes(c)).toBe(39);
-  expect(estimateMinutes(withMixedCount(c, "mcq_count", 30))).toBe(30);
-  expect(estimateMinutes(withMixedCount(c, "mcq_count", 0))).toBe(45);
-  expect(summary(c, {}, null)).toContain(
-    "30 marks · 12 multis + 18 marks of shorts · 39 min",
+  expect(summary({ ...c, marks_per_short: null }, {})).toContain(
+    "about 25 marks",
   );
   expect(estimateMinutes({ ...c, timed: false })).toBeNull();
+  expect(
+    estimatedMarks({
+      ...withSizeBy(withMode(DEFAULTS, "short"), "questions"),
+      marks_per_short: 5,
+    }),
+  ).toBe(25);
 });
 it("non-finite total input clamps safely", () => {
   expect(clampTarget(DEFAULTS, NaN)).toBe(5);
@@ -302,11 +319,18 @@ it("saved settings reject malformed arrays, unknown keys and non-finite size mem
   expect(restore({ mode: "toString" }).mode).toBe("mcq");
 });
 
-it("keeps five-mark mixed totals through links, saved settings and type switches", () => {
+it("keeps five-question mixed totals through links, saved settings and type switches", () => {
   const c = withTarget(withMode(DEFAULTS, "mixed"), 5);
-  expect(c).toMatchObject({ target: 5, mcq_count: 3, short_marks: 2 });
-  expect(estimateMinutes(c)).toBe(6);
+  expect(c).toMatchObject({ target: 5, mcq_count: 4, short_count: 1 });
+  expect(estimateMinutes(c)).toBe(9);
   expect(restore(c)).toMatchObject(c);
   expect(fromParams({ type: "mixed", size: "5" }, DEFAULTS)).toMatchObject(c);
   expect(withMode(withMode(c, "mcq"), "mixed").target).toBe(5);
+});
+
+it("drops retired year filters from saved setups and URL prefills", () => {
+  const c = restore({ ...DEFAULTS, year_from: 2022, year_to: 2025 });
+  expect(c).not.toHaveProperty("year_from");
+  expect(c).not.toHaveProperty("year_to");
+  expect(fromParams({ year_from: "2022" }, c)).toBeNull();
 });

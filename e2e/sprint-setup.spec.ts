@@ -128,11 +128,13 @@ test.describe("Topic Sprint setup", () => {
     await page
       .getByRole("button", { name: "Short answer", exact: true })
       .click();
+    await page
+      .getByRole("button", { name: "Economic Issues", exact: true })
+      .click();
     const subs = page.getByRole("group", { name: "Economic Issues subtopics" });
     await subs.getByRole("button", { name: /^Inflation \d+$/ }).click();
-    // The year span follows the published content (HSC and A1 practice), so it is not pinned.
     await expect(bar).toContainText(
-      /30 marks · 45 min · Economic Issues \(Inflation\) · \d{4}–\d{4} · Prefer new/,
+      /30 marks · 45 min · Economic Issues \(Inflation\) · Prefer new/,
     );
     // Inflation alone has fewer than 30 short-answer marks: the shortfall is explicit.
     await expect(
@@ -151,14 +153,6 @@ test.describe("Topic Sprint setup", () => {
     ).toHaveAttribute("aria-pressed", "false");
     await reviewSprintSetup(page);
     await page.getByRole("button", { name: "Advanced" }).click();
-    const to = Number(
-      await page.getByRole("combobox", { name: "To year" }).textContent(),
-    );
-    await page.getByRole("combobox", { name: "From year" }).click();
-    await page
-      .getByRole("option", { name: String(to - 4), exact: true })
-      .click();
-    await expect(page.getByText("1 filter on")).toBeVisible();
     await page.getByText("Adjust exam pace", { exact: true }).click();
     await page.getByLabel("Shorts: minutes per mark").fill("2.25");
     await expect(page.getByText("≈ 68 min")).toBeVisible();
@@ -210,9 +204,9 @@ test.describe("Topic Sprint setup", () => {
     await page.goto("/student/sprint?type=mcq&sub=t3-inflation&size=5");
     await expect(page.getByText("Prefilled from a link.")).toBeVisible();
     await reviewSprintSetup(page);
-    await expect(page.getByRole("textbox", { name: "Questions" })).toHaveValue(
-      "5",
-    );
+    await expect(
+      page.getByRole("spinbutton", { name: "Questions" }),
+    ).toHaveValue("5");
     await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
     await reviewSprintSetup(page);
     await page.keyboard.press("Control+Enter");
@@ -257,99 +251,4 @@ test.describe("Topic Sprint setup", () => {
       page.getByRole("button", { name: /^Economic Issues/ }),
     ).toHaveAttribute("aria-pressed", "true");
   });
-});
-
-// Real setup component, synthetic pool/actions: no accounts, DB writes or marking.
-test.describe("Iteration 2 setup without services", () => {
-  let setup: string;
-  test.beforeAll(async () => {
-    const { build } = await import("esbuild");
-    const result = await build({
-      stdin: {
-        contents: `import React from 'react'; import {createRoot} from 'react-dom/client';
-          import {SprintSetup} from './src/components/sprint-setup';
-          createRoot(document.getElementById('root')).render(<SprintSetup topics={[]} params={{type:'mixed'}} />);`,
-        resolveDir: process.cwd(),
-        loader: "tsx",
-      },
-      bundle: true,
-      write: false,
-      platform: "browser",
-      jsx: "automatic",
-      define: { "process.env.NODE_ENV": '"test"' },
-      plugins: [
-        {
-          name: "synthetic-setup",
-          setup(builder) {
-            builder.onResolve(
-              {
-                filter:
-                  /^(next\/link|@\/app\/\(app\)\/actions|@\/utils\/supabase\/client)$/,
-              },
-              ({ path }) => ({ path, namespace: "mock" }),
-            );
-            builder.onLoad({ filter: /.*/, namespace: "mock" }, ({ path }) => {
-              const contents =
-                path === "next/link"
-                  ? `import React from 'react'; export default function Link({href,prefetch,...props}){return <a href={typeof href==='string'?href:'#'} {...props}/>}`
-                  : path.endsWith("actions")
-                    ? "export async function startSprint(){return {error:'Synthetic start disabled'}}"
-                    : `export const createClient=()=>({rpc:async()=>({data:{questions:100,marks:100,mcq_questions:50,short_marks:50,any:100,new:100,mistakes:0,flagged:0,topics:{},subtopics:{},all_subtopics:100,verbs:{},difficulty:{},all_years:100,years:[2020,2025]},error:null})});`;
-              return { contents, loader: "tsx", resolveDir: process.cwd() };
-            });
-          },
-        },
-      ],
-    });
-    setup = result.outputFiles[0].text;
-  });
-  for (const width of [390, 1280])
-    test(`Mixed five-mark minimum at ${width}px`, async ({ page }) => {
-      test.setTimeout(25_000);
-      page.on("pageerror", (error) => {
-        throw error;
-      });
-      await page.setViewportSize({ width, height: 900 });
-      await page.route("**/__setup.js", (route) =>
-        route.fulfill({ contentType: "text/javascript", body: setup }),
-      );
-      await page.route("**/__setup-test", (route) =>
-        route.fulfill({
-          contentType: "text/html",
-          body: '<!doctype html><div id="root"></div><script src="/__setup.js"></script>',
-        }),
-      );
-      await page.goto("/__setup-test");
-      // Template setup is a single page (no wizard Next). Mixed comes from params.
-      await page.getByRole("button", { name: "Custom", exact: true }).click();
-      const marks = page.getByRole("textbox", { name: "Marks" });
-      await expect(marks).toBeVisible();
-      await marks.fill("5");
-      await marks.blur();
-      await expect(marks).toHaveValue("5");
-      await expect(marks).toHaveAccessibleDescription(/Minimum 5 marks/);
-      await expect(
-        page.getByRole("spinbutton", { name: "Multiple choice questions" }),
-      ).toHaveValue("3");
-      await marks.fill("1");
-      await expect(page.getByText(/Enter 5–100 marks/)).toBeVisible();
-      await marks.blur();
-      await expect(marks).toHaveValue("1");
-      await expect(
-        page.getByRole("button", { name: /^Start (sprint|with)/ }),
-      ).toBeDisabled();
-
-      const check = page.getByRole("radio", { name: /^Check as I go/ });
-      await check.focus();
-      await page.keyboard.press("Space");
-      await expect(check).toBeChecked();
-      await expect(page.locator('input[name="config"]')).toHaveValue(
-        /"feedback":"each"/,
-      );
-      await page.getByRole("radio", { name: /^Exam mode/ }).focus();
-      await page.keyboard.press("Space");
-      await expect(page.locator('input[name="config"]')).toHaveValue(
-        /"feedback":"end"/,
-      );
-    });
 });

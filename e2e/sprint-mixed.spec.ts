@@ -26,7 +26,7 @@ for (const width of [400, 1280]) {
       await page.setViewportSize({ width, height: 900 });
       await signIn(page, "/student/sprint");
     });
-    test("linked buckets, invalid input, reload, exact selection and MC-first order", async ({
+    test("independent question buckets, invalid input, reload, exact selection and MC-first order", async ({
       page,
     }) => {
       await page.goto(
@@ -37,21 +37,26 @@ for (const width of [400, 1280]) {
         name: "Multiple choice questions",
       });
       const shorts = page.getByRole("spinbutton", {
-        name: "Short answer marks",
+        name: "Short answer questions",
       });
-      await expect(mc).toHaveValue("10");
-      await expect(shorts).toHaveValue("10");
+      await expect(mc).toHaveValue("14");
+      await expect(shorts).toHaveValue("6");
       await mc.fill("999");
-      await expect(mc).toHaveValue("20");
-      await expect(shorts).toHaveValue("0");
+      await mc.blur();
+      await expect(mc).toHaveValue("40");
+      await expect(shorts).toHaveValue("6");
       await shorts.fill("-1");
+      await shorts.blur();
       await expect(shorts).toHaveValue("0");
+      await shorts.fill("2");
+      await shorts.blur();
       await mc.fill("11");
-      await expect(shorts).toHaveValue("9");
+      await mc.blur();
+      await expect(shorts).toHaveValue("2");
       await page.goto("/student/sprint");
       await reviewSprintSetup(page);
       await expect(mc).toHaveValue("11");
-      await expect(shorts).toHaveValue("9");
+      await expect(shorts).toHaveValue("2");
       await page.screenshot({
         path: test.info().outputPath("mixed-size.png"),
         fullPage: true,
@@ -60,7 +65,7 @@ for (const width of [400, 1280]) {
         page.locator("form").filter({
           has: page.getByRole("button", { name: /^Start (sprint|with)/ }),
         }),
-      ).toContainText("11 multis + 9 marks of shorts");
+      ).toContainText("11 multis + 2 shorts");
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= window.innerWidth,
@@ -82,11 +87,7 @@ for (const width of [400, 1280]) {
         (row) => row.question as unknown as { type: string; marks: number },
       );
       expect(questions.filter((q) => q.type === "mcq")).toHaveLength(11);
-      expect(
-        questions
-          .filter((q) => q.type === "short")
-          .reduce((n, q) => n + q.marks, 0),
-      ).toBe(9);
+      expect(questions.filter((q) => q.type === "short")).toHaveLength(2);
       expect(questions.map((q) => q.type)).toEqual([
         ...Array(11).fill("mcq"),
         "short",
@@ -103,8 +104,11 @@ for (const width of [400, 1280]) {
       await page
         .getByRole("spinbutton", { name: "Multiple choice questions" })
         .fill("20");
+      await page
+        .getByRole("spinbutton", { name: "Multiple choice questions" })
+        .blur();
       await expect(
-        page.getByText(/Only 12 multis and 17 marks of shorts match/),
+        page.getByText(/Only 12 multis and 3 short-answer questions match/),
       ).toBeVisible();
       const db = await sprintStudentClient();
       const config = {

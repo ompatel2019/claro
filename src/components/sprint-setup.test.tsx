@@ -12,13 +12,10 @@ vi.mock("@/app/(app)/actions", () => ({ startSprint: mocks.start }));
 vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({ rpc: mocks.rpc }),
 }));
-import { SprintSetup } from "./sprint-setup";
+import { SprintSetup, QuickStarts } from "./sprint-setup";
+import { restore } from "@/lib/sprint";
 
-function render(ui: React.ReactNode) {
-  const result = rtlRender(ui);
-  fireEvent.click(screen.getByRole("button", { name: "Custom" }));
-  return result;
-}
+const render = rtlRender;
 
 const topics = [1, 2, 3].map((i) => ({
   id: `t${i}`,
@@ -29,6 +26,7 @@ const topics = [1, 2, 3].map((i) => ({
 const pool = {
   questions: 30,
   marks: 45,
+  short_mark_values: { "2": 10, "5": 10 },
   any: 30,
   new: 30,
   mistakes: 0,
@@ -38,8 +36,6 @@ const pool = {
   all_subtopics: 30,
   verbs: {},
   difficulty: {},
-  all_years: 30,
-  years: [2020, 2025],
   trial: true,
 };
 const start = () =>
@@ -75,15 +71,22 @@ it("keeps the live summary after the builder with warnings and controls", async 
 });
 it("shows all builder sections, preserves settings across type selection, and resets", async () => {
   render(<SprintSetup topics={topics} params={{}} />);
-  for (const name of ["Question type", "Topics", "Size", "Timer", "Feedback"])
+  for (const name of [
+    "Question type",
+    "Topics",
+    "Questions",
+    "Timer",
+    "Feedback",
+  ])
     expect(screen.getByRole("region", { name })).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Short answer" }));
   fireEvent.click(screen.getByRole("button", { name: /Topic 1/ }));
-  const marks = screen.getByRole("textbox", { name: "Marks" });
-  expect(marks).toHaveValue("30");
+  const marks = screen.getByRole("spinbutton", { name: "Marks" });
+  expect(marks).toHaveValue(30);
   fireEvent.change(marks, { target: { value: "45" } });
+  fireEvent.blur(marks);
   fireEvent.click(screen.getByRole("button", { name: "Short answer" }));
-  expect(marks).toHaveValue("45");
+  expect(marks).toHaveValue(45);
   expect(start()).toBeEnabled();
   expect(
     screen.queryByRole("radiogroup", { name: "Question history" }),
@@ -100,7 +103,7 @@ it("shows all builder sections, preserves settings across type selection, and re
     "aria-pressed",
     "false",
   );
-  expect(screen.getByRole("textbox", { name: "Questions" })).toHaveValue("20");
+  expect(screen.getByRole("spinbutton", { name: "Questions" })).toHaveValue(20);
 });
 it("caps topics at two and handles malformed saved JSON", () => {
   localStorage.setItem("claro.sprint.v1", "{");
@@ -158,46 +161,57 @@ it("reselecting the current type keeps its size unit and count", () => {
   render(<SprintSetup topics={[]} params={{}} />);
   fireEvent.click(screen.getByRole("button", { name: "Short answer" }));
   fireEvent.click(screen.getByRole("button", { name: "Questions" }));
-  fireEvent.change(screen.getByRole("textbox", { name: "Questions" }), {
+  fireEvent.change(screen.getByRole("spinbutton", { name: "Questions" }), {
     target: { value: "8" },
   });
+  fireEvent.blur(screen.getByRole("spinbutton", { name: "Questions" }));
   fireEvent.click(screen.getByRole("button", { name: "Short answer" }));
-  expect(screen.getByRole("textbox", { name: "Questions" })).toHaveValue("8");
+  expect(screen.getByRole("spinbutton", { name: "Questions" })).toHaveValue(8);
 });
 
-it("mixed inputs stay linked at boundaries and reset to an even split for a preset", () => {
+it("mixed question inputs are independent and send the marks filter to the pool", async () => {
   render(<SprintSetup topics={[]} params={{}} />);
   fireEvent.click(screen.getByRole("button", { name: "Mixed" }));
   const mc = screen.getByRole("spinbutton", {
     name: "Multiple choice questions",
   });
-  const shorts = screen.getByRole("spinbutton", { name: "Short answer marks" });
-  expect(mc).toHaveValue(23);
-  expect(shorts).toHaveValue(22);
-  fireEvent.change(mc, { target: { value: "0" } });
-  expect(shorts).toHaveValue(45);
-  fireEvent.change(shorts, { target: { value: "999" } });
-  expect(mc).toHaveValue(0);
-  expect(shorts).toHaveValue(45);
-  fireEvent.click(screen.getByRole("button", { name: "30" }));
-  expect(mc).toHaveValue(15);
-  expect(shorts).toHaveValue(15);
-  fireEvent.change(shorts, { target: { value: "5" } });
-  expect(mc).toHaveValue(25);
-  expect(
-    screen.getByText("25 multis + 5 marks of shorts = 30 marks"),
-  ).toBeVisible();
+  const shorts = screen.getByRole("spinbutton", {
+    name: "Short answer questions",
+  });
+  expect(mc).toHaveValue(10);
   expect(shorts).toHaveValue(5);
+  fireEvent.change(mc, { target: { value: "0" } });
+  fireEvent.blur(mc);
+  expect(shorts).toHaveValue(5);
+  fireEvent.change(shorts, { target: { value: "999" } });
+  fireEvent.blur(shorts);
+  expect(shorts).toHaveValue(15);
+  expect(mc).toHaveValue(0);
+  fireEvent.click(await screen.findByRole("button", { name: "5 marks" }));
+  expect(screen.getByText("Total: 75 marks.")).toBeVisible();
+  await waitFor(() =>
+    expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config).toMatchObject({
+      short_count: 15,
+      mcq_count: 0,
+      marks_per_short: 5,
+      target: 15,
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Short answer" }));
+  expect(screen.getByRole("button", { name: "5 marks" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 });
 it("mixed availability warns per bucket even when combined marks exceed the total", async () => {
   mocks.rpc.mockResolvedValue({
-    data: { ...pool, marks: 100, mcq_questions: 2, short_marks: 98 },
+    data: { ...pool, marks: 100, mcq_questions: 2, short_questions: 28 },
     error: null,
   });
   render(<SprintSetup topics={[]} params={{ type: "mixed", size: "30" }} />);
   await waitFor(() =>
     expect(
-      screen.getByText(/Only 2 multis and 98 marks of shorts match/),
+      screen.getByText(/Only 2 multis and 28 short-answer questions match/),
     ).toBeVisible(),
   );
 });
@@ -209,7 +223,7 @@ it("an empty requested bucket disables start even when the other type has questi
       questions: 3,
       mcq_questions: 0,
       mcq_new: 0,
-      short_marks: 17,
+      short_questions: 3,
     },
     error: null,
   });
@@ -218,27 +232,41 @@ it("an empty requested bucket disables start even when the other type has questi
     screen.getByRole("spinbutton", { name: "Multiple choice questions" }),
     { target: { value: "20" } },
   );
+  fireEvent.blur(
+    screen.getByRole("spinbutton", { name: "Multiple choice questions" }),
+  );
+  fireEvent.change(
+    screen.getByRole("spinbutton", { name: "Short answer questions" }),
+    { target: { value: "0" } },
+  );
+  fireEvent.blur(
+    screen.getByRole("spinbutton", { name: "Short answer questions" }),
+  );
   await waitFor(() =>
     expect(screen.getByText("No questions match")).toBeVisible(),
   );
   expect(start()).toBeDisabled();
 });
 
-it("keeps a five-mark Mixed total on blur and explains the minimum inline", () => {
-  render(<SprintSetup topics={[]} params={{ type: "mixed" }} />);
-  const marks = screen.getByRole("textbox", { name: "Marks" });
-  fireEvent.change(marks, { target: { value: "5" } });
-  fireEvent.blur(marks);
-  expect(marks).toHaveValue("5");
-  expect(marks).toHaveAccessibleDescription(/Minimum 5 marks/);
+it("mixed steppers enforce at least five questions and independent maxima", () => {
+  render(<SprintSetup topics={[]} params={{ type: "mixed", size: "5" }} />);
+  const mc = screen.getByRole("spinbutton", {
+    name: "Multiple choice questions",
+  });
+  const shorts = screen.getByRole("spinbutton", {
+    name: "Short answer questions",
+  });
+  expect(mc).toHaveValue(4);
+  expect(shorts).toHaveValue(1);
   expect(
-    screen.getByRole("spinbutton", { name: "Multiple choice questions" }),
-  ).toHaveValue(3);
-  fireEvent.change(marks, { target: { value: "1" } });
-  expect(screen.getByText(/Enter 5–100 marks/)).toBeVisible();
-  fireEvent.blur(marks);
-  expect(marks).toHaveValue("1");
-  expect(start()).toBeDisabled();
+    screen.getByRole("button", { name: "Decrease multiple choice questions" }),
+  ).toBeDisabled();
+  expect(screen.queryByRole("spinbutton", { name: "Marks" })).toBeNull();
+  fireEvent.change(mc, { target: { value: "999" } });
+  fireEvent.blur(mc);
+  expect(mc).toHaveValue(40);
+  expect(shorts).toHaveValue(1);
+  expect(start()).toBeEnabled();
 });
 
 it("stores the existing feedback values through the feedback cards", async () => {
@@ -248,6 +276,10 @@ it("stores the existing feedback values through the feedback cards", async () =>
     name: /^Check as I go/,
   });
   expect(exam).toHaveAttribute("aria-checked", "true");
+  expect(check).toHaveAccessibleName("Check as I go");
+  expect(check).toHaveAccessibleDescription(
+    "Check each answer when you’re ready. See feedback before moving on.",
+  );
   expect(screen.getByText("Check each answer when you’re ready.").tagName).toBe(
     "LI",
   );
@@ -277,7 +309,7 @@ it("stores the existing feedback values through the feedback cards", async () =>
   );
 });
 
-it("selects a dot point with its parent, enforces the topic limit and clears both", async () => {
+it("reveals only selected topics' subtopics and All topics clears narrowing", async () => {
   const dotPoints = topics.map((topic) => ({
     id: `${topic.id}-1`,
     parent_id: topic.id,
@@ -292,33 +324,38 @@ it("selects a dot point with its parent, enforces the topic limit and clears bot
     error: null,
   });
   render(<SprintSetup topics={[...topics, ...dotPoints]} params={{}} />);
-  await waitFor(() =>
-    expect(
-      screen.getByRole("button", { name: "Topic 1 dot point 5" }),
-    ).toBeEnabled(),
+  expect(screen.getByRole("button", { name: "All topics" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
   );
-  const config = () =>
-    JSON.parse(
-      (document.querySelector('input[name="config"]') as HTMLInputElement)
-        .value,
-    );
-  for (const i of [1, 2, 3])
-    fireEvent.click(
-      screen.getByRole("button", { name: `Topic ${i} dot point 5` }),
-    );
-  expect(config().topics).toEqual(["t1", "t2"]);
-  expect(config().subtopics).toEqual(["t1-1", "t2-1"]);
-  expect(screen.getByText("Up to 2 topics. Deselect one first.")).toBeVisible();
-  fireEvent.click(screen.getByRole("button", { name: "Clear" }));
-  expect(config().topics).toEqual([]);
-  expect(config().subtopics).toEqual([]);
+  expect(screen.queryByRole("group", { name: "Topic 1 subtopics" })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Topic 1" }));
+  const group = screen.getByRole("group", { name: "Topic 1 subtopics" });
+  expect(screen.queryByRole("group", { name: "Topic 2 subtopics" })).toBeNull();
+  const chip = await within(group).findByRole("button", {
+    name: "Topic 1 dot point 5",
+  });
+  fireEvent.click(chip);
+  expect(chip).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(chip);
+  expect(screen.getByRole("button", { name: "Topic 1" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "All topics" }));
+  expect(screen.queryByRole("group", { name: "Topic 1 subtopics" })).toBeNull();
+  await waitFor(() =>
+    expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config).toMatchObject({
+      topics: [],
+      subtopics: [],
+    }),
+  );
 });
 
 it.each(["mistakes", "new_only", "flagged"])(
   "preserves the advanced %s history without a conflicting switch",
   async (history) => {
     render(<SprintSetup topics={topics} params={{ type: "short", history }} />);
-    await screen.findByRole("combobox", { name: "From year" });
     expect(
       screen.queryByRole("switch", { name: /Prefer questions/ }),
     ).not.toBeInTheDocument();
@@ -403,6 +440,7 @@ it("clears a unit's UUID dot points when its checkbox is deselected", async () =
       params={{}}
     />,
   );
+  fireEvent.click(screen.getByRole("button", { name: "Unit" }));
   fireEvent.click(await screen.findByRole("button", { name: "Dot point 7" }));
   const group = screen.getByRole("button", { name: /^Unit/ });
   expect(group).toHaveAttribute("aria-pressed", "true");
@@ -412,8 +450,71 @@ it("clears a unit's UUID dot points when its checkbox is deselected", async () =
   );
   expect(config.topics).toEqual([]);
   expect(config.subtopics).toEqual([]);
-  expect(screen.getByRole("button", { name: "Dot point 7" })).toHaveAttribute(
-    "aria-pressed",
-    "false",
+  expect(screen.queryByRole("button", { name: "Dot point 7" })).toBeNull();
+});
+
+it("keeps sequential marks keystrokes as a draft until blur or Enter", () => {
+  render(<SprintSetup topics={[]} params={{ type: "short" }} />);
+  const marks = screen.getByRole("spinbutton", { name: "Marks" });
+  const config = () =>
+    JSON.parse(
+      (document.querySelector('input[name="config"]') as HTMLInputElement)
+        .value,
+    );
+  fireEvent.focus(marks);
+  fireEvent.change(marks, { target: { value: "" } });
+  expect(marks).toHaveValue(null);
+  expect(config().target).toBe(30);
+  fireEvent.change(marks, { target: { value: "2" } });
+  expect(marks).toHaveValue(2);
+  expect(config().target).toBe(30);
+  fireEvent.change(marks, { target: { value: "20" } });
+  expect(marks).toHaveValue(20);
+  expect(config().target).toBe(30);
+  fireEvent.keyDown(marks, { key: "Enter" });
+  expect(config().target).toBe(20);
+  expect(mocks.start).not.toHaveBeenCalled();
+  fireEvent.change(marks, { target: { value: "2" } });
+  expect(marks).toHaveValue(2);
+  fireEvent.blur(marks);
+  expect(marks).toHaveValue(10);
+  expect(config().target).toBe(10);
+  fireEvent.change(marks, { target: { value: "999" } });
+  expect(marks).toHaveValue(999);
+  fireEvent.blur(marks);
+  expect(marks).toHaveValue(60);
+  expect(config().target).toBe(60);
+  fireEvent.change(marks, { target: { value: "" } });
+  fireEvent.blur(marks);
+  expect(marks).toHaveValue(10);
+});
+
+it("quick starts label their question counts and preserve legacy session units", () => {
+  const raw = {
+    mode: "mixed",
+    size_by: "marks",
+    target: 30,
+    mcq_count: 12,
+    short_marks: 18,
+  };
+  render(
+    <QuickStarts
+      weak={{ id: "t1", name: "Topic", parent_id: null }}
+      previous={restore(raw)}
+      previousRaw={raw}
+    />,
   );
+  const weak = screen.getByRole("button", {
+    name: "Mixed · 8 questions · about 15 min",
+  });
+  expect(JSON.parse(weak.getAttribute("value")!)).toMatchObject({
+    size_by: "questions",
+    target: 8,
+    mcq_count: 6,
+    short_count: 2,
+  });
+  const previous = screen.getByRole("button", {
+    name: "Mixed · 30 marks · 0 topics",
+  });
+  expect(JSON.parse(previous.getAttribute("value")!)).toEqual(raw);
 });

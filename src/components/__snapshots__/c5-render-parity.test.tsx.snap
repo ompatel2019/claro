@@ -146,92 +146,92 @@ exports[`preserves feedback unreadable / single=true / wide=false 1`] = `"2491:f
 
 exports[`preserves feedback unreadable / single=true / wide=true 1`] = `"2523:55141e6f089fac522dbec34ca611a972cf5c532d41e7fc6aa1a3835eee7331f3"`;
 
-exports[`preserves quick starts both / error 1`] = `"6087:66872ddcdfda6ae1066b681a3b9ed499bc14e7584fb72107eae2d3baabb79a48"`;
+exports[`preserves quick starts both / error 1`] = `"6069:ccde432183a7ed9dd865366e3c333235d4e8d11228fadb4c2749e66569221d61"`;
 
-exports[`preserves quick starts both / error 2`] = `"2023:e917261863f852b09e025e0940a6157976c876383956de82ef03ea0cd1178dab"`;
+exports[`preserves quick starts both / error 2`] = `"2004:2386c6791611223fafb6c569d6a2b1751b4ddd3f1598364f3775b82cb806c405"`;
 
-exports[`preserves quick starts both / pending 1`] = `"6111:ae6df7674f5b6523caf037b8aa87af7b2981d2f5b06f4d08c23603b0bc8f0d03"`;
+exports[`preserves quick starts both / pending 1`] = `"6093:335e9d2ba48e05678f3ecbf37e4fb15f53d8a78c9d5db2a8157d6d120dfab4f4"`;
 
-exports[`preserves quick starts both / pending 2`] = `"1979:4279e2b05203eff537b650074f7ef47ca81d14fe34fe886d5c04aa839b7b2e05"`;
+exports[`preserves quick starts both / pending 2`] = `"1960:d99b44140cc670faaf676b81964dbc585391177dba3e61e5851427e3e0810df2"`;
 
-exports[`preserves quick starts both / ready 1`] = `"6024:72eb472afa4526b7f476d5589928507c0cf0104af5edaf357addb9158c35b3cc"`;
+exports[`preserves quick starts both / ready 1`] = `"6006:34726a9fb47f203fb2aecdb1c27c974a1498311524a5f5881506c9b6eb1729ad"`;
 
-exports[`preserves quick starts both / ready 2`] = `"1955:40d901d01a9698f96997dace021b996048daf65d2d21a0d925f56519c5d5861e"`;
+exports[`preserves quick starts both / ready 2`] = `"1936:5eb21e2d37a298c9d7b0a33e2f688b37d1df6cb25d76e06c9e06858f14cd3ff0"`;
 
-exports[`preserves quick starts default / error 1`] = `"4681:378cee61bba32c4de4c9619e385832b9d07894d038fa28c847e2187ace19aa82"`;
+exports[`preserves quick starts default / error 1`] = `"4642:3330ccfd0e6413b664864bedd29a0a885c010df4528830a87f6193e078510bfa"`;
 
-exports[`preserves quick starts default / error 2`] = `"2023:e917261863f852b09e025e0940a6157976c876383956de82ef03ea0cd1178dab"`;
+exports[`preserves quick starts default / error 2`] = `"2004:2386c6791611223fafb6c569d6a2b1751b4ddd3f1598364f3775b82cb806c405"`;
 
-exports[`preserves quick starts default / pending 1`] = `"4676:10426dfc92a85ba86bcc98adc0d2e38c872e078a2d206c7d494cb42dbd6af91d"`;
+exports[`preserves quick starts default / pending 1`] = `"4637:53e080b7ee304f86063d22f32277916acd040a330b91a7b75b9b845003b2b7a4"`;
 
-exports[`preserves quick starts default / pending 2`] = `"1979:4279e2b05203eff537b650074f7ef47ca81d14fe34fe886d5c04aa839b7b2e05"`;
+exports[`preserves quick starts default / pending 2`] = `"1960:d99b44140cc670faaf676b81964dbc585391177dba3e61e5851427e3e0810df2"`;
 
-exports[`preserves quick starts default / ready 1`] = `"4618:a957a699fb452e129263ac39cbba7122831dd501aeb334dae827f473c6e1b860"`;
+exports[`preserves quick starts default / ready 1`] = `"4579:02655c300a42850117f48d554709aa1a80f343157c19e5fd3b54aa9781cebe66"`;
 
-exports[`preserves quick starts default / ready 2`] = `"1955:40d901d01a9698f96997dace021b996048daf65d2d21a0d925f56519c5d5861e"`;
+exports[`preserves quick starts default / ready 2`] = `"1936:5eb21e2d37a298c9d7b0a33e2f688b37d1df6cb25d76e06c9e06858f14cd3ff0"`;
 
-exports[`preserves quick starts previous / error 1`] = `"4031:8e76bccdfa53b2e0c283c7d74bd1e2d2839993f2d27a44fb263615032ecdf2e7"`;
+exports[`preserves quick starts previous / error 1`] = `"4011:e4471c594ae698dcde69d8c88efc067692151e9746acf524770bfe559f0e75d7"`;
 
-exports[`preserves quick starts previous / error 2`] = `"2023:e917261863f852b09e025e0940a6157976c876383956de82ef03ea0cd1178dab"`;
+exports[`preserves quick starts previous / error 2`] = `"2004:2386c6791611223fafb6c569d6a2b1751b4ddd3f1598364f3775b82cb806c405"`;
 
-exports[`preserves quick starts previous / pending 1`] = `"4026:a9516fb81b856e6e6bb1563431186ae3b781511c4d37a03eda3926c43422c6f7"`;
+exports[`preserves quick starts previous / pending 1`] = `"4006:0b5a883450876378718ac183a7ca83581e49024243f385f9bfa68930e1e3a715"`;
 
-exports[`preserves quick starts previous / pending 2`] = `"1979:4279e2b05203eff537b650074f7ef47ca81d14fe34fe886d5c04aa839b7b2e05"`;
+exports[`preserves quick starts previous / pending 2`] = `"1960:d99b44140cc670faaf676b81964dbc585391177dba3e61e5851427e3e0810df2"`;
 
-exports[`preserves quick starts previous / ready 1`] = `"3968:6ab3ddf2f25ab5d1fe80a8baf3bc0e02315b33e994c053e74a2463c75066fcf8"`;
+exports[`preserves quick starts previous / ready 1`] = `"3948:144216b106ce0fc1a35b24228877b73ccbacb1582df556a44a42ef311b51048c"`;
 
-exports[`preserves quick starts previous / ready 2`] = `"1955:40d901d01a9698f96997dace021b996048daf65d2d21a0d925f56519c5d5861e"`;
+exports[`preserves quick starts previous / ready 2`] = `"1936:5eb21e2d37a298c9d7b0a33e2f688b37d1df6cb25d76e06c9e06858f14cd3ff0"`;
 
-exports[`preserves quick starts weak / error 1`] = `"4722:291985010c0589275d30bf1858593404afbc0dc0240cc1950f154802b235661b"`;
+exports[`preserves quick starts weak / error 1`] = `"4704:5f027eaa26922a8b57b54853f445734315e121232fdd429afbe183e42ecb84cc"`;
 
-exports[`preserves quick starts weak / error 2`] = `"2023:e917261863f852b09e025e0940a6157976c876383956de82ef03ea0cd1178dab"`;
+exports[`preserves quick starts weak / error 2`] = `"2004:2386c6791611223fafb6c569d6a2b1751b4ddd3f1598364f3775b82cb806c405"`;
 
-exports[`preserves quick starts weak / pending 1`] = `"4717:af4fddeba23d6e9e50cd70a130286c0592dfbd2f2058e76424ad928ac9f7580c"`;
+exports[`preserves quick starts weak / pending 1`] = `"4699:8dfb4bc3c4df4cfbee1e8810888957cff6c9e8f4b8bb1b68ecdd91ae923a615e"`;
 
-exports[`preserves quick starts weak / pending 2`] = `"1979:4279e2b05203eff537b650074f7ef47ca81d14fe34fe886d5c04aa839b7b2e05"`;
+exports[`preserves quick starts weak / pending 2`] = `"1960:d99b44140cc670faaf676b81964dbc585391177dba3e61e5851427e3e0810df2"`;
 
-exports[`preserves quick starts weak / ready 1`] = `"4659:ef89c228a56c42354e64eb377d127dcaf73109056f4698482ba42856ea12f67a"`;
+exports[`preserves quick starts weak / ready 1`] = `"4641:be9d6ba1ab53c40174727725277814c5fac5ce1624e8513c83483083b7732b11"`;
 
-exports[`preserves quick starts weak / ready 2`] = `"1955:40d901d01a9698f96997dace021b996048daf65d2d21a0d925f56519c5d5861e"`;
+exports[`preserves quick starts weak / ready 2`] = `"1936:5eb21e2d37a298c9d7b0a33e2f688b37d1df6cb25d76e06c9e06858f14cd3ff0"`;
 
-exports[`preserves sprint mcq / custom 1`] = `"27796:0b83846ef01a37648f740cf5e4261ac9a8e15cda09d49635333cde30da094900"`;
+exports[`preserves sprint mcq / custom 1`] = `"22532:749e20957c0424ec8e7e5f60b66f20db1031ce0791f93242b73d1357033c8d66"`;
 
-exports[`preserves sprint mcq / empty 1`] = `"28522:6c9d84e62f9e2c3e66cf90a492e8a1d03bdf4bd29a82fe9d11211639424b3ab3"`;
+exports[`preserves sprint mcq / empty 1`] = `"24849:0d30f09b59a48faf094e3cd0680749d5de1821eed79a8429481b335f8fef16d9"`;
 
-exports[`preserves sprint mcq / error 1`] = `"27628:2652c8572a32c0233cbefafdfe3da3c556a730a0b315d5554ab1bb466464b054"`;
+exports[`preserves sprint mcq / error 1`] = `"24924:3b6fc02cf7959c7b79b9f9b8155f64228a071cbb4d06b0c2fee2a23d85bf5760"`;
 
-exports[`preserves sprint mcq / loading 1`] = `"27718:2a2d46053275da752a0c7a52b9985e3f54e71c7761eb64329ae5c4553b55c517"`;
+exports[`preserves sprint mcq / loading 1`] = `"24567:9df05054c30371749d0834527bd82f7128ee0e263076c2022a56e4c9fd12a09b"`;
 
-exports[`preserves sprint mcq / pending 1`] = `"27595:3a835ce84beedd3e91bb31cb95a59368589c59badb0dce7d611116dbe0600edb"`;
+exports[`preserves sprint mcq / pending 1`] = `"24592:075ca34a2e4ae610d53c6f2466a7b3e48252ff114aac3154247ed44bb7f2ea4c"`;
 
-exports[`preserves sprint mcq / populated 1`] = `"27567:9e2b5913b2e3bf79664efd1a6be53762569c9e9e571fb97ce27efa8a0db15c00"`;
+exports[`preserves sprint mcq / populated 1`] = `"24564:a5164b7464bc959a0fa4fccb10fe597314b825fa172e95e61084526f37a98900"`;
 
-exports[`preserves sprint mcq / shortfall 1`] = `"27725:abfe46899c5a1a151fad23e81bf691d46d9ecedda4bf8acaabd6b1080309e818"`;
+exports[`preserves sprint mcq / shortfall 1`] = `"25025:474af132529de2d663cf2aab53848c44c45df5b0c53ece5ef5b455350a440347"`;
 
-exports[`preserves sprint mixed / custom 1`] = `"30410:dd10215e11fe797e242b90eba10cb37a092e987025b83c56e3b856607f21d6b6"`;
+exports[`preserves sprint mixed / custom 1`] = `"26604:53ffac540ae6aa9d94d4c125fef240ae99360a163598edfbf05bbac8d170eae2"`;
 
-exports[`preserves sprint mixed / empty 1`] = `"31101:980a9a131d1c61ccb4d75806662579fdfd18d07034c2299fb1ef2f86254ee94a"`;
+exports[`preserves sprint mixed / empty 1`] = `"29428:6fc558411fdc74069f9f9ad3da8dc6879612f737d8bc9383c0b24c3f1c5f5cd7"`;
 
-exports[`preserves sprint mixed / error 1`] = `"30190:32cf6ec38d6ad26642a85bb1f5ff1ec2cfd2fbbfdd052fd5836d9c8df88951fd"`;
+exports[`preserves sprint mixed / error 1`] = `"28996:965d2e13417326380398f0fa3a6229ff7b517800e352ef3781e218bffb0ac4b1"`;
 
-exports[`preserves sprint mixed / loading 1`] = `"30101:3ab9f7885199b139cd727f325b4cfcbd20a69d4aba7de076869bacbe8e4789b3"`;
+exports[`preserves sprint mixed / loading 1`] = `"28119:f5c7f2e783ea767c1149ba77c0cae21be0bc30b7c290f359e81530d20aabbc15"`;
 
-exports[`preserves sprint mixed / pending 1`] = `"30176:cf1af3f7b6ae259acad06abcbb7301bb1229b3904dc0cd9bc56bc66d8b92e247"`;
+exports[`preserves sprint mixed / pending 1`] = `"28664:3fcd53ad5dc8b5c9142dd3ee8debdfb582e47759902955ba5ed77ccb7eb77ad5"`;
 
-exports[`preserves sprint mixed / populated 1`] = `"30166:3db33f5c4193e763ce990f41ad430312f80670a3a095e04a650c52126b9b025d"`;
+exports[`preserves sprint mixed / populated 1`] = `"28636:84098b6eb142fd90b48aafa92d85b64e409916bc18b72dced12bb53ed2d94901"`;
 
-exports[`preserves sprint mixed / shortfall 1`] = `"30165:cde259c3eccae88901b16099bcb145e7573902e7527272d16fc164c06418d919"`;
+exports[`preserves sprint mixed / shortfall 1`] = `"29161:cffdb73957fe619180d48faceaaaeb1df84edeed0b3f9fbbe61f8849ada83489"`;
 
-exports[`preserves sprint short / custom 1`] = `"31939:3594eee8ea7fc7f1ff7fe3118e38d72163156e34bcdde71b175ab49a85c509af"`;
+exports[`preserves sprint short / custom 1`] = `"27559:c659e5bb2d6fd6509c9916e210168253973afeaa3f3c8fe174f106368837034d"`;
 
-exports[`preserves sprint short / empty 1`] = `"32650:031a7de713c49748422c684281cd429d5d5917fa3215f2ddd76d1a5aae72b952"`;
+exports[`preserves sprint short / empty 1`] = `"29876:45e77a7e9562397cbfafefa89d1231f9956c926b14558ee8a664951ff512f8ce"`;
 
-exports[`preserves sprint short / error 1`] = `"31756:929774319780034422803c65cd1dbd0f3412830d1a412d46d5b4452212f2d147"`;
+exports[`preserves sprint short / error 1`] = `"29951:85f2b11b7d57e2b8a90bb781dafcaebb7e913485544bc8d9ce5729b8d424d2bb"`;
 
-exports[`preserves sprint short / loading 1`] = `"31846:d3f3cd9b11fa6cd92f6dcbce262875037b9c3c74fde4ee18afb27d1e1aa224d6"`;
+exports[`preserves sprint short / loading 1`] = `"29074:e99017d9415df9fb92cd3ace5e10da240738e4129507734b044581a91fecdc04"`;
 
-exports[`preserves sprint short / pending 1`] = `"31723:624e02f85424b9e3353ed1f127981dbfa349777e97b119514a12cd338f57d8dc"`;
+exports[`preserves sprint short / pending 1`] = `"29619:382f877768f4cdab6a597398aa72550cb8bc2e286a788cdd4e5f7fa90fffdd1a"`;
 
-exports[`preserves sprint short / populated 1`] = `"31695:e7fb6cabda71437ee9aace5a95d2cbf1aa1df7778e3cf077bb6adca9d9e59ddd"`;
+exports[`preserves sprint short / populated 1`] = `"29591:55a5ff7707c04d63c6095acf4bf119ddbb5f9db1748ff59da8d24c2e15b76108"`;
 
-exports[`preserves sprint short / shortfall 1`] = `"31841:e0dabe0278898f3b02ef04c2868bfe4ebbc23339cbc46b920ed04e58a1f93802"`;
+exports[`preserves sprint short / shortfall 1`] = `"30040:2ea0e9aff3bdbafb58c194158ad4e91eaa3a925d13f1b8cd3449458ad7368b1e"`;
