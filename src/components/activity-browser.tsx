@@ -3,7 +3,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useSyncExternalStore } from "react";
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover";
-import { SessionTable } from "./student/activity/session-table";
+import {
+  SessionList,
+  type SessionDetail,
+} from "./student/activity/session-list";
+import { SessionGlyph } from "./student/activity/session-icon";
 import { ActivityFilterControls } from "./student/activity/filter-controls";
 import { EmptyState } from "./empty-state";
 import { History, SearchOff, Close } from "./icons";
@@ -12,18 +16,14 @@ import { Calendar } from "./ui/calendar";
 import { Popover, PopoverContent } from "./ui/popover";
 import { Button, buttonVariants } from "./ui/button";
 import { Badge } from "./ui/badge";
-import { Card } from "./ui/card";
 import {
   activityHref,
   type ActivityFilters,
   type ActivityData,
 } from "@/lib/activity-filters";
-import {
-  kindLabels,
-  sessionHref,
-  isStudentSession,
-} from "@/lib/session-summary";
-import { dateLabel, type Topic } from "@/lib/practice";
+import { kindLabels, isStudentSession } from "@/lib/session-summary";
+import { dateLabel, plural, type Topic } from "@/lib/practice";
+import { cn } from "@/lib/utils";
 
 const subscribeOnline = (change: () => void) => {
   window.addEventListener("online", change);
@@ -46,10 +46,7 @@ export function ActivityBrowser({
   data: ActivityData;
   topics: Topic[];
   today: string;
-  details?: Record<
-    string,
-    import("./student/activity/session-table").SessionDetail
-  >;
+  details?: Record<string, SessionDetail>;
 }) {
   const [loaded, setLoaded] = useState({
     page: suppliedData.page,
@@ -97,117 +94,116 @@ export function ActivityBrowser({
         : {}),
   };
   return (
-    <div className="bg-card shadow-card min-w-0 overflow-hidden rounded-2xl border">
+    <div className="min-w-0">
       {!online && (
-        <p role="status" className="bg-muted rounded-lg px-3 py-2 text-sm">
+        <p role="status" className="bg-muted mb-3 rounded-lg px-3 py-2 text-sm">
           You&apos;re offline. We&apos;ll save when you&apos;re back.
         </p>
       )}
-      <Card className="gap-0 rounded-none border-0 border-b py-0 shadow-none">
-        <ActivityFilterControls
-          activeCount={
-            [
-              f.kind,
-              f.status,
-              f.topic,
-              f.q,
-              f.date || f.range,
-              f.sort !== "newest" ? f.sort : "",
-            ].filter(Boolean).length
-          }
-          values={values}
-          hidden={hidden}
-          clearHref="/student/activity"
-          filters={[
-            {
-              name: "status",
-              label: "Status",
-              all: "Any status",
-              options: [
-                { value: "progress", label: "In progress" },
-                { value: "marking", label: "Marking" },
-                { value: "finished", label: "Finished" },
-                { value: "provisional", label: "Has provisional marks" },
-              ],
-            },
-            {
-              name: "topic",
-              label: "Topic",
-              all: "All topics",
-              options: topics
-                .filter((t) => !t.parent_id)
-                .flatMap((t) => [
-                  { value: t.id, label: t.name },
-                  ...topics
-                    .filter((s) => s.parent_id === t.id)
-                    .map((s) => ({
-                      value: s.id,
-                      label: `${t.name} · ${s.name}`,
-                    })),
-                ]),
-            },
-            {
-              name: "range",
-              label: "Date",
-              all: "All time",
-              clearOnChange: ["date", "from", "to"],
-              options: [
-                { value: "7", label: "7 days" },
-                { value: "30", label: "30 days" },
-                { value: "90", label: "90 days" },
-                { value: "custom", label: "Custom range" },
-              ],
-            },
-            {
-              name: "q",
-              label: "Search",
-              placeholder: "Search sessions",
-            },
-            {
-              name: "sort",
-              label: "Sort",
-              all: "Newest first",
-              options: [
-                { value: "oldest", label: "Oldest" },
-                { value: "highest", label: "Highest score" },
-                { value: "lowest", label: "Lowest score" },
-              ],
-            },
-          ]}
+      <ActivityFilterControls
+        activeCount={
+          [
+            f.kind,
+            f.status,
+            f.topic,
+            f.q,
+            f.date || f.range,
+            f.sort !== "newest" ? f.sort : "",
+          ].filter(Boolean).length
+        }
+        values={values}
+        hidden={hidden}
+        clearHref="/student/activity"
+        filters={[
+          {
+            name: "status",
+            label: "Status",
+            all: "Any status",
+            options: [
+              { value: "progress", label: "In progress" },
+              { value: "marking", label: "Marking" },
+              { value: "finished", label: "Finished" },
+              { value: "provisional", label: "Has provisional marks" },
+            ],
+          },
+          {
+            name: "topic",
+            label: "Topic",
+            all: "All topics",
+            options: topics
+              .filter((t) => !t.parent_id)
+              .flatMap((t) => [
+                { value: t.id, label: t.name },
+                ...topics
+                  .filter((s) => s.parent_id === t.id)
+                  .map((s) => ({
+                    value: s.id,
+                    label: `${t.name} · ${s.name}`,
+                  })),
+              ]),
+          },
+          {
+            name: "range",
+            label: "Date",
+            all: "All time",
+            clearOnChange: ["date", "from", "to"],
+            options: [
+              { value: "7", label: "7 days" },
+              { value: "30", label: "30 days" },
+              { value: "90", label: "90 days" },
+              { value: "custom", label: "Custom range" },
+            ],
+          },
+          {
+            name: "q",
+            label: "Search",
+            placeholder: "Search sessions",
+          },
+          {
+            name: "sort",
+            label: "Sort",
+            all: "Newest first",
+            options: [
+              { value: "oldest", label: "Oldest" },
+              { value: "highest", label: "Highest score" },
+              { value: "lowest", label: "Lowest score" },
+            ],
+          },
+        ]}
+      >
+        <ToggleGroup
+          aria-label="Session kind"
+          value={[f.kind || "all"]}
+          onValueChange={(v) => go({ kind: v[0] === "all" ? "" : v[0] || "" })}
+          className="ac-chips"
         >
-          <ToggleGroup
-            aria-label="Session kind"
-            value={[f.kind || "all"]}
-            onValueChange={(v) =>
-              go({ kind: v[0] === "all" ? "" : v[0] || "" })
-            }
-            variant="default"
+          <ToggleGroupItem value="all">
+            All <span className="ac-n">{data.kind_total}</span>
+          </ToggleGroupItem>
+          {Object.entries(kindLabels).map(([kind, label]) => (
+            <ToggleGroupItem key={kind} value={kind}>
+              <SessionGlyph kind={kind} aria-hidden strokeWidth={1.5} />
+              {label} <span className="ac-n">{data.kinds[kind] || 0}</span>
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      </ActivityFilterControls>
+      {f.date && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <Badge variant="secondary">{dateLabel(f.date, true)}</Badge>
+          <Button
+            variant="ghost"
             size="sm"
-            className="bg-muted [&_button[data-state=on]]:bg-card max-w-full justify-start gap-0 overflow-x-auto rounded-full p-0.5 [&_button]:h-7 [&_button]:rounded-full [&_button]:px-3 [&_button]:text-[13px] [&_button[data-state=on]]:shadow-sm"
+            onClick={() => go({ date: "" })}
+            aria-label="Remove day filter"
           >
-            <ToggleGroupItem value="all">All {data.kind_total}</ToggleGroupItem>
-            {Object.entries(kindLabels).map(([kind, label]) => (
-              <ToggleGroupItem key={kind} value={kind}>
-                {label} {data.kinds[kind] || 0}
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
-        </ActivityFilterControls>
-        {f.date && (
-          <div className="flex flex-wrap items-center gap-2 px-4 py-3">
-            <Badge variant="secondary">{dateLabel(f.date, true)}</Badge>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => go({ date: "" })}
-              aria-label="Remove day filter"
-            >
-              <Close className="size-3" />
-              Remove day
-            </Button>
-          </div>
-        )}
-        {f.range === "custom" && (
+            <Close className="size-3" />
+            Remove day
+          </Button>
+        </div>
+      )}
+      {f.range === "custom" && (
+        <div className="mb-3">
           <Popover>
             <PopoverPrimitive.Trigger
               render={
@@ -256,71 +252,75 @@ export function ActivityBrowser({
               </Button>
             </PopoverContent>
           </Popover>
-        )}
-      </Card>
-      {!data.rows.length ? (
-        <EmptyState
-          icon={data.all_total ? SearchOff : History}
-          title={data.all_total ? "No sessions match" : "Nothing here yet"}
-          description={
-            data.all_total
-              ? "Try a different filter to find your session."
-              : "Your sprints, flashcards and checks will appear here."
-          }
-          action={
-            <Link
-              href={data.all_total ? "/student/activity" : "/student/sprint"}
-              className={buttonVariants()}
-            >
-              {data.all_total ? "Clear filters" : "Start sprint"}
-            </Link>
-          }
-        />
-      ) : (
-        <>
-          <SessionTable
-            rows={data.rows.slice(0, visible)}
-            topics={topics}
-            details={loaded.details}
-            today={today}
-            sort={f.sort}
-            onOpen={(r) => {
-              const href = sessionHref(r);
-              if (href) router.push(href);
-            }}
-            onDateSort={() =>
-              go({ sort: f.sort === "oldest" ? "newest" : "oldest" })
+        </div>
+      )}
+      <p className="ac-sum" aria-live="polite">
+        {plural(data.total, "session")}
+        {data.stats.questions > 0 &&
+          ` · ${plural(data.stats.questions, "question")} answered`}
+        {data.stats.average != null &&
+          ` · average ${Math.round(data.stats.average)}%`}
+      </p>
+      <div className="ac-card">
+        {!data.rows.length ? (
+          <EmptyState
+            icon={data.all_total ? SearchOff : History}
+            title={data.all_total ? "No sessions match" : "Nothing here yet"}
+            description={
+              data.all_total
+                ? "Try a different filter to find your session."
+                : "Your sprints, flashcards and checks will appear here."
+            }
+            action={
+              <Link
+                href={data.all_total ? "/student/activity" : "/student/sprint"}
+                className={buttonVariants()}
+              >
+                {data.all_total ? "Clear filters" : "Start sprint"}
+              </Link>
             }
           />
-          <nav
-            aria-label="Activity pagination"
-            className="flex flex-wrap items-center justify-between gap-3 border-t px-4 py-3 text-[13px]"
-          >
-            <p className="text-muted-foreground" aria-live="polite">
-              Showing {Math.min(visible, data.rows.length)} of {data.total}
-            </p>
-            <div className="flex items-center gap-2">
-              {visible < data.rows.length && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setVisible((n) => n + 12)}
-                >
-                  Load more
-                </Button>
-              )}
-              {visible >= data.rows.length && data.page * 20 < data.total && (
-                <Link
-                  href={activityHref(f, { page: data.page + 1 })}
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
-                >
-                  Load more
-                </Link>
-              )}
-            </div>
-          </nav>
-        </>
-      )}
+        ) : (
+          <>
+            <SessionList
+              rows={data.rows.slice(0, visible)}
+              topics={topics}
+              details={loaded.details}
+              today={today}
+              sort={f.sort}
+            />
+            <nav
+              aria-label="Activity pagination"
+              className="flex flex-wrap items-center justify-between gap-3 border-t px-6 py-3 text-[13px]"
+            >
+              <p className="text-muted-foreground" aria-live="polite">
+                Showing {Math.min(visible, data.rows.length)} of {data.total}
+              </p>
+              <div className="flex items-center gap-2">
+                {visible < data.rows.length && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setVisible((n) => n + 12)}
+                  >
+                    Load more
+                  </Button>
+                )}
+                {visible >= data.rows.length && data.page * 20 < data.total && (
+                  <Link
+                    href={activityHref(f, { page: data.page + 1 })}
+                    className={cn(
+                      buttonVariants({ variant: "outline", size: "sm" }),
+                    )}
+                  >
+                    Load more
+                  </Link>
+                )}
+              </div>
+            </nav>
+          </>
+        )}
+      </div>
     </div>
   );
 }

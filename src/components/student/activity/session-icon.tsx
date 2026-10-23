@@ -1,10 +1,15 @@
-import { Cards, Pen, Sprint } from "@/components/icons";
+import { Cards, Pen, Sprint, type IconProps } from "@/components/icons";
+
+export function SessionGlyph({ kind, ...props }: IconProps & { kind: string }) {
+  if (kind === "flashcards") return <Cards {...props} />;
+  if (kind === "single") return <Pen {...props} />;
+  return <Sprint {...props} />;
+}
 
 export function SessionIcon({ kind }: { kind: string }) {
-  const Icon = kind === "flashcards" ? Cards : kind === "single" ? Pen : Sprint;
   return (
-    <span className="bg-muted text-muted-foreground grid size-8 shrink-0 place-items-center rounded-lg">
-      <Icon aria-hidden className="size-4" />
+    <span className="ac-ic">
+      <SessionGlyph kind={kind} aria-hidden size={20} strokeWidth={1.5} />
     </span>
   );
 }

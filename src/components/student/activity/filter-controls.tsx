@@ -1,11 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { ComponentProps, ReactNode } from "react";
 import Form from "next/form";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { PortalIcon } from "@/components/icons";
-import { Input, Button } from "@/components/claro/controls";
+import { Button } from "@/components/claro/controls";
 import { buttonVariants } from "@/components/ui/button";
 
 type Filter = {
@@ -17,7 +17,7 @@ type Filter = {
   clearOnChange?: string[];
 };
 
-/** Activity's two-row presentation, preserving the existing GET form fields. */
+/** Activity's filter row: kind chips, then search and menus, preserving the GET form fields. */
 export function ActivityFilterControls({
   filters,
   values,
@@ -35,56 +35,67 @@ export function ActivityFilterControls({
 }) {
   const path = usePathname();
   const search = filters.find((filter) => filter.name === "q")!;
+  const icons: Record<string, ComponentProps<typeof PortalIcon>["name"]> = {
+    status: "circle-dot",
+    topic: "book-open",
+    range: "clock",
+    sort: "chevrons-up-down",
+  };
   return (
-    <Form key={JSON.stringify(values)} action={path}>
+    <Form key={JSON.stringify(values)} action={path} className="ac-filters">
       {Object.entries(hidden)
         .filter((entry) => !!entry[1])
         .map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
-        <div className="max-w-full min-w-0">{children}</div>
-        <div className="relative w-full sm:w-64">
-          <PortalIcon
-            name="search"
-            aria-hidden
-            className="text-muted-foreground pointer-events-none absolute top-2.5 left-3 size-4"
-          />
-          <Input
+      <div className="max-w-full min-w-0">{children}</div>
+      <div className="ac-selects">
+        <label className="ac-sel ac-search">
+          <PortalIcon name="search" size={16} strokeWidth={1.5} />
+          <input
             name="q"
             aria-label={search.label}
             placeholder={search.placeholder}
             defaultValue={values.q ?? ""}
-            className="w-full pl-9"
           />
-        </div>
-      </div>
-      <div className="bg-muted/40 flex flex-wrap items-center gap-2 px-4 py-2.5">
+        </label>
         {filters
           .filter((filter) => filter.options)
           .map((filter) => (
-            <select
-              key={filter.name}
-              name={filter.name}
-              aria-label={filter.label}
-              defaultValue={values[filter.name] ?? ""}
-              className={`field bg-card h-9 max-w-full py-0 text-[13px] ${filter.name === "topic" ? "w-56" : filter.name === "sort" ? "w-40 sm:ml-auto" : filter.name === "range" ? "w-36" : "w-40"}`}
-              onChange={(event) => {
-                const form = event.currentTarget.form;
-                for (const name of filter.clearOnChange ?? []) {
-                  const input = form?.elements.namedItem(name);
-                  if (input instanceof HTMLInputElement) input.disabled = true;
-                }
-                form?.requestSubmit();
-              }}
-            >
-              <option value="">{filter.all}</option>
-              {filter.options!.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            <label key={filter.name} className="ac-sel">
+              <PortalIcon
+                name={icons[filter.name]}
+                size={16}
+                strokeWidth={1.5}
+              />
+              <select
+                name={filter.name}
+                aria-label={filter.label}
+                defaultValue={values[filter.name] ?? ""}
+                onChange={(event) => {
+                  const form = event.currentTarget.form;
+                  for (const name of filter.clearOnChange ?? []) {
+                    const input = form?.elements.namedItem(name);
+                    if (input instanceof HTMLInputElement)
+                      input.disabled = true;
+                  }
+                  form?.requestSubmit();
+                }}
+              >
+                <option value="">{filter.all}</option>
+                {filter.options!.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+              <PortalIcon
+                name="chevron-down"
+                size={16}
+                strokeWidth={1.5}
+                className="ac-chev"
+              />
+            </label>
           ))}
         <Button
           type="submit"
@@ -98,7 +109,8 @@ export function ActivityFilterControls({
             href={clearHref}
             className={buttonVariants({ variant: "ghost", size: "sm" })}
           >
-            Clear ({activeCount})
+            <PortalIcon name="x" size={16} strokeWidth={1.5} />
+            Clear filters ({activeCount})
           </Link>
         )}
       </div>

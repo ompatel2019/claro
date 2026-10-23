@@ -59,19 +59,17 @@ test.describe("Activity browser", () => {
     expect(new URL(page.url()).searchParams.get("kind")).toBe("sprint");
     await expect(
       page
-        .getByRole("table", { name: "Your activity" })
+        .getByRole("region", { name: "Your activity" })
         .or(page.getByText("No sessions match"))
         .or(page.getByText("Nothing here yet")),
     ).toBeVisible();
     const rows = page
-      .locator("table tbody tr")
-      .filter({ has: page.locator("td") });
+      .getByRole("region", { name: "Your activity" })
+      .getByRole("listitem");
     expect(await rows.count()).toBeLessThanOrEqual(20);
     await expect
       .poll(async () => {
-        const titles = await rows
-          .locator("td:first-child a:first-child")
-          .allTextContents();
+        const titles = await rows.locator(".ac-title").allTextContents();
         return titles.every((t) => t.toLowerCase().includes("sprint"));
       })
       .toBe(true);
@@ -90,17 +88,10 @@ test.describe("Activity browser", () => {
         .or(page.getByText("Nothing here yet")),
     ).toBeVisible();
   });
-  test("template columns show results beside session titles", async ({
-    page,
-  }) => {
-    const table = page.getByRole("table", { name: "Your activity" });
-    test.skip(!(await table.count()), "No existing activity");
-    await expect(
-      table.getByRole("columnheader", { name: "Session", exact: true }),
-    ).toBeVisible();
-    await expect(
-      table.getByRole("columnheader", { name: "Result", exact: true }),
-    ).toBeVisible();
+  test("sessions are grouped by day, newest first", async ({ page }) => {
+    const list = page.getByRole("region", { name: "Your activity" });
+    test.skip(!(await list.count()), "No existing activity");
+    await expect(list.getByRole("heading").first()).toBeVisible();
     await expect(page.getByLabel("Sort", { exact: true })).toHaveValue("");
   });
   test("row title links to the existing session report", async ({ page }) => {
@@ -110,11 +101,14 @@ test.describe("Activity browser", () => {
     }).toPass();
     await expect(
       page
-        .getByRole("table", { name: "Your activity" })
+        .getByRole("region", { name: "Your activity" })
         .or(page.getByText("No sessions match"))
         .or(page.getByText("Nothing here yet")),
     ).toBeVisible();
-    const row = page.locator("table tbody td a[href]").first();
+    const row = page
+      .getByRole("region", { name: "Your activity" })
+      .locator("a.ac-cover")
+      .first();
     test.skip((await row.count()) === 0, "No existing reports to view");
     const href = await row.getAttribute("href");
     expect(href).toMatch(
@@ -165,7 +159,7 @@ test.describe("Activity browser", () => {
       await page.getByLabel("Sort", { exact: true }).selectOption("highest");
       await expect(page).toHaveURL(/sort=highest/, { timeout: 1000 });
     }).toPass();
-    await page.getByRole("link", { name: /^Clear \(/ }).click();
+    await page.getByRole("link", { name: /^Clear filters \(/ }).click();
     await expect(page).toHaveURL(/\/student\/activity$/);
   });
 });
