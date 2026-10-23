@@ -62,7 +62,11 @@ function AnswerState({
   return (
     <span className="flex flex-col items-start gap-1">
       {item.pill && !(tile && item.pill === "Marked") && (
-        <StatusPill pill={item.pill} />
+        // On a coloured tile the status inherits the tile's AA text colour.
+        <StatusPill
+          pill={item.pill}
+          className={tile ? "bg-transparent px-0 text-current" : undefined}
+        />
       )}
       {word && (
         <span className="flex items-center gap-1 text-[11px] font-medium">

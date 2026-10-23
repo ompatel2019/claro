@@ -241,6 +241,7 @@ it("preserves unanswered and review states alongside scores in sprint tiles and 
           : "text-brand-text",
     );
     expect(tile).not.toHaveClass("ring-primary");
+    expect(within(tile).getByText(pill)).toHaveClass("text-current");
     if (i === 0) expect(tile).not.toHaveTextContent("Missed");
     else expect(tile).toHaveTextContent(i === 3 ? "Earned" : "Part marks");
   }

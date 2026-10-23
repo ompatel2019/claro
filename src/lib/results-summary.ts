@@ -14,7 +14,7 @@ const META = [
   /\bth(?:is|e) summary\b.{0,40}\b(?:covers?|includes?|is based on|only|looks at)\b/i,
   /\b(?:multiple[- ]choice|mc)\b[^.]{0,40}\b(?:were|are|was|is|have been|has been)\s+not\s+(?:supplied|provided|included|available)\b/i,
   /\b(?:only|just) (?:covers?|includes?|looks at) (?:your )?written\b/i,
-  /\bmakes? no claims?\b/i,
+  /\bmakes? no claims? about (?:your )?(?:mc|multiple[- ]choice)\b/i,
   /\bas an ai\b/i,
   /\b(?:language model|i am an ai|i'm an ai)\b/i,
 ];
