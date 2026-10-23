@@ -1,11 +1,11 @@
 import { TRACKER_STATE } from "@/components/sprint/tracker-state";
 
 /**
- * Results answer tiles. Shared tracker colours come from TRACKER_STATE; only the result-specific
- * states live in this one local map.
+ * Results question pills. Shared tracker colours come from TRACKER_STATE; only the result-specific
+ * mark states live in this one local map.
  */
 export type AnswerPillState =
-  "full" | "dropped" | "not_answered" | "pending" | "unmarked";
+  "full" | "part" | "zero" | "not_answered" | "pending" | "unmarked";
 
 export function answerPillState({
   mark,
@@ -24,55 +24,63 @@ export function answerPillState({
   if (!answered) return "not_answered";
   if (!scored || mark == null || !Number.isFinite(Number(mark)))
     return marking ? "pending" : "unmarked";
+  const got = Number(mark);
   const of = Number(max);
-  return Number.isFinite(of) && of > 0 && Number(mark) >= of
-    ? "full"
-    : "dropped";
+  if (Number.isFinite(of) && of > 0 && got >= of) return "full";
+  return got > 0 ? "part" : "zero";
 }
 
 /**
- * Open = tracker active (light orange). Full marks = Orange with deep Navy text (4.9:1; white on
- * Orange is 3.5:1, too low for the tile's small text). Dropped = error tint with error text
- * (5.9:1 light). Not answered and still marking = tracker grey.
+ * Soft tints with darker text, from the kit's status tokens: full marks = success, part marks =
+ * warning, zero = error, not answered and still marking = tracker grey. The open question keeps
+ * its own colour and gets an outline (RESULT_OPEN).
  */
 export const RESULT_TILE = {
-  open: TRACKER_STATE.active,
-  full: "bg-brand text-navy-deep",
-  dropped: "bg-destructive-soft text-destructive-text",
+  full: "bg-success-soft text-success-text",
+  part: "bg-warning-soft text-warning-text",
+  zero: "bg-destructive-soft text-destructive-text",
   not_answered: TRACKER_STATE.unanswered,
   pending: TRACKER_STATE.unanswered,
   unmarked: TRACKER_STATE.unanswered,
-} as const;
+} as const satisfies Record<AnswerPillState, string>;
+
+/** The open question: an outline in its own text colour, no fill change. */
+export const RESULT_OPEN = "border-current";
 
 export const RESULT_ICON = {
   full: "check",
-  dropped: "flag",
+  part: "circle-half",
+  zero: "x",
   not_answered: "minus",
   pending: "clock",
   unmarked: "circle-alert",
-} as const;
+} as const satisfies Record<AnswerPillState, string>;
 
 export const RESULT_WORD: Record<AnswerPillState, string> = {
   full: "Full marks",
-  dropped: "Marks dropped",
+  part: "Part marks",
+  zero: "No marks",
   not_answered: "Not answered",
   pending: "Being marked",
   unmarked: "No mark",
 };
 
-/** Legend swatches carry a hairline so the tints stay visible on Paper and in dark mode. */
+/** Legend swatches and table dots: the same tints as the pills. */
 export const RESULT_SWATCH = {
-  open: "bg-brand-soft border border-brand/40",
-  full: "bg-brand border border-brand",
-  dropped: "bg-destructive-soft border border-destructive/50",
-  not_answered: "bg-muted border border-foreground/25",
-  pending: "bg-muted border border-foreground/25",
-  unmarked: "bg-muted border border-foreground/25",
-} as const;
+  full: RESULT_TILE.full,
+  part: RESULT_TILE.part,
+  zero: RESULT_TILE.zero,
+  not_answered: TRACKER_STATE.unanswered,
+  pending: TRACKER_STATE.unanswered,
+  unmarked: TRACKER_STATE.unanswered,
+} as const satisfies Record<AnswerPillState, string>;
 
-export const RESULT_LEGEND: [string, string][] = [
-  ["Open now", RESULT_SWATCH.open],
-  ["Full marks", RESULT_SWATCH.full],
-  ["Marks dropped", RESULT_SWATCH.dropped],
-  ["Not answered", RESULT_SWATCH.not_answered],
-];
+/** The pill key, in the order a student reads it. "Open" is the outline, not a colour. */
+export const RESULT_LEGEND: [label: string, state: AnswerPillState | "open"][] =
+  [
+    ["Full marks", "full"],
+    ["Part marks", "part"],
+    ["No marks", "zero"],
+    ["Not answered", "not_answered"],
+    ["Open now", "open"],
+  ];

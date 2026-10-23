@@ -2478,6 +2478,120 @@ body:has(.sprint-focus)
     margin-top: 0;
   }
 }
+/* Comment parts are spans (they can sit inside a column button); lay them out as blocks. */
+.cma .cma-cm-body,
+.cma .cma-cm-quote,
+.cma .cma-cm-text,
+.cma .cma-fix,
+.cma .cma-fix-tx {
+  display: block;
+}
+/* Column (sprint results): every comment at once, Google Docs style. Focus one and the rest dim. */
+.cma .cma-cols {
+  order: 3;
+  margin-top: 16px;
+}
+.cma .cma-cols ol {
+  display: grid;
+  gap: 10px;
+}
+.cma .cma-cm {
+  display: block;
+  width: 100%;
+  overflow: clip;
+  border: 1px solid var(--border);
+  border-radius: var(--cma-card-r);
+  background: var(--card);
+  scroll-margin: calc(var(--cma-sticky-top, 84px) + 8px) 16px 16px;
+  transition:
+    opacity 160ms,
+    box-shadow 160ms,
+    border-color 160ms;
+}
+.cma .cma-cm--earned {
+  --cma-tone: var(--cma-earned);
+  --cma-tone-ink: var(--success-text);
+  --cma-tone-line: var(--success);
+}
+.cma .cma-cm--missed {
+  --cma-tone: var(--cma-missed);
+  --cma-tone-ink: var(--cma-missed-text);
+  --cma-tone-line: var(--destructive);
+}
+.cma .cma-cm:hover {
+  border-color: color-mix(in srgb, var(--cma-tone-line) 45%, var(--border));
+}
+.cma .cma-cm[aria-pressed="true"] {
+  border-color: var(--cma-tone-line);
+  box-shadow: 0 0 0 1px var(--cma-tone-line);
+}
+.cma .cma-cm[data-dim] {
+  opacity: 0.5;
+}
+.cma .cma-cm[data-dim]:hover,
+.cma .cma-cm[data-dim]:focus-visible {
+  opacity: 0.85;
+}
+@container cma (min-width: 800px) {
+  .cma .cma-rail > .cma-cols {
+    margin-top: 12px;
+  }
+  .cma .cma-rail > .cma-cols:first-child {
+    margin-top: 0;
+  }
+}
+.cma .cma-cols ol {
+  transition: transform 220ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+/* Connectors from each phrase to its comment: soft at rest, stronger on the focused pair. */
+.cma .cma-lines {
+  display: none;
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.cma .cma-lines path {
+  fill: none;
+  stroke-width: 1;
+  opacity: 0.35;
+  transition: opacity 160ms;
+}
+.cma .cma-lines .is-earned path {
+  stroke: var(--success);
+}
+.cma .cma-lines .is-missed path {
+  stroke: var(--destructive);
+}
+.cma .cma-lines .is-on path {
+  stroke-width: 1.5;
+  opacity: 1;
+}
+.cma .cma-lines .is-dim path {
+  opacity: 0.15;
+}
+.cma .cma-lines path.cma-lines-tail {
+  stroke-dasharray: 1 3;
+  opacity: 0.6;
+}
+@container cma (min-width: 800px) {
+  .cma .cma-lines {
+    display: block;
+  }
+}
+@media print {
+  .cma .cma-cm[data-dim] {
+    opacity: 1;
+  }
+  .cma .cma-lines {
+    display: none;
+  }
+  .cma .cma-cols ol {
+    transform: none !important;
+  }
+}
 /* Flush: inside a host card (Mark my answer), no sheet or page box of its own. */
 .cma.cma--flush .cma-body,
 .cma.cma--flush .cma-page {

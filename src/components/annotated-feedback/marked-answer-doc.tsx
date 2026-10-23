@@ -54,10 +54,61 @@ export function answerParagraphs(
 const innermost = (a: NumberedComment, b: NumberedComment) =>
   b.start! - a.start! || a.quote.length - b.quote.length;
 
+/**
+ * Comment column focus: the focused comment is pressed, the rest dim. Nothing focused, nothing dims.
+ */
+export function commentFocus(ids: number[], focused: number | null) {
+  return ids.map((id) => ({
+    id,
+    pressed: id === focused,
+    dim: focused !== null && id !== focused,
+  }));
+}
+
+/**
+ * Column shift (px, for translateY) that lines the focused comment's top up with its phrase.
+ * `cardTop` is measured with the current shift applied. Never above the column's start.
+ */
+export function columnShift(phraseTop: number, cardTop: number, shift: number) {
+  return Math.max(0, Math.round(shift + phraseTop - cardTop));
+}
+
+type Box = { left: number; right: number; top: number; bottom: number };
+export type Connector = { id: number; d: string; tail: string | null };
+
+/**
+ * A Google Docs style connector, in the body's coordinates: from the page edge level with the
+ * phrase to the comment's left edge. The focused pair also gets a tail under the phrase's line.
+ */
+export function connectorPath(
+  id: number,
+  phrase: Box,
+  card: Box,
+  origin: { left: number; top: number },
+  edge: number,
+  focused: boolean,
+): Connector {
+  const y1 = Math.round(phrase.bottom + 2 - origin.top);
+  const y2 = Math.round(Math.min(card.top + 20, card.bottom) - origin.top);
+  const xe = Math.round(edge - origin.left);
+  const x2 = Math.round(card.left - origin.left);
+  const xm = Math.round((xe + x2) / 2);
+  return {
+    id,
+    d: y1 === y2 ? `M${xe} ${y1}H${x2}` : `M${xe} ${y1}H${xm}V${y2}H${x2}`,
+    tail: focused
+      ? `M${Math.round(phrase.right - origin.left)} ${y1}H${xe}`
+      : null,
+  };
+}
+
 const label = (c: NumberedComment) =>
   `${c.kind === "strength" ? "Strength" : "Fix"} ${c.n}${c.tag ? `, ${c.tag}` : ""}: ${c.body}`;
 
-/** The read-only marked answer: continuous text with flat highlights, a score card and a comment slider. */
+/**
+ * The read-only marked answer: continuous text with flat highlights, a score card and either a
+ * comment slider or (sprint results) every comment in a column.
+ */
 export function MarkedAnswerDoc({
   text,
   comments,
@@ -65,6 +116,7 @@ export function MarkedAnswerDoc({
   note,
   flush = false,
   aiNote = true,
+  column = false,
 }: {
   /** Display text: line breaks become paragraphs. */
   text: string;
@@ -76,6 +128,8 @@ export function MarkedAnswerDoc({
   flush?: boolean;
   /** Show the AI line; off when the host page shows it once for many answers. */
   aiNote?: boolean;
+  /** Every comment in a column beside the answer (under it when narrow); no slider. */
+  column?: boolean;
 }) {
   const body = useRef<HTMLDivElement>(null);
   const rail = useRef<HTMLDivElement>(null);
@@ -99,6 +153,12 @@ export function MarkedAnswerDoc({
   });
   const selected = slides.selected;
   const selectedId = selected?.id ?? null;
+  // Column mode: nothing is focused until a highlight or a comment is chosen.
+  const [focused, setFocused] = useState<number | null>(null);
+  const [shift, setShift] = useState(0);
+  const [lines, setLines] = useState<Connector[]>([]);
+  const cols = useRef<HTMLOListElement>(null);
+  const activeId = column ? focused : selectedId;
 
   const isWide = () =>
     !!body.current &&
@@ -133,9 +193,34 @@ export function MarkedAnswerDoc({
     slides.select(id);
   }
 
-  useHighlightSync(doc, selectedId, (id) => go(id, { reveal: true }), {
-    scroll: false,
-  });
+  /** Column mode: focus a comment (from its highlight) or toggle it (from the comment itself). */
+  function focusComment(id: number, from: "text" | "card", move = false) {
+    // From the text: the page stays put and the column slides so the comment sits level with
+    // its phrase. From the comment: nothing moves; its phrase lights up.
+    if (from === "text") {
+      const phrase = highlights(id)[0]?.getBoundingClientRect();
+      const card = body.current
+        ?.querySelector(`[data-card="${id}"]`)
+        ?.getBoundingClientRect();
+      setShift((now) =>
+        isWide() && phrase && card ? columnShift(phrase.top, card.top, now) : 0,
+      );
+    }
+    if (move)
+      body.current
+        ?.querySelector<HTMLElement>(`[data-card="${id}"]`)
+        ?.focus({ preventScroll: true });
+    setFocused((now) => (from === "card" && now === id ? null : id));
+  }
+
+  useHighlightSync(
+    doc,
+    activeId,
+    (id) => (column ? focusComment(id, "text") : go(id, { reveal: true })),
+    { scroll: false },
+  );
+
+  const inFocus = column ? comments.find((c) => c.id === focused) : undefined;
 
   useEffect(() => {
     const o = intent.current;
@@ -149,10 +234,57 @@ export function MarkedAnswerDoc({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedId]);
 
+  // Column connectors: drawn from measured boxes, redrawn on resize, focus and shift.
+  useLayoutEffect(() => {
+    const b = body.current;
+    if (!column || !b) return;
+    let frame = 0;
+    function layout() {
+      const wide = isWide();
+      if (!wide) setShift(0);
+      const o = b!.getBoundingClientRect();
+      const edge = page.current?.getBoundingClientRect().right ?? o.left;
+      const next = wide
+        ? anchored.flatMap((c) => {
+            const rects = highlights(c.id).flatMap((el) => [
+              ...el.getClientRects(),
+            ]);
+            const card = b!
+              .querySelector(`[data-card="${c.id}"]`)
+              ?.getBoundingClientRect();
+            if (!rects.length || !card) return [];
+            const last = rects.reduce((a, r) => (r.bottom > a.bottom ? r : a));
+            return [connectorPath(c.id, last, card, o, edge, c.id === focused)];
+          })
+        : [];
+      setLines((now) =>
+        JSON.stringify(now) === JSON.stringify(next) ? now : next,
+      );
+    }
+    const schedule = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(layout);
+    };
+    schedule();
+    const observer = new ResizeObserver(schedule);
+    observer.observe(b);
+    const list = cols.current;
+    list?.addEventListener("transitionend", schedule);
+    window.addEventListener("resize", schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      observer.disconnect();
+      list?.removeEventListener("transitionend", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+    // highlights/isWide read refs; anchored follows comments.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [column, focused, shift, comments, text]);
+
   // The window is as tall as the comment on show; the link line follows it.
   useLayoutEffect(() => {
     const b = body.current;
-    if (!b) return;
+    if (!b || column) return;
     let frame = 0;
     function layout() {
       const slide = view.current?.querySelector<HTMLElement>(
@@ -246,12 +378,12 @@ export function MarkedAnswerDoc({
       document.removeEventListener("scroll", schedule, { capture: true });
       window.removeEventListener("resize", schedule);
     };
-  }, [selectedId, comments, text]);
+  }, [selectedId, comments, text, column]);
 
   const owner = (piece: Piece) => {
     const covering = piece.comments.map((i) => anchored[i]);
     return (
-      covering.find((c) => c.id === selectedId) ??
+      covering.find((c) => c.id === activeId) ??
       [...covering].sort(innermost)[0]
     );
   };
@@ -260,7 +392,7 @@ export function MarkedAnswerDoc({
   const linkTone = selected ? `is-${tone(selected)}` : undefined;
 
   return (
-    <div className={cn("cma", flush && "cma--flush")}>
+    <div className={cn("cma", flush && "cma--flush", column && "cma--column")}>
       <div ref={body} className="cma-body">
         <div ref={page} className="cma-page">
           <div className="cma-answer">
@@ -275,7 +407,11 @@ export function MarkedAnswerDoc({
               )}
             </div>
             {anchored.length > 0 && (
-              <p className="cma-hint">Select a highlight to see its comment.</p>
+              <p className="cma-hint">
+                {column
+                  ? "Select a highlight to focus its comment."
+                  : "Select a highlight to see its comment."}
+              </p>
             )}
             {note && <p className="cma-note">{note}</p>}
             <div
@@ -288,7 +424,8 @@ export function MarkedAnswerDoc({
                 )[0];
                 if (!id) return;
                 e.preventDefault();
-                go(Number(id), { reveal: true, focus: true });
+                if (column) focusComment(Number(id), "text", true);
+                else go(Number(id), { reveal: true, focus: true });
               }}
             >
               {answerParagraphs(text, anchored).map((pieces) => (
@@ -395,7 +532,52 @@ export function MarkedAnswerDoc({
               )}
             </aside>
           )}
-          {comments.length > 0 && (
+          {column && comments.length > 0 && (
+            <section
+              className="cma-cols"
+              aria-label="Comments"
+              style={shift ? { paddingBottom: shift } : undefined}
+              onKeyDown={(e) => {
+                if (e.key !== "Escape" || focused === null) return;
+                e.preventDefault();
+                setFocused(null);
+              }}
+            >
+              <ol
+                ref={cols}
+                style={
+                  shift ? { transform: `translateY(${shift}px)` } : undefined
+                }
+              >
+                {commentFocus(
+                  comments.map((c) => c.id),
+                  focused,
+                ).map(({ id, pressed, dim }, i) => {
+                  const c = comments[i];
+                  return (
+                    <li key={id}>
+                      <button
+                        type="button"
+                        data-card={id}
+                        data-dim={dim || undefined}
+                        aria-pressed={pressed}
+                        onClick={() => focusComment(id, "card")}
+                        className={`cma-cm cma-cm--${tone(c)}`}
+                      >
+                        <CommentContent c={c} next={c === nextComment} inline />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+              <p className="sr-only" aria-live="polite">
+                {inFocus
+                  ? `Comment ${inFocus.n} in focus. ${label(inFocus)}`
+                  : ""}
+              </p>
+            </section>
+          )}
+          {!column && comments.length > 0 && (
             <section
               ref={slider}
               className="cma-slider"
@@ -481,52 +663,7 @@ export function MarkedAnswerDoc({
                         tabIndex={on ? 0 : -1}
                         className={`cma-slide cma-slide--${tone(c)}`}
                       >
-                        <p className="cma-band" data-band>
-                          <span className="cma-state">
-                            {c.kind === "strength" ? (
-                              <Check className="ic" />
-                            ) : (
-                              <Close className="ic" />
-                            )}
-                            {c.kind === "strength" ? "Strength" : "Fix"}
-                          </span>
-                          {c.tag && (
-                            <>
-                              <span className="sr-only">: </span>
-                              <span className="cma-cm-title">{c.tag}</span>
-                            </>
-                          )}
-                        </p>
-                        <div className="cma-cm-body">
-                          <p className="cma-cm-quote">
-                            {c.start === null ? (
-                              "Overall"
-                            ) : (
-                              <>
-                                <span className="sr-only">
-                                  About the words{" "}
-                                </span>
-                                “{c.quote}”
-                              </>
-                            )}
-                          </p>
-                          <p className="cma-cm-text">{c.body}</p>
-                          {c.next_mark && (
-                            <div className="cma-fix">
-                              <p className="cma-fix-hd">
-                                <PortalIcon
-                                  name="arrow-up-right"
-                                  className="ic"
-                                />
-                                {c === nextComment
-                                  ? "Your next mark"
-                                  : "How to get this mark"}
-                                <span className="sr-only">: </span>
-                              </p>
-                              <p className="cma-fix-tx">{c.next_mark}</p>
-                            </div>
-                          )}
-                        </div>
+                        <CommentContent c={c} next={c === nextComment} />
                       </div>
                     );
                   })}
@@ -539,11 +676,31 @@ export function MarkedAnswerDoc({
           )}
           {aiNote && <p className="cma-foot">{AI_NOTE}</p>}
         </div>
-        <svg ref={link} className="cma-link" aria-hidden>
-          <path className={linkTone} />
-          <path className={cn("cma-link-tail", linkTone)} />
-          <circle className={linkTone} r="3.5" />
-        </svg>
+        {column && lines.length > 0 && (
+          <svg className="cma-lines" aria-hidden>
+            {lines.map((l) => {
+              const c = comments.find((x) => x.id === l.id);
+              const cls = cn(
+                c && `is-${tone(c)}`,
+                focused === l.id && "is-on",
+                focused !== null && focused !== l.id && "is-dim",
+              );
+              return (
+                <g key={l.id} className={cls}>
+                  <path d={l.d} />
+                  {l.tail && <path className="cma-lines-tail" d={l.tail} />}
+                </g>
+              );
+            })}
+          </svg>
+        )}
+        {!column && (
+          <svg ref={link} className="cma-link" aria-hidden>
+            <path className={linkTone} />
+            <path className={cn("cma-link-tail", linkTone)} />
+            <circle className={linkTone} r="3.5" />
+          </svg>
+        )}
       </div>
     </div>
   );
@@ -556,6 +713,62 @@ function NextMark({ text }: { text: string }) {
       <span className="cma-crit-t">
         <b>Your next mark:</b> {text}
       </span>
+    </>
+  );
+}
+
+/** One comment's band and body. `inline` uses spans so it can sit inside a column button. */
+function CommentContent({
+  c,
+  next,
+  inline = false,
+}: {
+  c: NumberedComment;
+  next: boolean;
+  inline?: boolean;
+}) {
+  const P = inline ? "span" : "p";
+  const Div = inline ? "span" : "div";
+  return (
+    <>
+      <P className="cma-band" data-band>
+        <span className="cma-state">
+          {c.kind === "strength" ? (
+            <Check className="ic" />
+          ) : (
+            <Close className="ic" />
+          )}
+          {c.kind === "strength" ? "Strength" : "Fix"}
+        </span>
+        {c.tag && (
+          <>
+            <span className="sr-only">: </span>
+            <span className="cma-cm-title">{c.tag}</span>
+          </>
+        )}
+      </P>
+      <Div className="cma-cm-body">
+        <P className="cma-cm-quote">
+          {c.start === null ? (
+            "Overall"
+          ) : (
+            <>
+              <span className="sr-only">About the words </span>“{c.quote}”
+            </>
+          )}
+        </P>
+        <P className="cma-cm-text">{c.body}</P>
+        {c.next_mark && (
+          <Div className="cma-fix">
+            <P className="cma-fix-hd">
+              <PortalIcon name="arrow-up-right" className="ic" />
+              {next ? "Your next mark" : "How to get this mark"}
+              <span className="sr-only">: </span>
+            </P>
+            <P className="cma-fix-tx">{c.next_mark}</P>
+          </Div>
+        )}
+      </Div>
     </>
   );
 }

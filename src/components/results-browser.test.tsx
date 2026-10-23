@@ -161,17 +161,19 @@ it("reselects and scrolls to a summary question after manual navigation with the
   await waitFor(() => expect(scroll).toHaveBeenCalledTimes(3));
 });
 
-it("draws sprint tiles from the result state, with the open tile in brand-soft", () => {
-  const states = ["full", "dropped", "not_answered", "pending"] as const;
+it("colours sprint pills by mark, outlines the open one and keeps flags apart", async () => {
+  const { TRACKER_STATE } = await import("./sprint/tracker-state");
+  const states = ["full", "part", "zero", "not_answered", "pending"] as const;
   render(
     <ResultsBrowser
       sprintLayout
       items={states.map((state, i) => ({
         ...items[0],
         position: i + 1,
-        mark: ["2 / 2", "1.5 / 4", null, null][i],
+        mark: ["2 / 2", "1.5 / 4", "0 / 3", null, null][i],
         pill: state === "not_answered" ? "Not answered" : null,
         state,
+        flagged: i === 2,
       }))}
       views={views}
       initial={1}
@@ -179,20 +181,29 @@ it("draws sprint tiles from the result state, with the open tile in brand-soft",
   );
   const tile = (n: number) =>
     screen.getByRole("button", { name: new RegExp(`^Question ${n}(,|$)`) });
-  expect(tile(1)).toHaveClass("bg-brand", "text-navy-deep");
-  expect(tile(2)).toHaveClass("bg-brand-soft", "text-brand-text");
+  expect(tile(1)).toHaveClass("bg-success-soft", "text-success-text");
+  expect(tile(2)).toHaveClass("bg-warning-soft", "text-warning-text");
+  expect(tile(2)).toHaveClass("border-current");
   expect(tile(2)).toHaveAttribute("aria-current", "true");
   expect(tile(2)).toHaveTextContent("1.5/4");
-  expect(tile(3)).toHaveClass("bg-muted");
-  expect(tile(3)).toHaveTextContent(/^Q3$/);
-  for (const n of [1, 2, 3, 4]) {
+  expect(tile(3)).toHaveClass("bg-destructive-soft", "text-destructive-text");
+  expect(tile(4)).toHaveClass("bg-muted");
+  expect(tile(4)).toHaveTextContent(/^Q4$/);
+  for (const n of [1, 2, 3, 4, 5]) {
     expect(tile(n).querySelector("svg")).toBeTruthy();
     expect(tile(n).className).not.toMatch(/(^|\s)ring-/);
   }
+  // A flag is a tracker dot on top of the mark colour, never the mark colour itself.
+  expect(tile(3)).toHaveAccessibleName(/flagged$/);
+  expect(tile(3).querySelector("[data-flag]")?.className).toContain(
+    TRACKER_STATE.flag,
+  );
+  expect(tile(1).querySelector("[data-flag]")).toBeNull();
   fireEvent.click(tile(1));
-  expect(tile(2)).toHaveClass("bg-destructive-soft", "text-destructive-text");
+  expect(tile(1)).toHaveClass("border-current");
+  expect(tile(2)).not.toHaveClass("border-current");
   expect(screen.getByRole("list", { name: "Key" })).toHaveTextContent(
-    "Open nowFull marksMarks droppedNot answered",
+    "Full marksPart marksNo marksNot answeredOpen nowFlagged",
   );
 });
 
@@ -212,7 +223,7 @@ it("lists every question in a bordered table with the open row highlighted", () 
           ...items[0],
           position: 2,
           mark: "0 / 4",
-          state: "dropped",
+          state: "zero",
           pill: "Checked by our team",
         },
       ]}
@@ -227,7 +238,7 @@ it("lists every question in a bordered table with the open row highlighted", () 
   expect(rows[1]).toHaveTextContent("Full marks");
   expect(rows[1]).not.toHaveTextContent("Marked");
   expect(rows[2]).toHaveTextContent("0/4");
-  expect(rows[2]).toHaveTextContent("Marks dropped");
+  expect(rows[2]).toHaveTextContent("No marks");
   expect(within(rows[2]).getByText("Checked by our team")).toBeVisible();
   fireEvent.click(rows[2]);
   expect(rows[2]).toHaveAttribute("data-open", "true");

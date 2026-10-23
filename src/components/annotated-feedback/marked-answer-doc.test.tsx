@@ -10,6 +10,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { NumberedComment } from "@/lib/feedback";
 import {
   answerParagraphs,
+  columnShift,
+  commentFocus,
+  connectorPath,
   MarkedAnswerDoc,
   type MarkedScore,
 } from "./marked-answer-doc";
@@ -439,5 +442,100 @@ describe("variants", () => {
     expect(
       screen.queryByText(/AI-assisted and criteria-based/),
     ).not.toBeInTheDocument();
+  });
+});
+
+describe("comment column", () => {
+  const card = (id: number) =>
+    document.querySelector<HTMLElement>(`[data-card="${id}"]`)!;
+
+  it("focuses one comment and dims the rest, or none when nothing is focused", () => {
+    expect(commentFocus([1, 2, 3], null)).toEqual([
+      { id: 1, pressed: false, dim: false },
+      { id: 2, pressed: false, dim: false },
+      { id: 3, pressed: false, dim: false },
+    ]);
+    expect(commentFocus([1, 2, 3], 2).map((c) => [c.pressed, c.dim])).toEqual([
+      [false, true],
+      [true, false],
+      [false, true],
+    ]);
+  });
+
+  it("shifts the column so the comment sits level with its phrase, never above its start", () => {
+    expect(columnShift(400, 250, 0)).toBe(150);
+    // Measured with a shift already applied.
+    expect(columnShift(400, 380, 130)).toBe(150);
+    expect(columnShift(100, 250, 0)).toBe(0);
+  });
+
+  it("draws a connector from the page edge to the comment, with a tail under the phrase when focused", () => {
+    const phrase = { left: 50, right: 120, top: 100, bottom: 118 };
+    const box = { left: 700, right: 900, top: 300, bottom: 400 };
+    const origin = { left: 0, top: 0 };
+    expect(connectorPath(1, phrase, box, origin, 640, false)).toEqual({
+      id: 1,
+      d: "M640 120H670V320H700",
+      tail: null,
+    });
+    expect(connectorPath(1, phrase, box, origin, 640, true).tail).toBe(
+      "M120 120H640",
+    );
+  });
+
+  it("shows every comment at once with no slider, and the marks card without a slider", () => {
+    render(
+      <MarkedAnswerDoc text={text} comments={comments} score={score} column />,
+    );
+    const list = screen.getByRole("region", { name: "Comments" });
+    expect(within(list).getAllByRole("button")).toHaveLength(3);
+    expect(
+      screen.queryByRole("button", { name: "Next comment" }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText(/of 3/)).not.toBeInTheDocument();
+    for (const id of [11, 22, 33])
+      expect(card(id)).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("focuses a comment from its phrase without scrolling, and lights the phrase from the comment", () => {
+    const { container } = render(
+      <MarkedAnswerDoc text={text} comments={comments} column />,
+    );
+    scrollIntoView.mockClear();
+    fireEvent.click(marks(container, 22)[0]);
+    expect(card(22)).toHaveAttribute("aria-pressed", "true");
+    expect(card(11)).toHaveAttribute("data-dim");
+    expect(card(33)).toHaveAttribute("data-dim");
+    expect(card(22)).not.toHaveAttribute("data-dim");
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    fireEvent.click(card(11));
+    expect(card(11)).toHaveAttribute("aria-pressed", "true");
+    expect(card(22)).toHaveAttribute("data-dim");
+    for (const el of marks(container, 11))
+      expect(el).toHaveAttribute("data-selected", "true");
+    expect(scrollIntoView).not.toHaveBeenCalled();
+
+    // Selecting it again, or Esc, clears the focus.
+    fireEvent.click(card(11));
+    expect(card(11)).toHaveAttribute("aria-pressed", "false");
+    expect(card(22)).not.toHaveAttribute("data-dim");
+    fireEvent.click(card(22));
+    fireEvent.keyDown(card(22), { key: "Escape" });
+    expect(card(22)).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it("moves keyboard focus from a highlight to its comment without scrolling", () => {
+    const { container } = render(
+      <MarkedAnswerDoc text={text} comments={comments} column />,
+    );
+    scrollIntoView.mockClear();
+    const focus = vi.spyOn(HTMLElement.prototype, "focus");
+    fireEvent.keyDown(marks(container, 22)[0], { key: "Enter" });
+    expect(card(22)).toHaveFocus();
+    expect(card(22)).toHaveAttribute("aria-pressed", "true");
+    expect(focus).toHaveBeenCalledWith({ preventScroll: true });
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    focus.mockRestore();
   });
 });

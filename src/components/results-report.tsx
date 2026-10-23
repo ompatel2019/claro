@@ -86,7 +86,6 @@ export function ResultsAnswers({
     );
   }
   const sprintView = (r: ReviewRow) => {
-    const state = markingState(r);
     const sample = r.type !== "mcq" && r.sample_answer;
     return (
       <div key={r.attempt_id} className="space-y-4">
@@ -122,6 +121,7 @@ export function ResultsAnswers({
                 aiNote={false}
                 flush
                 bare
+                commentColumn
                 showReferences={false}
                 row={r}
                 photos={(r.image_paths ?? []).flatMap(
@@ -147,41 +147,46 @@ export function ResultsAnswers({
             )}
           </CardContent>
         </Card>
-        {!readOnly && (
-          <div className="flex flex-wrap items-center gap-2">
-            {r.topic_id && (
-              <Link
-                href={`/student/sprint?type=${r.type}&sub=${encodeURIComponent(r.topic_id)}`}
-                className={buttonVariants()}
-              >
-                <PortalIcon name="pen-line" aria-hidden className="size-4" />
-                Practise a similar question
-              </Link>
-            )}
-            {r.topic_id && !!cards[r.topic_id] && (
-              <Link
-                href={`/student/flashcards?topic=${encodeURIComponent(r.topic_id)}`}
-                className={buttonVariants({ variant: "outline" })}
-              >
-                <PortalIcon name="copy" aria-hidden className="size-4" />
-                {name(r.topic_id)} flashcards
-              </Link>
-            )}
-            <span className="hidden flex-1 sm:block" />
-            {r.type !== "mcq" && ["marked", "reviewed"].includes(state) && (
-              <QuestionMark attemptId={r.attempt_id} quiet />
-            )}
-            {r.question_id && (
-              <ReportProblem
-                quiet
-                questionId={r.question_id}
-                sessionId={id}
-                label={`Linked: ${r.source}`}
-              />
-            )}
-          </div>
-        )}
       </div>
+    );
+  };
+  const sprintActions = (r: ReviewRow) => {
+    const state = markingState(r);
+    return (
+      !readOnly && (
+        <div className="flex flex-wrap items-center gap-2">
+          {r.topic_id && (
+            <Link
+              href={`/student/sprint?type=${r.type}&sub=${encodeURIComponent(r.topic_id)}`}
+              className={buttonVariants()}
+            >
+              <PortalIcon name="pen-line" aria-hidden className="size-4" />
+              Practise a similar question
+            </Link>
+          )}
+          {r.topic_id && !!cards[r.topic_id] && (
+            <Link
+              href={`/student/flashcards?topic=${encodeURIComponent(r.topic_id)}`}
+              className={buttonVariants({ variant: "outline" })}
+            >
+              <PortalIcon name="copy" aria-hidden className="size-4" />
+              {name(r.topic_id)} flashcards
+            </Link>
+          )}
+          <span className="hidden flex-1 sm:block" />
+          {r.type !== "mcq" && ["marked", "reviewed"].includes(state) && (
+            <QuestionMark attemptId={r.attempt_id} quiet />
+          )}
+          {r.question_id && (
+            <ReportProblem
+              quiet
+              questionId={r.question_id}
+              sessionId={id}
+              label={`Linked: ${r.source}`}
+            />
+          )}
+        </div>
+      )
     );
   };
   const views = rows.map((r) => {
@@ -253,6 +258,7 @@ export function ResultsAnswers({
           sprintLayout={sprintLayout}
           initial={sprintLayout ? firstLost(rows) : firstBelow(rows)}
           views={views}
+          actions={sprintLayout ? rows.map(sprintActions) : undefined}
           mcGrid={mcGrid}
           items={rows.map((r) => {
             // MC marking stores a null choice without a "No answer" note.
@@ -262,6 +268,7 @@ export function ResultsAnswers({
                 : markingState(r);
             return {
               position: r.position,
+              flagged: r.flagged,
               type: TYPE_LABEL[r.type],
               topic: name(r.topic_id),
               source: r.source,
@@ -362,7 +369,7 @@ export function OverallFeedback({
           <p className="bg-card text-ink-2 shadow-card rounded-xl border p-4 text-[13px]">
             {/* The next mark lives in each question's score card, never here. */}
             No overall strengths or fixes for this sprint. Review each answer
-            above.
+            below.
           </p>
         ) : summary ? (
           <div className="grid gap-3 sm:grid-cols-2">
@@ -429,7 +436,9 @@ export function OverallFeedback({
             <p role="status" className="text-muted-foreground text-[13px]">
               {pending
                 ? "Your overall feedback will appear here once marking finishes."
-                : "An overall summary isn’t available for this sprint. Review each answer’s feedback above."}
+                : hideNextStep
+                  ? "An overall summary isn’t available for this sprint. Review each answer’s feedback below."
+                  : "An overall summary isn’t available for this sprint. Review each answer’s feedback above."}
             </p>
             {pending && (
               <div

@@ -300,8 +300,9 @@ it("keeps unanswered MC rows distinct from incorrect answers in sprint tiles and
   });
   expect(unanswered).toHaveTextContent(/^Q1$/);
   expect(unanswered.querySelector("svg")).toBeTruthy();
-  // Q1 is open (the first lost mark), so its colour is brand-soft; Q2 shows dropped marks.
+  // Q1 is open (the first lost mark): grey with an outline; Q2 scored zero, so it is red.
   expect(unanswered).toHaveAttribute("aria-current", "true");
+  expect(unanswered).toHaveClass("bg-muted", "border-current");
   expect(
     screen.getByRole("button", { name: "Question 2, 0/1 marks" }),
   ).toHaveClass("bg-destructive-soft");
@@ -309,11 +310,11 @@ it("keeps unanswered MC rows distinct from incorrect answers in sprint tiles and
   const table = screen.getByRole("table", { name: "Questions" });
   const [unansweredRow, wrongRow] = table.querySelectorAll("tbody tr");
   expect(unansweredRow).toHaveTextContent("Not answered");
-  expect(unansweredRow).not.toHaveTextContent("Marks dropped");
-  expect(wrongRow).toHaveTextContent("Marks dropped");
+  expect(unansweredRow).not.toHaveTextContent("No marks");
+  expect(wrongRow).toHaveTextContent("No marks");
 });
 
-it("builds the sprint question card: badges, full-marks answer, then the actions row", () => {
+it("builds the sprint question: actions row and pager above the card, then badges and full-marks answer", () => {
   const row = (position: number, mark: number): ReviewRow =>
     ({
       attempt_id: `w-${position}`,
@@ -352,6 +353,15 @@ it("builds the sprint question card: badges, full-marks answer, then the actions
   expect(
     screen.getByRole("link", { name: "Practise a similar question" }),
   ).toHaveAttribute("href", "/student/sprint?type=short&sub=growth");
+  // The actions row and previous / next sit above the question card.
+  const stem = screen.getByText("Stem 2");
+  for (const above of [
+    screen.getByRole("link", { name: "Practise a similar question" }),
+    screen.getByRole("navigation", { name: "Previous and next question" }),
+  ])
+    expect(
+      above.compareDocumentPosition(stem) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   expect(
     screen.queryByRole("link", { name: /flashcards/ }),
   ).not.toBeInTheDocument();
