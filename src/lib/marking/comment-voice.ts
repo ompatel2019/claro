@@ -12,6 +12,11 @@ export const SUMMARY_MAX_ITEMS = 3;
 const ABBREVIATIONS =
   /(?:\b(?:e\.g|i\.e|etc|vs|cf|approx|incl|no|p|pp|Dr|Mr|Mrs|Ms|St)|\b[A-Z])\.$/i;
 
+function openQuote(text: string) {
+  const count = (re: RegExp) => (text.match(re) ?? []).length;
+  return count(/"/gu) % 2 === 1 || count(/“/gu) > count(/”/gu);
+}
+
 /** Split prose into sentences without breaking decimals, "e.g." or "$800m." mid-number. */
 export function splitSentences(text: string): string[] {
   const out: string[] = [];
@@ -34,6 +39,8 @@ export function splitSentences(text: string): string[] {
     const rest = text.slice(i + 1).trimStart();
     // A lower-case continuation is not a new sentence (e.g. "approx. 3%").
     if (rest && /^[a-z]/u.test(rest)) continue;
+    // Never split inside a quotation ("Exports rise. Imports fall.").
+    if (openQuote(current)) continue;
     out.push(current.trim());
     current = "";
   }
@@ -56,7 +63,7 @@ const META_SENTENCE = [
   // Only when the subject is the comment itself ("This/It/That (change)"), so
   // advice such as "Do not add a statistic because it will not earn a mark" stays.
   // Explanations ("because …") and "earn a mark" judge the student's work, so they never match.
-  /^(?![^.;]*\b(?:because|since|as|unless|until)\b)(?:this|that|it)(?: (?:change|tweak|wording|fix|edit)(?: change| tweak)?)? (?:would|will|does|doesn't|won't|is|only)\b[^.;]*\b(?:not|never|without)\b[^.;]*\b(?:add|adding|change|changing|affect|affecting|cost|costing|lift|lifting) (?:a|the|your|any|another|an extra) (?:extra )?marks?\b/i,
+  /^(?![^.;]*\b(?:because|since|as|unless|until|if)\b)(?:this|that|it)(?: (?:change|tweak|wording|fix|edit)(?: change| tweak)?)? (?:would|will|does|doesn't|won't|is|only)\b[^.;]*\b(?:not|never|without)\b[^.;]*\b(?:add|adding|change|changing|affect|affecting|cost|costing|lift|lifting) (?:a|the|your|any|another|an extra) (?:extra )?marks?\b/i,
   /\bas an ai\b/i,
 ];
 

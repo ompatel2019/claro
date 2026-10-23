@@ -30,6 +30,22 @@ describe("splitSentences", () => {
       "Fix it!",
     ]);
   });
+  it("never splits inside a quotation (codex review)", () => {
+    expect(
+      splitSentences(
+        'Join "Exports rise. Imports fall." using "whereas". Done.',
+      ),
+    ).toEqual(['Join "Exports rise. Imports fall." using "whereas".', "Done."]);
+    expect(
+      tightenText('Join "Exports rise. Imports fall." using "whereas".', {
+        maxSentences: 1,
+      }),
+    ).toBe('Join "Exports rise. Imports fall." using "whereas".');
+    expect(
+      splitSentences("Write “Rates rise. Demand falls.” as one chain. Done."),
+    ).toEqual(["Write “Rates rise. Demand falls.” as one chain.", "Done."]);
+  });
+
   it("returns text without a full stop as one sentence", () => {
     expect(splitSentences("Correct formula, it deflates nominal GDP")).toEqual([
       "Correct formula, it deflates nominal GDP",
@@ -215,6 +231,7 @@ describe("tightenText", () => {
     for (const text of [
       "This will not earn a mark because nominal GDP does not adjust for inflation. Use real GDP instead.",
       "This will not change your mark as the definition is wrong. Fix it.",
+      "Name the policy. This will not lift your mark if you omit how it reduces borrowing.",
       "Your definition is accurate. This will not lift your mark unless you explain how higher rates reduce borrowing.",
       "Your definition is accurate. This will not add a mark until you name the transmission mechanism.",
       "Explain why this report includes only nominal GDP. Use real GDP to compare output.",
