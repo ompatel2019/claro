@@ -25,7 +25,7 @@ export function TablePagination({
   return (
     <nav
       aria-label={`${label} pagination`}
-      className="flex flex-wrap items-center justify-between gap-2 text-sm"
+      className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm"
     >
       <span aria-live="polite">
         Page {pager.page} of {pager.pages} · {pager.total}{" "}
