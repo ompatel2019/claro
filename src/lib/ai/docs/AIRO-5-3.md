@@ -32,7 +32,7 @@ Everything else in the tail is unchanged, including the 5.2 tutor rules (statist
 Applied in `markWritten` after `anchorComments` (comments) and in `summariseSession` (summary). It rewrites prose only, never `quote`, `start`, `kind`, `tag`, order or field set, and never marks.
 
 1. Split sentences safely (decimals, `$800m.`, `e.g.`, `i.e.`, closing quotes, lower-case continuations stay intact).
-2. Drop meta sentences: "This summary/feedback covers…", "MC answers were not supplied", "without changing your mark", "not add a mark", a bare "Already at full marks". When a meta clause shares a sentence with advice ("… will not earn another mark; explain how …" or "…, so explain how …"), only the meta clause goes.
+2. Drop meta sentences: "This summary/feedback covers…", "MC answers were not supplied", "without changing your mark", "This/It (change) will not add a mark" (only when the comment itself is the subject, so "Do not add a statistic because it will not earn a mark" stays), a bare "Already at full marks". When a meta clause shares a sentence with advice ("… will not earn another mark; explain how …" or "…, so explain how …"), only the meta clause goes.
 3. Drop praise-only sentences with no content ("Great job.", "Well done!", "Keep up the good work."); "Good work explaining…" keeps its content.
 4. Strip banned openers: "Overall,", "In summary,", "It is important to note that", "Note that", "Perhaps,", "Well done,", "Great job!", "In this answer,", "This demonstrates that", "Already at full marks;", "You could/might/may (want to) <known verb>" (so "You may be confusing…" is kept), "Try to". "Consider <verb>ing" becomes the imperative for a fixed list of verbs (e.g. "Consider adding" → "Add"); unknown verbs are left alone.
 5. Rewrite hedges only when the subject is part of the student's writing (your/this/the link, definition, sentence, paragraph, explanation, contrast and similar): "could be made more explicit" → "needs to be explicit"; "could be clearer" → "needs to be clearer"; "would benefit from" → "needs". A whole sentence "It could be made more explicit." becomes "It needs to be explicit." Economic actors and outcomes ("exporters would benefit from", "demand could be stronger") are never rewritten. Economic qualifiers inside a sentence ("only slightly elastic", "a little", "possibly offset") are never removed.
@@ -40,7 +40,7 @@ Applied in `markWritten` after `anchorComments` (comments) and in `summariseSess
 7. Cap: comment body 2 sentences, `next_mark` 1 sentence; summary lines 1 sentence each and at most 3 per list (strengths, improvements, next steps).
 8. If filtering would leave nothing, the original text is kept.
 
-The filter is idempotent and leaves already-direct comments byte-identical. Offline over the saved 5.2 results (no calls): run 1414 (67 comments) unchanged; run 1417 (727 comments) 2 bodies and 3 `next_mark` lines changed, 0 emptied, 0 field or anchor changes. Most of the length cut must come from the prompt, so it is only measurable in a paid run.
+The filter is idempotent and leaves already-direct comments byte-identical. Offline over the saved 5.2 results (no calls): run 1414 (67 comments) unchanged; run 1417 (727 comments) 2 bodies and 4 `next_mark` lines changed, 0 emptied, 0 field or anchor changes. Most of the length cut must come from the prompt, so it is only measurable in a paid run.
 
 ## Effect on marks
 

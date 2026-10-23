@@ -54,7 +54,9 @@ const META_SENTENCE = [
   /\b(multiple[- ]choice|MCQs?|MC)\b(?=[^.]*\b(answers?|questions?|responses?|items?)\b)[^.]*\b(not|weren't|were not|aren't|are not)\b[^.]*\b(supplied|provided|included|available|assessed|shown|given)\b/i,
   /\bwithout (changing|affecting) (the|your) mark\b/i,
   /^already at full marks[.!]?$/i,
-  /\b(not|never|won't|will not|without|doesn't|does not) (add|adding|change|changing|affect|affecting|earn|earning|cost|costing|lift|lifting) (a|the|your|any|another|an extra) (extra )?marks?\b/i,
+  // Only when the subject is the comment itself ("This/It/That (change)"), so
+  // advice such as "Do not add a statistic because it will not earn a mark" stays.
+  /^(?:this|that|it)(?: (?:change|tweak|wording|fix|edit)(?: change| tweak)?)? (?:would|will|does|doesn't|won't|is|only)\b[^.;]*\b(?:not|never|without)\b[^.;]*\b(?:add|adding|change|changing|affect|affecting|earn|earning|cost|costing|lift|lifting) (?:a|the|your|any|another|an extra) (?:extra )?marks?\b/i,
   /\bas an ai\b/i,
 ];
 
@@ -183,10 +185,10 @@ function stripOpeners(sentence: string): string {
  * "…, so explain the mechanism.").
  */
 function dropMetaClauses(sentence: string): string[] {
-  if (!isMetaSentence(sentence)) return [sentence];
   const clauses = sentence.split(/;\s*|,\s*(?:so|but|instead|then)\s+/u);
-  if (clauses.length < 2) return [];
+  if (clauses.length < 2) return isMetaSentence(sentence) ? [] : [sentence];
   const kept = clauses.filter((clause) => !isMetaSentence(clause.trim()));
+  if (kept.length === clauses.length) return [sentence];
   if (!kept.length) return [];
   const joined = capitalise(kept.join("; ").trim());
   return [/[.!?]["'”’)\]]*$/u.test(joined) ? joined : `${joined}.`];
@@ -204,8 +206,12 @@ export type TightenOptions = {
 
 /** Tighten one prose string; returns the original when nothing usable would remain. */
 export function tightenText(text: string, opts: TightenOptions): string {
-  const original = text;
-  if (!text || !text.trim()) return original;
+  return tightenCore(text, opts) || text;
+}
+
+/** Filtered text, or "" when nothing usable remains. */
+function tightenCore(text: string, opts: TightenOptions): string {
+  if (!text || !text.trim()) return "";
   let sentences = splitSentences(text.trim())
     .flatMap(dropMetaClauses)
     .filter((s) => !PADDING_SENTENCE.test(s.trim()))
@@ -218,8 +224,7 @@ export function tightenText(text: string, opts: TightenOptions): string {
     if (kept.length) sentences = kept;
   }
   sentences = sentences.slice(0, Math.max(1, opts.maxSentences));
-  const out = sentences.join(" ").trim();
-  return out ? out : original;
+  return sentences.join(" ").trim();
 }
 
 type CommentLike = {
@@ -252,14 +257,14 @@ type SummaryLike = {
 };
 
 function tightenList(lines: string[]): string[] {
-  return lines
-    .map((line) => (typeof line === "string" ? line : ""))
-    .filter(
-      (line) => line.trim() && !splitSentences(line).every(isMetaSentence),
-    )
-    .map((line) => tightenText(line, { maxSentences: 1 }))
-    .filter((line) => !isMetaSentence(line))
-    .slice(0, SUMMARY_MAX_ITEMS);
+  return (
+    lines
+      .map((line) => (typeof line === "string" ? line : ""))
+      // Clause extraction runs first, so advice beside a meta clause survives.
+      .map((line) => tightenCore(line, { maxSentences: 1 }))
+      .filter((line) => line && !isMetaSentence(line))
+      .slice(0, SUMMARY_MAX_ITEMS)
+  );
 }
 
 /** Summary: meta lines dropped, one sentence per line, at most three per list. */

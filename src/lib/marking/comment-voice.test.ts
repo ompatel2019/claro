@@ -181,14 +181,14 @@ describe("tightenText", () => {
     );
     expect(
       body(
-        "Repeating the definition will not earn another mark; explain how higher rates reduce borrowing. Name the transmission mechanism.",
+        "This will not earn another mark; explain how higher rates reduce borrowing. Name the transmission mechanism.",
       ),
     ).toBe(
       "Explain how higher rates reduce borrowing. Name the transmission mechanism.",
     );
     expect(
       body(
-        "Your definition is accurate. Repeating it will not earn another mark, so explain how higher rates reduce borrowing.",
+        "Your definition is accurate. This wording will not earn another mark, so explain how higher rates reduce borrowing.",
       ),
     ).toBe(
       "Your definition is accurate. Explain how higher rates reduce borrowing.",
@@ -198,6 +198,12 @@ describe("tightenText", () => {
         "This will not change your mark, but name the lag. Then add a result.",
       ),
     ).toBe("Name the lag. Then add a result.");
+    // Advice whose own subject is not the comment is kept whole (codex review).
+    for (const text of [
+      "Your definition is accurate. Do not add a statistic because it will not earn another mark.",
+      "Your definition is accurate. Repeating it will not earn another mark, so explain how higher rates reduce borrowing.",
+    ])
+      expect(body(text)).toBe(text);
     expect(body("Explain the lag; this will not change your mark.")).toBe(
       "Explain the lag.",
     );
@@ -307,6 +313,19 @@ describe("tightenSummary", () => {
       improvements: ["Q3 needs a judgement."],
       next_steps: ["Rewrite Q3 with a judgement."],
     });
+  });
+
+  it("keeps advice beside a meta clause in summary lines (codex review)", () => {
+    expect(
+      tightenSummary({
+        strengths: [],
+        improvements: [
+          "This will not change your mark, but correct the Q3 definition.",
+          "This summary covers written answers only.",
+        ],
+        next_steps: [],
+      }).improvements,
+    ).toEqual(["Correct the Q3 definition."]);
   });
 
   it("keeps empty lists empty", () => {
