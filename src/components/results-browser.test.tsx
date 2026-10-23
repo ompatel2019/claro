@@ -250,3 +250,30 @@ it("preserves unanswered and review states alongside scores in sprint tiles and 
   expect(table).not.toHaveTextContent("Missed");
   expect(table).toHaveTextContent("0/4");
 });
+
+it("drops the redundant Marked chip on coloured sprint tiles but keeps it in the table", () => {
+  render(
+    <ResultsBrowser
+      sprintLayout
+      items={[
+        {
+          ...items[0],
+          position: 1,
+          mark: "2 / 2",
+          pill: "Marked",
+          state: "full",
+        },
+      ]}
+      views={views}
+      initial={0}
+    />,
+  );
+  const tile = screen.getByRole("button", { name: /^Question 1,/ });
+  expect(tile).toHaveClass("bg-brand", "text-navy-deep");
+  expect(tile).not.toHaveTextContent("Marked");
+  expect(tile).toHaveAttribute("aria-current", "true");
+  fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+  expect(screen.getByRole("table", { name: "Questions" })).toHaveTextContent(
+    "Marked",
+  );
+});

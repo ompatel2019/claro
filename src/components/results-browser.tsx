@@ -34,7 +34,14 @@ export type ResultItem = {
   state?: AnswerPillState;
 };
 
-function AnswerState({ item }: { item: ResultItem }) {
+function AnswerState({
+  item,
+  tile = false,
+}: {
+  item: ResultItem;
+  /** On a coloured tile the fill already says it was marked. */
+  tile?: boolean;
+}) {
   const score = item.mark?.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
   const earned = score && Number(score[1]) === Number(score[2]);
   const partly = score && Number(score[1]) > 0 && !earned;
@@ -54,7 +61,9 @@ function AnswerState({ item }: { item: ResultItem }) {
             : "Not answered";
   return (
     <span className="flex flex-col items-start gap-1">
-      {item.pill && <StatusPill pill={item.pill} />}
+      {item.pill && !(tile && item.pill === "Marked") && (
+        <StatusPill pill={item.pill} />
+      )}
       {word && (
         <span className="flex items-center gap-1 text-[11px] font-medium">
           <PortalIcon
@@ -430,7 +439,7 @@ export function ResultsBrowser({
                         )}
                       >
                         {it.position ?? i + 1}
-                        {sprintLayout && <AnswerState item={it} />}
+                        {sprintLayout && <AnswerState item={it} tile />}
                         {type !== "Multiple choice" && it.mark && (
                           <span className="mt-0.5 text-[10px] font-normal">
                             {mark(it)}

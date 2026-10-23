@@ -485,7 +485,7 @@ export function AnnotatedFeedback({
         >
           <h2 className="text-sm font-semibold">Marking criteria</h2>
           {completeCriteria ? (
-            <Table>
+            <Table className="[&_th]:tracking-normal [&_th]:normal-case">
               <TableHeader>
                 <TableRow>
                   <TableHead scope="col">Marks</TableHead>
