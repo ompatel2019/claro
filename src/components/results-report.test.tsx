@@ -10,8 +10,20 @@ vi.mock("./question-mark", () => ({
   QuestionMark: () => <button>Question this mark</button>,
 }));
 vi.mock("./annotated-feedback", () => ({
-  AnnotatedFeedback: ({ row }: { row: ReviewRow }) => (
-    <p>Written feedback: {row.status}</p>
+  AnnotatedFeedback: ({
+    row,
+    aiNote = true,
+    flush = false,
+  }: {
+    row: ReviewRow;
+    aiNote?: boolean;
+    flush?: boolean;
+  }) => (
+    <p>
+      Written feedback: {row.status}
+      {aiNote && " (with AI line)"}
+      {flush && " (flush)"}
+    </p>
   ),
 }));
 vi.mock("./session-shell", () => ({ isTyping: () => false }));
@@ -301,4 +313,60 @@ it("keeps unanswered MC rows distinct from incorrect answers in sprint tiles and
   expect(unansweredRow).not.toHaveTextContent("Missed");
   expect(unansweredRow.querySelector("svg")).toBeTruthy();
   expect(table.querySelectorAll("tbody tr")[1]).toHaveTextContent("Missed");
+});
+
+it("shows the AI line once under all questions, not under each written answer", () => {
+  const row = (position: number, type: ReviewRow["type"]): ReviewRow =>
+    ({
+      attempt_id: String(position),
+      position,
+      question_id: null,
+      type,
+      marks: 4,
+      max_marks: 4,
+      mark: 2,
+      status: "marked",
+      check_status: "skipped",
+      feedback: null,
+      stem: `Stem ${position}`,
+      stimulus: null,
+      options: type === "mcq" ? ["One", "Two"] : null,
+      choice_index: type === "mcq" ? 0 : null,
+      correct_index: 0,
+      source: "HSC",
+      topic_id: null,
+      explanation: null,
+      image_paths: [],
+      review: null,
+      year: null,
+      answer_text: type === "mcq" ? null : "Demand rose.",
+      transcript: null,
+      flagged: false,
+      band: null,
+      criteria: null,
+      sample_answer: null,
+    }) as ReviewRow;
+  const { rerender } = render(
+    <ResultsAnswers
+      rows={[row(1, "short"), row(2, "short")]}
+      id="sit"
+      name={() => ""}
+      photos={new Map()}
+    />,
+  );
+  expect(screen.queryByText(/with AI line/)).not.toBeInTheDocument();
+  // Inside the question card the marked answer draws no frame of its own.
+  expect(screen.getByText(/Written feedback/)).toHaveTextContent("(flush)");
+  expect(screen.getAllByText(/AI-assisted and criteria-based/)).toHaveLength(1);
+  rerender(
+    <ResultsAnswers
+      rows={[row(1, "mcq")]}
+      id="sit"
+      name={() => ""}
+      photos={new Map()}
+    />,
+  );
+  expect(
+    screen.queryByText(/AI-assisted and criteria-based/),
+  ).not.toBeInTheDocument();
 });

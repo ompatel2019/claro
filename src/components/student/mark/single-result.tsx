@@ -10,13 +10,14 @@ import {
 import { buttonVariants } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScoreRing } from "@/components/claro/data-display";
-import { PenCaret, PenTick, PenWave } from "@/components/claro/markup-answer";
-import { MarkedAnswer } from "./marked-answer";
+import { PenCaret } from "@/components/claro/markup-answer";
+import { AnnotatedFeedback } from "@/components/annotated-feedback";
 import { MarkReportProblem } from "./report-problem";
 import { cn } from "@/lib/utils";
 import { QuestionMark } from "@/components/question-mark";
 import { PortalIcon } from "@/components/icons";
 import {
+  answerTextOf,
   readComments,
   markingState,
   nextMarkLine,
@@ -36,8 +37,7 @@ export function SingleResult({
   when: string;
   topic: string;
 }) {
-  const text = row.answer_text ?? row.transcript ?? "";
-  const comments = readComments(row.feedback, text);
+  const comments = readComments(row.feedback, answerTextOf(row));
   const score = row.mark ?? 0;
   const of = row.max_marks ?? row.marks;
   const provisional = markingState(row) !== "reviewed";
@@ -63,27 +63,6 @@ export function SingleResult({
     describe: "Provide characteristics and features.",
     define: "State the meaning and identify essential qualities.",
   };
-  const segments: {
-    text: string;
-    kind?: "credit" | "improve";
-    note?: number;
-    caret?: boolean;
-  }[] = [];
-  let offset = 0;
-  for (const c of comments.filter((c) => c.start !== null)) {
-    const start = c.start!;
-    if (start < offset) continue;
-    if (start > offset) segments.push({ text: text.slice(offset, start) });
-    segments.push({
-      text: c.quote,
-      kind: c.kind === "strength" ? "credit" : "improve",
-      note: c.n,
-    });
-    offset = start + c.quote.length;
-  }
-  segments.push({ text: text.slice(offset) });
-  for (const c of comments.filter((c) => c.start === null))
-    segments.push({ text: "", caret: c.kind === "fix", note: c.n });
   return (
     <div className="min-w-0">
       <header className="mb-6">
@@ -227,48 +206,16 @@ export function SingleResult({
             </Link>
           </div>
         </Card>
-        <Card className="md:col-span-2 xl:col-span-3">
-          <CardHeader className="flex flex-wrap justify-between gap-3">
-            <div>
-              <CardTitle>Your answer, marked</CardTitle>
-              <CardDescription className="mt-1">
-                Hover or focus a note to see the words it refers to.
-              </CardDescription>
-            </div>
-            <div className="text-muted-foreground hidden items-center gap-4 text-xs sm:flex">
-              <span className="flex items-center gap-1.5">
-                <PenTick />
-                Mark earned
-              </span>
-              <span className="flex items-center gap-1.5">
-                <PenWave />
-                Needs more
-              </span>
-              <span className="flex items-center gap-1.5">
-                <PenCaret />
-                Missing
-              </span>
-            </div>
-          </CardHeader>
+        {/* Visible overflow keeps the comment column sticky, 16px under the 56px top bar. */}
+        <Card className="overflow-visible [--cma-sticky-top:72px] md:col-span-2 xl:col-span-3">
           <CardContent>
-            <MarkedAnswer
-              segments={segments}
-              notes={comments.map((c) => ({
-                n: c.n,
-                kind:
-                  c.kind === "strength"
-                    ? "credit"
-                    : c.start === null
-                      ? "missing"
-                      : "improve",
-                title:
-                  c.kind === "strength"
-                    ? "Mark earned"
-                    : c.start === null
-                      ? "Add evidence"
-                      : "Needs more",
-                text: c.body,
-              }))}
+            <AnnotatedFeedback
+              row={row}
+              answerOnly
+              flush
+              keepLineBreaks
+              readOnly
+              showReferences={false}
             />
             <details className="mt-4 text-[13px]">
               <summary className="text-muted-foreground cursor-pointer">

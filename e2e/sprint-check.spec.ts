@@ -138,18 +138,41 @@ for (const width of [390, 1600]) {
       const feedback = page.getByRole("region", {
         name: "Checked answer feedback",
       });
-      await expect(feedback).toContainText("1 / 4");
-      await expect(feedback).toContainText("Band: Sound");
+      const score = feedback.getByRole("complementary", {
+        name: "Your mark: 1/4",
+      });
+      await expect(score).toContainText("1/4 marks");
+      await expect(score).toContainText("3 to gain");
+      await expect(
+        feedback.getByText("Band: Sound", { exact: true }),
+      ).toBeVisible();
       await expect(
         feedback.getByRole("button", { name: /^Strength 1/ }),
       ).toBeVisible();
+      const slider = feedback.getByRole("region", {
+        name: "Comments",
+        exact: true,
+      });
+      await expect(slider).toHaveAttribute("aria-roledescription", "carousel");
+      const fixSlide = slider.getByRole("group", { name: "Comment 2 of 2" });
+      await expect(fixSlide).toContainText("Overall");
+      await expect(fixSlide).toContainText(
+        "Your next mark: Explain spare capacity.",
+      );
       await expect(
-        feedback.getByText("Overall", { exact: true }),
-      ).toBeVisible();
+        slider.getByRole("button", { name: "Next comment" }),
+      ).toHaveAttribute("aria-disabled", "true");
+      const anchor = feedback.getByRole("button", { name: /^Strength 1/ });
+      await anchor.click();
+      await expect(anchor).toHaveAttribute("data-selected", "true");
+      const card = slider.getByRole("group", { name: "Comment 1 of 2" });
+      await expect(card).toContainText("You identified demand.");
+      await expect(fixSlide).toHaveCount(0);
+      await expect(slider.locator('[data-card="1"]')).toHaveAttribute(
+        "inert",
+        "",
+      );
       if (width > 1000) {
-        const anchor = feedback.getByRole("button", { name: /^Strength 1/ });
-        const card = feedback.locator("[data-anchored]").first();
-        await expect(card).toBeVisible();
         await expect
           .poll(async () => {
             const [a, c] = await Promise.all([
@@ -159,7 +182,16 @@ for (const width of [390, 1600]) {
             return !!a && !!c && c.x > a.x + a.width;
           })
           .toBe(true);
+        await expect(feedback.locator("svg.cma-link")).toBeVisible();
+      } else {
+        await expect(slider).toBeInViewport();
       }
+      await score
+        .getByRole("button", {
+          name: "Your next mark: Explain spare capacity.",
+        })
+        .click();
+      await expect(fixSlide).toContainText("Link demand to prices.");
       await expect
         .poll(() =>
           page.evaluate(
@@ -167,9 +199,6 @@ for (const width of [390, 1600]) {
           ),
         )
         .toBe(true);
-      await expect(
-        feedback.getByRole("button", { name: "Fixes (1)", exact: true }),
-      ).toBeVisible();
       await feedback
         .getByText("How to reach full marks", { exact: true })
         .click();
@@ -181,7 +210,9 @@ for (const width of [390, 1600]) {
       ).toHaveCount(0);
       await page.getByRole("button", { name: "Next question" }).click();
       await page.getByRole("button", { name: "Previous question" }).click();
-      await expect(feedback).toContainText("Explain spare capacity.");
+      await expect(
+        slider.getByRole("group", { name: "Comment 2 of 2" }),
+      ).toContainText("Your next mark: Explain spare capacity.");
       expect(calls).toBe(1);
       await page.reload();
       // Resume selects the next unanswered question; return to the checked one.
@@ -224,10 +255,14 @@ for (const width of [390, 1600]) {
       const feedback = page.getByRole("region", {
         name: "Checked answer feedback",
       });
-      await expect(feedback).toContainText("0 / 4");
+      const score = feedback.getByRole("complementary", {
+        name: "Your mark: 0/4",
+      });
+      await expect(score).toContainText("0/4 marks");
+      await expect(score).toContainText("4 to gain");
       await expect(feedback).toContainText(/Demand\d* grows\./);
       await expect(
-        feedback.getByRole("group", { name: "Filter comments" }),
+        feedback.getByRole("region", { name: "Comments", exact: true }),
       ).toHaveCount(0);
     });
 

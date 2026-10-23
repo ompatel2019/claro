@@ -69,10 +69,11 @@ test.describe("S13 writing-pattern summaries", () => {
         await expect(page.getByText(line, { exact: true })).toBeVisible();
       await expect(
         page
+          .getByRole("region", { name: "Comments", exact: true })
+          .getByRole("group", { name: "Comment 1 of 1" })
           .getByText("Explain why demand exceeds supply in this example.", {
             exact: true,
-          })
-          .first(),
+          }),
       ).toBeVisible();
       expect(
         await page.evaluate(
@@ -118,10 +119,11 @@ test.describe("S13 writing-pattern summaries", () => {
     ).toBeVisible();
     await expect(
       page
+        .getByRole("region", { name: "Comments", exact: true })
+        .getByRole("group", { name: "Comment 1 of 1" })
         .getByText("Explain why demand exceeds supply in this example.", {
           exact: true,
-        })
-        .first(),
+        }),
     ).toBeVisible();
   });
 });
