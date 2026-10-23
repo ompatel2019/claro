@@ -82,6 +82,7 @@ it("shows all builder sections, preserves settings across type selection, and re
   const marks = screen.getByRole("spinbutton", { name: "Marks" });
   expect(marks).toHaveValue(30);
   fireEvent.change(marks, { target: { value: "45" } });
+  fireEvent.blur(marks);
   fireEvent.click(screen.getByRole("button", { name: "Short answer" }));
   expect(marks).toHaveValue(45);
   expect(start()).toBeEnabled();
@@ -161,6 +162,7 @@ it("reselecting the current type keeps its size unit and count", () => {
   fireEvent.change(screen.getByRole("spinbutton", { name: "Questions" }), {
     target: { value: "8" },
   });
+  fireEvent.blur(screen.getByRole("spinbutton", { name: "Questions" }));
   fireEvent.click(screen.getByRole("button", { name: "Short answer" }));
   expect(screen.getByRole("spinbutton", { name: "Questions" })).toHaveValue(8);
 });
@@ -175,16 +177,20 @@ it("mixed inputs stay linked at boundaries and reset to an even split for a pres
   expect(mc).toHaveValue(23);
   expect(shorts).toHaveValue(22);
   fireEvent.change(mc, { target: { value: "0" } });
+  fireEvent.blur(mc);
   expect(shorts).toHaveValue(45);
   fireEvent.change(shorts, { target: { value: "999" } });
+  fireEvent.blur(shorts);
   expect(mc).toHaveValue(0);
   expect(shorts).toHaveValue(45);
   fireEvent.change(screen.getByRole("spinbutton", { name: "Marks" }), {
     target: { value: "30" },
   });
+  fireEvent.blur(screen.getByRole("spinbutton", { name: "Marks" }));
   expect(mc).toHaveValue(15);
   expect(shorts).toHaveValue(15);
   fireEvent.change(shorts, { target: { value: "5" } });
+  fireEvent.blur(shorts);
   expect(mc).toHaveValue(25);
   expect(
     screen.getByText("25 multis + 5 marks of shorts = 30 marks"),
@@ -220,6 +226,9 @@ it("an empty requested bucket disables start even when the other type has questi
     screen.getByRole("spinbutton", { name: "Multiple choice questions" }),
     { target: { value: "20" } },
   );
+  fireEvent.blur(
+    screen.getByRole("spinbutton", { name: "Multiple choice questions" }),
+  );
   await waitFor(() =>
     expect(screen.getByText("No questions match")).toBeVisible(),
   );
@@ -231,6 +240,7 @@ it("clamps the editable summary total and disables steppers at bounds", () => {
   const marks = screen.getByRole("spinbutton", { name: "Marks" });
   expect(start().closest("form")).toContainElement(marks);
   fireEvent.change(marks, { target: { value: "1" } });
+  fireEvent.blur(marks);
   expect(marks).toHaveValue(5);
   expect(
     screen.getByRole("button", { name: "Decrease total marks" }),
@@ -241,6 +251,7 @@ it("clamps the editable summary total and disables steppers at bounds", () => {
   fireEvent.click(screen.getByRole("button", { name: "Increase total marks" }));
   expect(marks).toHaveValue(6);
   fireEvent.change(marks, { target: { value: "999" } });
+  fireEvent.blur(marks);
   expect(marks).toHaveValue(100);
   expect(
     screen.getByRole("button", { name: "Increase total marks" }),
@@ -430,4 +441,40 @@ it("clears a unit's UUID dot points when its checkbox is deselected", async () =
   expect(config.topics).toEqual([]);
   expect(config.subtopics).toEqual([]);
   expect(screen.queryByRole("button", { name: "Dot point 7" })).toBeNull();
+});
+
+it("keeps sequential marks keystrokes as a draft until blur or Enter", () => {
+  render(<SprintSetup topics={[]} params={{ type: "short" }} />);
+  const marks = screen.getByRole("spinbutton", { name: "Marks" });
+  const config = () =>
+    JSON.parse(
+      (document.querySelector('input[name="config"]') as HTMLInputElement)
+        .value,
+    );
+  fireEvent.focus(marks);
+  fireEvent.change(marks, { target: { value: "" } });
+  expect(marks).toHaveValue(null);
+  expect(config().target).toBe(30);
+  fireEvent.change(marks, { target: { value: "2" } });
+  expect(marks).toHaveValue(2);
+  expect(config().target).toBe(30);
+  fireEvent.change(marks, { target: { value: "20" } });
+  expect(marks).toHaveValue(20);
+  expect(config().target).toBe(30);
+  fireEvent.keyDown(marks, { key: "Enter" });
+  expect(config().target).toBe(20);
+  expect(mocks.start).not.toHaveBeenCalled();
+  fireEvent.change(marks, { target: { value: "2" } });
+  expect(marks).toHaveValue(2);
+  fireEvent.blur(marks);
+  expect(marks).toHaveValue(10);
+  expect(config().target).toBe(10);
+  fireEvent.change(marks, { target: { value: "999" } });
+  expect(marks).toHaveValue(999);
+  fireEvent.blur(marks);
+  expect(marks).toHaveValue(60);
+  expect(config().target).toBe(60);
+  fireEvent.change(marks, { target: { value: "" } });
+  fireEvent.blur(marks);
+  expect(marks).toHaveValue(10);
 });

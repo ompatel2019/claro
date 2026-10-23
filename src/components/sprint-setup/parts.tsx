@@ -1,4 +1,4 @@
-import { useId } from "react";
+import { useId, useState } from "react";
 import { Minus, Plus } from "../icons";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -106,6 +106,18 @@ export function Stepper({
   onChange: (value: number) => void;
 }) {
   const id = useId();
+  const [draft, setDraft] = useState<string | null>(null);
+  function commit() {
+    if (draft === null) return;
+    const parsed = Number(draft);
+    onChange(
+      Math.min(
+        max,
+        Math.max(min, Number.isFinite(parsed) ? Math.round(parsed) : min),
+      ),
+    );
+    setDraft(null);
+  }
   return (
     <div className="flex items-center justify-between gap-3">
       <label htmlFor={id} className="min-w-0 text-sm font-medium">
@@ -133,8 +145,15 @@ export function Stepper({
           max={max}
           step={1}
           className="w-16 text-center tabular-nums"
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
+          value={draft ?? value}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              commit();
+            }
+          }}
         />
         <span className="sr-only" aria-live="polite">
           {label}: {value}
