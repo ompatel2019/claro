@@ -530,7 +530,8 @@
   [data-slot="table-head"],
   [data-slot="table-cell"],
   .progress-topics :is(th, td) {
-    @apply border-foreground bg-card border;
+    /* No cell fill: the table is the surface, so row states show through. */
+    @apply border-foreground border;
   }
   [data-slot="table-head"] {
     @apply text-muted-foreground h-10 px-3 text-left align-middle text-xs font-medium whitespace-nowrap;
