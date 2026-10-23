@@ -2,10 +2,10 @@ begin;
 insert into auth.users (id) values ('c9000000-0000-4000-8000-000000000009');
 insert into public.topics(id, name, sort) values ('s9', 'Sprint marks fixture', 999);
 insert into public.questions(id,type,topic_id,marks,stem,options,correct_index,source,year,origin,status)
-select 's9-mc-'||i,'mcq','s9',1,'Synthetic MC',array['A','B','C','D'],0,'Synthetic Q'||i,2020,'claro','live'
+select 's9-mc-'||i,'mcq','s9',1,'Synthetic MC '||i,array['A','B','C','D'],0,'Synthetic Q'||i,2020,'claro','live'
 from generate_series(1,6) i;
 insert into public.questions(id,type,topic_id,marks,stem,criteria,source,year,origin,status)
-select 's9-short-'||m||'-'||i,'short','s9',m,'Synthetic short','[]'::jsonb,'Synthetic Q'||i,2026,'claro','live'
+select 's9-short-'||m||'-'||i,'short','s9',m,'Synthetic short '||m||'-'||i,'[]'::jsonb,'Synthetic Q'||i,2026,'claro','live'
 from unnest(array[2,5]) m cross join generate_series(1,6) i;
 set local role authenticated;
 select set_config('request.jwt.claim.sub', 'c9000000-0000-4000-8000-000000000009', true);
