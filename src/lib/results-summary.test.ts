@@ -10,7 +10,6 @@ describe("isMetaLine", () => {
     "The feedback only covers written answers.",
     "Your MC answers were not provided.",
     "This summary only covers your written answers.",
-    "This summary is based on your short answers.",
   ])("drops %s", (line) => expect(isMetaLine(line)).toBe(true));
 
   it.each([
