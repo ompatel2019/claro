@@ -477,8 +477,11 @@ it("falls back to one plain line when a summary has no strengths or fixes", () =
     />,
   );
   expect(
-    screen.getByText("There is not enough writing to assess habits."),
+    screen.getByText(/No overall strengths or fixes for this sprint/),
   ).toBeVisible();
+  expect(
+    screen.queryByText("There is not enough writing to assess habits."),
+  ).not.toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Fixes" })).toBeNull();
   rerender(
     <OverallFeedback

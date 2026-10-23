@@ -111,7 +111,7 @@ test.describe("S13 writing-pattern summaries", () => {
     await signIn(page, fixture.email, fixture.password);
     await page.goto(`/student/activity/${fixture.sessions[0]}`);
     await expect(
-      page.getByText(summary.next_steps[0], { exact: true }),
+      page.getByText(/No overall strengths or fixes for this sprint/),
     ).toBeVisible();
     await save(null);
     await page.reload();

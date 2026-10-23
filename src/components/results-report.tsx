@@ -7,7 +7,7 @@ import {
   TYPE_LABEL,
   type McGridRow,
 } from "@/lib/results";
-import { isMetaLine, questionRefs, summaryView } from "@/lib/results-summary";
+import { questionRefs, summaryView } from "@/lib/results-summary";
 import { answerPillState } from "@/lib/answer-pill";
 import { firstLost } from "@/lib/results-stats";
 import { formatSampleMaths } from "@/lib/sample-maths";
@@ -358,8 +358,9 @@ export function OverallFeedback({
         !view.strengths.length &&
         !view.fixes.length ? (
           <p className="bg-card text-ink-2 shadow-card rounded-xl border p-4 text-[13px]">
-            {summary.next_steps?.find((t) => t.trim() && !isMetaLine(t)) ??
-              "No overall strengths or fixes for this sprint. Review each answer above."}
+            {/* The next mark lives in each question's score card, never here. */}
+            No overall strengths or fixes for this sprint. Review each answer
+            above.
           </p>
         ) : summary ? (
           <div className="grid gap-3 sm:grid-cols-2">
