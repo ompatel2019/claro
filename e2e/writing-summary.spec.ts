@@ -74,7 +74,7 @@ test.describe("S13 writing-pattern summaries", () => {
       await expect(
         page
           .getByRole("region", { name: "Comments", exact: true })
-          .getByRole("group", { name: "Comment 1 of 1" })
+          .locator("[data-card]")
           .getByText("Explain why demand exceeds supply in this example.", {
             exact: true,
           }),
@@ -121,7 +121,7 @@ test.describe("S13 writing-pattern summaries", () => {
     await expect(
       page
         .getByRole("region", { name: "Comments", exact: true })
-        .getByRole("group", { name: "Comment 1 of 1" })
+        .locator("[data-card]")
         .getByText("Explain why demand exceeds supply in this example.", {
           exact: true,
         }),

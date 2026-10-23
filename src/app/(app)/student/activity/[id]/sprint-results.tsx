@@ -211,6 +211,12 @@ export async function SprintResults({ id }: { id: string }) {
           )}
         </Stat>
       </section>
+      {/* Strengths and fixes sum up the whole sprint, so they lead. */}
+      <OverallFeedback
+        summary={s.summary}
+        pending={progress.summaryPending}
+        hideNextStep
+      />
       <ResultsAnswers
         sprintLayout
         mcGrid={mcGridRows(rows)}
@@ -219,11 +225,6 @@ export async function SprintResults({ id }: { id: string }) {
         name={name}
         photos={url}
         cards={cards}
-      />
-      <OverallFeedback
-        summary={s.summary}
-        pending={progress.summaryPending}
-        hideNextStep
       />
     </div>
   );

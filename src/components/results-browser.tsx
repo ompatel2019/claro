@@ -1,14 +1,16 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { McGridRow } from "@/lib/results";
 import {
   RESULT_ICON,
   RESULT_LEGEND,
+  RESULT_OPEN,
   RESULT_SWATCH,
   RESULT_TILE,
   RESULT_WORD,
   type AnswerPillState,
 } from "@/lib/answer-pill";
+import { TRACKER_STATE } from "./sprint/tracker-state";
 import { Check, Close, PortalIcon } from "./icons";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { cn } from "@/lib/utils";
@@ -35,18 +37,23 @@ export type ResultItem = {
   pill: Pill | null;
   /** Sprint results tiles and table use the result states. */
   state?: AnswerPillState;
+  /** Flagged during the sprint: a tracker flag dot on the pill. */
+  flagged?: boolean;
 };
 
 /** §3.4 question strip (or compact table) and the selected question; J / K move between questions. */
 export function ResultsBrowser({
   items,
   views,
+  actions,
   initial,
   mcGrid,
   sprintLayout = false,
 }: {
   items: ResultItem[];
   views: React.ReactNode[];
+  /** Sprint layout: each question's actions row, shown above its card. */
+  actions?: React.ReactNode[];
   initial: number;
   mcGrid?: McGridRow[];
   sprintLayout?: boolean;
@@ -136,7 +143,7 @@ export function ResultsBrowser({
   const mark = (it: ResultItem) =>
     sprintLayout ? it.mark?.replace(/\s*\/\s*/g, "/") : it.mark;
   const label = (it: ResultItem, i: number) =>
-    `Question ${it.position ?? i + 1}${it.mark ? `, ${mark(it)} marks` : ""}${it.pill ? `, ${it.pill}` : ""}`;
+    `Question ${it.position ?? i + 1}${it.mark ? `, ${mark(it)} marks` : ""}${it.pill ? `, ${it.pill}` : ""}${it.flagged ? ", flagged" : ""}`;
   const mcTable = mcGrid && mcGrid.length > 0 && (
     <Card>
       <CardHeader>
@@ -238,6 +245,7 @@ export function ResultsBrowser({
         mark={mark}
         mcTable={mcTable}
         view={views[index]}
+        actions={actions?.[index]}
       />
     );
   return (
@@ -375,7 +383,7 @@ export function ResultsBrowser({
   );
 }
 
-/** Sprint results: equal tiles (or the table) to pick a question, then that question, then previous / next. */
+/** Sprint results: pills (or the table) to pick a question, its actions and previous / next, then the question. */
 function SprintAnswers({
   items,
   index,
@@ -386,6 +394,7 @@ function SprintAnswers({
   mark,
   mcTable,
   view,
+  actions,
 }: {
   items: ResultItem[];
   index: number;
@@ -396,6 +405,7 @@ function SprintAnswers({
   mark: (it: ResultItem) => string | null | undefined;
   mcTable: React.ReactNode;
   view: React.ReactNode;
+  actions?: React.ReactNode;
 }) {
   const shown = (it: ResultItem) =>
     it.state === "not_answered" ? "—" : (mark(it) ?? "—");
@@ -474,10 +484,15 @@ function SprintAnswers({
                           <span
                             aria-hidden
                             className={cn(
-                              "size-2.5 rounded-full",
+                              "inline-grid h-4 w-5 place-items-center rounded-full",
                               RESULT_SWATCH[state],
                             )}
-                          />
+                          >
+                            <PortalIcon
+                              name={RESULT_ICON[state]}
+                              className="size-3"
+                            />
+                          </span>
                           {/* A terminal status pill ("Couldn't mark") already says it. */}
                           {!(state === "unmarked" && it.pill) &&
                             RESULT_WORD[state]}
@@ -496,8 +511,8 @@ function SprintAnswers({
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-          <ol aria-label="Questions" className="flex flex-wrap gap-1.5">
+        <div className="space-y-3">
+          <ol aria-label="Questions" className="flex flex-wrap gap-2">
             {items.map((it, i) => {
               const state = it.state ?? "pending";
               return (
@@ -507,10 +522,12 @@ function SprintAnswers({
                     title={it.pill ?? undefined}
                     aria-label={label(it, i)}
                     aria-current={i === index ? "true" : undefined}
+                    data-state={state}
                     onClick={() => setIndex(i)}
                     className={cn(
-                      "focus-visible:ring-ring inline-flex h-9 items-center gap-1.5 rounded-full px-3 text-sm font-semibold tabular-nums transition-colors outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
-                      i === index ? RESULT_TILE.open : RESULT_TILE[state],
+                      "focus-visible:ring-ring relative inline-flex h-9 items-center gap-1.5 rounded-full border-[1.5px] border-transparent px-3 text-sm font-semibold tabular-nums transition-colors outline-none hover:border-current/35 focus-visible:ring-2 focus-visible:ring-offset-2",
+                      RESULT_TILE[state],
+                      i === index && RESULT_OPEN,
                     )}
                   >
                     <span>Q{it.position ?? i + 1}</span>
@@ -519,8 +536,16 @@ function SprintAnswers({
                       aria-hidden
                       className="size-3.5"
                     />
-                    {state !== "not_answered" && (
-                      <span className="font-bold">{shown(it)}</span>
+                    {state !== "not_answered" && <span>{shown(it)}</span>}
+                    {it.flagged && (
+                      <span
+                        aria-hidden
+                        data-flag
+                        className={cn(
+                          "ring-background absolute -top-0.5 -right-0.5 size-2.5 rounded-full ring-2",
+                          TRACKER_STATE.flag,
+                        )}
+                      />
                     )}
                   </button>
                 </li>
@@ -531,19 +556,38 @@ function SprintAnswers({
             aria-label="Key"
             className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-[13px]"
           >
-            {RESULT_LEGEND.map(([text, swatch]) => (
+            {RESULT_LEGEND.map(([text, state]) => (
               <li key={text} className="flex items-center gap-1.5">
                 <span
                   aria-hidden
-                  className={cn("size-2.5 rounded-full", swatch)}
-                />
+                  className={cn(
+                    "inline-grid h-4 w-5 place-items-center rounded-full",
+                    state === "open"
+                      ? "border-ink-2 border-[1.5px]"
+                      : RESULT_SWATCH[state],
+                  )}
+                >
+                  {state !== "open" && (
+                    <PortalIcon name={RESULT_ICON[state]} className="size-3" />
+                  )}
+                </span>
                 {text}
               </li>
             ))}
+            {items.some((it) => it.flagged) && (
+              <li className="flex items-center gap-1.5">
+                <span
+                  aria-hidden
+                  className={cn("size-2.5 rounded-full", TRACKER_STATE.flag)}
+                />
+                Flagged
+              </li>
+            )}
           </ul>
         </div>
       )}
-      <div key={index}>{view}</div>
+      {/* Keyed by question: a draft in one question's actions (e.g. a dispute) never carries over. */}
+      <Fragment key={`actions-${index}`}>{actions}</Fragment>
       <nav
         aria-label="Previous and next question"
         className="grid grid-cols-2 gap-3"
@@ -602,6 +646,7 @@ function SprintAnswers({
           </button>
         ))}
       </nav>
+      <div key={index}>{view}</div>
     </section>
   );
 }

@@ -257,8 +257,9 @@ test.describe("Local results feedback", () => {
         page.getByRole("heading", { name: "Your next step" }),
       ).toHaveCount(0);
       const headings = await page.getByRole("heading").allTextContents();
-      expect(headings.indexOf("Your answers")).toBeLessThan(
-        headings.indexOf("Strengths and fixes"),
+      // Strengths and fixes sum up the sprint, so they lead.
+      expect(headings.indexOf("Strengths and fixes")).toBeLessThan(
+        headings.indexOf("Your answers"),
       );
       await expect(
         page.getByText(/^Sun 18 Oct, \d+:\d{2} [ap]m · \d+ questions?$/),
@@ -276,12 +277,24 @@ test.describe("Local results feedback", () => {
       await expect(score).toContainText(
         "Your next mark: Aggregate advice stays visible.",
       );
-      const slider = page
+      await expect(score).not.toContainText("Marked");
+      // Every comment shows at once in the column; no slider.
+      const column = page
         .locator("#q-2")
         .getByRole("region", { name: "Comments", exact: true });
+      await expect(column.locator("[data-card]")).toHaveCount(2);
+      await expect(column.locator("[data-card]").first()).toContainText(
+        "Your next mark: Stored per-comment advice.",
+      );
       await expect(
-        slider.getByRole("group", { name: "Comment 1 of 2" }),
-      ).toContainText("Your next mark: Stored per-comment advice.");
+        column.getByRole("button", { name: "Next comment" }),
+      ).toHaveCount(0);
+      // The actions row sits above the question card.
+      const actionsBox = await page
+        .getByRole("link", { name: "Practise a similar question" })
+        .boundingBox();
+      const cardBox = await page.locator("#q-2").boundingBox();
+      expect(actionsBox!.y).toBeLessThan(cardBox!.y);
       // One flat card: no criteria table and no "How to reach full marks".
       await expect(page.locator("#q-2 table")).toHaveCount(0);
       await expect(
@@ -351,30 +364,34 @@ test.describe("Local results feedback", () => {
     await expect(
       review.getByText("Full-marks answer", { exact: true }),
     ).toBeVisible();
-    const slider = review.getByRole("region", {
+    const column = review.getByRole("region", {
       name: "Comments",
       exact: true,
     });
-    const fixSlide = slider.getByRole("group", { name: "Comment 1 of 2" });
-    await expect(fixSlide).toContainText("Explain the link to supply.");
-    await expect(fixSlide).toContainText(
+    const fixCard = column.locator("[data-card]").first();
+    const strengthCard = column.locator("[data-card]").nth(1);
+    await expect(fixCard).toContainText("Explain the link to supply.");
+    await expect(fixCard).toContainText(
       "Your next mark: Stored per-comment advice.",
     );
+    await expect(strengthCard).toContainText(
+      "You identify the effect on prices.",
+    );
+    // A highlight focuses its comment and dims the other; the page does not scroll.
     const fix = review.getByRole("button", { name: /^Fix 1,/ });
+    const y0 = await page.evaluate(() => window.scrollY);
+    await fix.click();
+    await expect(fixCard).toHaveAttribute("aria-pressed", "true");
+    await expect(strengthCard).toHaveAttribute("data-dim", "true");
     await expect(fix).toHaveAttribute("data-selected", "true");
-    await slider.getByRole("button", { name: "Next comment" }).click();
-    await expect(
-      slider.getByRole("group", { name: "Comment 2 of 2" }),
-    ).toContainText("You identify the effect on prices.");
+    expect(await page.evaluate(() => window.scrollY)).toBe(y0);
+    // A comment lights up its phrase.
+    await strengthCard.click();
+    await expect(strengthCard).toHaveAttribute("aria-pressed", "true");
     await expect(
       review.getByRole("button", { name: /^Strength 2,/ }),
     ).toHaveAttribute("data-selected", "true");
-    await expect(slider.locator('[data-card="1"]')).toHaveAttribute(
-      "inert",
-      "",
-    );
-    await slider.getByRole("button", { name: "Previous comment" }).click();
-    await expect(fixSlide).toContainText("Explain the link to supply.");
+    await expect(fixCard).toHaveAttribute("data-dim", "true");
     await page
       .getByRole("link", { name: "Go to Q3", exact: true })
       .first()

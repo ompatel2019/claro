@@ -86,6 +86,7 @@ export function AnnotatedFeedback({
   aiNote = true,
   flush = false,
   bare = false,
+  commentColumn = false,
 }: {
   row: ReviewRow;
   photos?: string[];
@@ -105,6 +106,8 @@ export function AnnotatedFeedback({
   flush?: boolean;
   /** Sprint results: no "How to reach full marks" and no actions row; the host owns both. */
   bare?: boolean;
+  /** Sprint results: every comment in a column beside the answer, no slider and no "Marked" chip. */
+  commentColumn?: boolean;
 }) {
   const nextCommentId = useRef(
     Math.min(0, ...(edit?.comments.map((c) => c.id) ?? [])) - 1,
@@ -672,6 +675,7 @@ export function AnnotatedFeedback({
             comments={comments}
             flush={flush}
             aiNote={aiNote}
+            column={commentColumn}
             note={
               photos.length > 0
                 ? "Highlights show on the typed copy of your photo."
@@ -685,7 +689,10 @@ export function AnnotatedFeedback({
                     mark: markLabel(row).split(" / ")[0],
                     max,
                     gain: Math.max(0, max - Number(row.mark)),
-                    tags: [band?.label, pill].filter((t): t is string => !!t),
+                    tags: [
+                      band?.label,
+                      commentColumn && pill === "Marked" ? null : pill,
+                    ].filter((t): t is string => !!t),
                     note:
                       state === "in_review" &&
                       row.review?.reason !== "student_dispute"
