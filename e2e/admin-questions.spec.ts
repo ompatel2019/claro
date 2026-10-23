@@ -166,11 +166,13 @@ test.describe("Admin questions", () => {
     await expect(table.getByRole("row")).toHaveCount(3, { timeout: 60000 });
     await expect(async () => {
       const params = new URL(page.url()).searchParams;
-      if (params.get("sort") !== "id" || params.get("dir") !== "asc")
-        await table.getByRole("button", { name: "ID", exact: true }).click();
-      await expect(page).toHaveURL(/sort=id&dir=asc/);
+      if (params.get("sort") !== "source" || params.get("dir") !== "asc")
+        await table
+          .getByRole("button", { name: "Source", exact: true })
+          .click();
+      await expect(page).toHaveURL(/sort=source&dir=asc/);
     }).toPass();
-    await expect(table.getByRole("row").nth(1)).toContainText(id);
+    await expect(table.getByRole("row").nth(1)).toContainText(`${tag} Q1(c)`);
     // Bulk bar appears with a selection; Set verb applies to the rows.
     await expect(async () => {
       const select = table.getByRole("checkbox", {

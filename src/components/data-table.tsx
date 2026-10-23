@@ -189,7 +189,7 @@ function TableView<T extends { id: string }>({
                   {c.sort ? (
                     <button
                       type="button"
-                      className="inline-flex items-center gap-1 uppercase"
+                      className="inline-flex items-center gap-1"
                       onClick={() => toggle(c.id)}
                     >
                       {c.header}
