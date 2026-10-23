@@ -125,7 +125,7 @@ export function StatCard({
         <div className="flex items-end justify-between gap-3">
           <p
             className={cn(
-              "text-[30px] leading-none font-bold tracking-[-0.035em] tabular-nums",
+              "num-display text-[30px] leading-none font-bold",
               empty &&
                 "text-muted-foreground text-sm leading-6 font-normal tracking-normal",
             )}
@@ -245,14 +245,14 @@ export function ScoreRing({
   return (
     <div
       data-component="ScoreRing"
-      className="relative grid shrink-0 place-items-center tabular-nums"
+      className="relative grid shrink-0 place-items-center"
       style={{ width: size, height: size }}
       role="img"
       aria-label={`${score} out of ${of}`}
     >
       <Ring value={score} max={of} size={size} stroke={9} />
       <div className="absolute inset-0 grid place-content-center text-center">
-        <span className="text-[26px] leading-none font-bold tracking-[-0.03em]">
+        <span className="num-display text-[26px] leading-none font-bold">
           {score}
           <span className="text-muted-foreground text-[15px] font-semibold">
             /{of}

@@ -1170,25 +1170,25 @@ function Stats({
       <dl className="grid grid-cols-2 gap-3">
         <div>
           <dt className="text-muted-foreground text-xs">Attempts</dt>
-          <dd className="text-xl font-semibold tabular-nums">
+          <dd className="num-display text-xl font-semibold">
             {stats.attempts}
           </dd>
         </div>
         <div>
           <dt className="text-muted-foreground text-xs">Average</dt>
-          <dd className="text-xl font-semibold tabular-nums">
+          <dd className="num-display text-xl font-semibold">
             {stats.avg == null ? "No marks yet" : `${stats.avg}%`}
           </dd>
         </div>
         <div>
           <dt className="text-muted-foreground text-xs">Check disagreements</dt>
-          <dd className="text-xl font-semibold tabular-nums">
+          <dd className="num-display text-xl font-semibold">
             {stats.disagreements}
           </dd>
         </div>
         <div>
           <dt className="text-muted-foreground text-xs">Open reports</dt>
-          <dd className="text-xl font-semibold tabular-nums">
+          <dd className="num-display text-xl font-semibold">
             {stats.reportCount}
           </dd>
         </div>

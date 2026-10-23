@@ -37,7 +37,7 @@ export function ResultStat({
         <div className="min-w-0">
           <p className="text-muted-foreground text-[13px]">{label}</p>
           <p
-            className={`${score ? "mt-1" : "mt-3"} text-2xl leading-none font-bold tracking-tight tabular-nums sm:text-[28px]`}
+            className={`${score ? "mt-1" : "mt-3"} num-display text-2xl leading-none font-bold sm:text-[28px]`}
           >
             {value}
           </p>

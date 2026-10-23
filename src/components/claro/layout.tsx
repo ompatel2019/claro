@@ -124,7 +124,7 @@ export function ExamCountdown({
       <div className="relative">
         <p className="text-xs leading-4 font-semibold text-white/78">{name}</p>
         <p className="mt-1.5 flex items-baseline gap-1.5">
-          <span className="text-[28px] leading-8 font-bold tracking-[-0.02em] tabular-nums">
+          <span className="num-display text-[28px] leading-8 font-bold">
             {days}
           </span>
           <span className="text-sm font-semibold text-white/86">

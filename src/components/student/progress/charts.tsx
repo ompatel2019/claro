@@ -76,7 +76,7 @@ export function ProgressChart({
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
         {!volume && values.length > 0 ? (
           <div className="flex flex-wrap items-center gap-4">
-            <span className="relative inline-block px-3 py-1 text-3xl font-bold tabular-nums">
+            <span className="num-display relative inline-block px-3 py-1 text-3xl font-bold">
               {Math.round(values.at(-1)!.value)}%
               <svg
                 className="pen pen-draw absolute -inset-x-1 -inset-y-2 h-[calc(100%+16px)] w-[calc(100%+8px)]"

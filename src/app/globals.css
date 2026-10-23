@@ -273,6 +273,12 @@
     font-variant-numeric: tabular-nums;
   }
 }
+/* Big stat numerals (brand portal-number): proportional figures, -2% tracking.
+   Tabular figures stay for tables, timers and small inline counts. */
+@utility num-display {
+  font-variant-numeric: proportional-nums;
+  letter-spacing: -0.02em;
+}
 
 /* ==========================================================================
    SHADCN-EQUIVALENT PRIMITIVES
@@ -1264,8 +1270,7 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   font-size: 22px;
   line-height: 26px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
+  @apply num-display;
 }
 .home-session-score small {
   display: block;
@@ -1813,8 +1818,7 @@ body:has(.sprint-focus)
   font-size: 20px;
   line-height: 24px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
+  @apply num-display;
 }
 .ac-res b small {
   color: var(--muted-foreground);

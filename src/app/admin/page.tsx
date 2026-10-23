@@ -133,7 +133,7 @@ async function Dashboard() {
             <p className="text-muted-foreground text-xs">Spend this month</p>
           </CardHeader>
           <CardContent>
-            <p className="text-[30px] leading-none font-bold tracking-[-0.035em] tabular-nums">
+            <p className="num-display text-[30px] leading-none font-bold">
               {usd(d.spend.month)} of ${d.spend.cap}
             </p>
             <div
@@ -272,7 +272,7 @@ async function Dashboard() {
                 <PortalIcon name="pen-line" />
               </span>
               <div>
-                <p className="text-[30px] leading-none font-bold tabular-nums">
+                <p className="num-display text-[30px] leading-none font-bold">
                   {d.openReviews.count}
                 </p>
                 <p className="text-muted-foreground mt-1 text-sm">

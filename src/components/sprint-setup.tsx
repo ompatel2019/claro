@@ -823,7 +823,7 @@ export function SprintSetup({
               ) : (
                 <>
                   <p
-                    className="text-4xl leading-none font-bold tracking-tight tabular-nums"
+                    className="num-display text-4xl leading-none font-bold"
                     aria-live="polite"
                   >
                     {c.target}
@@ -833,7 +833,7 @@ export function SprintSetup({
               )}
             </div>
             <div>
-              <p className="text-4xl leading-none font-bold tracking-tight tabular-nums">
+              <p className="num-display text-4xl leading-none font-bold">
                 {c.timed ? minutes : "—"}
               </p>
               <p className="text-muted-foreground mt-2 text-xs">

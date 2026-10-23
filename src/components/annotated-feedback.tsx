@@ -527,7 +527,7 @@ export function AnnotatedFeedback({
                 <p
                   role="img"
                   aria-label={`Your mark: ${markLabel(row).replaceAll(" ", "")}`}
-                  className="text-4xl leading-tight font-bold tabular-nums"
+                  className="num-display text-4xl leading-tight font-bold"
                 >
                   {markLabel(row).split(" / ")[0]}
                   <span className="text-muted-foreground text-lg font-medium">
