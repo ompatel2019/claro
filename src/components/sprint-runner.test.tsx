@@ -1131,3 +1131,48 @@ it("a reload after a confirmed leave saves the restored draft, then finishes", a
     }),
   ]);
 });
+
+it("never finishes on unload while a newer answer is still saving behind an older save", async () => {
+  const held: ((value: unknown) => void)[] = [];
+  mocks.fetch.mockImplementation(
+    () =>
+      new Promise((resolve) =>
+        held.push(() =>
+          resolve({ ok: true, status: 200, json: async () => ({}) }),
+        ),
+      ),
+  );
+  vi.stubGlobal("fetch", mocks.fetch);
+  const beacon = vi.fn();
+  Object.defineProperty(navigator, "sendBeacon", {
+    value: beacon,
+    configurable: true,
+  });
+  show(
+    [
+      {
+        ...attempt,
+        choice_index: null,
+        question: { ...attempt.question, type: "short" },
+      },
+    ],
+    { mode: "short", feedback: "end", topics: [] },
+  );
+  const box = screen.getByRole("textbox", { name: "Your answer" });
+  fireEvent.change(box, { target: { value: "First answer" } });
+  await waitFor(() => expect(held).toHaveLength(1), { timeout: 3000 });
+  fireEvent.change(box, { target: { value: "Second answer" } });
+  // The second save leaves the dirty map and queues behind the first.
+  await new Promise((resolve) => setTimeout(resolve, 900));
+  held[0](undefined);
+  await waitFor(() => expect(held).toHaveLength(2), { timeout: 3000 });
+  window.dispatchEvent(
+    new PageTransitionEvent("pagehide", { persisted: false }),
+  );
+  expect(beacon).not.toHaveBeenCalled();
+  expect(sessionStorage.getItem("claro-left-s")).toBe("1");
+  expect(JSON.parse(localStorage.getItem("claro-draft-a")!)).toEqual({
+    answer_text: "Second answer",
+  });
+  sessionStorage.clear();
+});

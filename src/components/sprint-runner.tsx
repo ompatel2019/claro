@@ -87,6 +87,8 @@ export function SprintRunner({
   const [finishFailed, setFinishFailed] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
   const dirty = useRef(new Map<string, Partial<Attempt>>());
+  // Saves sent but not yet confirmed, per attempt: their drafts stay until every one settles.
+  const saving = useRef(new Map<string, number>());
   const limit = timeLimit(session.config);
   // §3.2 feedback "each": check as you go.
   const checkMode = session.config.feedback === "each";
@@ -147,6 +149,13 @@ export function SprintRunner({
   }
   function save(id: string, patch: Partial<Attempt>) {
     setSaveState("saving");
+    saving.current.set(id, (saving.current.get(id) ?? 0) + 1);
+    const settle = () => {
+      const left = (saving.current.get(id) ?? 1) - 1;
+      if (left) saving.current.set(id, left);
+      else saving.current.delete(id);
+      return left;
+    };
     const operation = queue.current.then(() =>
       withAuthRetry(db, async () => {
         if (patch.image_paths) {
@@ -197,10 +206,12 @@ export function SprintRunner({
     queue.current = cleaned.catch(() => {});
     return cleaned.then(
       () => {
-        if (!dirty.current.has(id)) localStorage.removeItem(draftKey(id));
+        if (!settle() && !dirty.current.has(id))
+          localStorage.removeItem(draftKey(id));
         if (!dirty.current.size) setSaveState("saved");
       },
       (e) => {
+        settle();
         setSaveState("error");
         throw e;
       },
@@ -245,6 +256,8 @@ export function SprintRunner({
     onAsk: () => setLeaving(true),
     // Answers the server hasn't confirmed yet keep their local draft until saved.
     unsaved: () =>
+      dirty.current.size > 0 ||
+      saving.current.size > 0 ||
       rows.current.some((a) => localStorage.getItem(draftKey(a.id)) != null),
   });
   useEffect(() => {
