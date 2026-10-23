@@ -58,9 +58,9 @@ it("links rows to canonical reports and preserves filters in pagination", () => 
     "href",
     "/student/activity?kind=sprint&page=2",
   );
-  expect(screen.getByText("75%")).toBeVisible();
-  fireEvent.click(screen.getByText("75%"));
-  expect(push).toHaveBeenCalledWith("/student/sprint/s/results");
+  expect(screen.getByText("75%").closest("li")).toContainElement(
+    screen.getByRole("link", { name: row.title }),
+  );
 });
 it("uses distinct first-use and filtered empty actions", () => {
   show({ ...data, rows: [], all_total: 0 });
@@ -137,25 +137,28 @@ it("sorts on the server, resets paging and clears every external filter", () => 
       "2026-10-09",
     ),
   );
-  expect(screen.getByRole("link", { name: "Clear (2)" })).toHaveAttribute(
-    "href",
-    "/student/activity",
-  );
-  fireEvent.click(screen.getByRole("button", { name: "Date" }));
-  expect(push).toHaveBeenCalledWith(
-    "/student/activity?kind=sprint&sort=oldest&date=2026-10-08",
-  );
-  expect(screen.getAllByRole("row")[1]).not.toHaveClass("h-14");
+  expect(
+    screen.getByRole("link", { name: "Clear filters (2)" }),
+  ).toHaveAttribute("href", "/student/activity");
+  const form = screen.getByRole("textbox", { name: "Search" }).closest("form")!;
+  const submit = vi.spyOn(form, "requestSubmit").mockImplementation(() => {});
+  fireEvent.change(screen.getByRole("combobox", { name: "Sort" }), {
+    target: { value: "oldest" },
+  });
+  expect(submit).toHaveBeenCalledOnce();
+  expect(Object.fromEntries(new FormData(form))).toMatchObject({
+    kind: "sprint",
+    sort: "oldest",
+    date: "2026-10-08",
+  });
+  submit.mockRestore();
 });
 
-it("toggles the default date order to oldest and back to newest", () => {
+it("summarises what the filters show", () => {
   show();
-  fireEvent.click(screen.getByRole("button", { name: "Date" }));
-  expect(push).toHaveBeenCalledWith("/student/activity?sort=oldest");
-  cleanup();
-  show(data, { ...filters, sort: "oldest" });
-  fireEvent.click(screen.getByRole("button", { name: "Date" }));
-  expect(push).toHaveBeenCalledWith("/student/activity");
+  expect(
+    screen.getByText("25 sessions · 200 questions answered · average 75%"),
+  ).toBeInTheDocument();
 });
 
 it("ignores a legacy paper session alongside supported activity", () => {
@@ -175,30 +178,25 @@ it("ignores a legacy paper session alongside supported activity", () => {
 
 it("separates sessions and results, groups newest history and shows duration", () => {
   show();
-  expect(screen.getByRole("link", { name: row.title })).toHaveTextContent(
-    "Short answer sprint",
+  const list = screen.getByRole("region", { name: "Your activity" });
+  expect(screen.getByText("Short answer sprint")).toHaveAttribute(
+    "title",
+    row.title,
   );
   expect(
-    screen.getByRole("columnheader", { name: "Session" }),
+    screen.getByRole("heading", { name: /^Today · Fri 9 Oct/ }),
   ).toBeInTheDocument();
-  expect(
-    screen.getByRole("columnheader", { name: "Result" }),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByRole("columnheader", { name: "Time" }),
-  ).toBeInTheDocument();
-  expect(screen.getByRole("rowheader", { name: "Today" })).toBeInTheDocument();
-  expect(
-    screen.getByRole("meter", { name: `${row.title} result` }),
-  ).toHaveAttribute("aria-valuenow", "75");
   expect(screen.getByText("2 min")).toBeInTheDocument();
-  expect(screen.getByRole("table")).not.toHaveTextContent("Finished");
-  expect(screen.getAllByText("11:00am").length).toBeGreaterThan(0);
+  expect(screen.getByText("1:05")).toBeInTheDocument();
+  expect(screen.getByText("75%")).toBeInTheDocument();
+  expect(list).not.toHaveTextContent("Finished");
+  expect(screen.getByText("11:00am")).toBeInTheDocument();
 });
 
 it("does not group score-sorted history into misleading day buckets", () => {
   show(data, { ...filters, sort: "highest" });
-  expect(screen.queryByRole("rowheader", { name: "Today" })).toBeNull();
+  expect(screen.queryByRole("heading", { name: /^Today/ })).toBeNull();
+  expect(screen.getByText("Fri 9 Oct, 11:00am")).toBeInTheDocument();
   expect(screen.getByRole("link", { name: row.title })).toBeVisible();
 });
 
@@ -265,8 +263,15 @@ it("groups sessions by Sydney dates including sessions across midnight UTC", () 
       { ...row, id: "earlier", started_at: "2026-10-01T00:00:00Z" },
     ],
   });
-  for (const label of ["Today", "Yesterday", "Earlier this week", "Earlier"])
-    expect(screen.getByRole("rowheader", { name: label })).toBeInTheDocument();
+  for (const label of [
+    "Today · Fri 9 Oct",
+    "Yesterday · Thu 8 Oct",
+    "Tue 6 Oct",
+    "Thu 1 Oct",
+  ])
+    expect(
+      screen.getByRole("heading", { name: new RegExp(`^${label}`) }),
+    ).toBeInTheDocument();
 });
 
 it("reveals additional sessions without replacing the visible history", () => {
@@ -324,8 +329,7 @@ it("shows actual card ratings and uses the latest rating for each card", () => {
       }}
     />,
   );
-  expect(screen.getByText(/1\/2/)).toHaveTextContent("1/2 knew");
-  expect(
-    screen.getByRole("meter", { name: "Flashcards · Study cards known" }),
-  ).toHaveAttribute("aria-valuenow", "50");
+  expect(screen.getByText("knew it").previousElementSibling).toHaveTextContent(
+    "1/2",
+  );
 });
