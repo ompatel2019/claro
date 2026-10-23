@@ -6,7 +6,13 @@ import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import { sydneyToday } from "@/lib/flashcards";
 import { type ActivityDay } from "@/lib/activity";
-import { greeting, longDate, schoolWeek, practiceWeek } from "@/lib/home";
+import {
+  greeting,
+  longDate,
+  practiceWeek,
+  schoolWeek,
+  studyQuote,
+} from "@/lib/home";
 import {
   HomeRecent,
   HomeNextStep,
@@ -71,6 +77,11 @@ export default async function Home() {
           </>
         }
         title={`${greeting()}${first ? `, ${first}` : ""}`}
+        actions={
+          <p className="text-muted-foreground max-w-[40ch] text-[13px] leading-[18px]">
+            {studyQuote(today)}
+          </p>
+        }
       />
       <Suspense fallback={<Card aria-hidden className="h-64 animate-pulse" />}>
         <HomeNextStep progress={progress} sessions={sessions} />

@@ -89,6 +89,24 @@ export function schoolWeek(today: string) {
   return { term: index + 1, week: week(today), weeks: week(end) };
 }
 
+const STUDY_QUOTES = [
+  "A little practice today makes tomorrow clearer.",
+  "One question is a good place to start.",
+  "Make room for the things you do not understand yet.",
+  "Progress comes from coming back.",
+  "Learn the reason, then try again.",
+  "Small steps count. Keep taking them.",
+  "Give your next answer your full attention.",
+] as const;
+
+/** Original study prompts, rotating by Sydney calendar date, independent of render time. */
+export function studyQuote(today: string) {
+  const day = Math.floor(Date.parse(`${today}T00:00:00Z`) / 86400000);
+  return STUDY_QUOTES[
+    ((day % STUDY_QUOTES.length) + STUDY_QUOTES.length) % STUDY_QUOTES.length
+  ];
+}
+
 export const WEEKLY_PRACTICE_GOAL = 5;
 export const NEXT_STEP_MIN_ANSWERS = 3;
 
