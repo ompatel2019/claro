@@ -18,10 +18,13 @@ export function FeedbackDetails({
   name,
   title,
   children,
+  flat = false,
 }: {
   name: string;
   title: string;
   children: React.ReactNode;
+  /** Inside a card: a hairline section instead of a nested box. */
+  flat?: boolean;
 }) {
   const ref = useRef<HTMLDetailsElement>(null);
   const key = `claro-feedback-${name}`;
@@ -35,7 +38,7 @@ export function FeedbackDetails({
   return (
     <details
       ref={ref}
-      className="group bg-card rounded-xl border"
+      className={flat ? "group border-t" : "group bg-card rounded-xl border"}
       onToggle={(e) => {
         try {
           localStorage.setItem(key, e.currentTarget.open ? "1" : "0");
@@ -44,10 +47,18 @@ export function FeedbackDetails({
         }
       }}
     >
-      <summary className="cursor-pointer px-4 py-3 text-sm font-semibold">
+      <summary
+        className={
+          flat
+            ? "cursor-pointer py-3 text-sm font-semibold"
+            : "cursor-pointer px-4 py-3 text-sm font-semibold"
+        }
+      >
         {title}
       </summary>
-      <div className="px-4 pb-4 text-sm">{children}</div>
+      <div className={flat ? "pb-4 text-sm" : "px-4 pb-4 text-sm"}>
+        {children}
+      </div>
     </details>
   );
 }

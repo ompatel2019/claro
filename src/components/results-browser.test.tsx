@@ -212,6 +212,7 @@ it("preserves unanswered and review states alongside scores in sprint tiles and 
     "bg-warning-soft border-warning text-warning",
     "bg-success-soft border-success text-success",
   ];
+  const states = ["not_answered", "part", "part", "full"] as const;
   render(
     <ResultsBrowser
       sprintLayout
@@ -221,6 +222,7 @@ it("preserves unanswered and review states alongside scores in sprint tiles and 
         mark: i === 0 ? "0 / 4" : i === 3 ? "4 / 4" : "2 / 4",
         pill,
         tone: tones[i],
+        state: states[i],
       }))}
       views={views}
       initial={0}
@@ -233,11 +235,12 @@ it("preserves unanswered and review states alongside scores in sprint tiles and 
     expect(tile).toHaveTextContent(pill);
     expect(tile).toHaveClass(
       i === 0
-        ? "text-destructive-text"
+        ? "text-muted-foreground"
         : i === 3
-          ? "text-success-text"
-          : "text-warning-text",
+          ? "text-navy-deep"
+          : "text-brand-text",
     );
+    expect(tile).not.toHaveClass("ring-primary");
     if (i === 0) expect(tile).not.toHaveTextContent("Missed");
     else expect(tile).toHaveTextContent(i === 3 ? "Earned" : "Part marks");
   }

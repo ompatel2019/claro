@@ -31,6 +31,14 @@ import { StatusPill, statePill } from "./status-pill";
 import { Badge } from "./ui/badge";
 import { Button, buttonVariants } from "./ui/button";
 import { Textarea } from "./ui/textarea";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "./ui/table";
 import { Card, CardContent } from "./ui/card";
 import { Popover, PopoverContent } from "./ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
@@ -473,41 +481,41 @@ export function AnnotatedFeedback({
       {!answerOnly && showReferences && !!row.criteria?.length && (
         <section
           aria-label="Marking criteria"
-          className="space-y-3 rounded-xl border p-4"
+          className={cn("space-y-3", !flush && "rounded-xl border p-4")}
         >
           <h2 className="text-sm font-semibold">Marking criteria</h2>
           {completeCriteria ? (
-            <table className="w-full text-left">
-              <thead className="text-muted-foreground text-xs">
-                <tr>
-                  <th className="py-2 pr-3 font-medium">Marks</th>
-                  <th className="py-2 font-medium">Descriptor</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead scope="col">Marks</TableHead>
+                  <TableHead scope="col">Descriptor</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {row.criteria.map((c) => (
-                  <tr
+                  <TableRow
                     key={c.descriptor}
                     className={cn(
-                      "border-t",
+                      "h-auto",
                       showMark && c === band?.row && "bg-accent",
                     )}
                   >
-                    <td className="py-2 pr-3 align-top tabular-nums">
+                    <TableCell className="w-16 align-top">
                       {c.min === c.max ? c.min : `${c.min}–${c.max}`}
-                    </td>
-                    <td className="py-2">
+                    </TableCell>
+                    <TableCell className="whitespace-normal">
                       {c.descriptor}
                       {showMark && c === band?.row && (
                         <Badge variant="outline" className="ml-2">
                           Your band
                         </Badge>
                       )}
-                    </td>
-                  </tr>
+                    </TableCell>
+                  </TableRow>
                 ))}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
           ) : (
             <p>
               The marking guidelines are incomplete, so the band table is
@@ -787,7 +795,11 @@ export function AnnotatedFeedback({
         {!answerOnly && showMark && (
           <div className="space-y-2">
             {Number(row.mark) < max && outline.length > 0 && (
-              <FeedbackDetails name="outline" title="How to reach full marks">
+              <FeedbackDetails
+                name="outline"
+                title="How to reach full marks"
+                flat={flush}
+              >
                 <ul className="list-disc space-y-1 pl-5">
                   {outline.map((t, i) => (
                     <li key={i}>{t}</li>
@@ -798,7 +810,10 @@ export function AnnotatedFeedback({
             {showReferences && row.sample_answer && (
               <section
                 aria-label="Sample answer"
-                className="bg-muted/40 space-y-3 rounded-xl border p-5"
+                className={cn(
+                  "space-y-3",
+                  flush ? "border-t pt-5" : "bg-muted/40 rounded-xl border p-5",
+                )}
               >
                 <h2 className="text-lg font-semibold">Sample answer</h2>
                 <p className="max-w-prose text-base leading-relaxed whitespace-pre-wrap">

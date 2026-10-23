@@ -27,6 +27,7 @@ import { ResultStat } from "@/components/student/sprint/result-stat";
 import { ResultsNextStep } from "@/components/student/sprint/results-next-step";
 import { StatusPill } from "@/components/status-pill";
 import { buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const when = (d: string) =>
   new Date(d)
@@ -37,6 +38,12 @@ const when = (d: string) =>
       month: "short",
     })
     .replace(/^(\w{3}),/, "$1");
+// Score spans the phone row; from lg every stat card gets an equal column.
+const STAT_COLS: Record<number, string> = {
+  1: "grid-cols-1 lg:grid-cols-2",
+  2: "grid-cols-2 lg:grid-cols-3",
+  3: "grid-cols-3 lg:grid-cols-4",
+};
 const avg = (xs: (number | null)[]) => {
   const v = xs.filter((x): x is number => x != null);
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
@@ -175,7 +182,12 @@ export async function SprintResults({ id }: { id: string }) {
         }
       />
       <MarkingProgress {...progress} />
-      <div className="grid grid-cols-3 gap-3 xl:grid-cols-[minmax(0,5fr)_repeat(3,minmax(0,2fr))] xl:gap-4">
+      <div
+        className={cn(
+          "grid gap-3 xl:gap-4",
+          STAT_COLS[1 + Number(k.mcCount > 0) + Number(k.writtenCount > 0)],
+        )}
+      >
         <ResultStat
           label={
             <span className="flex items-center gap-2">

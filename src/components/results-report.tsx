@@ -8,6 +8,7 @@ import {
   type McGridRow,
 } from "@/lib/results";
 import { summaryView } from "@/lib/results-summary";
+import { answerPillState } from "@/lib/answer-pill";
 import { PortalIcon } from "./icons";
 import { QuestionView } from "./question-view";
 import { Badge } from "./claro/controls";
@@ -169,6 +170,12 @@ export function ResultsAnswers({
                   : scored(r)
                     ? markTone(r.mark ?? 0, r.max_marks ?? r.marks)
                     : "",
+              state: answerPillState({
+                mark: r.mark,
+                max: r.max_marks ?? r.marks,
+                answered: state !== "not_answered",
+                scored: scored(r),
+              }),
               pill:
                 r.type === "mcq" && state !== "not_answered"
                   ? null

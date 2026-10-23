@@ -93,11 +93,11 @@ export function ResultsNextStep({
           <h2 className="text-xl font-[650] tracking-tight">
             Where marks dropped
           </h2>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid items-stretch gap-4 sm:grid-cols-2">
             {needsWork.map((t) => (
               <div
                 key={t.id}
-                className="bg-card grid gap-3 rounded-2xl border p-5"
+                className="bg-card grid h-full content-start gap-3 rounded-2xl border p-5"
               >
                 <div className="flex items-baseline justify-between gap-3 text-sm font-semibold">
                   <h3>{name(t.id)}</h3>
@@ -142,18 +142,22 @@ export function ResultsNextStep({
               </div>
             ))}
           </div>
-          {fullMarks.map((t) => (
-            <p
-              key={t.id}
-              className="text-success-text bg-card flex flex-wrap items-center gap-2 rounded-2xl border px-5 py-3 text-[13px]"
-            >
-              <PortalIcon name="check" className="size-4" />
-              <span className="font-medium">{name(t.id)}</span>
-              <span className="ml-auto tabular-nums">
-                {t.earned}/{t.possible} · Full marks
-              </span>
-            </p>
-          ))}
+          {!!fullMarks.length && (
+            <ul aria-label="Full marks" className="divide-y">
+              {fullMarks.map((t) => (
+                <li
+                  key={t.id}
+                  className="text-success-text flex flex-wrap items-center gap-2 py-2.5 text-[13px]"
+                >
+                  <PortalIcon name="check" className="size-4" />
+                  <span className="font-medium">{name(t.id)}</span>
+                  <span className="ml-auto tabular-nums">
+                    {t.earned}/{t.possible} · Full marks
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
     </section>

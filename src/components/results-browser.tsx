@@ -1,6 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
 import type { McGridRow } from "@/lib/results";
+import {
+  ANSWER_LEGEND,
+  ANSWER_PILL_SELECTED,
+  ANSWER_PILL_TONE,
+  type AnswerPillState,
+} from "@/lib/answer-pill";
 import { Check, Close, PortalIcon } from "./icons";
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card";
 import { cn } from "@/lib/utils";
@@ -24,6 +30,8 @@ export type ResultItem = {
   mark: string | null;
   tone: string;
   pill: Pill | null;
+  /** Sprint results pills use the shared state tokens instead of tone. */
+  state?: AnswerPillState;
 };
 
 function AnswerState({ item }: { item: ResultItem }) {
@@ -287,15 +295,15 @@ export function ResultsBrowser({
             aria-label="Answer key"
             className="text-muted-foreground mt-2 flex flex-col gap-x-4 gap-y-1 text-xs sm:flex-row sm:flex-wrap"
           >
-            {[
-              ["Correct", "bg-success-soft"],
-              ["Part marks", "bg-warning-soft"],
-              [
-                "Incorrect",
-                sprintLayout ? "bg-destructive-soft" : "bg-brand-soft",
-              ],
-              ["Not answered", "border border-dashed"],
-            ].map(([label, tone]) => (
+            {(sprintLayout
+              ? ANSWER_LEGEND
+              : [
+                  ["Correct", "bg-success-soft"],
+                  ["Part marks", "bg-warning-soft"],
+                  ["Incorrect", "bg-brand-soft"],
+                  ["Not answered", "border border-dashed"],
+                ]
+            ).map(([label, tone]) => (
               <li key={label} className="flex items-center gap-1.5">
                 <span aria-hidden className={cn("size-3 rounded", tone)} />
                 {label}
@@ -396,13 +404,7 @@ export function ResultsBrowser({
                             ? "grid min-h-20 min-w-20 content-center justify-items-center gap-1 rounded-2xl border border-transparent px-2 py-2 text-sm font-semibold tabular-nums"
                             : "grid size-12 content-center rounded-xl border border-transparent text-sm font-medium tabular-nums",
                           sprintLayout
-                            ? it.tone
-                                .replace(/text-success\b/g, "text-success-text")
-                                .replace(/text-warning\b/g, "text-warning-text")
-                                .replace(
-                                  /text-destructive\b/g,
-                                  "text-destructive-text",
-                                )
+                            ? ANSWER_PILL_TONE[it.state ?? "pending"]
                             : it.tone
                                 .replace(
                                   /border-(success|warning|destructive)/g,
@@ -416,8 +418,15 @@ export function ResultsBrowser({
                                   /text-destructive/g,
                                   "text-brand-text",
                                 ),
-                          !it.mark && "border-border border-dashed",
-                          i === index && "ring-primary ring-2 ring-offset-2",
+                          !sprintLayout &&
+                            !it.mark &&
+                            "border-border border-dashed",
+                          i === index &&
+                            (sprintLayout
+                              ? ANSWER_PILL_SELECTED
+                              : "ring-primary ring-2 ring-offset-2"),
+                          sprintLayout &&
+                            "focus-visible:ring-ring transition-transform outline-none focus-visible:ring-2 focus-visible:ring-offset-2 motion-reduce:transition-none",
                         )}
                       >
                         {it.position ?? i + 1}

@@ -21,8 +21,8 @@ export function ResultStat({
     <Card
       className={
         score
-          ? "col-span-full min-h-0 justify-center px-5 sm:min-h-36 xl:col-span-1"
-          : "min-h-0 justify-center px-3 sm:px-5"
+          ? "col-span-full h-full min-h-0 justify-center px-5 sm:min-h-36 lg:col-span-1"
+          : "h-full min-h-0 justify-center px-3 sm:px-5"
       }
     >
       <div className="flex items-center gap-4">
