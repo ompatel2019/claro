@@ -42,7 +42,11 @@ import { Switch } from "./ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 
 import { Section, Choice, Chip, Stepper } from "./sprint-setup/parts";
-export { QuickStarts, SameSetup } from "./sprint-setup/starts";
+export {
+  QuickStarts,
+  SameSetup,
+  RecommendedSprint,
+} from "./sprint-setup/starts";
 
 const KEY = "claro.sprint.v1";
 const DIFFICULTY: [Difficulty, string][] = [
@@ -56,8 +60,10 @@ const n = (v: number | undefined) => (v === undefined ? "–" : String(v));
 export function SprintSetup({
   topics,
   params,
+  mastery = {},
 }: {
   topics: Topic[];
+  mastery?: Record<string, number | null>;
   params: Record<string, string | undefined>;
 }) {
   const feedbackId = useId();
@@ -190,7 +196,7 @@ export function SprintSetup({
     : [];
 
   return (
-    <div className="grid items-start gap-5 pb-[calc(2rem+env(safe-area-inset-bottom))] xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <div className="grid items-start gap-5 pb-[calc(6rem+env(safe-area-inset-bottom))] xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       {prefilled && (
         <p
           className="text-muted-foreground text-sm xl:col-span-2"
@@ -210,66 +216,10 @@ export function SprintSetup({
         </p>
       )}
       <Card className="gap-0 py-0">
+        <div className="border-b px-5 py-5 sm:px-6">
+          <h2 className="text-xl font-[650] tracking-tight">Build your own</h2>
+        </div>
         <CardContent className="divide-y px-0">
-          <div>
-            <Section title="Question type">
-              <div
-                role="group"
-                aria-label="Question type"
-                className="grid gap-3 sm:grid-cols-3"
-              >
-                {Object.entries(modes).map(([id, m]) => (
-                  <button
-                    key={id}
-                    type="button"
-                    aria-label={m.label}
-                    aria-pressed={c.mode === id}
-                    onClick={() => {
-                      if (c.mode !== id) setC(withMode(c, id as Mode));
-                    }}
-                    className={cn(
-                      "relative flex flex-col items-start justify-start gap-1 rounded-lg border p-4 text-left transition-colors",
-                      c.mode === id
-                        ? "border-brand bg-brand-soft/60 ring-brand/10 ring-[3px]"
-                        : "hover:bg-muted",
-                    )}
-                  >
-                    <span
-                      aria-hidden
-                      className={cn(
-                        "absolute top-4 right-4 grid size-4 place-items-center rounded-full border",
-                        c.mode === id && "border-brand",
-                      )}
-                    >
-                      {c.mode === id && (
-                        <span className="bg-brand size-2 rounded-full" />
-                      )}
-                    </span>
-                    <PortalIcon
-                      name={
-                        id === "mcq"
-                          ? "list"
-                          : id === "short"
-                            ? "pen-line"
-                            : "layers"
-                      }
-                      className="text-muted-foreground mb-2 size-5"
-                    />
-                    <span className="block text-sm font-semibold">
-                      {m.label}
-                    </span>
-                    <span className="text-muted-foreground block text-[13px]">
-                      {id === "mcq"
-                        ? "Choose from four options."
-                        : id === "short"
-                          ? "Practise written answers."
-                          : "Multiple choice, then short answers."}
-                    </span>
-                  </button>
-                ))}
-              </div>
-            </Section>
-          </div>
           <div>
             <Section
               title="Topics"
@@ -285,6 +235,7 @@ export function SprintSetup({
                     <button
                       key={t.id}
                       type="button"
+                      aria-label={t.name}
                       aria-pressed={on}
                       onClick={() => {
                         if (t.id === "all") {
@@ -293,15 +244,32 @@ export function SprintSetup({
                         } else toggleTopic(t.id);
                       }}
                       className={cn(
-                        "focus-visible:ring-ring flex min-h-24 items-center gap-3 rounded-xl border p-4 text-left text-sm font-semibold focus-visible:ring-2",
-                        on ? "border-brand bg-brand-soft" : "hover:bg-muted",
+                        "focus-visible:ring-ring flex min-h-20 items-center gap-3 rounded-xl border p-4 text-left text-sm font-semibold focus-visible:ring-2",
+                        on ? "border-primary bg-muted" : "hover:bg-muted",
                       )}
                     >
                       <PortalIcon
                         name={t.id === "all" ? "layers" : "book-open"}
-                        className="text-brand size-5 shrink-0"
+                        className="text-muted-foreground size-5 shrink-0"
                       />
-                      {t.name}
+                      <span className="min-w-0 flex-1">
+                        {t.name}
+                        <span className="text-muted-foreground mt-1 block text-xs font-normal">
+                          {n(
+                            t.id === "all"
+                              ? pool?.questions
+                              : pool?.topics[t.id],
+                          )}{" "}
+                          questions available
+                        </span>
+                      </span>
+                      {t.id !== "all" && (
+                        <span className="text-muted-foreground text-xs font-medium tabular-nums">
+                          {mastery[t.id] == null
+                            ? "Not practised"
+                            : `${Math.round(mastery[t.id]!)}% mastery`}
+                        </span>
+                      )}
                     </button>
                   );
                 })}
@@ -352,6 +320,65 @@ export function SprintSetup({
                     )
                   );
                 })}
+            </Section>
+          </div>
+          <div>
+            <Section title="Question type">
+              <div
+                role="group"
+                aria-label="Question type"
+                className="grid gap-3 sm:grid-cols-3"
+              >
+                {Object.entries(modes).map(([id, m]) => (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-label={m.label}
+                    aria-pressed={c.mode === id}
+                    onClick={() => {
+                      if (c.mode !== id) setC(withMode(c, id as Mode));
+                    }}
+                    className={cn(
+                      "relative flex flex-col items-start justify-start gap-1 rounded-lg border p-4 text-left transition-colors",
+                      c.mode === id
+                        ? "border-primary bg-muted ring-primary ring-1"
+                        : "hover:bg-muted",
+                    )}
+                  >
+                    <span
+                      aria-hidden
+                      className={cn(
+                        "absolute top-4 right-4 grid size-4 place-items-center rounded-full border",
+                        c.mode === id && "border-primary",
+                      )}
+                    >
+                      {c.mode === id && (
+                        <span className="bg-primary size-2 rounded-full" />
+                      )}
+                    </span>
+                    <PortalIcon
+                      name={
+                        id === "mcq"
+                          ? "list"
+                          : id === "short"
+                            ? "pen-line"
+                            : "layers"
+                      }
+                      className="text-muted-foreground mb-2 size-5"
+                    />
+                    <span className="block text-sm font-semibold">
+                      {m.label}
+                    </span>
+                    <span className="text-muted-foreground block text-[13px]">
+                      {id === "mcq"
+                        ? "Choose from four options."
+                        : id === "short"
+                          ? "Practise written answers."
+                          : "Multiple choice, then short answers."}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </Section>
           </div>
           <div>
@@ -594,7 +621,7 @@ export function SprintSetup({
                         key={value}
                         className={cn(
                           "has-[:focus-visible]:ring-ring flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm has-[:focus-visible]:ring-2",
-                          c.feedback === value && "border-brand bg-brand-soft",
+                          c.feedback === value && "border-primary bg-muted",
                         )}
                       >
                         <RadioGroupItem
@@ -768,7 +795,7 @@ export function SprintSetup({
           )
             e.preventDefault();
         }}
-        className="bg-card shadow-card rounded-xl border p-5 xl:sticky xl:top-20"
+        className="bg-card rounded-2xl border p-5 xl:sticky xl:top-20"
       >
         <input type="hidden" name="config" value={JSON.stringify(c)} />
         <div className="grid gap-5">
@@ -925,7 +952,7 @@ export function SprintSetup({
             )}
           </div>
         )}
-        <div className="bg-card fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]">
+        <div className="sprint-setup-dock bg-card fixed inset-x-0 bottom-0 z-30 border-t px-4 py-3 sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]">
           <div className="mx-auto flex max-w-[calc(1400px-4rem)] flex-wrap items-center justify-end gap-x-3 gap-y-2">
             <p className="text-muted-foreground mr-auto min-w-0 truncate text-[13px] tabular-nums">
               <span className="text-foreground font-semibold">

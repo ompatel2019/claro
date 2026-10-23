@@ -9,6 +9,7 @@ import {
   withTarget,
   type SetupConfig,
 } from "@/lib/sprint";
+import { PenCaret } from "../claro/markup-answer";
 import { PortalIcon } from "../icons";
 import { Button } from "../ui/button";
 
@@ -21,6 +22,62 @@ const QUICK = [
     },
   },
 ];
+
+/** The recommendation uses the same validated start action as the builder. */
+export function RecommendedSprint({
+  weak,
+}: {
+  weak?: { id: string; name: string; parent_id: string | null };
+}) {
+  const [state, action, pending] = useActionState(startSprint, {});
+  const config = {
+    ...withTarget(withMode(DEFAULTS, "mixed"), 8),
+    feedback: "each" as const,
+    topics: weak ? [weak.parent_id ?? weak.id] : [],
+    subtopics: weak?.parent_id ? [weak.id] : [],
+  };
+  return (
+    <section
+      className="home-next grid gap-5 sm:flex sm:items-center sm:justify-between"
+      aria-label="Recommended sprint"
+    >
+      <div className="min-w-0 flex-1">
+        <p className="flex items-center gap-2 text-sm font-semibold">
+          <PenCaret />
+          Recommended sprint
+        </p>
+        <h2 className="mt-2 text-2xl font-[650] tracking-tight">
+          {weak?.name ?? "A little of everything"}
+        </h2>
+        <p className="text-muted-foreground mt-2 text-sm">
+          {weak
+            ? "Practise where you’ve dropped marks, while the feedback is fresh."
+            : "Start with a mixed sprint across the course to find your next step."}
+        </p>
+        <p className="text-muted-foreground mt-3 text-[13px] tabular-nums">
+          8 questions · about {estimateMinutes(config)} min · Check as I go
+        </p>
+      </div>
+      <form action={action}>
+        <Button
+          name="config"
+          value={JSON.stringify(config)}
+          type="submit"
+          disabled={pending}
+        >
+          <PortalIcon name="arrow-right" />
+          {pending ? "Building…" : "Start recommended sprint"}
+        </Button>
+        {state.error && (
+          <p role="alert" className="text-destructive mt-2 text-sm">
+            <PortalIcon name="circle-alert" className="mr-1 inline size-4" />
+            {state.error}
+          </p>
+        )}
+      </form>
+    </section>
+  );
+}
 
 /** §3.1 Quick start: one click straight into a sprint (used on Home). */
 export function QuickStarts({
@@ -87,7 +144,7 @@ export function QuickStarts({
           )}
           type="submit"
           variant="outline"
-          className="bg-card h-auto justify-start gap-3 rounded-xl p-3.5 text-left shadow-xs"
+          className="bg-card h-auto min-w-0 justify-start gap-3 rounded-2xl p-4 text-left whitespace-normal"
           aria-label={q.label}
           disabled={pending}
         >
@@ -96,7 +153,7 @@ export function QuickStarts({
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-sm font-semibold">{q.title}</span>
-            <span className="text-muted-foreground mt-0.5 block text-xs">
+            <span className="text-muted-foreground mt-0.5 block text-[13px]">
               {q.config.mode === "mcq"
                 ? `${q.config.target} multiple choice · ${estimateMinutes(q.config)} min`
                 : q.label}

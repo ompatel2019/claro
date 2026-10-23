@@ -244,9 +244,7 @@ test.describe("Local results feedback", () => {
     }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(`/student/sprint/${sessionId(1)}/results`);
-      const next = page.locator('[data-slot="card"]').filter({
-        has: page.getByRole("heading", { name: "Your next step", exact: true }),
-      });
+      const next = page.getByRole("region", { name: "Your next step" });
       await expect(next).toBeVisible();
       await expect(
         next.getByRole("link", { name: "Practise", exact: true }),
@@ -255,8 +253,8 @@ test.describe("Local results feedback", () => {
         next.getByRole("link", { name: "Review cards", exact: true }),
       ).toHaveAttribute("href", "/student/flashcards?topic=inflation");
       const headings = await page.getByRole("heading").allTextContents();
-      expect(headings.indexOf("Your answer, marked")).toBeLessThan(
-        headings.indexOf("Your next step"),
+      expect(headings.indexOf("Your next step")).toBeLessThan(
+        headings.indexOf("Your answer, marked"),
       );
       expect(headings.indexOf("Your next step")).toBeLessThan(
         headings.indexOf("Strengths"),

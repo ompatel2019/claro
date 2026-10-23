@@ -518,3 +518,24 @@ it("quick starts label their question counts and preserve legacy session units",
   });
   expect(JSON.parse(previous.getAttribute("value")!)).toEqual(raw);
 });
+
+it("starts the recommendation with the measured dot point and check-as-you-go feedback", async () => {
+  const { RecommendedSprint } = await import("./sprint-setup/starts");
+  render(
+    <RecommendedSprint
+      weak={{ id: "dot", name: "Inflation", parent_id: "unit" }}
+    />,
+  );
+  const button = screen.getByRole("button", {
+    name: "Start recommended sprint",
+  });
+  const config = JSON.parse(button.getAttribute("value")!);
+  expect(config).toMatchObject({
+    mode: "mixed",
+    target: 8,
+    topics: ["unit"],
+    subtopics: ["dot"],
+    feedback: "each",
+  });
+  expect(screen.getByText(/8 questions · about/)).toBeVisible();
+});

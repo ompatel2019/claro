@@ -10,7 +10,10 @@ vi.mock("@/components/calculator", () => ({
     <button onClick={onClose}>Close calculator</button>
   ),
 }));
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 function show() {
   const onExit = vi.fn(),
     onFinish = vi.fn(),
@@ -29,6 +32,7 @@ function show() {
       onFinish={onFinish}
       onMove={onMove}
       booklet={<p>Questions</p>}
+      progress={<button aria-current="step">Question 2</button>}
     >
       <p>Question content</p>
     </SprintFocusShell>,
@@ -96,4 +100,19 @@ it("announces the mobile booklet sheet state independently of the desktop rail",
   ).toHaveAttribute("role", "dialog");
   fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
   expect(mobile).toHaveAttribute("aria-expanded", "false");
+});
+
+it("starts with the question centred and keeps progress available", () => {
+  show();
+  expect(
+    screen.getByRole("navigation", { name: "Question progress" }),
+  ).toContainElement(screen.getByRole("button", { name: "Question 2" }));
+  expect(screen.queryByText("Questions")).toBeNull();
+  vi.stubGlobal("matchMedia", () => ({ matches: true }));
+  const desktop = screen
+    .getAllByRole("button", { name: "Booklet (B)" })
+    .find((button) => button.hasAttribute("aria-pressed"))!;
+  expect(desktop).toHaveAttribute("aria-pressed", "false");
+  fireEvent.click(desktop);
+  expect(screen.getByText("Questions")).toBeVisible();
 });

@@ -116,6 +116,7 @@ vi.mock("@/lib/auth", () => ({ requireProfile: async () => ({ id: "u" }) }));
 vi.mock("./sprint-setup", () => ({
   SprintSetup: () => null,
   QuickStarts: () => null,
+  RecommendedSprint: () => null,
   SameSetup: () => null,
 }));
 vi.mock("@/utils/supabase/server", () => ({

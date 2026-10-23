@@ -29,6 +29,7 @@ export function ResultsAnswers({
   readOnly = false,
   writtenAction,
   singleResult = false,
+  sprintLayout = false,
 }: {
   rows: ReviewRow[];
   id: string;
@@ -38,6 +39,7 @@ export function ResultsAnswers({
   readOnly?: boolean;
   writtenAction?: (row: ReviewRow) => React.ReactNode;
   singleResult?: boolean;
+  sprintLayout?: boolean;
 }) {
   const report = (r: ReviewRow) =>
     !readOnly &&
@@ -130,6 +132,7 @@ export function ResultsAnswers({
   return (
     rows.length > 0 && (
       <ResultsBrowser
+        sprintLayout={sprintLayout}
         initial={firstBelow(rows)}
         views={views}
         mcGrid={mcGrid}
@@ -171,43 +174,47 @@ export function OverallFeedback({
   summary,
   pending,
   nextStep,
+  hideNextStep = false,
 }: {
   summary: OverallSummary | null;
   pending: boolean;
   nextStep?: React.ReactNode;
+  hideNextStep?: boolean;
 }) {
   return (
     <section aria-label="Overall feedback" className="grid gap-5">
       <h2 className="sr-only">Overall feedback</h2>
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Your next step</h2>
-          </CardTitle>
-          <p className="text-muted-foreground text-[13px]">
-            Fix the marks you dropped while they’re fresh
-          </p>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {nextStep ?? (
-            <>
-              <section
-                className="bg-brand-soft/60 border-brand/30 space-y-3 rounded-xl border p-4"
-                aria-label="Next steps"
-              >
-                <h3 className="text-sm font-semibold">Next steps</h3>
-                {!!summary?.next_steps?.length && (
-                  <ul className="space-y-2 text-[13px]">
-                    {summary.next_steps.map((text, i) => (
-                      <li key={i}>{text}</li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            </>
-          )}
-        </CardContent>
-      </Card>
+      {!hideNextStep && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              <h2>Your next step</h2>
+            </CardTitle>
+            <p className="text-muted-foreground text-[13px]">
+              Fix the marks you dropped while they’re fresh
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {nextStep ?? (
+              <>
+                <section
+                  className="bg-brand-soft/60 border-brand/30 space-y-3 rounded-xl border p-4"
+                  aria-label="Next steps"
+                >
+                  <h3 className="text-sm font-semibold">Next steps</h3>
+                  {!!summary?.next_steps?.length && (
+                    <ul className="space-y-2 text-[13px]">
+                      {summary.next_steps.map((text, i) => (
+                        <li key={i}>{text}</li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
       <Card>
         <CardHeader>
           <CardTitle>
@@ -230,9 +237,11 @@ export function OverallFeedback({
                 <section key={label} className="space-y-2">
                   <h3
                     className={
-                      lost
-                        ? "text-destructive flex items-center gap-1.5 text-xs font-semibold"
-                        : "text-success flex items-center gap-1.5 text-xs font-semibold"
+                      hideNextStep
+                        ? "text-ink-2 flex items-center gap-1.5 text-xs font-semibold"
+                        : lost
+                          ? "text-destructive flex items-center gap-1.5 text-xs font-semibold"
+                          : "text-success flex items-center gap-1.5 text-xs font-semibold"
                     }
                   >
                     <PortalIcon
@@ -244,10 +253,22 @@ export function OverallFeedback({
                   <ul className="space-y-2 text-[13px]">
                     {(lines ?? []).map((text, i) => (
                       <li key={i} className="flex items-start gap-2">
-                        {lost ? (
-                          <PenCaret className="text-destructive mt-0.5 shrink-0" />
+                        {!hideNextStep ? (
+                          lost ? (
+                            <PenCaret className="text-destructive mt-0.5 shrink-0" />
+                          ) : (
+                            <PenTick className="text-success mt-0.5 shrink-0" />
+                          )
+                        ) : lost ? (
+                          <PortalIcon
+                            name="arrow-right"
+                            className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                          />
                         ) : (
-                          <PenTick className="text-success mt-0.5 shrink-0" />
+                          <PortalIcon
+                            name="check"
+                            className="text-success mt-0.5 size-4 shrink-0"
+                          />
                         )}
                         <span>
                           {text.split(/(\bQ\d+\b)/g).map((part, index) =>

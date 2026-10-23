@@ -13,7 +13,11 @@ import {
   type Topic,
 } from "@/lib/practice";
 import { PageHeader } from "@/components/claro/layout";
-import { SprintSetup, QuickStarts } from "@/components/sprint-setup";
+import {
+  SprintSetup,
+  QuickStarts,
+  RecommendedSprint,
+} from "@/components/sprint-setup";
 import { FinishSprint } from "@/components/finish-sprint";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -76,7 +80,7 @@ export default async function SprintPage({
     <div className="space-y-5">
       <PageHeader
         title="Topic Sprint"
-        description="Build exactly the practice you need. The summary shows what you’ll get."
+        description="Start with a recommendation, or build the practice you need."
       />
       {unfinished && (
         <Card className="py-3.5">
@@ -109,16 +113,20 @@ export default async function SprintPage({
           </CardContent>
         </Card>
       )}
-      <div className="grid gap-3 md:grid-cols-3">
+      <RecommendedSprint weak={weak} />
+      <div className="grid gap-4 sm:grid-cols-2">
         <QuickStarts
-          weak={weak}
           previousRaw={previous.data?.config}
           previous={
             previous.data?.config ? restore(previous.data.config) : undefined
           }
         />
       </div>
-      <SprintSetup topics={(topics.data ?? []) as Topic[]} params={params} />
+      <SprintSetup
+        topics={(topics.data ?? []) as Topic[]}
+        params={params}
+        mastery={Object.fromEntries(measured.map((t) => [t.id, t.pct]))}
+      />
     </div>
   );
 }

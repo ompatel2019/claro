@@ -161,8 +161,26 @@ export default async function Results({
           title={`${modeLabel(s.config.mode)} sprint · ${places?.length ? places.map(name).join(", ") : "All topics"}`}
         />
       </div>
+      <div className="flex flex-wrap gap-2">
+        <SameSetup config={s.config} />
+        {failed.length > 0 && (
+          <RetryAnswer
+            ids={failed.map((r) => r.attempt_id)}
+            label={`Retry all failed (${failed.length})`}
+          />
+        )}
+        {mistakes > 0 && (
+          <Link
+            href={sprintHref(s.config, { history: "mistakes" })}
+            className={buttonVariants()}
+          >
+            <PortalIcon name="target" className="size-4" />
+            Retry mistakes ({mistakes})
+          </Link>
+        )}
+      </div>
       <MarkingProgress {...progress} />
-      <div className="grid grid-cols-3 gap-4 xl:gap-5">
+      <div className="grid grid-cols-3 gap-3 xl:grid-cols-[minmax(0,5fr)_repeat(3,minmax(0,2fr))] xl:gap-4">
         <ResultStat
           label={
             <span className="flex items-center gap-2">
@@ -208,36 +226,24 @@ export default async function Results({
           />
         )}
       </div>
-      <div className="flex flex-wrap gap-2">
-        <SameSetup config={s.config} />
-        {failed.length > 0 && (
-          <RetryAnswer
-            ids={failed.map((r) => r.attempt_id)}
-            label={`Retry all failed (${failed.length})`}
-          />
-        )}
-        {mistakes > 0 && (
-          <Link
-            href={sprintHref(s.config, { history: "mistakes" })}
-            className={buttonVariants()}
-          >
-            <PortalIcon name="target" className="size-4" />
-            Practise mistakes ({mistakes})
-          </Link>
-        )}
-      </div>
-      <ResultsAnswers rows={rows} id={id} name={name} photos={url} />
+      <ResultsNextStep
+        rows={rows}
+        topics={topics}
+        config={s.config}
+        cards={cards}
+        note={s.summary?.improvements?.[0] ?? s.summary?.next_steps?.[0]}
+      />
+      <ResultsAnswers
+        sprintLayout
+        rows={rows}
+        id={id}
+        name={name}
+        photos={url}
+      />
       <OverallFeedback
         summary={s.summary}
         pending={progress.summaryPending}
-        nextStep={
-          <ResultsNextStep
-            rows={rows}
-            topics={topics}
-            config={s.config}
-            cards={cards}
-          />
-        }
+        hideNextStep
       />
     </div>
   );

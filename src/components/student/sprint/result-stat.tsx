@@ -21,7 +21,7 @@ export function ResultStat({
     <Card
       className={
         score
-          ? "col-span-full min-h-0 justify-center px-5 sm:min-h-36"
+          ? "col-span-full min-h-0 justify-center px-5 sm:min-h-36 xl:col-span-1"
           : "min-h-0 justify-center px-3 sm:px-5"
       }
     >
@@ -37,7 +37,7 @@ export function ResultStat({
         <div className="min-w-0">
           <p className="text-muted-foreground text-[13px]">{label}</p>
           <p
-            className={`${score ? "mt-1" : "mt-3"} text-[28px] leading-none font-bold tracking-tight tabular-nums`}
+            className={`${score ? "mt-1" : "mt-3"} text-2xl leading-none font-bold tracking-tight tabular-nums sm:text-[28px]`}
           >
             {value}
           </p>

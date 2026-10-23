@@ -3,6 +3,7 @@ import type { ReviewRow } from "@/lib/feedback";
 import type { SprintConfig, Topic } from "@/lib/practice";
 import { below, scored, sprintHref } from "@/lib/results";
 import { PortalIcon } from "@/components/icons";
+import { PenCaret } from "@/components/claro/markup-answer";
 import { buttonVariants } from "@/components/ui/button";
 import { Meter } from "@/components/claro/data-display";
 
@@ -11,13 +12,14 @@ export function ResultsNextStep({
   topics,
   config,
   cards,
+  note,
 }: {
   rows: ReviewRow[];
   topics: Topic[];
   config: SprintConfig;
   cards: Record<string, number>;
+  note?: string;
 }) {
-  const missed = rows.filter((r) => r.type === "mcq" && below(r));
   const grouped = [...new Set(rows.flatMap((r) => r.topic_id ?? []))]
     .map((id) => {
       const rs = rows.filter((r) => r.topic_id === id && scored(r));
@@ -26,94 +28,111 @@ export function ResultsNextStep({
         0,
       );
       const earned = rs.reduce((n, r) => n + Number(r.mark), 0);
-      return {
-        id,
-        rs,
-        possible,
-        earned,
-        percentage: possible ? Math.round((earned / possible) * 100) : 0,
-      };
+      return { id, rs, possible, earned, dropped: possible - earned };
     })
-    .filter((t) => t.possible > t.earned)
-    .sort((a, b) => a.percentage - b.percentage)
-    .slice(0, 2);
+    .filter((t) => t.possible > 0)
+    .sort((a, b) => b.dropped - a.dropped);
+  const needsWork = grouped.filter((t) => t.dropped > 0);
+  const fullMarks = grouped.filter((t) => t.dropped === 0);
+  const missed = rows.filter((r) => r.type === "mcq" && below(r));
+  const name = (id: string) => topics.find((t) => t.id === id)?.name ?? "Topic";
   return (
-    <div className="grid gap-3">
-      {!!missed.length && (
-        <div className="bg-brand-soft/60 border-brand/30 flex items-center gap-4 rounded-xl border p-4">
-          <span className="text-brand bg-card grid size-10 shrink-0 place-items-center rounded-xl">
-            <PortalIcon name="rotate-ccw" className="size-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold">
+    <section className="space-y-5" aria-label="Your next step">
+      <div className="bg-muted flex items-start gap-3 rounded-2xl px-5 py-5 sm:px-6">
+        <PenCaret className="mt-1 size-5 shrink-0" />
+        <div>
+          <h2 className="text-base font-semibold">Your next step</h2>
+          <p className="text-ink-2 mt-1 text-sm">
+            {note ??
+              (needsWork.length
+                ? `Focus on ${name(needsWork[0].id)} — ${needsWork[0].dropped} marks dropped here.`
+                : rows.some(scored)
+                  ? "You earned every available mark. Try another sprint to keep practising."
+                  : "Your next steps will appear once marking finishes.")}
+          </p>
+          {!!missed.length && (
+            <Link
+              className="text-ink-2 mt-2 inline-flex items-center gap-2 text-[13px] underline underline-offset-4"
+              href={sprintHref(
+                { ...config, mode: "mcq", feedback: "each" },
+                { history: "mistakes" },
+              )}
+            >
               Retry the {missed.length} multiple choice question
-              {missed.length === 1 ? "" : "s"} you missed
-            </p>
-            <p className="text-muted-foreground text-[13px]">
-              About {Math.ceil(missed.length * 1.25)} minutes · explanations
-              shown after each one
-            </p>
-          </div>
-          <Link
-            href={sprintHref(
-              { ...config, mode: "mcq", feedback: "each" },
-              { history: "mistakes" },
-            )}
-            className={buttonVariants({ size: "sm" })}
-          >
-            Retry mistakes
-          </Link>
+              {missed.length === 1 ? "" : "s"} you missed{" "}
+              <PortalIcon name="arrow-right" className="size-4" />
+            </Link>
+          )}
         </div>
-      )}
+      </div>
       {!!grouped.length && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          {grouped.map((t) => (
-            <div key={t.id} className="grid gap-3 rounded-xl border p-4">
-              <div>
-                <div className="flex justify-between gap-3 text-sm font-semibold">
-                  <p>{topics.find((topic) => topic.id === t.id)?.name}</p>
-                  <span>{t.percentage}%</span>
+        <div className="space-y-3">
+          <h2 className="text-xl font-[650] tracking-tight">
+            Where marks dropped
+          </h2>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {needsWork.map((t) => (
+              <div
+                key={t.id}
+                className="bg-card grid gap-3 rounded-2xl border p-5"
+              >
+                <div className="flex items-baseline justify-between gap-3 text-sm font-semibold">
+                  <h3>{name(t.id)}</h3>
+                  <span className="shrink-0 tabular-nums">
+                    {t.earned}/{t.possible}
+                  </span>
                 </div>
-                <p className="text-muted-foreground text-xs">
-                  {t.possible - t.earned} of {t.possible} marks dropped ·{" "}
+                <p className="text-muted-foreground text-[13px]">
+                  {t.dropped} marks dropped ·{" "}
                   {t.rs
                     .filter(below)
                     .map((r) => `Q${r.position}`)
                     .join(", ")}
                 </p>
-              </div>
-              <Meter
-                value={t.percentage}
-                label="Topic score"
-                className="h-1.5"
-              />
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href={`/student/sprint?type=${config.mode}&sub=${t.id}`}
-                  className={buttonVariants({ variant: "outline", size: "sm" })}
-                >
-                  Practise
-                </Link>
-                {!!cards[t.id] && (
+                <Meter
+                  value={(t.earned / t.possible) * 100}
+                  label="Topic score"
+                  className="h-1.5"
+                />
+                <div className="flex flex-wrap gap-2">
                   <Link
-                    href={`/student/flashcards?topic=${t.id}`}
-                    className={buttonVariants({ variant: "ghost", size: "sm" })}
+                    href={`/student/sprint?type=${config.mode}&${topics.find((topic) => topic.id === t.id)?.parent_id ? "sub" : "topics"}=${t.id}`}
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                    })}
                   >
-                    Review cards
+                    Practise
                   </Link>
-                )}
+                  {!!cards[t.id] && (
+                    <Link
+                      href={`/student/flashcards?topic=${t.id}`}
+                      className={buttonVariants({
+                        variant: "ghost",
+                        size: "sm",
+                      })}
+                    >
+                      Review cards
+                    </Link>
+                  )}
+                </div>
               </div>
-            </div>
+            ))}
+          </div>
+          {fullMarks.map((t) => (
+            <p
+              key={t.id}
+              className="text-success-text bg-card flex flex-wrap items-center gap-2 rounded-2xl border px-5 py-3 text-[13px]"
+            >
+              <PortalIcon name="check" className="size-4" />
+              <span className="font-medium">{name(t.id)}</span>
+              <span className="ml-auto tabular-nums">
+                {t.earned}/{t.possible} · Full marks
+              </span>
+            </p>
           ))}
         </div>
       )}
-      {!missed.length && !grouped.length && (
-        <p className="text-muted-foreground text-[13px]">
-          {rows.some(scored)
-            ? "You earned every available mark. Try another sprint to keep practising."
-            : "Your next steps will appear once marking finishes."}
-        </p>
-      )}
-    </div>
+    </section>
   );
 }

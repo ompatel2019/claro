@@ -136,7 +136,7 @@ test.describe("Sprint results", () => {
     ).toBeVisible();
 
     const mistakes = page.getByRole("link", {
-      name: /^Practise mistakes \(\d\)$/,
+      name: /^Retry mistakes \(\d\)$/,
     });
     if (below !== -1)
       await expect(mistakes).toHaveAttribute("href", /history=mistakes/);
@@ -164,24 +164,15 @@ test.describe("Sprint results", () => {
       ).toBeInViewport({ ratio: 1 });
       await expect(noOverflow(page)).resolves.toBe(true);
     }
-    const more = page.getByRole("button", { name: "More tools" });
-    await more.click();
-    await expect(page.getByRole("menuitem", { name: "Booklet" })).toBeVisible();
+    await page.getByRole("button", { name: "Booklet (B)" }).click();
     await expect(
-      page.getByRole("menuitem", { name: "Calculator" }),
+      page.getByRole("heading", { name: "Booklet", exact: true }),
     ).toBeVisible();
-    // The menu opens under its own button: its right edge lines up with the button's,
-    // not stranded at the left edge of the header.
-    // Retry: the popup animates in for ~100ms.
-    await expect
-      .poll(async () => {
-        const button = (await more.boundingBox())!;
-        const menu = (await page.getByRole("menu").boundingBox())!;
-        return (
-          menu.y >= button.y + button.height - 1 &&
-          Math.abs(menu.x + menu.width - (button.x + button.width)) < 8
-        );
-      })
-      .toBe(true);
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Calculator (C)" }).click();
+    await expect(
+      page.getByRole("dialog", { name: "Calculator" }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
   });
 });

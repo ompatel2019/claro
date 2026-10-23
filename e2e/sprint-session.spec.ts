@@ -36,6 +36,7 @@ test.describe("Sprint session", () => {
     page,
   }) => {
     await setUp(page, ["Check as I go"]);
+    await page.getByRole("button", { name: "Booklet (B)" }).click();
     await expect(
       page.getByText(
         /^Question 1 · Multiple choice · 1 mark · (\d{4} HSC Q\d+|Practice)/,
@@ -121,8 +122,9 @@ test.describe("Sprint session", () => {
     }) => {
       await page.setViewportSize({ width, height: 850 });
       await setUp(page, ["Check as I go"]);
+      await page.getByRole("button", { name: "Booklet (B)" }).click();
       const actions = page.getByRole("group", { name: "Answer actions" });
-      const flag = actions.getByRole("button", { name: "Flag for review" });
+      const flag = page.getByRole("button", { name: "Flag for review" });
       await expect(
         actions.getByRole("button", { name: "Check answer" }),
       ).toBeVisible();

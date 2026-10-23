@@ -32,11 +32,13 @@ export function ResultsBrowser({
   views,
   initial,
   mcGrid,
+  sprintLayout = false,
 }: {
   items: ResultItem[];
   views: React.ReactNode[];
   initial: number;
   mcGrid?: McGridRow[];
+  sprintLayout?: boolean;
 }) {
   const [index, setIndex] = useState(initial);
   const [table, setTable] = useState(false);
@@ -123,7 +125,12 @@ export function ResultsBrowser({
   const label = (it: ResultItem, i: number) =>
     `Question ${it.position ?? i + 1}${it.mark ? `, ${it.mark} marks` : ""}${it.pill ? `, ${it.pill}` : ""}`;
   return (
-    <section className="bg-card shadow-card space-y-5 rounded-xl border p-5">
+    <section
+      className={cn(
+        "space-y-5",
+        !sprintLayout && "bg-card shadow-card rounded-xl border p-5",
+      )}
+    >
       {table && mcGrid && mcGrid.length > 0 && (
         <Card>
           <CardHeader>
@@ -211,7 +218,15 @@ export function ResultsBrowser({
         className="relative flex scroll-mt-20 flex-wrap items-start justify-between gap-3"
       >
         <div>
-          <h2 className="text-sm font-semibold">Your answers</h2>
+          <h2
+            className={
+              sprintLayout
+                ? "text-xl font-[650] tracking-tight"
+                : "text-sm font-semibold"
+            }
+          >
+            Your answers
+          </h2>
           <ul
             aria-label="Answer key"
             className="text-muted-foreground mt-2 flex flex-col gap-x-4 gap-y-1 text-xs sm:flex-row sm:flex-wrap"
@@ -219,7 +234,10 @@ export function ResultsBrowser({
             {[
               ["Correct", "bg-success-soft"],
               ["Part marks", "bg-warning-soft"],
-              ["Incorrect", "bg-brand-soft"],
+              [
+                "Incorrect",
+                sprintLayout ? "bg-destructive-soft" : "bg-brand-soft",
+              ],
               ["Not answered", "border border-dashed"],
             ].map(([label, tone]) => (
               <li key={label} className="flex items-center gap-1.5">
@@ -307,19 +325,61 @@ export function ResultsBrowser({
                         aria-current={i === index ? "true" : undefined}
                         onClick={() => setIndex(i)}
                         className={cn(
-                          "grid size-12 content-center rounded-xl border border-transparent text-sm font-medium tabular-nums",
-                          it.tone
-                            .replace(
-                              /border-(success|warning|destructive)/g,
-                              "border-transparent",
-                            )
-                            .replace(/bg-destructive-soft/g, "bg-brand-soft")
-                            .replace(/text-destructive/g, "text-brand-text"),
+                          sprintLayout
+                            ? "grid min-h-20 min-w-20 content-center justify-items-center gap-1 rounded-2xl border border-transparent px-2 py-2 text-sm font-semibold tabular-nums"
+                            : "grid size-12 content-center rounded-xl border border-transparent text-sm font-medium tabular-nums",
+                          sprintLayout
+                            ? it.tone
+                            : it.tone
+                                .replace(
+                                  /border-(success|warning|destructive)/g,
+                                  "border-transparent",
+                                )
+                                .replace(
+                                  /bg-destructive-soft/g,
+                                  "bg-brand-soft",
+                                )
+                                .replace(
+                                  /text-destructive/g,
+                                  "text-brand-text",
+                                ),
                           !it.mark && "border-border border-dashed",
                           i === index && "ring-primary ring-2 ring-offset-2",
                         )}
                       >
                         {it.position ?? i + 1}
+                        {sprintLayout &&
+                          (() => {
+                            const score = it.mark?.match(/^(\d+)\/(\d+)$/);
+                            const earned =
+                              score && Number(score[1]) === Number(score[2]);
+                            const partly =
+                              score && Number(score[1]) > 0 && !earned;
+                            const word = score
+                              ? earned
+                                ? "Earned"
+                                : partly
+                                  ? "Part marks"
+                                  : "Missed"
+                              : (it.pill ?? "Not answered");
+                            return (
+                              <span className="flex items-center gap-1 text-[10px] font-medium">
+                                <PortalIcon
+                                  name={
+                                    score
+                                      ? earned
+                                        ? "check"
+                                        : partly
+                                          ? "circle-alert"
+                                          : "x"
+                                      : "circle-alert"
+                                  }
+                                  className="size-3"
+                                />
+                                {word}
+                              </span>
+                            );
+                          })()}
                         {type !== "Multiple choice" && it.mark && (
                           <span className="mt-0.5 text-[10px] font-normal">
                             {it.mark}
