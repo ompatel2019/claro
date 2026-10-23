@@ -334,8 +334,21 @@ test.describe("Local results feedback", () => {
     await expect(
       review.getByRole("region", { name: "Sample answer" }),
     ).toBeVisible();
+    await expect(
+      review
+        .locator("[data-card]")
+        .filter({ hasText: "Explain the link to supply." }),
+    ).toContainText("Your next mark: Stored per-comment advice.");
     await page.getByRole("link", { name: "Q3", exact: true }).click();
     await expect(page.locator("#q-3")).toBeInViewport();
+    await page.getByRole("button", { name: /^Question 2,/ }).click();
+    await expect(page.locator("#q-2")).toBeVisible();
+    await expect(page).toHaveURL(/#q-3$/);
+    await page.getByRole("link", { name: "Q3", exact: true }).click();
+    await expect(page.locator("#q-3")).toBeInViewport();
+    await expect(
+      page.getByRole("button", { name: /^Question 3,/ }),
+    ).toHaveAttribute("aria-current", "true");
   });
   test("single-answer results show full marks and actionable partial-mark feedback", async ({
     page,

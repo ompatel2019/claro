@@ -75,7 +75,7 @@ export function ResultsAnswers({
   const views = rows.map((r) => {
     const state = markingState(r);
     return (
-      <Card key={r.attempt_id} id={`q-${r.position}`}>
+      <Card key={r.attempt_id} id={`q-${r.position}`} className="scroll-mt-20">
         <CardHeader className="space-y-2">
           <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
             <Badge variant="outline">Question {r.position}</Badge>

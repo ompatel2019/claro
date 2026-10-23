@@ -4,12 +4,13 @@ import {
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
 vi.mock("sonner", () => ({ toast: vi.fn() }));
 import { toast } from "sonner";
-import type { ReviewRow } from "@/lib/feedback";
+import { readComments, type ReviewRow } from "@/lib/feedback";
 import {
   AnnotatedFeedback,
   displayAnswer,
@@ -97,7 +98,7 @@ it("shows the summary, numbered highlights and an Overall group", () => {
   expect(screen.getByLabelText("Your mark: 3/6")).toBeTruthy();
   expect(screen.getByText("Band: 3–4 marks")).toBeTruthy();
   expect(screen.getByText("Marked")).toBeTruthy();
-  expect(screen.getAllByText("Quote the 2022 CPI.")).toHaveLength(1);
+  expect(screen.getAllByText("Quote the 2022 CPI.")).toHaveLength(2);
   expect(screen.queryByText("Next mark:")).not.toBeInTheDocument();
   const fix = screen.getByRole("button", {
     name: "Fix 1, Evidence: Give a CPI figure.",
@@ -671,4 +672,35 @@ it("shows criteria, answer with semantic numbered notes, then an open sample ans
     expect(note).toHaveTextContent(kind);
   }
   localStorage.clear();
+});
+
+it("keeps every fix's next-mark instruction beneath its numbered comment", () => {
+  const comments = readComments(row.feedback, text).map((c, i) => ({
+    ...c,
+    next_mark: i === 2 ? "Link the conclusion to inflation." : c.next_mark,
+  }));
+  render(
+    <AnnotatedFeedback
+      singleResult
+      readOnly
+      row={{
+        ...row,
+        feedback: {
+          ...row.feedback,
+          comments,
+          next_mark_line: "Focus on evidence and structure.",
+        },
+      }}
+    />,
+  );
+  for (const [body, instruction, number] of [
+    ["Give a CPI figure.", "Quote the 2022 CPI.", "1"],
+    ["Add a conclusion.", "Link the conclusion to inflation.", "3"],
+  ]) {
+    const card = screen.getByText(body).closest("[data-card]") as HTMLElement;
+    expect(within(card).getByText(number)).toBeVisible();
+    expect(within(card).getByText("Your next mark:")).toBeVisible();
+    expect(within(card).getByText(instruction)).toBeVisible();
+  }
+  expect(screen.getByText("Focus on evidence and structure.")).toBeVisible();
 });

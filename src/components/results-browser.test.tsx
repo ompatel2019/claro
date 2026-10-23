@@ -1,11 +1,14 @@
 import {
   cleanup,
+  act,
   render,
   screen,
   fireEvent,
   within,
+  waitFor,
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { OverallFeedback } from "./results-report";
 import { ResultsBrowser } from "./results-browser";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -101,4 +104,43 @@ it("opens the questioned mark from a report hash and responds to hash changes", 
   window.history.replaceState(null, "", "#q-999");
   fireEvent(window, new Event("hashchange"));
   expect(screen.getByText("Answer to Q24")).toBeVisible();
+});
+
+it("reselects and scrolls to a summary question after manual navigation with the same hash", async () => {
+  const scroll = vi.fn(function (this: HTMLElement) {
+    expect(this).toBe(screen.getByText("Answer to Q3"));
+  });
+  Element.prototype.scrollIntoView = scroll;
+  render(
+    <>
+      <ResultsBrowser
+        items={[2, 3].map((position) => ({ ...items[0], position }))}
+        views={[2, 3].map((p) => (
+          <p id={`q-${p}`} key={p}>
+            Answer to Q{p}
+          </p>
+        ))}
+        initial={0}
+      />
+      <OverallFeedback
+        summary={{ strengths: ["At Q3, identify prices."] }}
+        pending={false}
+      />
+    </>,
+  );
+  await act(async () => {});
+  fireEvent.click(screen.getByRole("link", { name: "Q3" }));
+  expect(screen.getByText("Answer to Q3")).toBeVisible();
+  await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
+  fireEvent.click(
+    screen.getByRole("button", { name: "Question 2, 2 / 4 marks" }),
+  );
+  expect(screen.getByText("Answer to Q2")).toBeVisible();
+  expect(window.location.hash).toBe("#q-3");
+  fireEvent.click(screen.getByRole("link", { name: "Q3" }));
+  expect(screen.getByText("Answer to Q3")).toBeVisible();
+  await waitFor(() => expect(scroll).toHaveBeenCalledTimes(2));
+  // Clicking the selected question again still scrolls to its answer.
+  fireEvent.click(screen.getByRole("link", { name: "Q3" }));
+  await waitFor(() => expect(scroll).toHaveBeenCalledTimes(3));
 });

@@ -239,7 +239,15 @@ export function CommentCard({
           </Button>
         </fieldset>
       ) : (
-        <p className="mt-1.5">{c.body}</p>
+        <>
+          <p className="mt-1.5">{c.body}</p>
+          {c.kind === "fix" && c.next_mark?.trim() && (
+            <p className="mt-1.5">
+              <span className="font-semibold">Your next mark: </span>
+              {c.next_mark}
+            </p>
+          )}
+        </>
       )}
     </div>
   );
