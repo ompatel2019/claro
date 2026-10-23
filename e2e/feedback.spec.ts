@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { adminClient, cleanupSessions, signIn, start } from "./helpers";
 
 const answer =
-  "Inflation rose because demand grew faster than supply. Wages lagg[?] behind prices.";
+  "Inflation rose because demand grew faster than supply.\nWages lagg[?] behind prices.";
 const comments = [
   {
     quote: "Inflation rose",
@@ -95,56 +95,89 @@ test.describe("annotated written feedback", () => {
     results = `/student/sprint/${id}/results`;
   });
 
-  test("highlights and margin cards link both ways on wide screens", async ({
+  test("highlights and comment slider link both ways on wide screens", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1700, height: 1000 });
     await signIn(page);
     await page.goto(results);
-    await expect(page.getByText("2 / 4", { exact: true })).toBeVisible();
-    await expect(
-      page.getByText("Marked", { exact: true }).last(),
-    ).toBeVisible();
-    await expect(
-      page.getByText("Quote the latest CPI rate.").first(),
-    ).toBeVisible();
+    const score = page.getByRole("complementary", { name: "Your mark: 2/4" });
+    await expect(score).toContainText("2/4 marks");
+    await expect(score.getByText("Marked", { exact: true })).toBeVisible();
+    const slider = page.getByRole("region", { name: "Comments", exact: true });
+    const fixSlide = slider.getByRole("group", { name: "Comment 1 of 3" });
+    await expect(fixSlide).toContainText(
+      "Your next mark: Quote the latest CPI rate.",
+    );
     const fix = page.getByRole("button", {
       name: "Fix 1, Evidence: Give a CPI figure.",
     });
     await expect(fix).toHaveText("Inflation rose");
-    await fix.click();
-    await expect(page.locator('[data-card="0"]')).toBeFocused();
-    await expect(
-      page.getByRole("heading", { name: "Overall", exact: true }),
-    ).toBeVisible();
+    await expect(fix).toHaveClass(/cma-hl--missed/);
+    await expect(fix).toHaveAttribute("data-anchors", "0");
+    await expect(page.locator(".cma-text > p")).toHaveText([
+      "Inflation rose because demand grew faster than supply.",
+      "Wages lagg[?] behind prices.",
+    ]);
+    await fix.press("Enter");
+    await expect(fixSlide).toBeFocused();
+    await expect(fix).toHaveAttribute("data-selected", "true");
     await expect(
       page.getByTitle("Hard to read. Not counted against you."),
     ).toHaveText("lagg[?]");
-    // The margin card sits level with its highlight.
+    // The slider sits to the right of the answer and connects to its highlight.
     const [h, c] = await Promise.all([
       fix.boundingBox(),
-      page.locator('[data-card="0"]').boundingBox(),
+      fixSlide.boundingBox(),
     ]);
-    expect(Math.abs(h!.y - c!.y)).toBeLessThan(40);
-    expect(c!.x).toBeGreaterThan(h!.x + 300);
-    await page.getByRole("button", { name: "Fixes (2)" }).click();
-    await expect(page.getByRole("button", { name: /^Strength 2/ })).toHaveCount(
-      0,
+    expect(c!.x).toBeGreaterThan(h!.x + h!.width);
+    await expect(page.locator("svg.cma-link")).toBeVisible();
+    const previous = slider.getByRole("button", { name: "Previous comment" });
+    const next = slider.getByRole("button", { name: "Next comment" });
+    await expect(previous).toHaveAttribute("aria-disabled", "true");
+    await next.click();
+    const strength = page.getByRole("button", { name: /^Strength 2/ });
+    await expect(strength).toHaveClass(/cma-hl--earned/);
+    await expect(strength).toHaveAttribute("data-selected", "true");
+    await expect(fix).not.toHaveAttribute("data-selected", "true");
+    await expect(slider.locator('[data-card="0"]')).toHaveAttribute(
+      "aria-hidden",
+      "true",
     );
+    await expect(slider.locator('[data-card="0"]')).toHaveAttribute(
+      "inert",
+      "",
+    );
+    await expect(slider.getByRole("group")).toHaveCount(1);
+    await next.click();
+    const overall = slider.getByRole("group", { name: "Comment 3 of 3" });
+    await expect(overall.getByText("Overall", { exact: true })).toBeVisible();
+    await expect(overall).toContainText("End with a one-line judgement.");
+    await expect(next).toHaveAttribute("aria-disabled", "true");
+    await score
+      .getByRole("button", {
+        name: "Your next mark: Quote the latest CPI rate.",
+      })
+      .click();
+    await expect(fixSlide).toBeFocused();
+    await expect(fix).toHaveAttribute("data-selected", "true");
   });
 
-  test("tapping a highlight opens its comment on phones", async ({ page }) => {
+  test("tapping a highlight shows its comment in the slider on phones", async ({
+    page,
+  }) => {
     await page.setViewportSize({ width: 390, height: 844 });
+    await page.emulateMedia({ reducedMotion: "reduce" });
     await signIn(page);
     await page.goto(results);
-    await page.getByRole("button", { name: /^Strength 2/ }).click();
+    const strength = page.getByRole("button", { name: /^Strength 2/ });
+    await strength.click();
+    const slider = page.getByRole("region", { name: "Comments", exact: true });
     await expect(
-      page
-        .getByRole("dialog")
-        .getByText("Correct cause of demand-pull inflation."),
-    ).toBeVisible();
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("dialog")).toHaveCount(0);
+      slider.getByRole("group", { name: "Comment 2 of 3" }),
+    ).toContainText("Correct cause of demand-pull inflation.");
+    await expect(strength).toHaveAttribute("data-selected", "true");
+    await expect(slider).toBeInViewport();
   });
 
   test("report a problem with this question sends linked feedback", async ({

@@ -45,8 +45,26 @@ test.describe("Sprint check model answer", () => {
     const feedback = page.getByRole("region", {
       name: "Checked answer feedback",
     });
-    await expect(feedback).toContainText("2/4");
-    await expect(feedback).toContainText("Link demand to prices.");
+    const score = feedback.getByRole("complementary", {
+      name: "Your mark: 2/4",
+    });
+    await expect(score).toContainText("2/4 marks");
+    await expect(score).toContainText("2 to gain");
+    const slider = feedback.getByRole("region", {
+      name: "Comments",
+      exact: true,
+    });
+    const comment = slider.getByRole("group", { name: "Comment 1 of 1" });
+    await expect(comment).toContainText("Overall");
+    await expect(comment).toContainText("Link demand to prices.");
+    await expect(comment).toContainText(
+      "Your next mark: Explain spare capacity.",
+    );
+    for (const name of ["Previous comment", "Next comment"])
+      await expect(slider.getByRole("button", { name })).toHaveAttribute(
+        "aria-disabled",
+        "true",
+      );
     await expect(
       feedback.getByRole("heading", { name: "Sample answer" }),
     ).toBeVisible();

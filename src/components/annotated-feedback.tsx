@@ -10,6 +10,7 @@ import {
 } from "react";
 import { Alert } from "@/components/icons";
 import {
+  answerTextOf,
   bandOf,
   layoutCards,
   markLabel,
@@ -34,6 +35,7 @@ import { Popover, PopoverContent } from "./ui/popover";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 
+import { MarkedAnswerDoc } from "./annotated-feedback/marked-answer-doc";
 import {
   FeedbackDetails,
   CommentFields,
@@ -69,6 +71,10 @@ export function AnnotatedFeedback({
   edit,
   showReferences = true,
   singleResult = false,
+  keepLineBreaks = false,
+  answerOnly = false,
+  aiNote = true,
+  flush = false,
 }: {
   row: ReviewRow;
   photos?: string[];
@@ -78,14 +84,21 @@ export function AnnotatedFeedback({
   showReferences?: boolean;
   /** Standalone student result cards; defaults preserve embedded/admin rendering. */
   singleResult?: boolean;
+  /** Typed answers: keep every line break instead of joining single ones. */
+  keepLineBreaks?: boolean;
+  /** Render only the marked answer (heading, filter, highlights, comments); the host page owns score, criteria, next steps and references. */
+  answerOnly?: boolean;
+  /** The AI line under the marked answer; results pages show it once instead. */
+  aiNote?: boolean;
+  /** Draw the marked answer inside the host's card, with no frame of its own. */
+  flush?: boolean;
 }) {
-  const AnswerContainer = singleResult ? ResultAnswerCard : Fragment;
   const nextCommentId = useRef(
     Math.min(0, ...(edit?.comments.map((c) => c.id) ?? [])) - 1,
   );
   const state = markingState(row);
-  const text = row.transcript ?? row.answer_text ?? "";
-  const displayedText = displayAnswer(text);
+  const text = answerTextOf(row);
+  const displayedText = keepLineBreaks ? text : displayAnswer(text);
   const comments = useMemo(
     () =>
       edit
@@ -145,6 +158,11 @@ export function AnnotatedFeedback({
   const visible = comments.filter((c) => filter === "all" || c.kind === filter);
   const anchored = comments.filter((c) => c.start !== null);
   const pill = statePill(state, row.review);
+  // Marked, read-only typed answers use the Docs-style view; editing and the photo keep the margin layout.
+  const docView =
+    !edit && showMark && !!text && (view === "typed" || !photos.length);
+  const AnswerContainer =
+    singleResult && !docView ? ResultAnswerCard : Fragment;
   const outline = Array.isArray(row.feedback?.better_answer_outline)
     ? (row.feedback.better_answer_outline as string[])
     : [];
@@ -449,9 +467,9 @@ export function AnnotatedFeedback({
       ref={root}
       data-comment-navigation
       className={cn("space-y-4", singleResult && "min-w-0")}
-      onKeyDown={onKey}
+      onKeyDown={docView ? undefined : onKey}
     >
-      {showReferences && !!row.criteria?.length && (
+      {!answerOnly && showReferences && !!row.criteria?.length && (
         <section
           aria-label="Marking criteria"
           className="space-y-3 rounded-xl border p-4"
@@ -498,7 +516,7 @@ export function AnnotatedFeedback({
         </section>
       )}
 
-      {singleResult && showMark ? (
+      {answerOnly || docView ? null : singleResult && showMark ? (
         <div className="grid gap-5">
           <Card className="min-w-0 p-5">
             <div className="flex items-center gap-5">
@@ -594,7 +612,7 @@ export function AnnotatedFeedback({
         </Card>
       )}
       <AnswerContainer>
-        {(text || photos.length > 0) && (
+        {!docView && (text || photos.length > 0) && (
           <div>
             <h2 className="text-sm font-semibold">
               {showMark ? "Your answer, marked" : "Your answer"}
@@ -606,9 +624,9 @@ export function AnnotatedFeedback({
             )}
           </div>
         )}
-        {(filterBar || (photos.length > 0 && text)) && (
+        {((filterBar && !docView) || (photos.length > 0 && text)) && (
           <div className="flex flex-wrap items-center justify-between gap-2">
-            {view === "typed" && filterBar}
+            {view === "typed" && !docView && filterBar}
             {photos.length > 0 && text && (
               <ToggleGroup
                 aria-label="Answer view"
@@ -625,6 +643,42 @@ export function AnnotatedFeedback({
         )}
         {(view === "photo" || !text) && photos.length > 0 ? (
           <Photos photos={photos} />
+        ) : docView ? (
+          <MarkedAnswerDoc
+            // A new answer (e.g. the next checked question) starts fresh:
+            // slider back on its next-mark comment, highlights re-synced.
+            key={`${row.attempt_id}:${text}`}
+            text={
+              keepLineBreaks || !row.transcript ? text : displayAnswer(text)
+            }
+            comments={comments}
+            flush={flush}
+            aiNote={aiNote}
+            note={
+              photos.length > 0
+                ? "Highlights show on the typed copy of your photo."
+                : undefined
+            }
+            score={
+              answerOnly
+                ? undefined
+                : {
+                    label: `Your mark: ${markLabel(row).replaceAll(" ", "")}`,
+                    mark: markLabel(row).split(" / ")[0],
+                    max,
+                    gain: Math.max(0, max - Number(row.mark)),
+                    tags: [band?.label, pill].filter((t): t is string => !!t),
+                    note:
+                      state === "in_review" &&
+                      row.review?.reason !== "student_dispute"
+                        ? "Our team is double-checking this mark."
+                        : null,
+                    earned: strings(row.feedback?.earned),
+                    missing: strings(row.feedback?.missing_points),
+                    next,
+                  }
+            }
+          />
         ) : text ? (
           <div
             className={cn(
@@ -709,7 +763,7 @@ export function AnnotatedFeedback({
           </PopoverContent>
         </Popover>
 
-        {showMark && (edit || next) && (
+        {!answerOnly && !docView && showMark && (edit || next) && (
           <div>
             <h3 className="text-sm font-semibold">
               {singleResult ? "Your next mark" : "What gets you the next mark"}
@@ -729,7 +783,7 @@ export function AnnotatedFeedback({
           </div>
         )}
 
-        {showMark && (
+        {!answerOnly && showMark && (
           <div className="space-y-2">
             {Number(row.mark) < max && outline.length > 0 && (
               <FeedbackDetails name="outline" title="How to reach full marks">
@@ -757,17 +811,24 @@ export function AnnotatedFeedback({
           </div>
         )}
       </AnswerContainer>
-      <div className="flex flex-wrap gap-2">
-        {!edit && !singleResult && row.topic_id && (
-          <Link
-            className={buttonVariants({ variant: "outline", size: "sm" })}
-            href={`/student/sprint?type=${row.type}&sub=${encodeURIComponent(row.topic_id)}`}
-          >
-            Practise similar
-          </Link>
-        )}
-        {actions}
-      </div>
+      {!answerOnly && (
+        <div className="flex flex-wrap gap-2">
+          {!edit && !singleResult && row.topic_id && (
+            <Link
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+              href={`/student/sprint?type=${row.type}&sub=${encodeURIComponent(row.topic_id)}`}
+            >
+              Practise similar
+            </Link>
+          )}
+          {actions}
+        </div>
+      )}
     </div>
   );
 }
+
+const strings = (value: unknown) =>
+  Array.isArray(value)
+    ? value.filter((v): v is string => typeof v === "string" && !!v.trim())
+    : [];
