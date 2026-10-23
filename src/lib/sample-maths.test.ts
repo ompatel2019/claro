@@ -49,3 +49,9 @@ it("never pulls a unit across a line break", () => {
     "840 ÷ 105 × 100 = 800m.",
   );
 });
+
+it("formats division with uneven slash spacing", () => {
+  expect(formatSampleMaths("840 /105 x 100 = $800 m")).toBe(
+    "840 ÷ 105 × 100 = $800m",
+  );
+});
