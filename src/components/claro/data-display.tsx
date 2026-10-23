@@ -114,9 +114,7 @@ export function StatCard({
   return (
     <Card data-component="StatCard" className="h-full gap-3">
       <CardHeader>
-        <CardDescription className="self-center text-[13px]">
-          {title}
-        </CardDescription>
+        <CardDescription className="self-center">{title}</CardDescription>
         {icon && (
           <span className="bg-muted text-muted-foreground col-start-2 row-start-1 grid size-8 place-items-center rounded-[12px]">
             {icon}
