@@ -6,6 +6,7 @@ describe("isMetaLine", () => {
     "This summary covers your written short answers; multiple-choice (MC) answers were not supplied, so it makes no claims about your MC performance.",
     "Multiple-choice answers were not included in this feedback.",
     "As an AI, I can only see your written answers.",
+    "As a language model, I cannot see your diagrams.",
     "The feedback only covers written answers.",
     "Your MC answers were not provided.",
   ])("drops %s", (line) => expect(isMetaLine(line)).toBe(true));
@@ -18,6 +19,7 @@ describe("isMetaLine", () => {
     "You supplied two relevant examples in Q5.",
     "Q6 covers multiple-choice style recall well.",
     "In Q2, units were not included.",
+    "In Q2, explain how a language model can raise labour productivity.",
     "The summary in Q1 covers both causes of inflation accurately.",
     "In Q2, your answer makes no claim about the effect on employment.",
     "Your multiple-choice answers were accurate.",

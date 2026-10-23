@@ -251,7 +251,10 @@ it("keeps one line per point with its question links on the right", () => {
     "#q-3",
   );
   const fix = screen.getByText(/^Q4 and Q5: link hours/);
-  expect(fix).toHaveClass("sm:truncate");
+  expect(fix).toHaveClass(
+    "sm:truncate",
+    "sm:group-focus-within:whitespace-normal",
+  );
   expect(fix).toHaveAttribute("title", fix.textContent);
   expect(
     Array.from(fix.closest("li")!.querySelectorAll("a"), (a) =>

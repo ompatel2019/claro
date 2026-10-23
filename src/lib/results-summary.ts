@@ -16,7 +16,7 @@ const META = [
   /\b(?:only|just) (?:covers?|includes?|looks at) (?:your )?written\b/i,
   /\bmakes? no claims? about (?:your )?(?:mc|multiple[- ]choice)\b/i,
   /\bas an ai\b/i,
-  /\b(?:language model|i am an ai|i'm an ai)\b/i,
+  /\b(?:as a language model|i am an ai|i'm an ai|i am a language model|i'm a language model)\b/i,
 ];
 
 export function isMetaLine(text: string) {

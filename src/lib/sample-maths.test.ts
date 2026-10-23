@@ -28,6 +28,14 @@ it.each([
   "https://example.com/?calc=2*3=6",
   "See /resources?calc=2*3=6 for more",
   "See www.example.com/a#840/105=8 for more",
+  "See (/resources?calc=2*3=6) for more",
+  'Open "/calc/840/105=8" to check',
 ])("leaves %j alone", (input) => {
   expect(formatSampleMaths(input)).toBe(input);
+});
+
+it("still formats maths that follows an opening bracket", () => {
+  expect(formatSampleMaths("Real GDP (840/105 x 100 = 800)")).toBe(
+    "Real GDP (840 ÷ 105 × 100 = 800)",
+  );
 });

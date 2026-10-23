@@ -13,6 +13,7 @@ import { firstLost } from "@/lib/results-stats";
 import { formatSampleMaths } from "@/lib/sample-maths";
 import Link from "next/link";
 import { buttonVariants } from "./ui/button";
+import { cn } from "@/lib/utils";
 import { PortalIcon } from "./icons";
 import { QuestionView } from "./question-view";
 import { Badge } from "./claro/controls";
@@ -385,10 +386,15 @@ export function OverallFeedback({
                   {lines.map((text, i) => (
                     <li
                       key={i}
-                      className="flex items-baseline gap-4 px-4 py-2.5 text-[13px]"
+                      className="group flex items-baseline gap-4 px-4 py-2.5 text-[13px]"
                     >
+                      {/* Sprint: one line on desktop, opened in full on hover or when its Q link has focus. */}
                       <span
-                        className="text-ink-2 min-w-0 flex-1 sm:truncate"
+                        className={cn(
+                          "text-ink-2 min-w-0 flex-1",
+                          hideNextStep &&
+                            "sm:truncate sm:group-focus-within:whitespace-normal sm:group-hover:whitespace-normal",
+                        )}
                         title={text}
                       >
                         {text}
