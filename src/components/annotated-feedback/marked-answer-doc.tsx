@@ -205,6 +205,11 @@ export function MarkedAnswerDoc({
     from: "text" | "card" | "mark",
     move = false,
   ) {
+    // Focus first: a clipped card's onFocus reveal is then overridden by the phrase alignment below.
+    if (move)
+      body.current
+        ?.querySelector<HTMLElement>(`[data-card="${id}"]`)
+        ?.focus({ preventScroll: true });
     // From the text: the page stays put and the column slides so the comment sits level with
     // its phrase. From the comment: nothing moves; its phrase lights up.
     if (from === "text") {
@@ -220,10 +225,6 @@ export function MarkedAnswerDoc({
           : 0,
       );
     }
-    if (move)
-      body.current
-        ?.querySelector<HTMLElement>(`[data-card="${id}"]`)
-        ?.focus({ preventScroll: true });
     const next = from === "card" && focused === id ? null : id;
     // Nothing focused: the column settles back to its start.
     if (next === null) setShift(0);

@@ -561,4 +561,28 @@ describe("comment column", () => {
       transform: "translateY(-90px)",
     });
   });
+
+  it("keeps the phrase alignment when Enter on a highlight focuses a clipped comment", () => {
+    const { container } = render(
+      <MarkedAnswerDoc text={text} comments={comments} column />,
+    );
+    const list = screen.getByRole("region", { name: "Comments" });
+    (container.querySelector(".cma-body") as HTMLElement).style.setProperty(
+      "--cma-wide",
+      "1",
+    );
+    const rect = (top: number) =>
+      ({ top, bottom: top + 20, left: 0, right: 0 }) as DOMRect;
+    list.getBoundingClientRect = () => rect(100);
+    Object.defineProperty(card(22).parentElement!, "offsetTop", { value: 90 });
+    card(22).getBoundingClientRect = () => rect(40);
+    const phrase = marks(container, 22)[0];
+    phrase.getBoundingClientRect = () => rect(150);
+    fireEvent.keyDown(phrase, { key: "Enter" });
+    expect(card(22)).toHaveFocus();
+    // Level with the phrase (150 - (100 + 90)), not lifted to the column top (-90).
+    expect(list.querySelector("ol")).toHaveStyle({
+      transform: "translateY(-40px)",
+    });
+  });
 });
