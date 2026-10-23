@@ -283,7 +283,7 @@ it("shows the supplied exam countdown only for students without a global chat la
     </AppShell>,
   );
   expect(screen.queryByText("HSC Economics exam")).toBeNull();
-  expect(screen.queryByRole("button", { name: "Feedback" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Send feedback" })).toBeNull();
   expect(screen.getByRole("link", { name: "Inbox" })).toHaveAttribute(
     "href",
     "/admin/feedback",
@@ -299,12 +299,12 @@ it("opens the existing feedback dialog from the main nav and both account menus"
       </AppShell>
     </FeedbackWidget>,
   );
-  const feedback = screen.getByRole("button", { name: "Feedback" });
+  const feedback = screen.getByRole("button", { name: "Send feedback" });
   expect(feedback.closest("nav")).toHaveAttribute(
     "aria-label",
     "Main navigation",
   );
-  expect(screen.queryByRole("link", { name: "Feedback" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "Send feedback" })).toBeNull();
   fireEvent.click(feedback);
   expect(
     await screen.findByRole("dialog", { name: "Send feedback" }),
@@ -312,10 +312,37 @@ it("opens the existing feedback dialog from the main nav and both account menus"
   fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   for (const trigger of ["User menu", "Account menu"]) {
     fireEvent.click(screen.getByRole("button", { name: trigger }));
-    fireEvent.click(await screen.findByRole("menuitem", { name: "Feedback" }));
+    fireEvent.click(
+      await screen.findByRole("menuitem", { name: "Send feedback" }),
+    );
     expect(
       await screen.findByRole("dialog", { name: "Send feedback" }),
     ).toBeVisible();
     fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   }
+});
+
+it("retains the original admin navigation, top bar and footer classes", () => {
+  const { container } = render(
+    <AppShell kind="admin" name="Synthetic Admin" defaultOpen>
+      Content
+    </AppShell>,
+  );
+  const dashboard = screen.getByRole("link", {
+    name: "Dashboard",
+  });
+  expect(dashboard).toHaveClass(
+    "h-9",
+    "data-active:font-semibold",
+    "data-active:before:bg-brand",
+  );
+  expect(container.querySelector('[data-component="TopBar"]')).toHaveClass(
+    "h-14",
+    "backdrop-blur-md",
+  );
+  expect(container.querySelector('[data-slot="sidebar-footer"]')).toHaveClass(
+    "border-t",
+    "px-3",
+  );
+  expect(container.querySelector(".student-frame")).toBeNull();
 });

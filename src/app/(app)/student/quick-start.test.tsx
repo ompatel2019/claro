@@ -103,7 +103,7 @@ it("shows term context, one next step, honest weekly practice and a quiet flashc
   render(await resolve(await Home()));
   expect(screen.getByText(/Term 4, week 2/)).toBeVisible();
   const next = screen.getByRole("region", {
-    name: "Start your first Topic Sprint",
+    name: "Pick a topic for today's sprint",
   });
   expect(
     within(next).getByRole("link", { name: /Start sprint/ }),
@@ -131,6 +131,12 @@ it("keeps next-step actions usable when progress and activity fail", async () =>
     "/student/sprint",
   );
   expect(screen.getByText("Practice days unavailable")).toBeVisible();
+  expect(screen.getByText("Couldn't load your recommendation.")).toBeVisible();
+  expect(
+    screen.getByText("Couldn't load your practice average."),
+  ).toBeVisible();
+  expect(screen.queryByText("Start your first Topic Sprint")).toBeNull();
+  expect(screen.queryByText(/No marked answers/)).toBeNull();
 });
 it("isolates recent-session failures", async () => {
   mocks.failSessions = true;

@@ -258,8 +258,44 @@ export async function HomeRecent({
   );
 }
 
-export async function HomeNextStep({ progress }: { progress: HomeProgress }) {
-  const topic = nextStepTopic(await progress);
+export async function readHasMarkedAnswers(
+  userId: string,
+): Promise<boolean | null> {
+  try {
+    const db = await createClient();
+    const { data, error } = await db
+      .from("attempts")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("status", "marked")
+      .limit(1)
+      .returns<{ id: string }[]>();
+    if (
+      error ||
+      !Array.isArray(data) ||
+      data.some((row) => typeof row.id !== "string")
+    )
+      return null;
+    return data.length > 0;
+  } catch {
+    return null;
+  }
+}
+
+export async function HomeNextStep({
+  progress,
+  markedHistory,
+}: {
+  progress: HomeProgress;
+  markedHistory?: Promise<boolean | null>;
+}) {
+  const data = await progress;
+  const topic = nextStepTopic(data);
+  const hasMarks = data?.topics.some((t) => t.answered > 0)
+    ? true
+    : await markedHistory;
+  const unavailable = data === null || hasMarks == null;
+  const firstVisit = !unavailable && hasMarks === false;
   return (
     <section className="home-next" aria-labelledby="next-step-title">
       <p className="text-ink-2 flex items-center gap-2 text-sm font-semibold">
@@ -290,15 +326,25 @@ export async function HomeNextStep({ progress }: { progress: HomeProgress }) {
             </span>{" "}
             <span className="home-hand">start here</span>
           </>
-        ) : (
+        ) : firstVisit ? (
           "Start your first Topic Sprint"
+        ) : (
+          "Pick a topic for today's sprint"
         )}
       </h2>
-      <p className="text-ink-2 mt-3 max-w-[62ch]">
-        {topic
-          ? `It's your lowest topic at ${Math.round((100 * topic.earned) / topic.possible)}%, with ${topic.possible - topic.earned} marks dropped in the last 30 days.`
-          : "Pick a topic and Claro marks every answer against the criteria."}
-      </p>
+      {unavailable ? (
+        <div className="mt-3">
+          <TryAgain what="your recommendation" />
+        </div>
+      ) : (
+        <p className="text-ink-2 mt-3 max-w-[62ch]">
+          {topic
+            ? `It's your lowest topic at ${Math.round((100 * topic.earned) / topic.possible)}%, with ${topic.possible - topic.earned} marks dropped in the last 30 days.`
+            : firstVisit
+              ? "Pick a topic and Claro marks every answer against the criteria."
+              : "Answer a few more marked questions and Claro will pick your weakest topic."}
+        </p>
+      )}
       <div className="mt-5 flex flex-wrap items-center gap-3">
         <Link
           className={buttonVariants({ size: "lg", className: "home-primary" })}
@@ -388,9 +434,13 @@ export async function HomeWeek({
             target {PRACTICE_TARGET}%
           </span>
         </div>
-        {average === null ? (
+        {data === null ? (
+          <div className="mt-2">
+            <TryAgain what="your practice average" />
+          </div>
+        ) : average === null ? (
           <p className="text-muted-foreground mt-2 text-[13px]">
-            No marked answers yet
+            No marked answers in the last 30 days
           </p>
         ) : (
           <div

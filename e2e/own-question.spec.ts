@@ -107,11 +107,13 @@ for (const width of [390, 1280]) {
     ).toBe("static");
     // Feedback lives in the account menu (topbar avatar / sidebar user row).
     await page
-      .getByRole("button", { name: "Account menu" })
+      .getByRole("button", { name: /^(Account|User) menu$/ })
       .filter({ visible: true })
       .first()
       .click();
-    await page.getByRole("menuitem", { name: "Feedback", exact: true }).click();
+    await page
+      .getByRole("menuitem", { name: "Send feedback", exact: true })
+      .click();
     await expect(
       page.getByRole("dialog", { name: "Send feedback" }),
     ).toBeVisible();

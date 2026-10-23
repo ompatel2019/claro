@@ -167,7 +167,7 @@ export function SprintFocusShell(
             onClick={() => feedback()}
           >
             <PortalIcon name="message-circle" />
-            Feedback
+            Send feedback
           </Button>
         </div>
         <Button size="sm" disabled={busy} onClick={onFinish}>

@@ -69,25 +69,59 @@ vi.mock("@/components/ui/sidebar", async (original) => ({
   }),
 }));
 it("keeps the four phone destinations and opens the existing drawer from More", () => {
-  render(
-    <MobileTabs
-      activeHref="/student/flashcards"
-      badges={{ "/student/flashcards": 3 }}
-    />,
-  );
+  render(<MobileTabs activeHref="/student/activity" />);
   expect(
     screen.getAllByRole("link").map((a) => a.getAttribute("href")),
   ).toEqual([
     "/student",
     "/student/sprint",
-    "/student/flashcards",
     "/student/progress",
+    "/student/activity",
   ]);
-  expect(screen.getByRole("link", { name: /Flashcards/ })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute(
     "aria-current",
     "page",
   );
-  expect(screen.getByText("3 due")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "More navigation" }));
   expect(mobile.setOpenMobile).toHaveBeenCalledWith(true);
+});
+
+it.each([
+  "/student",
+  "/student/sprint",
+  "/student/progress",
+  "/student/activity",
+  "/student/activity/synthetic-result",
+  "/student/flashcards",
+  "/student/mark",
+  "/student/profile",
+])("marks the correct phone tab for %s", (path) => {
+  render(<MobileTabs activeHref={activeItem("student", path)?.href ?? path} />);
+  const tabs = screen.getByRole("navigation", { name: "Phone navigation" });
+  expect(
+    Array.from(tabs.querySelectorAll("a")).map((a) => [
+      a.textContent,
+      a.getAttribute("href"),
+    ]),
+  ).toEqual([
+    ["Home", "/student"],
+    ["Sprint", "/student/sprint"],
+    ["Progress", "/student/progress"],
+    ["Feedback", "/student/activity"],
+  ]);
+  const current = tabs.querySelector('[aria-current="page"]')!;
+  expect(current.textContent).toBe(
+    path.includes("activity")
+      ? "Feedback"
+      : path.includes("flashcards") ||
+          path.includes("mark") ||
+          path.includes("profile")
+        ? "More"
+        : path === "/student"
+          ? "Home"
+          : path.includes("sprint")
+            ? "Sprint"
+            : "Progress",
+  );
+  expect(current.querySelector(".nav-pen")).not.toBeNull();
 });

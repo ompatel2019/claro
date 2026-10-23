@@ -190,8 +190,14 @@ test.describe("annotated written feedback", () => {
     page,
   }) => {
     await signIn(page);
-    await page.getByRole("button", { name: "Account menu" }).click();
-    await page.getByRole("menuitem", { name: "Feedback", exact: true }).click();
+    await page
+      .getByRole("button", { name: /^(Account|User) menu$/ })
+      .filter({ visible: true })
+      .first()
+      .click();
+    await page
+      .getByRole("menuitem", { name: "Send feedback", exact: true })
+      .click();
     const dialog = page.getByRole("dialog");
     await expect(
       dialog.getByRole("button", { name: "General" }),

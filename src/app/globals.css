@@ -963,7 +963,7 @@ html[data-theme-motion="instant"] .theme-toggle:active {
 .student-tabbar {
   display: none;
 }
-[data-component="TopBar"] :focus-visible,
+.student-frame [data-component="TopBar"] :focus-visible,
 .theme-toggle:focus-visible,
 .student-tabbar :focus-visible,
 .student-sidebar :focus-visible {
@@ -1229,4 +1229,18 @@ html[data-theme-motion="instant"] .theme-toggle:active {
 }
 .student-sidebar[data-mobile="true"] {
   background: var(--background);
+}
+
+.student-frame [data-component="PageHeader"] h1 {
+  font-size: 30px;
+  line-height: 36px;
+  letter-spacing: -0.02em;
+}
+.student-frame
+  [data-component="PageHeader"]
+  > div
+  > p:first-child:not(:last-child) {
+  font-size: 13px;
+  line-height: 18px;
+  font-weight: 400;
 }

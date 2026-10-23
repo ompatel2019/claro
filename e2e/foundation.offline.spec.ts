@@ -115,7 +115,7 @@ for (const width of [1440, 390])
       await page.getByRole("button", { name: "More navigation" }).click();
     await page
       .getByRole("navigation", { name: "Main navigation" })
-      .getByRole("button", { name: "Feedback", exact: true })
+      .getByRole("button", { name: "Send feedback", exact: true })
       .click();
     await expect(
       page.getByRole("dialog", { name: "Send feedback" }),
@@ -154,4 +154,52 @@ test("admin search includes real admin routes", async ({ page }) => {
     .fill("Review queue");
   await page.keyboard.press("Enter");
   await expect(page).toHaveURL(/\/admin\/marking\/review$/);
+});
+
+test("phone feedback and secondary-route tabs stay distinct", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const path of [
+    "/student",
+    "/student/activity",
+    "/student/activity/synthetic-result",
+    "/student/flashcards",
+    "/student/mark",
+    "/student/profile",
+  ]) {
+    await page.goto(`http://claro.test${path}`);
+    const tabs = page.getByRole("navigation", { name: "Phone navigation" });
+    await expect(tabs.getByRole("link")).toHaveText([
+      "Home",
+      "Sprint",
+      "Progress",
+      "Feedback",
+    ]);
+    await expect(tabs.getByRole("link", { name: "Feedback" })).toHaveAttribute(
+      "href",
+      "/student/activity",
+    );
+    const current = tabs.locator('[aria-current="page"]');
+    await expect(current).toHaveText(
+      path === "/student"
+        ? "Home"
+        : path.includes("activity")
+          ? "Feedback"
+          : "More",
+    );
+    await expect(current.locator(".nav-pen")).toHaveCount(1);
+  }
+  await page.getByRole("button", { name: "More navigation" }).click();
+  const drawer = page.getByRole("navigation", { name: "Main navigation" });
+  for (const label of ["Flashcards", "Mark my answer", "Activity"])
+    await expect(
+      drawer.getByRole("link", { name: label, exact: true }),
+    ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Profile", exact: true }),
+  ).toBeVisible();
+  await expect(
+    drawer.getByRole("button", { name: "Send feedback", exact: true }),
+  ).toBeVisible();
 });

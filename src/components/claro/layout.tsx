@@ -27,11 +27,11 @@ export function PageHeader({
     >
       <div className="min-w-0">
         {eyebrow && (
-          <p className="text-muted-foreground mb-1 text-[13px] leading-[18px]">
+          <p className="text-muted-foreground mb-1 text-sm font-medium">
             {eyebrow}
           </p>
         )}
-        <h1 className="text-[30px] leading-9 font-bold tracking-[-0.02em]">
+        <h1 className="text-[26px] leading-tight font-bold tracking-[-0.025em] sm:text-[28px]">
           {title}
         </h1>
         {description && (
@@ -76,49 +76,13 @@ export function TopBar({
     <header
       data-component="TopBar"
       className={cn(
-        "bg-background sticky top-0 z-30 flex h-16 items-center gap-3 border-b px-4 md:px-10",
+        "bg-background/90 sticky top-0 z-30 flex h-14 items-center gap-1.5 border-b px-4 backdrop-blur-md sm:px-8",
         className,
       )}
       {...props}
     >
       {children}
     </header>
-  );
-}
-export function TermProgress({
-  term,
-  week,
-  weeks = 10,
-}: {
-  term: number;
-  week: number;
-  weeks?: number;
-}) {
-  return (
-    <div
-      data-component="TermProgress"
-      className="bg-card flex h-9 items-center gap-3 rounded-full border px-3.5 text-[13px] font-medium shadow-xs"
-      title={`Term ${term}, week ${week} of ${weeks}`}
-    >
-      <span>
-        Term {term} · Week {week}
-      </span>
-      <span className="flex gap-[3px]" aria-hidden>
-        {Array.from({ length: weeks }, (_, i) => (
-          <span
-            key={i}
-            className={cn(
-              "h-1.5 rounded-full",
-              i + 1 < week
-                ? "bg-foreground/35 w-1.5"
-                : i + 1 === week
-                  ? "bg-brand w-4"
-                  : "bg-foreground/12 w-1.5",
-            )}
-          />
-        ))}
-      </span>
-    </div>
   );
 }
 export function SubjectSwitcher() {

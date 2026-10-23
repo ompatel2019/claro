@@ -88,7 +88,21 @@ test.describe("App shell", () => {
       ).toBeVisible({ timeout: 1500 });
     }).toPass({ timeout: 15000 });
     const nav = page.getByRole("navigation", { name: "Main navigation" });
+    await expect(
+      nav.getByRole("button", { name: "Send feedback", exact: true }),
+    ).toBeVisible();
     await nav.getByRole("link", { name: "Topic Sprint" }).click();
+    const tabs = page.getByRole("navigation", { name: "Phone navigation" });
+    await expect(tabs.getByRole("link")).toHaveText([
+      "Home",
+      "Sprint",
+      "Progress",
+      "Feedback",
+    ]);
+    await expect(tabs.getByRole("link", { name: "Feedback" })).toHaveAttribute(
+      "href",
+      "/student/activity",
+    );
     await expect(page).toHaveURL(/\/student\/sprint$/);
   });
 });
