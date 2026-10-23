@@ -2332,8 +2332,9 @@ body:has(.sprint-focus)
   line-height: 18px;
   color: var(--muted-foreground);
 }
-.cma .cma-crit li[data-selected] .cma-crit-t {
-  font-weight: 650;
+/* The next-mark row whose comment is on show goes a shade deeper, like its highlight. */
+.cma .cma-crit .is-next[data-selected] .cma-crit-row {
+  background: color-mix(in srgb, var(--brand) 12%, var(--brand-soft));
 }
 .cma .cma-crit .is-next .ic {
   width: 14px;
