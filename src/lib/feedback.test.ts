@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  answerTextOf,
   bandOf,
   inlineSprintFeedback,
   layoutCards,
@@ -298,3 +299,15 @@ it("shows a reliability note or no-mark label instead of coercing null to zero",
     }),
   ).toBe("Add reliable criteria.");
 });
+
+it.each([
+  ["Transcript.", "Typed.", "Transcript."],
+  [null, "Typed.", "Typed."],
+  [null, null, ""],
+  ["", "Typed.", ""],
+])(
+  "reads transcript %j before typed answer %j",
+  (transcript, answer_text, expected) => {
+    expect(answerTextOf({ transcript, answer_text })).toBe(expected);
+  },
+);
