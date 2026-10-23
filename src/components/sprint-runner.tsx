@@ -26,7 +26,6 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { MarkingScreen } from "./marking-screen";
-import { RichText } from "./rich-text";
 import { McqExplanationView } from "./mcq-explanation";
 import type { McqExplanation } from "@/lib/mcq-explanation";
 import { QuestionView } from "./question-view";
@@ -40,6 +39,7 @@ import { TYPE_LABEL } from "@/lib/results";
 
 import { SprintFocusShell } from "./student/sprint/focus-shell";
 import { BookletFilter, BookletLegend } from "./booklet-controls";
+import { BookletModal } from "./student/sprint/booklet-modal";
 
 const LETTERS = "ABCD";
 const draftKey = (id: string) => `claro-draft-${id}`;
@@ -74,7 +74,7 @@ export function SprintRunner({
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const [readAll, setReadAll] = useState(false);
+  const [bookletOpen, setBookletOpen] = useState(false);
   const [answerModes, setAnswerModes] = useState<
     Record<string, "type" | "photo">
   >({});
@@ -477,7 +477,8 @@ export function SprintRunner({
   const keys = useRef<(e: KeyboardEvent) => void>(() => {});
   useEffect(() => {
     keys.current = (e) => {
-      if (!a || busy || !editable) return;
+      // The booklet modal is read-only: F and A–D must not change the question behind it.
+      if (!a || busy || !editable || bookletOpen) return;
       const k = e.key.toUpperCase();
       if (k === "F") flag();
       else if (a.question.type === "mcq" && /^[1-4A-D]$/.test(k)) {
@@ -516,6 +517,17 @@ export function SprintRunner({
       <p className="text-muted-foreground absolute top-6 right-5 text-xs">
         {attempts.filter(answered).length} of {attempts.length} answered
       </p>
+      {/* Top of the rail: the bottom sits under the fixed answer footer.
+          data-q closes the mobile sheet, so the modal never stacks on it. */}
+      <Button
+        data-q
+        variant="outline"
+        size="sm"
+        className="w-full"
+        onClick={() => setBookletOpen(true)}
+      >
+        <PortalIcon name="book-open" className="size-4" /> View booklet
+      </Button>
       <BookletFilter filter={filter} onFilter={setFilter} />
       <nav aria-label="Question booklet" className="space-y-5">
         {(["mcq", "short", "extended"] as const).map((type) => {
@@ -566,14 +578,6 @@ export function SprintRunner({
         })}
       </nav>
       <BookletLegend />
-      <Button
-        variant="outline"
-        size="sm"
-        className="mt-auto w-full"
-        onClick={() => setReadAll(true)}
-      >
-        <PortalIcon name="list" className="size-4" /> Read all questions
-      </Button>
     </div>
   );
 
@@ -924,32 +928,15 @@ export function SprintRunner({
             </div>
           </DialogContent>
         </Dialog>
-        <Dialog open={readAll} onOpenChange={setReadAll}>
-          <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
-            <DialogTitle>All questions</DialogTitle>
-            <ol className="space-y-4">
-              {attempts.map((row, i) => (
-                <li
-                  key={row.id}
-                  className="space-y-1 border-b border-dashed pb-4"
-                >
-                  <button
-                    type="button"
-                    className="text-sm font-semibold underline-offset-4 hover:underline"
-                    onClick={() => {
-                      setReadAll(false);
-                      go(i);
-                    }}
-                  >
-                    Question {i + 1} · {row.question.marks}{" "}
-                    {row.question.marks === 1 ? "mark" : "marks"}
-                  </button>
-                  <RichText className="text-sm" text={row.question.stem} />
-                </li>
-              ))}
-            </ol>
-          </DialogContent>
-        </Dialog>
+        <BookletModal
+          open={bookletOpen}
+          onOpenChange={setBookletOpen}
+          attempts={attempts}
+          index={index}
+          examMode={!checkMode}
+          busy={busy}
+          onJump={go}
+        />
       </SprintFocusShell>
     </>
   );
