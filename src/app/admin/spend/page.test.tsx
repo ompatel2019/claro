@@ -63,6 +63,7 @@ it("renders KPIs and mark-value bands, labelled budget markers, empty sections a
     "90% · All AI stops",
     "100% · Cap",
     "No spend in this range",
+    "Daily OpenRouter spend by model will appear after an AI call.",
     "No model spend yet",
     "No task spend yet",
     "No student spend in the last 30 days",
@@ -119,21 +120,20 @@ it("shows stacked spend, calls, written average and over-limit student links, cl
   );
   expect(over).toHaveTextContent("151 calls");
 });
-it("still charts direct-provider-only spend when the OpenRouter tables are empty", async () => {
+it("labels the spend chart as OpenRouter only", async () => {
   const data = spend();
   data.perDay = [
-    { day: "2026-10-09", usd: 2.5, models: { "gpt-direct": 2.5 } },
+    { day: "2026-10-09", usd: 2.5, models: { "anthropic/model-a": 2.5 } },
   ];
   vi.mocked(loadSpend).mockResolvedValue(data);
   render(await SpendPage({ searchParams: Promise.resolve({}) }));
+  const chart = screen
+    .getByRole("img", { name: "Spend per day, Sydney dates, stacked by model" })
+    .closest('[data-slot="card"]')!;
   expect(
-    screen.getByText(/\(Sydney, through now\) · 0 OpenRouter calls$/),
+    within(chart as HTMLElement).getByText("OpenRouter only"),
   ).toBeInTheDocument();
-  expect(screen.getByRole("img")).toHaveAccessibleName(
-    "Spend per day, Sydney dates, stacked by model",
-  );
   expect(screen.queryByText("No spend in this range")).toBeNull();
-  expect(screen.getByText("No model spend yet")).toBeInTheDocument();
 });
 it("reflects historical inclusive custom dates and defaults invalid ranges", async () => {
   const range = { from: "2026-09-01", to: "2026-09-30" };

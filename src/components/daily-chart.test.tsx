@@ -43,6 +43,26 @@ it.each(["area", "bars"] as const)(
     );
   },
 );
+it("shows an optional description under the title", () => {
+  const points = [{ day: "2026-10-01", value: 1 }];
+  const { rerender } = render(
+    <DailyChart title="Spend" hero="$1.00" kind="bars" points={points} />,
+  );
+  expect(document.querySelector('[data-slot="card-description"]')).toBeNull();
+  rerender(
+    <DailyChart
+      title="Spend"
+      description="OpenRouter only"
+      hero="$1.00"
+      kind="bars"
+      points={points}
+    />,
+  );
+  expect(screen.getByText("OpenRouter only")).toHaveAttribute(
+    "data-slot",
+    "card-description",
+  );
+});
 it("draws finite, zero-height spend bars when every day has zero usage", () => {
   const { container } = render(
     <DailyChart

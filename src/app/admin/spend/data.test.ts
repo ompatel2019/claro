@@ -455,7 +455,7 @@ it("excludes null-mark results from marked-answer averages while retaining costs
   ).toBe(true);
   expect(result.unattributedWrittenUsd).toBeCloseTo(0.03);
 });
-it("counts only OpenRouter models in Today, by model and by task, like the SQL month and all-time totals", () => {
+it("counts only OpenRouter models in Today, per day, by model and by task, like the SQL month and all-time totals", () => {
   const rows = [
     usage({ model: "anthropic/model-a", usd: 1 }),
     usage({ model: "openai/model-b", task: "eval", usd: 2 }),
@@ -481,8 +481,12 @@ it("counts only OpenRouter models in Today, by model and by task, like the SQL m
     ["Marking", 1, 1],
     ["Admin and evals", 1, 2],
   ]);
-  // Out of scope: the daily chart, written-cost allocation and students stay all-provider.
-  expect(result.perDay.at(-1)?.usd).toBe(15);
+  expect(result.perDay.at(-1)).toEqual({
+    day: "2026-10-09",
+    models: { "anthropic/model-a": 1, "openai/model-b": 2 },
+    usd: 3,
+  });
+  // Out of scope: written-cost allocation and students stay all-provider.
   expect(result.unattributedWrittenUsd).toBe(5);
   expect(result.topStudents[0]).toMatchObject({ calls: 4, usd: 15 });
 });
