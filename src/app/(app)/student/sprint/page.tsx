@@ -104,7 +104,11 @@ export default async function SprintPage({
             <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:max-w-xs">
               <Link
                 className={buttonVariants({ variant: "ghost", size: "sm" })}
-                href={`/student/sprint/${unfinished.id}${allMarked ? "/results" : ""}`}
+                href={
+                  allMarked
+                    ? `/student/activity/${unfinished.id}`
+                    : `/student/sprint/${unfinished.id}`
+                }
               >
                 {allMarked ? "View results" : "Continue"}
               </Link>

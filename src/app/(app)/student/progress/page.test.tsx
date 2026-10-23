@@ -169,7 +169,7 @@ it("excludes flashcard recall from mixed score history and scopes type chips to 
   );
   expect(
     screen.getAllByRole("link", { name: /Short answer sprint/ })[0],
-  ).toHaveAttribute("href", "/student/sprint/sprint/results");
+  ).toHaveAttribute("href", "/student/activity/sprint");
   expect(screen.queryByRole("link", { name: /Flashcards/ })).toBeNull();
   expect(screen.getByRole("cell", { name: "80%" })).toBeVisible();
   expect(
@@ -192,7 +192,7 @@ it("excludes flashcard recall from mixed score history and scopes type chips to 
   );
   expect(
     screen.getAllByRole("link", { name: /Short answer sprint/ })[0],
-  ).toHaveAttribute("href", "/student/sprint/sprint/results");
+  ).toHaveAttribute("href", "/student/activity/sprint");
   expect(
     screen.getAllByRole("link", { name: /Short answer sprint/ })[0],
   ).toHaveAccessibleName(/60%/);

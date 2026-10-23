@@ -223,7 +223,7 @@ test.describe("Progress with local synthetic reads", () => {
       await page.getByRole("button", { name: "Show chart data" }).click();
       await expect(page.getByRole("link", { name: /60%/ })).toHaveAttribute(
         "href",
-        "/student/sprint/synthetic-2/results",
+        "/student/activity/synthetic-2",
       );
       await page.getByText("Filter score history", { exact: true }).click();
       await page.getByRole("button", { name: "Sprints", exact: true }).click();

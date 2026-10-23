@@ -13,7 +13,7 @@ export default async function Sprint({
 }) {
   const { id } = await params;
   const { session, attempts, profile, explanations } = await loadSprint(id);
-  if (session.finished_at) redirect(`/student/sprint/${id}/results`);
+  if (session.finished_at) redirect(`/student/activity/${id}`);
   const db = await createClient();
   const [{ data: topics }, { data: before }] = await Promise.all([
     db.from("topics").select("id,parent_id,name,sort"),

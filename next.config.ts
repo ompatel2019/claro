@@ -34,8 +34,14 @@ const nextConfig: NextConfig = {
       { source: "/practice", destination: "/student/sprint", permanent: false },
       {
         source: "/practice/:id/results",
-        destination: "/student/sprint/:id/results",
+        destination: "/student/activity/:id",
         permanent: false,
+      },
+      // Session results live under Activity; old sprint links and emails 308 here.
+      {
+        source: "/student/sprint/:id/results",
+        destination: "/student/activity/:id",
+        permanent: true,
       },
       {
         source: "/practice/:id",

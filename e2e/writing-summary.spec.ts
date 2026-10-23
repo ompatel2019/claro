@@ -60,7 +60,7 @@ test.describe("S13 writing-pattern summaries", () => {
         .throwOnError();
       await page.setViewportSize({ width, height: 900 });
       await signIn(page, fixture.email, fixture.password);
-      await page.goto(`/student/sprint/${fixture.sessions[0]}/results`);
+      await page.goto(`/student/activity/${fixture.sessions[0]}`);
       for (const label of ["Strengths", "Top fixes", "Next steps"])
         await expect(
           page.getByRole("heading", { name: label, exact: true }).first(),
@@ -105,7 +105,7 @@ test.describe("S13 writing-pattern summaries", () => {
         .throwOnError();
     await save(summary);
     await signIn(page, fixture.email, fixture.password);
-    await page.goto(`/student/sprint/${fixture.sessions[0]}/results`);
+    await page.goto(`/student/activity/${fixture.sessions[0]}`);
     await expect(
       page.getByText(summary.next_steps[0], { exact: true }),
     ).toBeVisible();
