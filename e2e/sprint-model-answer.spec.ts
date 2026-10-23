@@ -45,9 +45,11 @@ test.describe("Sprint check model answer", () => {
     const feedback = page.getByRole("region", {
       name: "Checked answer feedback",
     });
-    await expect(feedback).toContainText("2 / 4");
+    await expect(feedback).toContainText("2/4");
     await expect(feedback).toContainText("Link demand to prices.");
-    await feedback.getByText("Model answer", { exact: true }).click();
+    await expect(
+      feedback.getByRole("heading", { name: "Sample answer" }),
+    ).toBeVisible();
     await expect(feedback.getByText("Synthetic model answer.")).toBeVisible();
     await expect(feedback.getByText("Marking guidelines")).toHaveCount(0);
     await expect(feedback.getByText(/double-checking/)).toHaveCount(0);
