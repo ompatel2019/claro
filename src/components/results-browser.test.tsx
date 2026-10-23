@@ -265,6 +265,17 @@ it("pages to the previous and next question below the open one", () => {
   expect(next).toHaveAttribute("aria-disabled", "true");
   expect(next).toHaveFocus();
   expect(next).toHaveTextContent("Last question");
+  fireEvent.click(next);
+  expect(screen.getByText("Review 3")).toBeVisible();
+  expect(next).toHaveFocus();
+  // The same holds paging back to Q1.
+  prev.focus();
+  fireEvent.click(prev);
+  fireEvent.click(prev);
+  expect(screen.getByText("Review 1")).toBeVisible();
+  expect(prev).toHaveAttribute("aria-disabled", "true");
+  expect(prev).toHaveFocus();
+  expect(prev).toHaveTextContent("First question");
 });
 
 it("lets a terminal status pill speak for an unmarked row in the table", () => {
