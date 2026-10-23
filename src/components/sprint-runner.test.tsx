@@ -614,6 +614,30 @@ it("saves before background marking, keeps a resumed mark editable and hides fai
   ).toHaveValue("Edited final answer");
 });
 
+it("Exam mode never shows or announces awarded marks; check mode still does", () => {
+  const marked: Attempt = {
+    ...written(),
+    status: "marked",
+    mark: 2,
+    max_marks: 4,
+  };
+  const names = () =>
+    ["Question booklet", "Question progress"].flatMap((nav) =>
+      within(screen.getByRole("navigation", { name: nav }))
+        .getAllByRole("button")
+        .map((b) => b.getAttribute("aria-label") ?? b.textContent),
+    );
+  show([marked], { ...session.config, feedback: "end" });
+  expect(names().join(" ")).not.toMatch(/\d+\/\d+|marks/);
+  expect(document.body).not.toHaveTextContent(/2\/4|Band|Correct/);
+  expect(screen.getByText("4 marks")).toBeVisible();
+  cleanup();
+  show([marked]);
+  expect(
+    screen.getByRole("button", { name: "Question 1: Answered, 2/4 marks" }),
+  ).toBeVisible();
+});
+
 it("Submit answer queues silently and deduplicates repeated submissions", async () => {
   const a = written();
   mocks.fetch.mockImplementation(

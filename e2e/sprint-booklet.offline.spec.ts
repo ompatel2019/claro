@@ -91,7 +91,7 @@ async function load(page: Page, width: number, height: number) {
   await expect(page.getByText(/Question 3 of 6/)).toBeVisible();
 }
 
-async function shots(page: Page, width: number) {
+async function shots(page: Page, width: number, name = "booklet") {
   const dir = process.env.BOOKLET_SHOTS;
   for (const theme of ["light", "dark"] as const) {
     await page.evaluate(
@@ -100,8 +100,8 @@ async function shots(page: Page, width: number) {
     );
     await page.screenshot({
       path: dir
-        ? `${dir}/booklet-${width}-${theme}.png`
-        : test.info().outputPath(`booklet-${width}-${theme}.png`),
+        ? `${dir}/${name}-${width}-${theme}.png`
+        : test.info().outputPath(`${name}-${width}-${theme}.png`),
       animations: "disabled",
     });
   }
@@ -205,3 +205,32 @@ test("View booklet at 390px from the mobile sheet", async ({ page }) => {
   await expect(page.locator('[data-slot="sheet-content"]')).toHaveCount(0);
   await expect(page.getByText(/Question 6 of 6/)).toBeVisible();
 });
+
+// Exam mode: Q2's background mark never reaches the rail, sheet or progress pills.
+for (const [width, height] of [
+  [1440, 900],
+  [390, 844],
+] as const)
+  test(`Exam mode rail at ${width}px never shows awarded marks`, async ({
+    page,
+  }) => {
+    await load(page, width, height);
+    // Only the button for this breakpoint is visible: rail at 1440, sheet at 390.
+    await page.getByRole("button", { name: "Booklet (B)" }).click();
+    const rail = page.getByRole("navigation", { name: "Question booklet" });
+    await expect(
+      rail.getByRole("button", { name: "Question 2: Answered", exact: true }),
+    ).toBeVisible();
+    for (const nav of [
+      rail,
+      page.getByRole("navigation", { name: "Question progress" }),
+    ])
+      for (const label of await nav
+        .getByRole("button")
+        .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label"))))
+        expect(label).not.toMatch(/\d+\/\d+|marks|correct/i);
+    await expect(page.locator("body")).not.toContainText(
+      /\d+\/\d+|Full marks|No marks|Correct/,
+    );
+    await shots(page, width, "exam-rail");
+  });
