@@ -27,7 +27,7 @@ import {
 } from "./ui/dialog";
 import { Button } from "./ui/button";
 import { Textarea } from "./ui/textarea";
-import { Input } from "./ui/input";
+import { FilePicker } from "./ui/file-picker";
 import {
   Table,
   TableBody,
@@ -244,31 +244,28 @@ export function CardImportDialog({
                 onChange={(e) => setText(e.target.value)}
               />
             </label>
-            <label className="grid min-w-0 gap-1">
-              Upload file
-              <Input
-                type="file"
-                accept=".txt,.csv,.tsv"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  if (file.size > CARD_IMPORT_BYTE_LIMIT) {
-                    setError("Files must be 1 MB or smaller.");
-                    return;
+            <FilePicker
+              label="Upload file"
+              accept=".txt,.csv,.tsv"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > CARD_IMPORT_BYTE_LIMIT) {
+                  setError("Files must be 1 MB or smaller.");
+                  return;
+                }
+                setError("");
+                if (shared) {
+                  try {
+                    setText(await file.text());
+                  } catch {
+                    setError("Couldn't read this file. Try again.");
                   }
-                  setError("");
-                  if (shared) {
-                    try {
-                      setText(await file.text());
-                    } catch {
-                      setError("Couldn't read this file. Try again.");
-                    }
-                    return;
-                  }
-                  setText(await file.text());
-                }}
-              />
-            </label>
+                  return;
+                }
+                setText(await file.text());
+              }}
+            />
             <Choose
               label="Separator"
               value={separator}

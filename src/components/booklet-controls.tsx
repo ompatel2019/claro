@@ -1,5 +1,7 @@
 "use client";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
+import { questionPillState } from "./student/sprint/question-pill";
+import { cn } from "@/lib/utils";
 type Filter = "all" | "unanswered" | "flagged";
 export function BookletFilter({
   filter,
@@ -10,7 +12,7 @@ export function BookletFilter({
 }) {
   return (
     <ToggleGroup
-      className="bg-muted w-full max-w-full flex-wrap rounded-full p-0.5 [&>*]:flex-1"
+      className="w-full max-w-full flex-wrap [&>*]:flex-auto [&>*]:px-2"
       aria-label="Show questions"
       size="sm"
       variant="default"
@@ -26,18 +28,20 @@ export function BookletFilter({
 export function BookletLegend() {
   return (
     <ul className="text-muted-foreground space-y-2 text-xs">
-      <li className="flex items-center gap-2">
-        <span className="bg-ink size-3 rounded-full" /> Answered
-      </li>
-      <li className="flex items-center gap-2">
-        <span className="bg-card size-3 rounded-full border" /> Not answered
-      </li>
-      <li className="flex items-center gap-2">
-        <span className="bg-brand size-3 rounded-full" /> Flagged
-      </li>
-      <li className="flex items-center gap-2">
-        <span className="ring-brand size-3 rounded-full ring-2" /> Current
-      </li>
+      {[
+        { label: "Not answered", state: {} },
+        { label: "Current", state: { active: true } },
+        { label: "Answered", state: { answered: true } },
+        { label: "Flagged", state: { flagged: true } },
+      ].map(({ label, state }) => (
+        <li key={label} className="flex items-center gap-2">
+          <span
+            aria-hidden
+            className={cn("size-3", questionPillState(state).className)}
+          />
+          {label}
+        </li>
+      ))}
     </ul>
   );
 }

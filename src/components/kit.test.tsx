@@ -353,3 +353,30 @@ it("gives admin the shared shell navigation, top bar and account footer", () => 
     "OverviewDashboardStudentsAll studentsContentQuestionsFlashcardsMarkingReview queueAccuracyEngineFeedbackInboxSpendAI spend",
   );
 });
+
+it.each(["student", "admin"] as const)(
+  "keeps the %s desktop toggle in the sidebar logo row",
+  (kind) => {
+    const { container } = render(
+      <AppShell kind={kind} name="Test" defaultOpen>
+        Content
+      </AppShell>,
+    );
+    const header = container.querySelector('[data-slot="sidebar-header"]')!;
+    const toggle = header.querySelector('button[data-sidebar="trigger"]')!;
+    expect(toggle).toHaveAccessibleName("Toggle Sidebar");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(header.firstElementChild?.tagName).toBe("A");
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(container.querySelector('[data-slot="sidebar"]')).toHaveAttribute(
+      "data-collapsible",
+      "icon",
+    );
+    const mobileToggle = container.querySelector(
+      '[data-component="TopBar"] [data-sidebar="trigger"]',
+    );
+    expect(mobileToggle).toHaveClass("md:hidden");
+    expect(mobileToggle).not.toHaveAttribute("aria-expanded");
+  },
+);

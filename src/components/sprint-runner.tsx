@@ -38,6 +38,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "./ui/tooltip";
 import { TYPE_LABEL } from "@/lib/results";
 
 import { SprintFocusShell } from "./student/sprint/focus-shell";
+import { questionPillState } from "./student/sprint/question-pill";
 import { BookletFilter, BookletLegend } from "./booklet-controls";
 import { BookletModal } from "./student/sprint/booklet-modal";
 
@@ -513,8 +514,8 @@ export function SprintRunner({
   const go = (i: number) => void act(() => change(i));
   const qLabel = (i: number) => `Q${i + 1}`;
   const sprintBooklet = (
-    <div className="flex min-h-[calc(100svh-9rem)] flex-col gap-5">
-      <p className="text-muted-foreground absolute top-6 right-5 text-xs">
+    <div className="flex min-h-[calc(100svh-9rem)] flex-1 flex-col gap-5 md:min-h-0">
+      <p className="text-muted-foreground text-xs md:absolute md:top-6 md:right-5">
         {attempts.filter(answered).length} of {attempts.length} answered
       </p>
       {/* Top of the rail: the bottom sits under the fixed answer footer.
@@ -547,31 +548,30 @@ export function SprintRunner({
                 {TYPE_LABEL[type]}
               </h3>
               <div className="grid grid-cols-5 gap-2">
-                {items.map(({ row, i }) => (
-                  <button
-                    key={row.id}
-                    data-q
-                    disabled={busy}
-                    aria-current={index === i ? "step" : undefined}
-                    aria-label={`Question ${i + 1}: ${answered(row) ? "Answered" : "Not answered"}${row.flagged ? ", Flagged" : ""}${row.status === "marked" ? `, ${row.mark}/${row.max_marks} marks` : ""}`}
-                    onClick={() => go(i)}
-                    className={cn(
-                      "relative size-9 rounded-full border text-sm font-medium tabular-nums",
-                      answered(row)
-                        ? "bg-ink border-ink text-surface"
-                        : "bg-card",
-                      index === i && "ring-brand ring-2 ring-offset-2",
-                    )}
-                  >
-                    {i + 1}
-                    {row.flagged && (
-                      <span
-                        aria-hidden
-                        className="bg-brand absolute -top-0.5 -right-0.5 size-2 rounded-full"
-                      />
-                    )}
-                  </button>
-                ))}
+                {items.map(({ row, i }) => {
+                  const pill = questionPillState({
+                    active: index === i,
+                    answered: answered(row),
+                    flagged: row.flagged,
+                  });
+                  return (
+                    <button
+                      key={row.id}
+                      type="button"
+                      data-q
+                      disabled={busy}
+                      aria-current={pill["aria-current"]}
+                      aria-label={`Question ${i + 1}: ${pill.label}${checkMode && row.status === "marked" ? `, ${row.mark}/${row.max_marks} marks` : ""}`}
+                      onClick={() => go(i)}
+                      className={cn(
+                        "focus-visible:outline-ring size-9 text-sm font-medium tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2",
+                        pill.className,
+                      )}
+                    >
+                      {i + 1}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           ) : null;
@@ -613,31 +613,26 @@ export function SprintRunner({
         onFinish={() => setConfirm(true)}
         onMove={(d) => !busy && go(index + d)}
         booklet={sprintBooklet}
-        progress={attempts.map((row, i) => (
-          <button
-            key={row.id}
-            type="button"
-            aria-label={`Question ${i + 1}${row.flagged ? ", flagged" : ""}${answered(row) ? ", answered" : ", not answered"}`}
-            aria-current={i === index ? "step" : undefined}
-            disabled={busy}
-            onClick={() => go(i)}
-            className={cn(
-              "focus-visible:outline-ring relative flex h-8 min-w-8 flex-1 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2",
-              i === index && "outline-ring outline-2 outline-offset-2",
-            )}
-          >
-            <span
-              aria-hidden
-              className={cn(
-                "h-3 w-full rounded-full border",
-                answered(row) ? "bg-primary border-primary" : "bg-muted",
-              )}
-            />
-            {row.flagged && (
-              <span className="bg-brand absolute top-1 right-0 size-1.5 rounded-full" />
-            )}
-          </button>
-        ))}
+        progress={attempts.map((row, i) => {
+          const pill = questionPillState({
+            active: i === index,
+            answered: answered(row),
+            flagged: row.flagged,
+          });
+          return (
+            <button
+              key={row.id}
+              type="button"
+              aria-label={`Question ${i + 1}${row.flagged ? ", flagged" : ""}${answered(row) ? ", answered" : ", not answered"}`}
+              aria-current={pill["aria-current"]}
+              disabled={busy}
+              onClick={() => go(i)}
+              className="focus-visible:outline-ring flex h-8 min-w-8 flex-1 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              <span aria-hidden className={cn("h-3 w-full", pill.className)} />
+            </button>
+          );
+        })}
       >
         {!!limit && elapsed >= limit && (
           <div role="alert" className="bg-accent rounded-xl border p-4 text-sm">
@@ -835,7 +830,7 @@ export function SprintRunner({
             </p>
           </div>
         </article>
-        <div className="sprint-session-footer bg-background fixed inset-x-0 bottom-0 z-20 border-t px-4 py-3">
+        <div className="sprint-session-footer bg-background fixed right-0 bottom-0 left-[var(--sprint-rail)] z-20 border-t px-4 py-3">
           <div className="mx-auto flex max-w-[760px] items-center justify-end gap-2">
             <Button
               variant="outline"

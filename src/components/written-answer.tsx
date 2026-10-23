@@ -7,7 +7,7 @@ import { withAuthRetry } from "@/lib/auth-client";
 import { plural, type Attempt } from "@/lib/practice";
 import { cn } from "@/lib/utils";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
+import { FilePicker } from "./ui/file-picker";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -264,7 +264,7 @@ export function WrittenAnswer({
                   rows={6}
                   className={cn(
                     "text-base font-normal",
-                    "session-writing min-h-60 text-[15px] leading-7",
+                    "session-writing lined-answer min-h-60 text-[15px]",
                   )}
                   aria-describedby={`answer-guide-${a.id}`}
                   value={text}
@@ -346,25 +346,23 @@ export function WrittenAnswer({
           {confirmed && <p role="status">Transcript confirmed.</p>}
           {mode !== "type" && (
             <>
-              <label className="grid gap-2 text-sm">
-                Take photo / Upload
-                <Input
-                  type="file"
-                  multiple
-                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
-                  capture="environment"
-                  disabled={busy || disabled}
-                  onChange={(e) => {
-                    const files = Array.from(e.target.files ?? []);
-                    if (files.length) {
-                      if (a.answer_text?.trim() && !a.image_paths?.length)
-                        setReplacement(files);
-                      else void act(() => upload(files));
-                    }
-                    e.target.value = "";
-                  }}
-                />
-              </label>
+              <FilePicker
+                label="Take photo / Upload"
+                icon="camera"
+                multiple
+                accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
+                capture="environment"
+                disabled={busy || disabled}
+                onChange={(e) => {
+                  const files = Array.from(e.target.files ?? []);
+                  if (files.length) {
+                    if (a.answer_text?.trim() && !a.image_paths?.length)
+                      setReplacement(files);
+                    else void act(() => upload(files));
+                  }
+                  e.target.value = "";
+                }}
+              />
               {!!a.image_paths?.length && (
                 <ol className="space-y-2" aria-label="Photo pages">
                   {a.image_paths.map((path, index) => (

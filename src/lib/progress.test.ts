@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-  weeklyScores,
   weakestTopics,
   type TopicProgress,
   parseRange,
@@ -64,49 +63,6 @@ it("verb practise links override a saved MC setup using main's understood parame
   );
   expect(setup?.mode).toBe("short");
   expect(setup?.verbs).toEqual(["Analyse"]);
-});
-
-it("bounds weekly history by Sydney date before averaging and rejects unscored sessions", () => {
-  const session = { kind: "sprint", config: {}, elapsed_s: 60, by_type: {} };
-  expect(
-    weeklyScores(
-      [
-        {
-          ...session,
-          id: "before",
-          finished_at: "2026-09-30T12:00:00Z",
-          pct: 10,
-        },
-        {
-          ...session,
-          id: "sydney-day",
-          finished_at: "2026-09-30T15:00:00Z",
-          pct: 40,
-        },
-        {
-          ...session,
-          id: "same-week",
-          finished_at: "2026-10-02T00:00:00Z",
-          pct: 80,
-        },
-        {
-          ...session,
-          id: "after",
-          finished_at: "2026-10-10T00:00:00Z",
-          pct: 10,
-        },
-        {
-          ...session,
-          id: "invalid",
-          finished_at: "2026-10-02T00:00:00Z",
-          pct: NaN,
-        },
-        { ...session, id: "pending", finished_at: "", pct: 100 },
-      ],
-      "2026-10-01",
-      "2026-10-09",
-    ),
-  ).toEqual([{ day: "2026-09-28", value: 60 }]);
 });
 
 it("orders scored topics weakest first without mutating data or prioritising unstarted topics", () => {

@@ -86,7 +86,7 @@ export default async function Home() {
       <Suspense fallback={<Card aria-hidden className="h-64 animate-pulse" />}>
         <HomeNextStep progress={progress} sessions={sessions} />
       </Suspense>
-      <div className="grid min-w-0 grid-cols-1 items-start gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
+      <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <Suspense
           fallback={<Card aria-hidden className="h-72 animate-pulse" />}
         >

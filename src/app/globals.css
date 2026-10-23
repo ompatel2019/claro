@@ -44,6 +44,7 @@
   --toggle-on: #ffffff; /* active segment in a toggle group */
 
   /* brand */
+  --pill-flag: var(--destructive);
   --brand: #f54f1b; /* orange: marks, indicators, highlights */
   --brand-foreground: #ffffff;
   --brand-soft: #fdeee7; /* orange tint: active nav, brand badges */
@@ -102,6 +103,7 @@
   --accent: #262a47;
   --accent-foreground: #f5f1ec;
   --destructive: #ff6b5e;
+  --pill-flag: var(--destructive);
   --destructive-soft: color-mix(in srgb, var(--destructive) 12%, var(--card));
   --border: #2f3354;
   --input: #6e7396;
@@ -273,6 +275,12 @@
     font-variant-numeric: tabular-nums;
   }
 }
+/* Big stat numerals (brand portal-number): proportional figures, -2% tracking.
+   Tabular figures stay for tables, timers and small inline counts. */
+@utility num-display {
+  font-variant-numeric: proportional-nums;
+  letter-spacing: -0.02em;
+}
 
 /* ==========================================================================
    SHADCN-EQUIVALENT PRIMITIVES
@@ -419,7 +427,7 @@
 
   /* --- Toggle group (segmented control) ------------------------------------ */
   [data-slot="toggle-group"] {
-    @apply bg-muted inline-flex items-center gap-0.5 rounded-full p-[3px];
+    @apply inline-flex items-center gap-2;
   }
   [data-slot="toggle-group-item"] {
     @apply text-muted-foreground inline-flex h-7 items-center justify-center gap-1.5 rounded-full px-3 text-[13px] font-medium whitespace-nowrap;
@@ -427,7 +435,7 @@
     @apply [&_svg]:size-3.5;
   }
   [data-slot="toggle-group-item"][data-state="on"] {
-    @apply bg-toggle-on text-foreground;
+    @apply border-foreground bg-toggle-on text-foreground;
     box-shadow: var(--shadow-card);
   }
 
@@ -515,20 +523,18 @@
   }
 
   /* --- Table --------------------------------------------------------------- */
-  [data-slot="table"] {
-    @apply w-full caption-bottom text-sm;
+  [data-slot="table"],
+  .progress-topics {
+    @apply border-foreground bg-card text-card-foreground w-full caption-bottom border-collapse border text-sm;
+  }
+  [data-slot="table-head"],
+  [data-slot="table-cell"],
+  .progress-topics :is(th, td) {
+    /* No cell fill: the table is the surface, so row states show through. */
+    @apply border-foreground border;
   }
   [data-slot="table-head"] {
     @apply text-muted-foreground h-10 px-3 text-left align-middle text-xs font-medium whitespace-nowrap;
-  }
-  [data-slot="table-header"] [data-slot="table-row"] {
-    @apply border-b hover:bg-transparent;
-  }
-  [data-slot="table-row"] {
-    @apply border-b transition-colors duration-150 last:border-0;
-  }
-  [data-slot="table-body"] [data-slot="table-row"]:hover {
-    @apply bg-accent/60;
   }
   [data-slot="table-cell"] {
     @apply px-3 py-3 align-middle tabular-nums;
@@ -973,11 +979,8 @@
 }
 
 @layer components {
-  [data-slot="toggle-group"] {
-    @apply bg-muted rounded-full p-[3px];
-  }
   [data-slot="toggle-group-item"][data-pressed] {
-    @apply bg-toggle-on text-foreground shadow-xs;
+    @apply border-foreground bg-toggle-on text-foreground shadow-xs;
   }
   [data-slot="switch"][data-checked] {
     @apply bg-primary;
@@ -1170,8 +1173,7 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   }
 }
 
-.home-next,
-.ma-booklet {
+.home-next {
   --paper-rule: color-mix(in srgb, var(--foreground) 5.5%, transparent);
   --paper-margin: color-mix(in srgb, var(--brand) 28%, transparent);
   border-radius: var(--radius);
@@ -1271,8 +1273,7 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   font-size: 22px;
   line-height: 26px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
+  @apply num-display;
 }
 .home-session-score small {
   display: block;
@@ -1376,8 +1377,7 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   .home-next {
     padding: 24px 20px 24px 40px;
   }
-  .home-next,
-  .ma-booklet {
+  .home-next {
     background-position:
       -32px 0,
       0 0;
@@ -1424,28 +1424,19 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   box-shadow: none;
 }
 .sprint-focus .session-writing {
+  --answer-margin-rule: linear-gradient(
+    to right,
+    transparent 55px,
+    var(--paper-margin) 55px,
+    var(--paper-margin) 56px,
+    transparent 56px
+  );
   min-height: 288px;
   font-family: var(--font-sans);
   font-size: 16px;
-  line-height: 32px;
-  padding: 16px 20px 16px 72px;
+  padding: var(--answer-pad) 20px 16px 72px;
   border-radius: var(--radius);
   background-color: var(--card);
-  background-image:
-    linear-gradient(
-      to right,
-      transparent 55px,
-      color-mix(in srgb, var(--brand) 28%, transparent) 55px,
-      color-mix(in srgb, var(--brand) 28%, transparent) 56px,
-      transparent 56px
-    ),
-    repeating-linear-gradient(
-      to bottom,
-      transparent 0,
-      transparent 31px,
-      color-mix(in srgb, var(--foreground) 5.5%, transparent) 31px,
-      color-mix(in srgb, var(--foreground) 5.5%, transparent) 32px
-    );
   caret-color: var(--brand);
 }
 .sprint-session-footer {
@@ -1456,17 +1447,9 @@ html[data-theme-motion="instant"] .theme-toggle:active {
     bottom: calc(63px + env(safe-area-inset-bottom));
   }
   .sprint-focus .session-writing {
+    --answer-margin-x: -32px;
     padding-left: 36px;
-    background-position-x: -32px, 0;
   }
-}
-.sprint-focus label:has(input[type="file"][multiple]) {
-  min-height: 180px;
-  align-content: center;
-  padding: 24px;
-  border: 1px dashed var(--input);
-  border-radius: var(--radius);
-  background: var(--card);
 }
 body:has(.sprint-focus)
   :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
@@ -1546,10 +1529,6 @@ body:has(.sprint-focus)
   font-weight: 700;
   font-variant-numeric: tabular-nums;
 }
-.ma-mode {
-  background: var(--card);
-  border: 1px solid var(--border);
-}
 .ma-mode [data-slot="toggle-group-item"] {
   height: 34px;
   padding: 0 14px;
@@ -1560,18 +1539,26 @@ body:has(.sprint-focus)
   color: var(--primary-foreground);
 }
 .ma-booklet {
-  padding: 16px 20px 0 72px;
+  --paper-margin: color-mix(in srgb, var(--brand) 28%, transparent);
+  border-radius: var(--radius);
+  background-color: var(--muted);
+  background-image: linear-gradient(
+    to right,
+    transparent 55px,
+    var(--paper-margin) 55px,
+    var(--paper-margin) 56px,
+    transparent 56px
+  );
 }
 .ma-answer {
   display: block;
   width: 100%;
   min-height: 288px;
-  padding: 0;
+  padding: var(--answer-pad) 20px 0 72px;
   border: 0;
-  background: transparent;
+  background-color: transparent;
   resize: vertical;
   font-size: 18px;
-  line-height: 32px;
   letter-spacing: -0.005em;
   caret-color: var(--brand);
 }
@@ -1588,7 +1575,7 @@ body:has(.sprint-focus)
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 0 14px;
+  padding: 10px 20px 14px 72px;
   color: var(--muted-foreground);
   font-size: 13px;
   line-height: 18px;
@@ -1630,8 +1617,45 @@ body:has(.sprint-focus)
     flex: 1;
   }
   .ma-booklet {
-    padding: 12px 14px 0 36px;
+    background-position-x: -32px;
   }
+  .ma-answer {
+    padding: var(--answer-pad) 14px 0 36px;
+  }
+  .ma-booklet-foot {
+    padding: 10px 14px 14px 36px;
+  }
+}
+
+/* Lined answer paper for every written answer box. One rule per line box, offset
+   by the top padding and drawn just under the text baseline. Claro Sans puts the
+   baseline (ascent - descent) / 2 = 0.3325em below the centre of the line box. */
+.lined-answer {
+  --answer-line: 32px;
+  --answer-pad: 16px;
+  --answer-rule-at: calc(var(--answer-line) / 2 + 0.3325em + 1px);
+  --answer-margin-x: 0px;
+  --paper-rule: color-mix(in srgb, var(--foreground) 5.5%, transparent);
+  --paper-margin: color-mix(in srgb, var(--brand) 28%, transparent);
+  padding-top: var(--answer-pad);
+  line-height: var(--answer-line);
+  background-image:
+    var(--answer-margin-rule, none),
+    linear-gradient(
+      to bottom,
+      transparent var(--answer-rule-at),
+      var(--paper-rule) var(--answer-rule-at),
+      var(--paper-rule) calc(var(--answer-rule-at) + 1px),
+      transparent calc(var(--answer-rule-at) + 1px)
+    );
+  background-size:
+    100% 100%,
+    100% var(--answer-line);
+  background-repeat: no-repeat, repeat-y;
+  background-position:
+    var(--answer-margin-x) 0,
+    0 var(--answer-pad);
+  background-attachment: local;
 }
 
 /* Student Activity: kind chips with counts, pill menus, sessions grouped by day. */
@@ -1820,8 +1844,7 @@ body:has(.sprint-focus)
   font-size: 20px;
   line-height: 24px;
   font-weight: 700;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
+  @apply num-display;
 }
 .ac-res b small {
   color: var(--muted-foreground);

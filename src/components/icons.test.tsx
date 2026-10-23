@@ -116,6 +116,7 @@ it("covers the supported portal glyph vocabulary", () => {
     "tag",
     "target",
     "timer",
+    "tray",
     "trending-up",
     "user",
     "users",

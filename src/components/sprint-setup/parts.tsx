@@ -10,18 +10,13 @@ export function Section({
   title,
   children,
   hint,
-  compact = false,
 }: {
   title: string;
   hint?: string;
-  compact?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <section
-      className={cn("space-y-3.5", !compact && "px-5 py-5 sm:px-6")}
-      aria-label={title}
-    >
+    <section className="space-y-3.5" aria-label={title}>
       <div>
         <h2 className="text-sm font-semibold">{title}</h2>
         {hint && (

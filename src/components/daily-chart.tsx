@@ -67,7 +67,7 @@ export function DailyChart({
           <CardTitle role="heading" aria-level={2}>
             {title}
           </CardTitle>
-          <p className="mt-2 text-[30px] leading-none font-bold tracking-[-0.035em] tabular-nums">
+          <p className="num-display mt-2 text-[30px] leading-none font-bold">
             {hero}
           </p>
         </div>

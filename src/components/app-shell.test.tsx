@@ -5,7 +5,7 @@ vi.mock("@/app/(auth)/actions", () => ({ signOut: vi.fn() }));
 vi.mock("@/components/feedback-widget", () => ({
   useFeedback: () => () => {},
 }));
-import { activeItem, nav, MobileTabs, studentTab } from "./app-shell";
+import { activeItem, AppShell, nav, MobileTabs, studentTab } from "./app-shell";
 
 const pages = import.meta.glob("../app/**/page.tsx", {
   eager: true,
@@ -79,17 +79,25 @@ it("scopes a page override to its route and clears it on unmount", () => {
   expect(screen.getByRole("status")).toHaveTextContent("Activity");
 });
 
-const mobile = vi.hoisted(() => ({ setOpenMobile: vi.fn() }));
-vi.mock("@/components/ui/sidebar", async (original) => ({
-  ...(await original<typeof import("@/components/ui/sidebar")>()),
-  useSidebar: () => ({
-    setOpenMobile: mobile.setOpenMobile,
-    openMobile: false,
-  }),
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/student",
+  useSearchParams: () => new URLSearchParams(),
+  useRouter: () => ({ push: vi.fn() }),
 }));
+vi.mock("@/hooks/use-mobile", () => ({ useIsMobile: () => false }));
+import { SidebarProvider, useSidebar } from "./ui/sidebar";
+
+function DrawerState() {
+  const { openMobile } = useSidebar();
+  return <output>{openMobile ? "open" : "closed"}</output>;
+}
+
 it("keeps the four phone destinations and opens the existing drawer from More", () => {
   render(
-    <MobileTabs activeHref={studentTab("/student/activity", "finished")} />,
+    <SidebarProvider>
+      <MobileTabs activeHref={studentTab("/student/activity", "finished")} />
+      <DrawerState />
+    </SidebarProvider>,
   );
   expect(
     screen.getAllByRole("link").map((a) => a.getAttribute("href")),
@@ -104,7 +112,7 @@ it("keeps the four phone destinations and opens the existing drawer from More", 
     "page",
   );
   fireEvent.click(screen.getByRole("button", { name: "More navigation" }));
-  expect(mobile.setOpenMobile).toHaveBeenCalledWith(true);
+  expect(screen.getByRole("status")).toHaveTextContent("open");
 });
 
 it.each([
@@ -120,10 +128,35 @@ it.each([
   ["/student/mark", null, "More"],
   ["/student/profile", null, "More"],
 ])("marks the correct phone tab for %s (status %s)", (path, status, tab) => {
-  render(<MobileTabs activeHref={studentTab(path, status)} />);
+  render(
+    <SidebarProvider>
+      <MobileTabs activeHref={studentTab(path, status)} />
+    </SidebarProvider>,
+  );
   const tabs = screen.getByRole("navigation", { name: "Phone navigation" });
   const current = tabs.querySelectorAll('[aria-current="page"]');
   expect(current).toHaveLength(1);
   expect(current[0].textContent).toBe(tab);
   expect(current[0].querySelector(".nav-pen")).not.toBeNull();
 });
+
+it.each([true, false])(
+  "omits the subject card with defaultOpen=%s",
+  (defaultOpen) => {
+    window.matchMedia = () =>
+      ({
+        matches: false,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      }) as unknown as MediaQueryList;
+    const { container } = render(
+      <AppShell kind="student" name="Test" defaultOpen={defaultOpen}>
+        Content
+      </AppShell>,
+    );
+    expect(
+      container.querySelector('[data-component="SubjectSwitcher"]'),
+    ).toBeNull();
+    expect(screen.queryByText("HSC · Year 12")).toBeNull();
+  },
+);

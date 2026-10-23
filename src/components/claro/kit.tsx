@@ -186,7 +186,7 @@ export function Kit() {
             {[
               [
                 "58%",
-                "text-[48px] leading-none font-bold tracking-[-0.045em]",
+                "num-display text-[48px] leading-none font-bold",
                 "Hero figure · 48/700 · one per page",
               ],
               [
@@ -196,7 +196,7 @@ export function Kit() {
               ],
               [
                 "3h 9m",
-                "text-[30px] leading-none font-bold tracking-[-0.035em]",
+                "num-display text-[30px] leading-none font-bold",
                 "Stat value · 30/700",
               ],
               ["Card title", "text-[15px] font-semibold", "15/600"],
@@ -419,7 +419,7 @@ export function Kit() {
           wide
         >
           <div className="mb-5 flex flex-wrap items-center gap-8 text-sm">
-            <span className="text-[22px] font-bold tabular-nums">
+            <span className="num-display text-[22px] font-bold">
               <PenCircle>48%</PenCircle>
             </span>
             <span className="flex items-center gap-2">
