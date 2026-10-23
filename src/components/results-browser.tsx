@@ -26,17 +26,61 @@ export type ResultItem = {
   pill: Pill | null;
 };
 
+function AnswerState({ item }: { item: ResultItem }) {
+  const score = item.mark?.match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+  const earned = score && Number(score[1]) === Number(score[2]);
+  const partly = score && Number(score[1]) > 0 && !earned;
+  const word =
+    item.pill === "Not answered"
+      ? null
+      : score
+        ? earned
+          ? "Earned"
+          : partly
+            ? "Part marks"
+            : "Missed"
+        : item.pill
+          ? null
+          : item.mark
+            ? "Pending"
+            : "Not answered";
+  return (
+    <span className="flex flex-col items-start gap-1">
+      {item.pill && <StatusPill pill={item.pill} />}
+      {word && (
+        <span className="flex items-center gap-1 text-[11px] font-medium">
+          <PortalIcon
+            name={
+              score
+                ? earned
+                  ? "check"
+                  : partly
+                    ? "circle-alert"
+                    : "x"
+                : "circle-alert"
+            }
+            className="size-3"
+          />
+          {word}
+        </span>
+      )}
+    </span>
+  );
+}
+
 /** §3.4 question strip (or compact table) and the selected question; J / K move between questions. */
 export function ResultsBrowser({
   items,
   views,
   initial,
   mcGrid,
+  sprintLayout = false,
 }: {
   items: ResultItem[];
   views: React.ReactNode[];
   initial: number;
   mcGrid?: McGridRow[];
+  sprintLayout?: boolean;
 }) {
   const [index, setIndex] = useState(initial);
   const [table, setTable] = useState(false);
@@ -120,10 +164,17 @@ export function ResultsBrowser({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [items.length]);
+  const mark = (it: ResultItem) =>
+    sprintLayout ? it.mark?.replace(/\s*\/\s*/g, "/") : it.mark;
   const label = (it: ResultItem, i: number) =>
-    `Question ${it.position ?? i + 1}${it.mark ? `, ${it.mark} marks` : ""}${it.pill ? `, ${it.pill}` : ""}`;
+    `Question ${it.position ?? i + 1}${it.mark ? `, ${mark(it)} marks` : ""}${it.pill ? `, ${it.pill}` : ""}`;
   return (
-    <section className="bg-card shadow-card space-y-5 rounded-xl border p-5">
+    <section
+      className={cn(
+        "space-y-5",
+        !sprintLayout && "bg-card shadow-card rounded-xl border p-5",
+      )}
+    >
       {table && mcGrid && mcGrid.length > 0 && (
         <Card>
           <CardHeader>
@@ -132,12 +183,22 @@ export function ResultsBrowser({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid gap-x-6 gap-y-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div
+              className={
+                sprintLayout
+                  ? "grid grid-cols-[repeat(auto-fit,minmax(min(100%,260px),1fr))] gap-x-6 gap-y-2"
+                  : "grid gap-x-6 gap-y-2 sm:grid-cols-2 xl:grid-cols-4"
+              }
+            >
               {Array.from(
                 { length: Math.ceil(mcGrid.length / 5) },
                 (_, group) => (
                   <Table
-                    className="[&_td]:px-1 [&_th]:px-1"
+                    className={cn(
+                      "[&_td]:px-1 [&_th]:px-1",
+                      sprintLayout &&
+                        "[&_th]:tracking-normal [&_th]:normal-case [&_tr]:border-solid",
+                    )}
                     key={group}
                     aria-label={`Multiple choice answers ${group + 1}`}
                   >
@@ -178,7 +239,9 @@ export function ResultsBrowser({
                           <TableCell>{r.your}</TableCell>
                           <TableCell>{r.correct}</TableCell>
                           <TableCell>
-                            {r.right == null ? (
+                            {!r.answered ? (
+                              <StatusPill pill="Not answered" />
+                            ) : r.right == null ? (
                               "Pending"
                             ) : (
                               <span
@@ -211,7 +274,15 @@ export function ResultsBrowser({
         className="relative flex scroll-mt-20 flex-wrap items-start justify-between gap-3"
       >
         <div>
-          <h2 className="text-sm font-semibold">Your answers</h2>
+          <h2
+            className={
+              sprintLayout
+                ? "text-xl font-[650] tracking-tight"
+                : "text-sm font-semibold"
+            }
+          >
+            Your answers
+          </h2>
           <ul
             aria-label="Answer key"
             className="text-muted-foreground mt-2 flex flex-col gap-x-4 gap-y-1 text-xs sm:flex-row sm:flex-wrap"
@@ -219,7 +290,10 @@ export function ResultsBrowser({
             {[
               ["Correct", "bg-success-soft"],
               ["Part marks", "bg-warning-soft"],
-              ["Incorrect", "bg-brand-soft"],
+              [
+                "Incorrect",
+                sprintLayout ? "bg-destructive-soft" : "bg-brand-soft",
+              ],
               ["Not answered", "border border-dashed"],
             ].map(([label, tone]) => (
               <li key={label} className="flex items-center gap-1.5">
@@ -252,7 +326,14 @@ export function ResultsBrowser({
         </div>
       </div>
       {table ? (
-        <Table aria-label="Questions">
+        <Table
+          aria-label="Questions"
+          className={
+            sprintLayout
+              ? "[&_th]:tracking-normal [&_th]:normal-case [&_tr]:border-solid"
+              : undefined
+          }
+        >
           <TableHeader>
             <TableRow>
               {["#", "Type", "Topic", "Source", "Mark", "Status"].map((h) => (
@@ -281,10 +362,14 @@ export function ResultsBrowser({
                 <TableCell>{it.topic}</TableCell>
                 <TableCell>{it.source}</TableCell>
                 <TableCell className="tabular-nums">
-                  {it.mark ?? "Pending"}
+                  {mark(it) ?? "Pending"}
                 </TableCell>
                 <TableCell>
-                  {it.pill && <StatusPill pill={it.pill} />}
+                  {sprintLayout ? (
+                    <AnswerState item={it} />
+                  ) : (
+                    it.pill && <StatusPill pill={it.pill} />
+                  )}
                 </TableCell>
               </TableRow>
             ))}
@@ -307,22 +392,39 @@ export function ResultsBrowser({
                         aria-current={i === index ? "true" : undefined}
                         onClick={() => setIndex(i)}
                         className={cn(
-                          "grid size-12 content-center rounded-xl border border-transparent text-sm font-medium tabular-nums",
-                          it.tone
-                            .replace(
-                              /border-(success|warning|destructive)/g,
-                              "border-transparent",
-                            )
-                            .replace(/bg-destructive-soft/g, "bg-brand-soft")
-                            .replace(/text-destructive/g, "text-brand-text"),
+                          sprintLayout
+                            ? "grid min-h-20 min-w-20 content-center justify-items-center gap-1 rounded-2xl border border-transparent px-2 py-2 text-sm font-semibold tabular-nums"
+                            : "grid size-12 content-center rounded-xl border border-transparent text-sm font-medium tabular-nums",
+                          sprintLayout
+                            ? it.tone
+                                .replace(/text-success\b/g, "text-success-text")
+                                .replace(/text-warning\b/g, "text-warning-text")
+                                .replace(
+                                  /text-destructive\b/g,
+                                  "text-destructive-text",
+                                )
+                            : it.tone
+                                .replace(
+                                  /border-(success|warning|destructive)/g,
+                                  "border-transparent",
+                                )
+                                .replace(
+                                  /bg-destructive-soft/g,
+                                  "bg-brand-soft",
+                                )
+                                .replace(
+                                  /text-destructive/g,
+                                  "text-brand-text",
+                                ),
                           !it.mark && "border-border border-dashed",
                           i === index && "ring-primary ring-2 ring-offset-2",
                         )}
                       >
                         {it.position ?? i + 1}
+                        {sprintLayout && <AnswerState item={it} />}
                         {type !== "Multiple choice" && it.mark && (
                           <span className="mt-0.5 text-[10px] font-normal">
-                            {it.mark}
+                            {mark(it)}
                           </span>
                         )}
                       </button>

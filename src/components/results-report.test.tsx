@@ -256,3 +256,49 @@ it("keeps question jump links and semantic strength/fix icons in the summary", (
     );
   }
 });
+
+it("keeps unanswered MC rows distinct from incorrect answers in sprint tiles and Table view", () => {
+  const rows = [null, 0].map((choice_index, i) => ({
+    attempt_id: `mc-${i}`,
+    position: i + 1,
+    question_id: null,
+    type: "mcq",
+    marks: 1,
+    max_marks: 1,
+    mark: 0,
+    status: "marked",
+    feedback: null,
+    choice_index,
+    correct_index: 1,
+    options: ["One", "Two"],
+    stem: "Choose an answer.",
+    source: "Practice",
+    topic_id: null,
+    review: null,
+  })) as ReviewRow[];
+  render(
+    <ResultsAnswers
+      sprintLayout
+      rows={rows}
+      id="sprint"
+      name={() => ""}
+      photos={new Map()}
+    />,
+  );
+  const unanswered = screen.getByRole("button", {
+    name: "Question 1, 0/1 marks, Not answered",
+  });
+  expect(unanswered).toHaveTextContent("Not answered");
+  expect(unanswered).not.toHaveTextContent("Missed");
+  expect(unanswered.querySelector("svg")).toBeTruthy();
+  expect(
+    screen.getByRole("button", { name: "Question 2, 0/1 marks" }),
+  ).toHaveTextContent("Missed");
+  fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+  const table = screen.getByRole("table", { name: "Questions" });
+  const unansweredRow = table.querySelectorAll("tbody tr")[0];
+  expect(unansweredRow).toHaveTextContent("Not answered");
+  expect(unansweredRow).not.toHaveTextContent("Missed");
+  expect(unansweredRow.querySelector("svg")).toBeTruthy();
+  expect(table.querySelectorAll("tbody tr")[1]).toHaveTextContent("Missed");
+});

@@ -18,6 +18,7 @@ export function SprintFocusShell(
     clock: { mode: "down" | "up"; seconds: number };
     wide?: boolean;
     booklet: React.ReactNode;
+    progress: React.ReactNode;
   },
 ) {
   const {
@@ -34,10 +35,17 @@ export function SprintFocusShell(
     onFinish,
     onMove,
     booklet,
+    progress,
     children,
   } = props;
   const bookletId = useId();
-  const [rail, setRail] = useState(true);
+  const progressRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    progressRef.current
+      ?.querySelector('[aria-current="step"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [position, total]);
+  const [rail, setRail] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [calc, setCalc] = useState(false);
   const [help, setHelp] = useState(false);
@@ -73,8 +81,8 @@ export function SprintFocusShell(
     return () => window.removeEventListener("keydown", key);
   }, []);
   return (
-    <div className="flex min-h-svh flex-col">
-      <FocusBar className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 md:h-[68px] md:flex-nowrap md:py-0 lg:gap-4 lg:px-8 [&>[data-component=MobileFocusFeedback]]:hidden">
+    <div className="sprint-focus flex min-h-svh flex-col">
+      <FocusBar className="bg-background flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 backdrop-blur-none md:h-[68px] md:flex-nowrap md:py-0 lg:gap-4 lg:px-8 [&>[data-component=MobileFocusFeedback]]:hidden">
         <Button
           variant="ghost"
           size="sm"
@@ -84,12 +92,12 @@ export function SprintFocusShell(
           onClick={onExit}
         >
           <PortalIcon name="arrow-left" className="size-4" />
-          Save and exit
+          <span className="hidden sm:inline">Save and exit</span>
         </Button>
         <div className="min-w-0 flex-1 sm:border-l sm:pl-4">
           <p className="truncate text-sm font-semibold">{title}</p>
           <div className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
-            <p className="hidden truncate sm:block">
+            <p className="truncate">
               Question {position} of {total} · {answered} answered ·
             </p>
             <p
@@ -167,13 +175,24 @@ export function SprintFocusShell(
             onClick={() => feedback()}
           >
             <PortalIcon name="message-circle" />
-            Send feedback
+            <span className="hidden sm:inline">Send feedback</span>
           </Button>
         </div>
-        <Button size="sm" disabled={busy} onClick={onFinish}>
+        <Button variant="outline" size="sm" disabled={busy} onClick={onFinish}>
           Finish
         </Button>
       </FocusBar>
+      <nav
+        aria-label="Question progress"
+        className="bg-background border-b px-4 py-3 sm:px-8"
+      >
+        <div
+          ref={progressRef}
+          className="mx-auto flex max-w-5xl gap-1.5 overflow-x-auto p-1"
+        >
+          {progress}
+        </div>
+      </nav>
       <div className="flex flex-1">
         {rail && (
           <aside className="bg-card sticky top-[68px] hidden h-[calc(100svh-68px)] w-[272px] shrink-0 overflow-y-auto border-r p-5 md:block">
@@ -184,7 +203,7 @@ export function SprintFocusShell(
         <main
           id="main"
           className={cn(
-            "mx-auto w-full max-w-[824px] min-w-0 flex-1 space-y-5 px-4 py-6 sm:px-8 sm:py-10",
+            "mx-auto w-full max-w-[824px] min-w-0 flex-1 space-y-5 px-4 pt-6 pb-32 sm:px-8 sm:pt-10",
             wide && "max-w-7xl",
           )}
         >

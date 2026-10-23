@@ -5,7 +5,7 @@ vi.mock("@/app/(auth)/actions", () => ({ signOut: vi.fn() }));
 vi.mock("@/components/feedback-widget", () => ({
   useFeedback: () => () => {},
 }));
-import { activeItem, nav, MobileTabs } from "./app-shell";
+import { activeItem, nav, MobileTabs, studentTab } from "./app-shell";
 
 const pages = import.meta.glob("../app/**/page.tsx", {
   eager: true,
@@ -88,14 +88,16 @@ vi.mock("@/components/ui/sidebar", async (original) => ({
   }),
 }));
 it("keeps the four phone destinations and opens the existing drawer from More", () => {
-  render(<MobileTabs activeHref="/student/activity" />);
+  render(
+    <MobileTabs activeHref={studentTab("/student/activity", "finished")} />,
+  );
   expect(
     screen.getAllByRole("link").map((a) => a.getAttribute("href")),
   ).toEqual([
     "/student",
     "/student/sprint",
     "/student/progress",
-    "/student/activity",
+    "/student/activity?status=finished",
   ]);
   expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute(
     "aria-current",
@@ -106,41 +108,22 @@ it("keeps the four phone destinations and opens the existing drawer from More", 
 });
 
 it.each([
-  "/student",
-  "/student/sprint",
-  "/student/progress",
-  "/student/activity",
-  "/student/activity/synthetic-result",
-  "/student/flashcards",
-  "/student/mark",
-  "/student/profile",
-])("marks the correct phone tab for %s", (path) => {
-  render(<MobileTabs activeHref={activeItem("student", path)?.href ?? path} />);
+  ["/student", null, "Home"],
+  ["/student/sprint", null, "Sprint"],
+  ["/student/sprint/session", null, "Sprint"],
+  ["/student/progress", null, "Progress"],
+  ["/student/activity", null, "More"],
+  ["/student/activity", "progress", "More"],
+  ["/student/activity", "finished", "Feedback"],
+  ["/student/activity/synthetic-result", null, "Feedback"],
+  ["/student/flashcards", null, "More"],
+  ["/student/mark", null, "More"],
+  ["/student/profile", null, "More"],
+])("marks the correct phone tab for %s (status %s)", (path, status, tab) => {
+  render(<MobileTabs activeHref={studentTab(path, status)} />);
   const tabs = screen.getByRole("navigation", { name: "Phone navigation" });
-  expect(
-    Array.from(tabs.querySelectorAll("a")).map((a) => [
-      a.textContent,
-      a.getAttribute("href"),
-    ]),
-  ).toEqual([
-    ["Home", "/student"],
-    ["Sprint", "/student/sprint"],
-    ["Progress", "/student/progress"],
-    ["Feedback", "/student/activity"],
-  ]);
-  const current = tabs.querySelector('[aria-current="page"]')!;
-  expect(current.textContent).toBe(
-    path.includes("activity")
-      ? "Feedback"
-      : path.includes("flashcards") ||
-          path.includes("mark") ||
-          path.includes("profile")
-        ? "More"
-        : path === "/student"
-          ? "Home"
-          : path.includes("sprint")
-            ? "Sprint"
-            : "Progress",
-  );
-  expect(current.querySelector(".nav-pen")).not.toBeNull();
+  const current = tabs.querySelectorAll('[aria-current="page"]');
+  expect(current).toHaveLength(1);
+  expect(current[0].textContent).toBe(tab);
+  expect(current[0].querySelector(".nav-pen")).not.toBeNull();
 });

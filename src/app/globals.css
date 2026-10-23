@@ -166,6 +166,7 @@
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
+  --color-destructive-text: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -1249,6 +1250,69 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   font-size: 13px;
   line-height: 18px;
   font-weight: 400;
+}
+
+/* Sprint chrome shares the shell's paper stage and stays clear of marked answers. */
+.sprint-focus :focus-visible,
+.sprint-setup-dock :focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  box-shadow: none;
+}
+.sprint-focus .session-writing {
+  min-height: 288px;
+  font-family: var(--font-sans);
+  font-size: 16px;
+  line-height: 32px;
+  padding: 16px 20px 16px 72px;
+  border-radius: var(--radius);
+  background-color: var(--card);
+  background-image:
+    linear-gradient(
+      to right,
+      transparent 55px,
+      color-mix(in srgb, var(--brand) 28%, transparent) 55px,
+      color-mix(in srgb, var(--brand) 28%, transparent) 56px,
+      transparent 56px
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 31px,
+      color-mix(in srgb, var(--foreground) 5.5%, transparent) 31px,
+      color-mix(in srgb, var(--foreground) 5.5%, transparent) 32px
+    );
+  caret-color: var(--brand);
+}
+.sprint-session-footer {
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+}
+@media (max-width: 767px) {
+  .student-frame .sprint-setup-dock {
+    bottom: calc(63px + env(safe-area-inset-bottom));
+  }
+  .sprint-focus .session-writing {
+    padding-left: 36px;
+    background-position-x: -32px, 0;
+  }
+}
+.sprint-focus label:has(input[type="file"][multiple]) {
+  min-height: 180px;
+  align-content: center;
+  padding: 24px;
+  border: 1px dashed var(--input);
+  border-radius: var(--radius);
+  background: var(--card);
+}
+body:has(.sprint-focus)
+  :is([data-slot="dialog-overlay"], [data-slot="alert-dialog-overlay"]) {
+  backdrop-filter: none;
+}
+body:has(.sprint-focus)
+  :is([data-slot="dialog-title"], [data-slot="alert-dialog-title"]) {
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 650;
 }
 
 /* Student Flashcards: due-today stage tags and topic decks. */

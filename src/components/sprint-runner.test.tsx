@@ -54,16 +54,19 @@ vi.mock("./session-shell", () => ({
 vi.mock("./student/sprint/focus-shell", () => ({
   SprintFocusShell: ({
     booklet,
+    progress,
     children,
     onExit,
   }: {
     booklet: React.ReactNode;
+    progress: React.ReactNode;
     children: React.ReactNode;
     onExit: () => void;
   }) => (
     <>
       <button onClick={onExit}>Save and exit</button>
       {booklet}
+      <nav aria-label="Question progress">{progress}</nav>
       {children}
     </>
   ),
@@ -144,7 +147,7 @@ it("checks an MC sprint answer and renders its feedback", async () => {
 });
 it("persists sprint time on save and exit, and keeps the finish confirmation", async () => {
   show();
-  fireEvent.click(screen.getByRole("button", { name: "Finish" }));
+  fireEvent.click(screen.getByRole("button", { name: "Finish and mark" }));
   expect(
     await screen.findByRole("dialog", { name: "Finish and mark?" }),
   ).toBeVisible();
@@ -190,13 +193,13 @@ it("untimed sessions never warn", () => {
   expect(screen.queryByText(/Time’s up/)).not.toBeInTheDocument();
 });
 
-it("flags from the answer actions and updates the question booklet", async () => {
+it("flags from the fixed footer and updates the question booklet", async () => {
   show();
   const actions = screen.getByRole("group", { name: "Answer actions" });
   expect(
     within(actions).getByRole("button", { name: "Check answer" }),
   ).toBeVisible();
-  const flag = within(actions).getByRole("button", { name: "Flag for review" });
+  const flag = screen.getByRole("button", { name: "Flag for review" });
   fireEvent.click(flag);
   await waitFor(() => expect(flag).toHaveAttribute("aria-pressed", "true"));
   expect(
@@ -484,7 +487,7 @@ it("a failed manual finish keeps the saved answer editable and allows retry", as
   });
   vi.stubGlobal("fetch", mocks.fetch);
   show();
-  fireEvent.click(screen.getByRole("button", { name: "Finish" }));
+  fireEvent.click(screen.getByRole("button", { name: "Finish and mark" }));
   fireEvent.click(screen.getByRole("button", { name: "Finish and mark" }));
   expect(await screen.findByRole("alert")).toHaveTextContent(
     "Marking is paused.",
@@ -493,7 +496,7 @@ it("a failed manual finish keeps the saved answer editable and allows retry", as
     screen.queryByRole("heading", { name: "Marking your answers" }),
   ).not.toBeInTheDocument();
   expect(screen.getByRole("radio", { name: /^Option A:/ })).toBeEnabled();
-  expect(screen.getByRole("button", { name: "Finish" })).toBeEnabled();
+  expect(screen.getByRole("button", { name: "Finish and mark" })).toBeEnabled();
 });
 
 it("shows structured MC feedback concept first and retains it on question navigation", async () => {
@@ -699,6 +702,7 @@ it("saves a photo with only accepted answer fields and retries metadata without 
     ],
     { mode: "short", feedback: "end", topics: [] },
   );
+  fireEvent.click(screen.getByRole("button", { name: "Photo" }));
   fireEvent.change(screen.getByLabelText("Take photo / Upload"), {
     target: {
       files: [new File(["photo"], "answer.png", { type: "image/png" })],
@@ -742,6 +746,7 @@ it("retries failed photo metadata automatically despite the one-second session c
     ],
     { mode: "short", feedback: "end", topics: [] },
   );
+  fireEvent.click(screen.getByRole("button", { name: "Photo" }));
   await act(async () => {
     fireEvent.change(screen.getByLabelText("Take photo / Upload"), {
       target: {
@@ -843,6 +848,7 @@ it("deletes a fresh upload when the student removes it after its metadata save f
     ],
     { mode: "short", feedback: "end", topics: [] },
   );
+  fireEvent.click(screen.getByRole("button", { name: "Photo" }));
   fireEvent.change(screen.getByLabelText("Take photo / Upload"), {
     target: {
       files: [new File(["photo"], "answer.png", { type: "image/png" })],
@@ -917,4 +923,37 @@ it("offers scanning only for editable typed written answers", () => {
   expect(
     screen.queryByRole("button", { name: "Scan written answer" }),
   ).toBeNull();
+});
+
+it("switches between typing and photo without losing the typed draft", () => {
+  show([written()]);
+  expect(screen.getByLabelText("Your answer")).toHaveValue("Demand grows.");
+  expect(screen.queryByLabelText("Take photo / Upload")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Photo" }));
+  expect(screen.getByLabelText("Take photo / Upload")).toBeVisible();
+  expect(screen.queryByLabelText("Your answer")).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Type" }));
+  expect(screen.getByLabelText("Your answer")).toHaveValue("Demand grows.");
+});
+
+it("keeps long-sprint progress targets usable and preserves answered and flagged states", async () => {
+  show(
+    Array.from({ length: 55 }, (_, i) => ({
+      ...attempt,
+      id: `a${i}`,
+      question_id: `q${i}`,
+      position: i + 1,
+      flagged: i === 54,
+    })),
+  );
+  const nav = screen.getByRole("navigation", { name: "Question progress" });
+  const buttons = within(nav).getAllByRole("button");
+  expect(buttons).toHaveLength(55);
+  expect(buttons[54]).toHaveAccessibleName("Question 55, flagged, answered");
+  expect(buttons[54]).toHaveClass("h-8", "min-w-8");
+  expect(buttons[54].querySelector(".bg-brand")).toBeTruthy();
+  fireEvent.click(buttons[54]);
+  await waitFor(() =>
+    expect(buttons[54]).toHaveAttribute("aria-current", "step"),
+  );
 });

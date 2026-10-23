@@ -37,7 +37,16 @@ it("preserves question numbering and opens a question from the MC grid", () => {
       items={items}
       views={views}
       initial={1}
-      mcGrid={[{ position: 1, your: "B", correct: "C", right: false }]}
+      mcGrid={[
+        { position: 1, your: "B", correct: "C", answered: true, right: false },
+        {
+          position: 24,
+          your: "Not answered",
+          correct: "A",
+          answered: false,
+          right: false,
+        },
+      ]}
     />,
   );
   expect(screen.getByText("Answer to Q24")).toBeVisible();
@@ -50,6 +59,13 @@ it("preserves question numbering and opens a question from the MC grid", () => {
       screen.getByRole("table", { name: "Multiple choice answers 1" }),
     ).getByText("Incorrect"),
   ).toBeVisible();
+  const unanswered = within(
+    screen.getByRole("table", { name: "Multiple choice answers 1" }),
+  )
+    .getByRole("button", { name: "Review question 24" })
+    .closest("tr")!;
+  expect(within(unanswered).getAllByText("Not answered")).toHaveLength(2);
+  expect(within(unanswered).queryByText("Incorrect")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Review question 1" }));
   expect(screen.getByText("Answer to Q1")).toBeVisible();
   expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
@@ -143,4 +159,91 @@ it("reselects and scrolls to a summary question after manual navigation with the
   // Clicking the selected question again still scrolls to its answer.
   fireEvent.click(screen.getByRole("link", { name: "Q3" }));
   await waitFor(() => expect(scroll).toHaveBeenCalledTimes(3));
+});
+
+it("shows an icon and word for every sprint answer, including spaced and decimal marks", () => {
+  const scores = ["4 / 4", "1.5 / 4", "0 / 1", null];
+  const sprintItems = scores.map((mark, i) => ({
+    ...items[0],
+    position: i + 1,
+    mark,
+  }));
+  render(
+    <ResultsBrowser
+      sprintLayout
+      items={sprintItems}
+      views={scores.map((_, i) => (
+        <p key={i}>Review {i + 1}</p>
+      ))}
+      initial={0}
+    />,
+  );
+  for (const [i, word] of [
+    "Earned",
+    "Part marks",
+    "Missed",
+    "Not answered",
+  ].entries()) {
+    const tile = screen.getByRole("button", {
+      name: new RegExp(`^Question ${i + 1}(,|$)`),
+    });
+    expect(tile).toHaveTextContent(word);
+    expect(tile.querySelector("svg")).toBeTruthy();
+  }
+  expect(
+    screen.getByRole("button", { name: "Question 2, 1.5/4 marks" }),
+  ).toHaveTextContent("1.5/4");
+  fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+  expect(screen.getByRole("table", { name: "Questions" })).toHaveTextContent(
+    "Part marks",
+  );
+});
+
+it("preserves unanswered and review states alongside scores in sprint tiles and tables", () => {
+  const pills = [
+    "Not answered",
+    "Provisional",
+    "Being double-checked",
+    "Checked by our team",
+  ] as const;
+  const tones = [
+    "bg-destructive-soft border-destructive text-destructive",
+    "bg-warning-soft border-warning text-warning",
+    "bg-warning-soft border-warning text-warning",
+    "bg-success-soft border-success text-success",
+  ];
+  render(
+    <ResultsBrowser
+      sprintLayout
+      items={pills.map((pill, i) => ({
+        ...items[0],
+        position: i + 1,
+        mark: i === 0 ? "0 / 4" : i === 3 ? "4 / 4" : "2 / 4",
+        pill,
+        tone: tones[i],
+      }))}
+      views={views}
+      initial={0}
+    />,
+  );
+  for (const [i, pill] of pills.entries()) {
+    const tile = screen.getByRole("button", {
+      name: new RegExp(`^Question ${i + 1},`),
+    });
+    expect(tile).toHaveTextContent(pill);
+    expect(tile).toHaveClass(
+      i === 0
+        ? "text-destructive-text"
+        : i === 3
+          ? "text-success-text"
+          : "text-warning-text",
+    );
+    if (i === 0) expect(tile).not.toHaveTextContent("Missed");
+    else expect(tile).toHaveTextContent(i === 3 ? "Earned" : "Part marks");
+  }
+  fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+  const table = screen.getByRole("table", { name: "Questions" });
+  for (const pill of pills) expect(within(table).getByText(pill)).toBeVisible();
+  expect(table).not.toHaveTextContent("Missed");
+  expect(table).toHaveTextContent("0/4");
 });

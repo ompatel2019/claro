@@ -41,7 +41,7 @@ export function FinishSprint({ id }: { id: string }) {
   return (
     <>
       {busy && <MarkingScreen />}
-      <Button size="sm" disabled={busy} onClick={finish}>
+      <Button variant="outline" size="sm" disabled={busy} onClick={finish}>
         {busy ? "Finishing…" : "Finish and mark"}
       </Button>
       {error && (

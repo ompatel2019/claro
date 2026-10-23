@@ -18,11 +18,11 @@ import { cn } from "@/lib/utils";
 const pills = {
   Marking: [Spinner, "bg-muted text-muted-foreground"],
   Marked: [CheckCircle, "bg-success-soft text-success"],
-  Provisional: [Clock, "bg-warning-soft text-warning"],
+  Provisional: [Clock, "bg-warning-soft text-warning-text"],
   "Checked by our team": [Shield, "border-success text-success"],
-  "Being double-checked": [Pending, "border-warning text-warning"],
+  "Being double-checked": [Pending, "border-warning text-warning-text"],
   "Couldn't mark": [Alert, "bg-destructive-soft text-destructive"],
-  "Couldn't read photo": [Help, "bg-warning-soft text-warning"],
+  "Couldn't read photo": [Help, "bg-warning-soft text-warning-text"],
   "Not answered": [EyeOff, "bg-muted text-muted-foreground"],
   "In progress": [Dot, "border-ink text-ink"],
   Finished: [Check, "bg-muted text-muted-foreground"],
@@ -30,9 +30,9 @@ const pills = {
   Live: [CheckCircle, "bg-success-soft text-success"],
   Retired: [EyeOff, "bg-muted text-muted-foreground"],
   New: [Dot, "bg-muted text-muted-foreground"],
-  Triaged: [EyeOff, "bg-warning-soft text-warning"],
+  Triaged: [EyeOff, "bg-warning-soft text-warning-text"],
   Resolved: [CheckCircle, "bg-success-soft text-success"],
-  Open: [Clock, "bg-warning-soft text-warning"],
+  Open: [Clock, "bg-warning-soft text-warning-text"],
 } satisfies Record<string, [Icon, string]>;
 export type Pill = keyof typeof pills;
 

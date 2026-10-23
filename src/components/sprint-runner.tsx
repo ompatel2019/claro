@@ -75,6 +75,9 @@ export function SprintRunner({
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [readAll, setReadAll] = useState(false);
+  const [answerModes, setAnswerModes] = useState<
+    Record<string, "type" | "photo">
+  >({});
   const [filter, setFilter] = useState<"all" | "unanswered" | "flagged">("all");
   const [finishing, setFinishing] = useState(false);
   const [finishFailed, setFinishFailed] = useState(false);
@@ -257,8 +260,7 @@ export function SprintRunner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(() => {
-    // This clock is initialised inside the effect, after render.
-    // This monotonic clock is read only in the mount effect.
+    // eslint-disable-next-line react-hooks/purity -- This baseline is captured in the mount effect, after render.
     let last = performance.now();
     const tick = setInterval(() => {
       const now = performance.now();
@@ -582,6 +584,11 @@ export function SprintRunner({
       router.push("/student");
     });
 
+  const answerMode =
+    answerModes[a.id] ?? (a.image_paths?.length ? "photo" : "type");
+  const setAnswerMode = (mode: "type" | "photo") =>
+    setAnswerModes((current) => ({ ...current, [a.id]: mode }));
+
   return (
     <>
       <SprintFocusShell
@@ -602,6 +609,31 @@ export function SprintRunner({
         onFinish={() => setConfirm(true)}
         onMove={(d) => !busy && go(index + d)}
         booklet={sprintBooklet}
+        progress={attempts.map((row, i) => (
+          <button
+            key={row.id}
+            type="button"
+            aria-label={`Question ${i + 1}${row.flagged ? ", flagged" : ""}${answered(row) ? ", answered" : ", not answered"}`}
+            aria-current={i === index ? "step" : undefined}
+            disabled={busy}
+            onClick={() => go(i)}
+            className={cn(
+              "focus-visible:outline-ring relative flex h-8 min-w-8 flex-1 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2",
+              i === index && "outline-ring outline-2 outline-offset-2",
+            )}
+          >
+            <span
+              aria-hidden
+              className={cn(
+                "h-3 w-full rounded-full border",
+                answered(row) ? "bg-primary border-primary" : "bg-muted",
+              )}
+            />
+            {row.flagged && (
+              <span className="bg-brand absolute top-1 right-0 size-1.5 rounded-full" />
+            )}
+          </button>
+        ))}
       >
         {!!limit && elapsed >= limit && (
           <div role="alert" className="bg-accent rounded-xl border p-4 text-sm">
@@ -633,7 +665,7 @@ export function SprintRunner({
             )}
           </div>
         )}
-        <article className="bg-card shadow-card space-y-6 overflow-hidden rounded-xl border p-6 sm:p-7">
+        <article className="space-y-6 p-0">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
               <Badge variant="outline">Question {index + 1}</Badge>
@@ -664,7 +696,7 @@ export function SprintRunner({
                 <label
                   key={i}
                   className={cn(
-                    "has-[:focus-visible]:ring-ring flex cursor-pointer items-center gap-3.5 rounded-xl border px-4 py-3.5 text-[15px] leading-snug transition-colors has-[:focus-visible]:ring-2",
+                    "has-[:focus-visible]:ring-ring bg-card border-input has-[:focus-visible]:outline-ring flex cursor-pointer items-center gap-3.5 rounded-2xl border px-4 py-4 text-base leading-6 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2",
                     a.choice_index === i
                       ? "border-primary bg-accent"
                       : "hover:bg-muted",
@@ -688,7 +720,7 @@ export function SprintRunner({
                   <span
                     aria-hidden
                     className={cn(
-                      "text-muted-foreground flex size-7 shrink-0 items-center justify-center rounded-lg border text-xs font-semibold",
+                      "text-muted-foreground border-input flex size-8 shrink-0 items-center justify-center rounded-full border text-[13px] font-semibold",
                       a.choice_index === i &&
                         "bg-primary border-primary text-primary-foreground",
                     )}
@@ -700,20 +732,45 @@ export function SprintRunner({
               ))}
             </fieldset>
           ) : checkMode && a.status === "marked" ? null : (
-            <WrittenAnswer
-              disabled={busy || !editable}
-              onBusy={setBusy}
-              key={a.question_id ?? a.id}
-              attempt={backgroundAnswer(a) ? { ...a, status: "pending" } : a}
-              userId={userId}
-              edit={(patch) => edit(a.id, patch)}
-              save={async (patch) => {
-                edit(a.id, patch);
-                await flush();
-              }}
-              flush={flush}
-              local={(patch) => local(a.id, patch)}
-            />
+            <div className="space-y-4">
+              <div
+                role="group"
+                aria-label="Answer method"
+                className="bg-card inline-flex gap-1 rounded-full border p-1"
+              >
+                {(["type", "photo"] as const).map((mode) => (
+                  <Button
+                    key={mode}
+                    size="sm"
+                    variant={answerMode === mode ? "default" : "ghost"}
+                    aria-pressed={answerMode === mode}
+                    disabled={busy || !editable}
+                    onClick={() => setAnswerMode(mode)}
+                  >
+                    <PortalIcon
+                      name={mode === "type" ? "pen-line" : "camera"}
+                    />
+                    {mode === "type" ? "Type" : "Photo"}
+                  </Button>
+                ))}
+              </div>
+              <WrittenAnswer
+                mode={answerMode}
+                onModeChange={setAnswerMode}
+                disabled={busy || !editable}
+                onBusy={setBusy}
+                key={a.question_id ?? a.id}
+                attempt={backgroundAnswer(a) ? { ...a, status: "pending" } : a}
+                userId={userId}
+                edit={(patch) => edit(a.id, patch)}
+                save={async (patch) => {
+                  edit(a.id, patch);
+                  await flush();
+                }}
+                flush={flush}
+                local={(patch) => local(a.id, patch)}
+              />
+            </div>
           )}
           {a.question.type !== "mcq" && editable && !a.image_paths?.length && (
             <ScanToText
@@ -750,7 +807,7 @@ export function SprintRunner({
           <div
             role="group"
             aria-label="Answer actions"
-            className="-mx-6 -mb-6 flex flex-wrap items-center gap-3 border-t px-6 pt-5 pb-6 sm:-mx-7 sm:-mb-7 sm:px-7 sm:pb-7"
+            className="flex flex-wrap items-center gap-3 pt-2"
           >
             {checkMode && a.status !== "marked" && (
               <CheckResult
@@ -762,16 +819,6 @@ export function SprintRunner({
                 onCheck={() => void check()}
               />
             )}
-            <Button
-              variant="outline"
-              size="sm"
-              aria-pressed={a.flagged}
-              disabled={busy || !editable}
-              onClick={flag}
-            >
-              <Flag className={cn(a.flagged && "fill-brand text-brand")} />
-              Flag for review
-            </Button>
             <p className="text-muted-foreground ml-auto hidden items-center gap-1.5 text-xs sm:flex">
               {a.question.type === "mcq" ? (
                 <>
@@ -787,38 +834,53 @@ export function SprintRunner({
             </p>
           </div>
         </article>
-        <div className="flex items-center justify-between gap-3 pt-1">
-          <Button
-            variant="outline"
-            aria-label="Previous question"
-            disabled={busy || index === 0}
-            onClick={() => go(index - 1)}
-          >
-            <PortalIcon name="arrow-left" aria-hidden />
-            <span className="sm:hidden">Previous</span>
-            <span className="hidden sm:inline">Previous</span>
-          </Button>
-          <span className="text-muted-foreground text-xs whitespace-nowrap tabular-nums md:hidden">
-            {index + 1} / {attempts.length}
-          </span>
-          {index < attempts.length - 1 ? (
-            <Tooltip disabled={!needsCheck}>
-              <TooltipTrigger
-                render={
-                  <Button disabled={busy} onClick={() => go(index + 1)} />
-                }
-              >
-                Next question <PortalIcon name="arrow-right" aria-hidden />
-              </TooltipTrigger>
-              <TooltipContent role="tooltip">
-                You’ve selected an answer, check it first?
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            <Button disabled={busy} onClick={() => setConfirm(true)}>
-              Finish
+        <div className="sprint-session-footer bg-background fixed inset-x-0 bottom-0 z-20 border-t px-4 py-3">
+          <div className="mx-auto flex max-w-[760px] items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="mr-auto"
+              aria-label="Flag for review"
+              aria-pressed={a.flagged}
+              disabled={busy || !editable}
+              onClick={flag}
+            >
+              <Flag className={cn(a.flagged && "text-brand-text")} />
+              <span className="hidden sm:inline">Flag for review</span>
             </Button>
-          )}
+
+            <Button
+              variant="outline"
+              aria-label="Previous question"
+              disabled={busy || index === 0}
+              onClick={() => go(index - 1)}
+            >
+              <PortalIcon name="arrow-left" aria-hidden />
+              <span className="sm:hidden">Previous</span>
+              <span className="hidden sm:inline">Previous</span>
+            </Button>
+            <span className="text-muted-foreground sr-only text-xs whitespace-nowrap tabular-nums">
+              {index + 1} / {attempts.length}
+            </span>
+            {index < attempts.length - 1 ? (
+              <Tooltip disabled={!needsCheck}>
+                <TooltipTrigger
+                  render={
+                    <Button disabled={busy} onClick={() => go(index + 1)} />
+                  }
+                >
+                  Next question <PortalIcon name="arrow-right" aria-hidden />
+                </TooltipTrigger>
+                <TooltipContent role="tooltip">
+                  You’ve selected an answer, check it first?
+                </TooltipContent>
+              </Tooltip>
+            ) : (
+              <Button disabled={busy} onClick={() => setConfirm(true)}>
+                Finish and mark
+              </Button>
+            )}
+          </div>
         </div>
         <Dialog open={confirm} onOpenChange={setConfirm}>
           <DialogContent className="max-h-[85dvh] overflow-y-auto">

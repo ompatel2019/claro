@@ -10,7 +10,12 @@ vi.mock("@/components/calculator", () => ({
     <button onClick={onClose}>Close calculator</button>
   ),
 }));
-afterEach(cleanup);
+Element.prototype.scrollIntoView = vi.fn();
+
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
 function show() {
   const onExit = vi.fn(),
     onFinish = vi.fn(),
@@ -29,6 +34,7 @@ function show() {
       onFinish={onFinish}
       onMove={onMove}
       booklet={<p>Questions</p>}
+      progress={<button aria-current="step">Question 2</button>}
     >
       <p>Question content</p>
     </SprintFocusShell>,
@@ -96,4 +102,59 @@ it("announces the mobile booklet sheet state independently of the desktop rail",
   ).toHaveAttribute("role", "dialog");
   fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
   expect(mobile).toHaveAttribute("aria-expanded", "false");
+});
+
+it("starts with the question centred and keeps progress available", () => {
+  show();
+  expect(
+    screen.getByRole("navigation", { name: "Question progress" }),
+  ).toContainElement(screen.getByRole("button", { name: "Question 2" }));
+  expect(screen.queryByText("Questions")).toBeNull();
+  vi.stubGlobal("matchMedia", () => ({ matches: true }));
+  const desktop = screen
+    .getAllByRole("button", { name: "Booklet (B)" })
+    .find((button) => button.hasAttribute("aria-pressed"))!;
+  expect(desktop).toHaveAttribute("aria-pressed", "false");
+  fireEvent.click(desktop);
+  expect(screen.getByText("Questions")).toBeVisible();
+});
+
+it("scrolls the current question into view when navigation changes", () => {
+  const scroll = vi.fn();
+  Element.prototype.scrollIntoView = scroll;
+  const props = {
+    title: "Long sprint",
+    children: null,
+    onRetry: vi.fn(),
+    total: 55,
+    answered: 0,
+    saveState: "saved" as const,
+    clock: { mode: "up" as const, seconds: 0 },
+    onExit: vi.fn(),
+    onFinish: vi.fn(),
+    onMove: vi.fn(),
+    booklet: null,
+  };
+  const progress = (position: number) =>
+    Array.from({ length: 55 }, (_, i) => (
+      <button key={i} aria-current={i + 1 === position ? "step" : undefined}>
+        Question {i + 1}
+      </button>
+    ));
+  const { rerender } = render(
+    <SprintFocusShell {...props} position={1} progress={progress(1)} />,
+  );
+  expect(scroll.mock.instances.at(-1)).toBe(
+    screen.getByRole("button", { name: "Question 1" }),
+  );
+  rerender(
+    <SprintFocusShell {...props} position={55} progress={progress(55)} />,
+  );
+  expect(scroll.mock.instances.at(-1)).toBe(
+    screen.getByRole("button", { name: "Question 55" }),
+  );
+  expect(scroll).toHaveBeenLastCalledWith({
+    block: "nearest",
+    inline: "nearest",
+  });
 });

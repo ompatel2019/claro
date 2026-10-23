@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { continueTime, greeting, longDate, schoolWeek } from "./home";
+import {
+  continueTime,
+  greeting,
+  longDate,
+  schoolWeek,
+  studyQuote,
+} from "./home";
 
 describe("home", () => {
   it("greets by Sydney time of day", () => {
@@ -154,4 +160,10 @@ it("weights practice average by possible marks without double counting dot point
   ).toBe(60);
   expect(practiceAverage(data([]))).toBeNull();
   expect(practiceAverage(null)).toBeNull();
+});
+
+it("rotates original study quotes deterministically by Sydney day", () => {
+  expect(studyQuote("2026-10-19")).toBe(studyQuote("2026-10-19"));
+  expect(studyQuote("2026-10-19")).not.toBe(studyQuote("2026-10-20"));
+  expect(studyQuote("2026-10-19")).toBe(studyQuote("2026-10-26"));
 });

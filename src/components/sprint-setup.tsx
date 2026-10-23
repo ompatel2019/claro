@@ -42,7 +42,11 @@ import { Switch } from "./ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 
 import { Section, Choice, Chip, Stepper } from "./sprint-setup/parts";
-export { QuickStarts, SameSetup } from "./sprint-setup/starts";
+export {
+  QuickStarts,
+  SameSetup,
+  RecommendedSprint,
+} from "./sprint-setup/starts";
 
 const KEY = "claro.sprint.v1";
 const DIFFICULTY: [Difficulty, string][] = [
@@ -56,8 +60,10 @@ const n = (v: number | undefined) => (v === undefined ? "–" : String(v));
 export function SprintSetup({
   topics,
   params,
+  mastery = {},
 }: {
   topics: Topic[];
+  mastery?: Record<string, number | null>;
   params: Record<string, string | undefined>;
 }) {
   const feedbackId = useId();
@@ -190,7 +196,7 @@ export function SprintSetup({
     : [];
 
   return (
-    <div className="grid items-start gap-5 pb-[calc(2rem+env(safe-area-inset-bottom))] xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <div className="grid items-start gap-5 pb-[calc(6rem+env(safe-area-inset-bottom))] xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       {prefilled && (
         <p
           className="text-muted-foreground text-sm xl:col-span-2"
@@ -210,7 +216,116 @@ export function SprintSetup({
         </p>
       )}
       <Card className="gap-0 py-0">
+        <div className="border-b px-5 py-5 sm:px-6">
+          <h2 className="text-xl font-[650] tracking-tight">Build your own</h2>
+        </div>
         <CardContent className="divide-y px-0">
+          <div>
+            <Section
+              title="Topics"
+              hint="Choose up to two topics, or practise the whole course."
+            >
+              <div className="grid items-start gap-3 sm:grid-cols-2">
+                {[{ id: "all", name: "All topics" }, ...parents].map((t) => {
+                  const on =
+                    t.id === "all"
+                      ? c.topics.length === 0
+                      : c.topics.includes(t.id);
+                  const subs = topics.filter((sub) => sub.parent_id === t.id);
+                  return (
+                    <div
+                      key={t.id}
+                      className={cn(
+                        "rounded-2xl border p-3",
+                        on && "border-primary ring-primary ring-1",
+                      )}
+                    >
+                      <button
+                        type="button"
+                        aria-label={t.name}
+                        aria-pressed={on}
+                        onClick={() => {
+                          if (t.id === "all") {
+                            set({ topics: [], subtopics: [] });
+                            setLimitHit(false);
+                          } else toggleTopic(t.id);
+                        }}
+                        className="focus-visible:outline-ring flex min-h-14 w-full items-start gap-3 rounded-2xl text-left text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
+                      >
+                        <span
+                          aria-hidden
+                          className={cn(
+                            "border-input mt-0.5 grid size-5 shrink-0 place-items-center rounded border",
+                            on &&
+                              "bg-primary border-primary text-primary-foreground",
+                          )}
+                        >
+                          {on && <PortalIcon name="check" className="size-4" />}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          {t.name}
+                          <span className="text-muted-foreground mt-1 block text-xs font-normal">
+                            {n(
+                              t.id === "all"
+                                ? pool?.questions
+                                : pool?.topics[t.id],
+                            )}{" "}
+                            questions available
+                          </span>
+                          {t.id !== "all" && (
+                            <span className="text-muted-foreground mt-1 block text-xs font-normal tabular-nums">
+                              {mastery[t.id] == null
+                                ? "Not practised"
+                                : `${Math.round(mastery[t.id]!)}% mastery`}
+                            </span>
+                          )}
+                        </span>
+                      </button>
+                      {on && subs.length > 0 && (
+                        <div className="mt-3 space-y-2 border-t pt-3">
+                          <h3 className="sr-only">{t.name} subtopics</h3>
+                          <p className="text-muted-foreground text-xs">
+                            Optional: narrow your practice. No selection uses
+                            all subtopics.
+                          </p>
+                          <div
+                            className="flex flex-wrap gap-2"
+                            role="group"
+                            aria-label={`${t.name} subtopics`}
+                          >
+                            {subs.map((sub) => (
+                              <Chip
+                                key={sub.id}
+                                on={c.subtopics.includes(sub.id)}
+                                disabled={
+                                  !!pool && (pool.subtopics[sub.id] ?? 0) === 0
+                                }
+                                onClick={() =>
+                                  set({
+                                    subtopics: toggle(c.subtopics, sub.id),
+                                  })
+                                }
+                              >
+                                {sub.name}{" "}
+                                <span className="tabular-nums opacity-65">
+                                  {n(pool?.subtopics[sub.id])}
+                                </span>
+                              </Chip>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+              {limitHit && (
+                <p role="status" className="text-muted-foreground text-xs">
+                  Up to 2 topics. Deselect one first.
+                </p>
+              )}
+            </Section>
+          </div>
           <div>
             <Section title="Question type">
               <div
@@ -230,7 +345,7 @@ export function SprintSetup({
                     className={cn(
                       "relative flex flex-col items-start justify-start gap-1 rounded-lg border p-4 text-left transition-colors",
                       c.mode === id
-                        ? "border-brand bg-brand-soft/60 ring-brand/10 ring-[3px]"
+                        ? "border-primary bg-muted ring-primary ring-1"
                         : "hover:bg-muted",
                     )}
                   >
@@ -238,11 +353,11 @@ export function SprintSetup({
                       aria-hidden
                       className={cn(
                         "absolute top-4 right-4 grid size-4 place-items-center rounded-full border",
-                        c.mode === id && "border-brand",
+                        c.mode === id && "border-primary",
                       )}
                     >
                       {c.mode === id && (
-                        <span className="bg-brand size-2 rounded-full" />
+                        <span className="bg-primary size-2 rounded-full" />
                       )}
                     </span>
                     <PortalIcon
@@ -268,90 +383,6 @@ export function SprintSetup({
                   </button>
                 ))}
               </div>
-            </Section>
-          </div>
-          <div>
-            <Section
-              title="Topics"
-              hint="Choose up to two topics, or practise the whole course."
-            >
-              <div className="grid gap-3 sm:grid-cols-2">
-                {[{ id: "all", name: "All topics" }, ...parents].map((t) => {
-                  const on =
-                    t.id === "all"
-                      ? c.topics.length === 0
-                      : c.topics.includes(t.id);
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      aria-pressed={on}
-                      onClick={() => {
-                        if (t.id === "all") {
-                          set({ topics: [], subtopics: [] });
-                          setLimitHit(false);
-                        } else toggleTopic(t.id);
-                      }}
-                      className={cn(
-                        "focus-visible:ring-ring flex min-h-24 items-center gap-3 rounded-xl border p-4 text-left text-sm font-semibold focus-visible:ring-2",
-                        on ? "border-brand bg-brand-soft" : "hover:bg-muted",
-                      )}
-                    >
-                      <PortalIcon
-                        name={t.id === "all" ? "layers" : "book-open"}
-                        className="text-brand size-5 shrink-0"
-                      />
-                      {t.name}
-                    </button>
-                  );
-                })}
-              </div>
-              {limitHit && (
-                <p role="status" className="text-muted-foreground text-xs">
-                  Up to 2 topics. Deselect one first.
-                </p>
-              )}
-              {parents
-                .filter((t) => c.topics.includes(t.id))
-                .map((t) => {
-                  const subs = topics.filter((sub) => sub.parent_id === t.id);
-                  return (
-                    subs.length > 0 && (
-                      <div key={t.id} className="space-y-2 border-t pt-4">
-                        <h3 className="text-sm font-semibold">
-                          {t.name} subtopics
-                        </h3>
-                        <p className="text-muted-foreground text-xs">
-                          Optional: narrow your practice. No selection uses all
-                          subtopics.
-                        </p>
-                        <div
-                          className="flex flex-wrap gap-2"
-                          role="group"
-                          aria-label={`${t.name} subtopics`}
-                        >
-                          {subs.map((sub) => (
-                            <Chip
-                              key={sub.id}
-                              on={c.subtopics.includes(sub.id)}
-                              disabled={
-                                !!pool && (pool.subtopics[sub.id] ?? 0) === 0
-                              }
-                              onClick={() =>
-                                set({ subtopics: toggle(c.subtopics, sub.id) })
-                              }
-                            >
-                              {sub.name}{" "}
-                              <span className="opacity-65">
-                                {n(pool?.subtopics[sub.id])}
-                              </span>
-                            </Chip>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  );
-                })}
             </Section>
           </div>
           <div>
@@ -594,7 +625,7 @@ export function SprintSetup({
                         key={value}
                         className={cn(
                           "has-[:focus-visible]:ring-ring flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm has-[:focus-visible]:ring-2",
-                          c.feedback === value && "border-brand bg-brand-soft",
+                          c.feedback === value && "border-primary bg-muted",
                         )}
                       >
                         <RadioGroupItem
@@ -768,7 +799,7 @@ export function SprintSetup({
           )
             e.preventDefault();
         }}
-        className="bg-card shadow-card rounded-xl border p-5 xl:sticky xl:top-20"
+        className="bg-card rounded-2xl border p-5 xl:sticky xl:top-20"
       >
         <input type="hidden" name="config" value={JSON.stringify(c)} />
         <div className="grid gap-5">
@@ -925,7 +956,7 @@ export function SprintSetup({
             )}
           </div>
         )}
-        <div className="bg-card fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]">
+        <div className="sprint-setup-dock bg-card fixed inset-x-0 bottom-0 z-30 border-t px-4 py-3 sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]">
           <div className="mx-auto flex max-w-[calc(1400px-4rem)] flex-wrap items-center justify-end gap-x-3 gap-y-2">
             <p className="text-muted-foreground mr-auto min-w-0 truncate text-[13px] tabular-nums">
               <span className="text-foreground font-semibold">
