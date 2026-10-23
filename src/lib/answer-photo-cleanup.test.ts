@@ -16,9 +16,7 @@ const path = "u/11111111-1111-4111-8111-111111111111-1729000000000-0.png";
 
 it("persists failed object deletes and retries them without another upload", async () => {
   remove.mockResolvedValueOnce({ error: { message: "Offline" } });
-  await expect(cleanupAnswerPhotos("u", [path])).rejects.toThrow(
-    "Retry photo cleanup",
-  );
+  await expect(cleanupAnswerPhotos("u", [path])).resolves.toBeUndefined();
   expect(JSON.parse(localStorage.getItem("claro-photo-cleanup-u")!)).toEqual([
     path,
   ]);

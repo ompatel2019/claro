@@ -11,7 +11,7 @@ vi.mock("@/utils/supabase/server", () => ({
 vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
 vi.mock("@/env/client", () => ({ clientEnv: {} }));
 import { startSprint } from "./actions";
-import { DEFAULTS } from "@/lib/sprint";
+import { DEFAULTS, withMode } from "@/lib/sprint";
 const form = (config: unknown) => {
   const f = new FormData();
   f.set("config", JSON.stringify(config));
@@ -30,7 +30,7 @@ it("rejects essay mode before selection", async () => {
 it("discards the legacy essay toggle and starts mixed", async () => {
   await startSprint(
     {},
-    form({ ...DEFAULTS, mode: "mixed", include_extended: true }),
+    form({ ...withMode(DEFAULTS, "mixed"), include_extended: true }),
   );
   expect(mocks.rpc.mock.calls[0][1].p_config).not.toHaveProperty(
     "include_extended",
@@ -119,6 +119,7 @@ it.each([
       size_by: "marks",
       target: 30,
       mcq_count,
+      short_count: undefined,
       short_marks,
     };
     expect(await startSprint({}, form(config))).toHaveProperty("error");
@@ -138,11 +139,48 @@ it.each([
       size_by: "marks",
       target: 30,
       mcq_count,
+      short_count: undefined,
       short_marks,
     }),
   );
   expect(mocks.rpc.mock.calls[0][1].p_config).toMatchObject({
     mcq_count,
     short_marks,
+  });
+});
+
+it.each(["5", 0, 101, 2.5, {}, []])(
+  "rejects invalid marks per short answer %s",
+  async (marks_per_short) => {
+    expect(
+      await startSprint({}, form({ ...DEFAULTS, marks_per_short })),
+    ).toHaveProperty("error");
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  },
+);
+it.each([null, "5", -1, 16, 2.5])(
+  "rejects invalid short question count %s",
+  async (short_count) => {
+    expect(
+      await startSprint(
+        {},
+        form({ ...withMode(DEFAULTS, "mixed"), short_count }),
+      ),
+    ).toHaveProperty("error");
+    expect(mocks.rpc).not.toHaveBeenCalled();
+  },
+);
+it("validates new Mixed totals before RPC and sends the exact mark filter", async () => {
+  const config = { ...withMode(DEFAULTS, "mixed"), marks_per_short: 5 };
+  expect(await startSprint({}, form({ ...config, target: 3 }))).toHaveProperty(
+    "error",
+  );
+  expect(mocks.rpc).not.toHaveBeenCalled();
+  await startSprint({}, form(config));
+  expect(mocks.rpc.mock.calls[0][1].p_config).toMatchObject({
+    short_count: 5,
+    mcq_count: 10,
+    marks_per_short: 5,
+    target: 15,
   });
 });

@@ -45,6 +45,8 @@ const pool: Pool = {
   mcq_questions: 20,
   mcq_new: 10,
   short_marks: 40,
+  short_questions: 20,
+  short_mark_values: { "2": 10, "5": 10 },
   any: 50,
   new: 20,
   mistakes: 5,
@@ -163,6 +165,7 @@ for (const mode of ["mcq", "short", "mixed"] as const) {
                 marks: 0,
                 mcq_questions: 0,
                 short_marks: 0,
+                short_questions: 0,
               }
             : scenario === "shortfall"
               ? {
@@ -171,6 +174,7 @@ for (const mode of ["mcq", "short", "mixed"] as const) {
                   marks: 3,
                   mcq_questions: 1,
                   short_marks: 2,
+                  short_questions: 1,
                 }
               : pool;
       state.values = [

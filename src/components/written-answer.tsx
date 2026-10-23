@@ -60,9 +60,9 @@ export function WrittenAnswer({
   const [replacement, setReplacement] = useState<File[] | null>(null);
   const [notes, setNotes] = useState("");
   useEffect(() => {
-    void cleanupAnswerPhotos(userId).catch((error: Error) =>
-      setError(error.message),
-    );
+    void cleanupAnswerPhotos(userId);
+    const retry = setInterval(() => void cleanupAnswerPhotos(userId), 60_000);
+    return () => clearInterval(retry);
   }, [userId]);
   useEffect(() => {
     onConfirmed?.(confirmed && !confirm);
@@ -524,15 +524,6 @@ export function WrittenAnswer({
             Type it instead
           </Button>
         </div>
-      )}
-      {error.includes("Retry photo cleanup") && (
-        <Button
-          variant="outline"
-          disabled={busy || disabled}
-          onClick={() => void act(() => cleanupAnswerPhotos(userId))}
-        >
-          Retry photo cleanup
-        </Button>
       )}
       {error && (
         <p role="alert" className="text-destructive break-words">

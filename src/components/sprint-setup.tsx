@@ -9,6 +9,7 @@ import {
   validPace,
   DEFAULTS,
   estimateMinutes,
+  estimatedMarks,
   filtersOn,
   fromParams,
   HISTORY_LABELS,
@@ -138,9 +139,9 @@ export function SprintSetup({
   const available = pool
     ? c.mode === "mixed" &&
       pool.mcq_questions !== undefined &&
-      pool.short_marks !== undefined
+      pool.short_questions !== undefined
       ? Math.min(c.mcq_count, pool.mcq_questions) +
-        Math.min(c.short_marks, pool.short_marks)
+        Math.min(c.short_count, pool.short_questions)
       : byMarks
         ? pool.marks
         : pool.questions
@@ -149,7 +150,7 @@ export function SprintSetup({
     ? c.mode === "mixed" && pool.mcq_questions !== undefined
       ? c.mcq_count === 0
         ? pool.questions - pool.mcq_questions
-        : c.short_marks === 0
+        : c.short_count === 0
           ? pool.mcq_questions
           : pool.questions
       : pool.questions
@@ -158,7 +159,7 @@ export function SprintSetup({
     ? c.mode === "mixed" && pool.mcq_new !== undefined
       ? c.mcq_count === 0
         ? pool.new - pool.mcq_new
-        : c.short_marks === 0
+        : c.short_count === 0
           ? pool.mcq_new
           : pool.new
       : pool.new
@@ -167,7 +168,7 @@ export function SprintSetup({
     pool &&
     c.mode === "mixed" &&
     ((pool.mcq_questions ?? Infinity) < c.mcq_count ||
-      (pool.short_marks ?? Infinity) < c.short_marks);
+      (pool.short_questions ?? Infinity) < c.short_count);
   const shortfall = available !== null && available > 0 && available < c.target;
   const unit = byMarks ? "marks" : "questions";
   const minutes = estimateMinutes(c);
@@ -358,10 +359,41 @@ export function SprintSetup({
               title="Questions"
               hint={
                 c.mode === "mixed"
-                  ? "Adjust the split within your total marks. Shorts use whole questions and aim within 2 marks of the target."
+                  ? "Choose each question count independently. At least 5 questions in total."
                   : undefined
               }
             >
+              {written && (
+                <div className="space-y-2">
+                  <p id="short-marks-label" className="text-sm font-medium">
+                    Marks per short answer
+                  </p>
+                  <div
+                    role="group"
+                    aria-labelledby="short-marks-label"
+                    className="flex flex-wrap gap-2"
+                  >
+                    {[
+                      null,
+                      ...Object.keys(pool?.short_mark_values ?? {}).map(Number),
+                      ...(c.marks_per_short !== null
+                        ? [c.marks_per_short]
+                        : []),
+                    ]
+                      .filter((v, i, all) => all.indexOf(v) === i)
+                      .sort((a, b) => (a ?? 0) - (b ?? 0))
+                      .map((marks) => (
+                        <Chip
+                          key={marks ?? "any"}
+                          on={c.marks_per_short === marks}
+                          onClick={() => set({ marks_per_short: marks })}
+                        >
+                          {marks === null ? "Any" : `${marks} marks`}
+                        </Chip>
+                      ))}
+                  </div>
+                </div>
+              )}
               {c.mode === "short" && (
                 <ToggleGroup
                   aria-label="Size by"
@@ -381,15 +413,19 @@ export function SprintSetup({
                   {(
                     [
                       ["mcq_count", "Multiple choice questions"],
-                      ["short_marks", "Short answer marks"],
+                      ["short_count", "Short answer questions"],
                     ] as const
                   ).map(([key, label]) => (
                     <Stepper
                       key={key}
                       label={label}
                       value={c[key]}
-                      min={0}
-                      max={c.target}
+                      min={Math.max(
+                        0,
+                        5 -
+                          c[key === "mcq_count" ? "short_count" : "mcq_count"],
+                      )}
+                      max={key === "mcq_count" ? 40 : 15}
                       onChange={(value) => setC(withMixedCount(c, key, value))}
                     />
                   ))}
@@ -397,8 +433,8 @@ export function SprintSetup({
                     className="text-muted-foreground text-sm"
                     aria-live="polite"
                   >
-                    {c.mcq_count} multis + {c.short_marks} marks of shorts ={" "}
-                    {c.target} marks
+                    {c.mcq_count} multis + {c.short_count} shorts = {c.target}{" "}
+                    questions
                   </p>
                 </div>
               ) : c.mode === "mcq" || !byMarks ? (
@@ -774,6 +810,16 @@ export function SprintSetup({
               </p>
             </div>
           </div>
+          {written && (c.mode === "mixed" || !byMarks) && (
+            <p className="text-muted-foreground text-sm" aria-live="polite">
+              {c.marks_per_short === null
+                ? "Estimated total: about "
+                : "Total: "}
+              {estimatedMarks(c)} marks.
+              {c.marks_per_short === null &&
+                " Uses 3 marks per short answer; actual marks depend on the questions selected."}
+            </p>
+          )}
           <dl className="grid gap-2.5 text-[13px]">
             {[
               [
@@ -787,7 +833,7 @@ export function SprintSetup({
                 c.mode === "mcq"
                   ? "—"
                   : c.mode === "mixed"
-                    ? `${c.short_marks} marks`
+                    ? `${c.short_count} questions`
                     : `${c.target} ${unit}`,
               ],
               [
@@ -897,9 +943,9 @@ export function SprintSetup({
             {mixedShortfall && (
               <p role="alert" className="text-warning-text">
                 <Alert className="mr-1 inline size-4" /> Only{" "}
-                {pool?.mcq_questions} multis and {pool?.short_marks} marks of
-                shorts match. Each bucket uses what is available; adjust the
-                split or widen your filters.
+                {pool?.mcq_questions} multis and {pool?.short_questions}{" "}
+                short-answer questions match. Each bucket uses what is
+                available; adjust the split or widen your filters.
               </p>
             )}
             {state.error && (
