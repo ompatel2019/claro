@@ -3,7 +3,6 @@ import { useEffect, useId, useRef, useState } from "react";
 import { RichText } from "./rich-text";
 import { MarkingScreen } from "./marking-screen";
 import { useRouter } from "next/navigation";
-import { z } from "zod";
 import {
   Dialog,
   DialogContent,
@@ -134,8 +133,6 @@ export function MarkMyAnswer({
 }) {
   const router = useRouter();
   const [offline, setOffline] = useState(false);
-  const [restored, setRestored] = useState(false);
-  const draftKey = `claro.single.${userId}`;
   const [source, setSource] = useState(initial?.question ? "own" : "bank");
   const [selected, setSelected] = useState(
     initial?.questionId ?? initialQuestionId ?? defaultQuestionId ?? "",
@@ -259,106 +256,6 @@ export function MarkMyAnswer({
       window.removeEventListener("offline", update);
     };
   }, []);
-  useEffect(() => {
-    const timer = setTimeout(async () => {
-      try {
-        const raw = initialQuestionId ? null : localStorage.getItem(draftKey);
-        if (raw) {
-          const draft = z
-            .object({
-              source: z.enum(["own", "bank"]),
-              selected: z.string(),
-              own: ownQuestionSchema.extend({
-                stem: z.string().max(3000),
-                marks: z.number().int().min(0).max(20),
-              }),
-              mode: z.enum(["type", "photo"]),
-              answer: z.object({
-                answer_text: z.string().nullable(),
-                transcript: z.string().nullable(),
-                image_paths: z.array(z.string()).nullable(),
-              }),
-              sessionId: z.string().nullable(),
-            })
-            .safeParse(JSON.parse(raw));
-          if (draft.success && draft.data.sessionId && !initial) {
-            const db = createClient();
-            const { data: session, error: readError } = await db
-              .from("sessions")
-              .select("finished_at")
-              .eq("id", draft.data.sessionId)
-              .eq("user_id", userId)
-              .maybeSingle();
-            if (readError) {
-              // Let the owned report route handle auth/network failures without overwriting the draft.
-              router.replace(`/student/activity/${draft.data.sessionId}`);
-              return;
-            }
-            if (session && !session.finished_at) {
-              router.replace(`/student/activity/${draft.data.sessionId}`);
-              return;
-            }
-            localStorage.removeItem(draftKey);
-            setRestored(true);
-            return;
-          }
-          if (
-            draft.success &&
-            (!initial || draft.data.sessionId === initial.sessionId)
-          ) {
-            // A saved session's question is immutable; only restore its answer.
-            if (!initial) {
-              setSource(allowOwnQuestion ? draft.data.source : "bank");
-              setSelected(
-                !allowOwnQuestion && draft.data.source === "own"
-                  ? ""
-                  : draft.data.selected,
-              );
-              setOwn(draft.data.own);
-              edited.current = {
-                marks: draft.data.own.marks > 0,
-                topic_id: !!draft.data.own.topic_id,
-                criteria_text: !!draft.data.own.criteria_text,
-                verb: false,
-              };
-            }
-            setMode(draft.data.mode);
-            setAnswer((previous) => {
-              const next = { ...previous, ...draft.data.answer };
-              answerRef.current = next;
-              return next;
-            });
-          }
-        }
-      } catch {
-        /* Browser storage can be unavailable. */
-      }
-      setRestored(true);
-    }, 0);
-    return () => clearTimeout(timer);
-  }, [allowOwnQuestion, draftKey, initial, initialQuestionId, router, userId]);
-  useEffect(() => {
-    if (!restored || submitted) return;
-    try {
-      localStorage.setItem(
-        draftKey,
-        JSON.stringify({
-          source,
-          selected,
-          own,
-          mode,
-          answer: {
-            answer_text: answer.answer_text,
-            transcript: answer.transcript,
-            image_paths: answer.image_paths,
-          },
-          sessionId: created.current?.sessionId ?? null,
-        }),
-      );
-    } catch {
-      /* Keep the in-memory draft if storage is full. */
-    }
-  }, [restored, submitted, draftKey, source, selected, own, mode, answer]);
   async function autofill(retry = false) {
     const snapshot = ownRef.current;
     const stem = snapshot.stem.trim();
@@ -515,9 +412,6 @@ export function MarkMyAnswer({
       })
         .then(() => router.refresh())
         .catch(() => router.refresh());
-      try {
-        localStorage.removeItem(draftKey);
-      } catch {}
       router.push(`/student/activity/${sessionId}`);
     } catch (e) {
       setError(
@@ -974,7 +868,6 @@ export function MarkMyAnswer({
                       ? ` · aim for about ${wordGuide(question.marks).join("–")}`
                       : ""}
                   </span>
-                  <span>Draft saved in this browser</span>
                 </div>
               </div>
             ) : (

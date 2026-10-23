@@ -73,29 +73,6 @@ export function firstReviews(reviews: readonly FlashcardReview[]) {
     if (!first.has(review.flashcard_id)) first.set(review.flashcard_id, review);
   return first;
 }
-export function resumeQueue(
-  ids: readonly string[],
-  reviews: readonly FlashcardReview[],
-  repeatMissed = true,
-) {
-  let queue = [...ids];
-  const attempts = new Map<string, number>();
-  const available = new Set(ids);
-  for (const review of reviews) {
-    if (!available.has(review.flashcard_id)) continue;
-    const count = attempts.get(review.flashcard_id) ?? 0;
-    queue = nextQueue(
-      queue,
-      review.flashcard_id,
-      review.mark,
-      repeatMissed,
-      count,
-    );
-    attempts.set(review.flashcard_id, count + 1);
-  }
-  return queue;
-}
-
 /** Normalise for flashcard matching. */
 export function normaliseAnswer(text: string) {
   let s = text

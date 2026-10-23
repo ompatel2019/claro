@@ -78,8 +78,10 @@ test.describe("Sprint session", () => {
       const id = await setUp(page, []);
       await pick(page, "A");
       await expect(page.getByText("Saved", { exact: true })).toBeAttached();
-      await page.getByRole("button", { name: "Save and exit" }).click();
-      await expect(page).toHaveURL(/\/student$/);
+      // No resume: simulate a lost tab (no finish beacon, no leave flag) so the
+      // reload sees the server's elapsed time instead of ending the sprint.
+      await page.route("**/api/sessions/*/finish", (route) => route.abort());
+      await page.addInitScript(() => sessionStorage.clear());
       const { data: saved, error: readError } = await adminClient()!
         .from("sessions")
         .select("config")
@@ -94,7 +96,8 @@ test.describe("Sprint session", () => {
         })
         .eq("id", id);
       expect(error).toBeNull();
-      await page.goto(`/student/sprint/${id}`);
+      await page.reload();
+      await page.unroute("**/api/sessions/*/finish");
       await expect(
         page.getByRole("alert").filter({ hasText: "Time’s up" }),
       ).toBeVisible();

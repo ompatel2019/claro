@@ -54,14 +54,25 @@ vi.mock("@/utils/supabase/server", () => ({
       );
     },
     from: (table: string) => {
-      const result =
+      let finishedOnly = false;
+      const result = () =>
         table === "topics"
           ? { data: mocks.failTopics ? null : topics, error: mocks.failTopics }
           : table === "sessions"
-            ? { data: mocks.sessions, error: mocks.failSessions }
+            ? {
+                data: mocks.sessions.filter(
+                  (s) => !finishedOnly || s.finished_at,
+                ),
+                error: mocks.failSessions,
+              }
             : { count: 0, error: null };
       const query = {
         select: () => query,
+        not: (column: string, op: string, value: unknown) => {
+          finishedOnly ||=
+            column === "finished_at" && op === "is" && value === null;
+          return query;
+        },
         eq: () => query,
         is: () => query,
         maybeSingle: async () => ({
@@ -75,7 +86,7 @@ vi.mock("@/utils/supabase/server", () => ({
         in: () => query,
         limit: () => query,
         then: (done: (r: unknown) => unknown) =>
-          Promise.resolve(result).then(done),
+          Promise.resolve(result()).then(done),
       };
       return query;
     },
@@ -145,25 +156,26 @@ it("isolates recent-session failures", async () => {
   expect(screen.getByRole("link", { name: /^Start sprint/ })).toBeVisible();
 });
 
-it("links recent and unfinished sessions to their existing runner routes", async () => {
+it("never offers Continue: Home lists finished sessions only", async () => {
+  const base = {
+    kind: "sprint",
+    config: { mode: "mixed", topics: ["t1"] },
+    started_at: "2026-10-19T00:00:00Z",
+    score: 3,
+    max_score: 4,
+    elapsed_s: 30,
+    user_id: "student",
+    summary: null,
+  } as const;
   mocks.sessions = [
-    {
-      id: "resume",
-      kind: "sprint",
-      config: { mode: "mixed", topics: ["t1"] },
-      started_at: "2026-10-19T00:00:00Z",
-      finished_at: null,
-      score: null,
-      max_score: null,
-      elapsed_s: 30,
-      user_id: "student",
-      summary: null,
-    },
-  ];
+    { ...base, id: "open", finished_at: null, score: null, max_score: null },
+    { ...base, id: "done", finished_at: "2026-10-19T00:10:00Z" },
+  ] as unknown as Session[];
   render(await resolve(await Home()));
-  expect(
-    screen.getByRole("link", {
-      name: /Mixed sprint.*Continue.*The Global Economy/,
-    }),
-  ).toHaveAttribute("href", "/student/sprint/resume");
+  expect(screen.queryByText("Continue")).toBeNull();
+  const links = screen
+    .getAllByRole("link")
+    .map((link) => link.getAttribute("href"));
+  expect(links).not.toContain("/student/sprint/open");
+  expect(links).toContain("/student/activity/done");
 });

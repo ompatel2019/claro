@@ -492,3 +492,39 @@ it("falls back to one plain line when a summary has no strengths or fixes", () =
   );
   expect(screen.getByText("Nothing to add this time.")).toBeVisible();
 });
+
+it("shows a written question left blank by a finished sprint as Not answered, 0 marks", () => {
+  // No resume: leaving or auto-finishing marks blank written answers 0 with a "No answer" note.
+  const rows = [
+    {
+      attempt_id: "w-1",
+      position: 1,
+      question_id: null,
+      type: "short",
+      marks: 4,
+      max_marks: 4,
+      mark: 0,
+      status: "marked",
+      feedback: { note: "No answer" },
+      choice_index: null,
+      correct_index: null,
+      options: null,
+      stem: "Explain inflation.",
+      source: "Practice",
+      topic_id: null,
+      review: null,
+    },
+  ] as unknown as ReviewRow[];
+  render(
+    <ResultsAnswers
+      sprintLayout
+      rows={rows}
+      id="sprint"
+      name={() => ""}
+      photos={new Map()}
+    />,
+  );
+  expect(
+    screen.getByRole("button", { name: "Question 1, 0/4 marks, Not answered" }),
+  ).toBeVisible();
+});

@@ -153,18 +153,13 @@ function SessionRow({
     : selectedTopic;
   const title = base ?? row.title;
   const topic = base ? row.title.slice(base.length).replace(/^ · /, "") : "";
-  const scored =
-    row.pct != null &&
-    row.status !== "Marking" &&
-    row.status !== "In progress" &&
-    !row.study;
+  const scored = row.pct != null && row.status !== "Marking" && !row.study;
   const marks =
     scored && detail?.score != null && detail.max_score != null
       ? { score: detail.score, max: detail.max_score }
       : null;
-  const unfinished = !row.finished_at;
   return (
-    <li className={unfinished ? "ac-row live" : "ac-row"}>
+    <li className="ac-row">
       <SessionIcon kind={row.kind} />
       <div className="min-w-0">
         <p className="ac-title" title={row.title}>
@@ -220,31 +215,17 @@ function SessionRow({
             {sessionScore(row.pct, row.status, row.study)}
           </span>
         ) : null}
-        {row.status !== "Finished" && (
-          <StatusPill
-            pill={
-              row.kind === "single" && unfinished && row.answered === 0
-                ? "Draft"
-                : row.status
-            }
-          />
-        )}
+        {row.status !== "Finished" && <StatusPill pill={row.status} />}
         {row.provisional && row.status !== "Provisional" && (
           <StatusPill pill="Provisional" />
         )}
       </div>
-      {unfinished && href ? (
-        <Link href={href} className="ac-resume">
-          Resume
-        </Link>
-      ) : (
-        <PortalIcon
-          name="chevron-right"
-          size={18}
-          strokeWidth={1.5}
-          className="ac-go"
-        />
-      )}
+      <PortalIcon
+        name="chevron-right"
+        size={18}
+        strokeWidth={1.5}
+        className="ac-go"
+      />
       {href && (
         <Link
           prefetch={false}

@@ -64,7 +64,7 @@ vi.mock("./student/sprint/focus-shell", () => ({
     onExit: () => void;
   }) => (
     <>
-      <button onClick={onExit}>Save and exit</button>
+      <button onClick={onExit}>Exit sprint</button>
       {booklet}
       <nav aria-label="Question progress">{progress}</nav>
       {children}
@@ -146,16 +146,44 @@ it("checks an MC sprint answer and renders its feedback", async () => {
     expect.objectContaining({ method: "POST" }),
   );
 });
-it("persists sprint time on save and exit, and keeps the finish confirmation", async () => {
+const finishCall = () =>
+  expect(mocks.fetch).toHaveBeenCalledWith(
+    "/api/sessions/s/finish",
+    expect.objectContaining({ method: "POST" }),
+  );
+async function leave() {
+  fireEvent.click(screen.getByRole("button", { name: "Exit sprint" }));
+  const dialog = await screen.findByRole("alertdialog", {
+    name: "Leave this sprint?",
+  });
+  fireEvent.click(
+    within(dialog).getByRole("button", { name: "Leave and mark" }),
+  );
+  await waitFor(finishCall);
+}
+it("exit asks first, and leaving saves time and finishes the sprint", async () => {
+  vi.stubGlobal("fetch", mocks.fetch);
   show();
   fireEvent.click(screen.getByRole("button", { name: "Finish and mark" }));
   expect(
     await screen.findByRole("dialog", { name: "Finish and mark?" }),
   ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Keep working" }));
-  fireEvent.click(screen.getByRole("button", { name: "Save and exit" }));
-  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/student"));
+  fireEvent.click(screen.getByRole("button", { name: "Exit sprint" }));
+  const dialog = await screen.findByRole("alertdialog", {
+    name: "Leave this sprint?",
+  });
+  expect(dialog).toHaveTextContent(
+    "Leaving ends this sprint. Your answered questions will be marked.",
+  );
+  fireEvent.click(within(dialog).getByRole("button", { name: "Keep working" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("alertdialog")).not.toBeInTheDocument(),
+  );
+  expect(mocks.fetch).not.toHaveBeenCalled();
+  await leave();
   expect(mocks.update).toHaveBeenCalledWith({ elapsed_s: 0 });
+  expect(mocks.push).not.toHaveBeenCalled();
 });
 
 it.each(["finish", "overtime"])(
@@ -759,8 +787,7 @@ it("saves a photo with only accepted answer fields and retries metadata without 
   expect(JSON.parse(localStorage.getItem("claro-draft-a")!)).toEqual(patch);
   expect(screen.getByText("Page 1")).toBeVisible();
   fail = false;
-  fireEvent.click(screen.getByRole("button", { name: "Save and exit" }));
-  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/student"));
+  await leave();
   expect(mocks.upload).toHaveBeenCalledOnce();
   expect(localStorage.getItem("claro-draft-a")).toBeNull();
 });
@@ -831,8 +858,7 @@ it("keeps a removed photo until the end-feedback metadata retry succeeds, then d
     transcript: null,
   });
   fail = false;
-  fireEvent.click(screen.getByRole("button", { name: "Save and exit" }));
-  await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/student"));
+  await leave();
   expect(mocks.remove).toHaveBeenCalledWith([path]);
 });
 

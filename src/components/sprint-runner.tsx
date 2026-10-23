@@ -2,7 +2,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PortalIcon, Flag, Spinner } from "@/components/icons";
-import { toast } from "sonner";
 import { createClient } from "@/utils/supabase/client";
 import { cleanupAnswerPhotos } from "@/lib/answer-photo-cleanup";
 import { ensureSession, withAuthRetry } from "@/lib/auth-client";
@@ -10,7 +9,6 @@ import {
   answered,
   plural,
   timeLimit,
-  timer,
   type Attempt,
   type Session,
 } from "@/lib/practice";
@@ -41,6 +39,11 @@ import { SprintFocusShell } from "./student/sprint/focus-shell";
 import { questionPillState } from "./student/sprint/question-pill";
 import { BookletFilter, BookletLegend } from "./booklet-controls";
 import { BookletModal } from "./student/sprint/booklet-modal";
+import {
+  LeaveSprintDialog,
+  leftKey,
+  useLeaveGuard,
+} from "./student/sprint/leave-guard";
 
 const LETTERS = "ABCD";
 const draftKey = (id: string) => `claro-draft-${id}`;
@@ -235,6 +238,23 @@ export function SprintRunner({
     localStorage.setItem(draftKey(id), JSON.stringify(next));
     setSaveState("saving");
   }
+  const [leaving, setLeaving] = useState(false);
+  useLeaveGuard({
+    sessionId: session.id,
+    active: !finishing,
+    onAsk: () => setLeaving(true),
+  });
+  useEffect(() => {
+    // No resume: a reload or reopened tab after a confirmed leave goes to the results.
+    try {
+      if (sessionStorage.getItem(leftKey(session.id))) {
+        sessionStorage.removeItem(leftKey(session.id));
+        window.location.replace(`/student/activity/${session.id}`);
+      }
+    } catch {}
+    // Mount only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     // Restore drafts the server never confirmed (closed tab, lost connection).
     for (const a of rows.current) {
@@ -251,12 +271,6 @@ export function SprintRunner({
         edit(a.id, patch);
       } else localStorage.removeItem(draftKey(a.id));
     }
-    if (initial.some(answered))
-      toast(
-        limit
-          ? `Welcome back. ${timer(Math.max(0, limit - (session.elapsed_s ?? 0)))} left`
-          : "Welcome back.",
-      );
     // Mount only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -581,13 +595,6 @@ export function SprintRunner({
     </div>
   );
 
-  const exit = () =>
-    void act(async () => {
-      await flush();
-      await persistTime();
-      router.push("/student");
-    });
-
   const answerMode =
     answerModes[a.id] ?? (a.image_paths?.length ? "photo" : "type");
   const setAnswerMode = (mode: "type" | "photo") =>
@@ -609,7 +616,7 @@ export function SprintRunner({
             : { mode: "up", seconds: elapsed }
         }
         busy={busy}
-        onExit={exit}
+        onExit={() => setLeaving(true)}
         onFinish={() => setConfirm(true)}
         onMove={(d) => !busy && go(index + d)}
         booklet={sprintBooklet}
@@ -647,7 +654,11 @@ export function SprintRunner({
           >
             <p>{error}</p>
             {finishFailed && (
-              <a href={`/student/activity/${session.id}`} className="underline">
+              <a
+                href={`/student/activity/${session.id}`}
+                className="underline"
+                data-leave-ok
+              >
                 View results
               </a>
             )}
@@ -655,6 +666,7 @@ export function SprintRunner({
               <a
                 className="button-link"
                 href={`/sign-in?next=/student/sprint/${session.id}`}
+                data-leave-ok
               >
                 Sign in again
               </a>
@@ -920,6 +932,15 @@ export function SprintRunner({
             </div>
           </DialogContent>
         </Dialog>
+        <LeaveSprintDialog
+          open={leaving}
+          onOpenChange={setLeaving}
+          busy={busy}
+          onLeave={() => {
+            setLeaving(false);
+            void act(() => finish());
+          }}
+        />
         <BookletModal
           open={bookletOpen}
           onOpenChange={setBookletOpen}

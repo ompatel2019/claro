@@ -95,12 +95,12 @@ export function SprintFocusShell(
           variant="ghost"
           size="sm"
           className="shrink-0 px-0"
-          aria-label="Save and exit"
+          aria-label="Exit sprint"
           disabled={busy}
           onClick={onExit}
         >
           <PortalIcon name="arrow-left" className="size-4" />
-          <span className="hidden sm:inline">Save and exit</span>
+          <span className="hidden sm:inline">Exit</span>
         </Button>
         <div className="min-w-0 flex-1 sm:border-l sm:pl-4">
           <p className="truncate text-sm font-semibold">{title}</p>

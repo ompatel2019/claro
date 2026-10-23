@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { PortalIcon } from "@/components/icons";
-import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { loadSprint } from "@/lib/practice-data";
+import { finishOpenSessions } from "@/lib/session-finish";
 import { createClient } from "@/utils/supabase/server";
 import { modeLabel, timeLimit, type Topic } from "@/lib/practice";
 import { markingState, type ReviewRow } from "@/lib/feedback";
@@ -52,8 +53,9 @@ const avg = (xs: (number | null)[]) => {
 export async function SprintResults({ id }: { id: string }) {
   const { session: s, profile, attempts } = await loadSprint(id);
   if (!s.finished_at) {
+    // No resume: an open sprint opened here is finished (answered questions marked).
     if (!markingInFlight(attempts, s.config.feedback))
-      redirect(`/student/sprint/${id}`);
+      after(() => finishOpenSessions(profile.id, { only: id }));
     const counted = attempts.filter((a) => a.status !== "skipped");
     return (
       <div className="space-y-5">

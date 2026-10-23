@@ -44,6 +44,8 @@ export async function readHomeSessions(userId: string): HomeSessions {
       .select("*")
       .eq("user_id", userId)
       .in("kind", ["sprint", "flashcards", "single"])
+      // No resume: open sessions never show here.
+      .not("finished_at", "is", null)
       .order("started_at", { ascending: false })
       .limit(3);
     if (error) return null;
@@ -150,9 +152,8 @@ export async function HomeRecent({
             const max = recall ? s.recall?.total : s.max_score;
             const hasScore = !!s.finished_at && mark != null && !!max;
             const tone = hasScore ? scoreTone((100 * mark!) / max!) : null;
-            const state = !s.finished_at
-              ? "Continue"
-              : tone === "success"
+            const state =
+              tone === "success"
                 ? "Earned"
                 : tone === "warning"
                   ? "Partly there"
@@ -161,9 +162,8 @@ export async function HomeRecent({
                     : recall
                       ? "Reviewed"
                       : "No marks yet";
-            const icon = !s.finished_at
-              ? "play"
-              : tone === "success"
+            const icon =
+              tone === "success"
                 ? "check"
                 : tone === "warning"
                   ? "circle-half"

@@ -4,6 +4,7 @@ import { loadSprint } from "@/lib/practice-data";
 import { modeLabel, topicNames, type Topic } from "@/lib/practice";
 import { createClient } from "@/utils/supabase/server";
 import { SprintRunner } from "@/components/sprint-runner";
+import { sessionIdle } from "@/lib/session-finish";
 export const metadata = pageMetadata("Sprint session");
 
 export default async function Sprint({
@@ -13,7 +14,12 @@ export default async function Sprint({
 }) {
   const { id } = await params;
   const { session, attempts, profile, explanations } = await loadSprint(id);
-  if (session.finished_at) redirect(`/student/activity/${id}`);
+  // No resume: an idle sprint goes to its results, which finish it.
+  if (
+    session.finished_at ||
+    sessionIdle((session as { last_active_at?: string }).last_active_at)
+  )
+    redirect(`/student/activity/${id}`);
   const db = await createClient();
   const [{ data: topics }, { data: before }] = await Promise.all([
     db.from("topics").select("id,parent_id,name,sort"),

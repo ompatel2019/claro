@@ -1,7 +1,9 @@
 import { examDaysLeft } from "@/lib/hsc-exam";
 import { cookies } from "next/headers";
+import { after } from "next/server";
 import { requireProfile } from "@/lib/auth";
 import { sydneyToday } from "@/lib/flashcards";
+import { finishOpenSessions } from "@/lib/session-finish";
 import { createClient } from "@/utils/supabase/server";
 import { AppShell } from "@/components/app-shell";
 import { Toaster } from "sonner";
@@ -13,6 +15,8 @@ export default async function Layout({
   children: React.ReactNode;
 }) {
   const profile = await requireProfile();
+  // No resume: lazily finish sprints and decks idle for 30 minutes (no cron runs here).
+  after(() => finishOpenSessions(profile.id, { idleOnly: true }));
   const db = await createClient();
   const [{ count }, jar] = await Promise.all([
     db

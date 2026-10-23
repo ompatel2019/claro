@@ -218,13 +218,13 @@ it("preserves every GET field when search or another filter is submitted", () =>
     target: { value: "Trade" },
   });
   fireEvent.change(screen.getByRole("combobox", { name: "Status" }), {
-    target: { value: "progress" },
+    target: { value: "marking" },
   });
   expect(submit).toHaveBeenCalledOnce();
   const fields = new FormData(form);
   expect(Object.fromEntries(fields)).toMatchObject({
     kind: "sprint",
-    status: "progress",
+    status: "marking",
     q: "Trade",
     sort: "highest",
     range: "custom",
