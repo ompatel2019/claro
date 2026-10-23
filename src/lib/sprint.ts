@@ -14,8 +14,6 @@ export type SetupConfig = {
   short_marks: number;
   difficulty: Difficulty[];
   verbs: string[];
-  year_from: number | null;
-  year_to: number | null;
   origins: ("nesa" | "a1")[];
   history: History;
   order: "exam";
@@ -42,17 +40,15 @@ export type Pool = {
   all_subtopics: number;
   verbs: Record<string, number>;
   difficulty: Partial<Record<Difficulty, number>>;
-  all_years: number;
-  years: [number, number];
   trial: boolean;
 };
 
-type Size = { min: number; max: number; step: number; presets: number[] };
+type Size = { min: number; max: number };
 export const SIZES: Record<string, Size> = {
-  "mcq:questions": { min: 5, max: 40, step: 1, presets: [10, 20, 30, 40] },
-  "short:marks": { min: 10, max: 60, step: 5, presets: [15, 30, 45, 60] },
-  "short:questions": { min: 2, max: 15, step: 1, presets: [3, 5, 8, 10] },
-  "mixed:marks": { min: 5, max: 100, step: 5, presets: [30, 45, 60, 80, 100] },
+  "mcq:questions": { min: 5, max: 40 },
+  "short:marks": { min: 10, max: 60 },
+  "short:questions": { min: 2, max: 15 },
+  "mixed:marks": { min: 5, max: 100 },
 };
 const DEFAULT_SIZE: Record<string, number> = {
   "mcq:questions": 20,
@@ -73,8 +69,6 @@ export const DEFAULTS: SetupConfig = {
   short_marks: 10,
   difficulty: [],
   verbs: [],
-  year_from: null,
-  year_to: null,
   origins: [],
   history: "prefer_new",
   order: "exam",
@@ -176,12 +170,8 @@ export function estimateMinutes(c: SetupConfig): number | null {
 
 /** Count of "More filters" in use, for the collapsed header. */
 export const filtersOn = (c: SetupConfig) =>
-  [
-    c.difficulty.length,
-    c.verbs.length,
-    c.year_from ?? c.year_to,
-    c.origins.length,
-  ].filter(Boolean).length;
+  [c.difficulty.length, c.verbs.length, c.origins.length].filter(Boolean)
+    .length;
 
 const HISTORY: History[] = [
   "prefer_new",
@@ -314,12 +304,8 @@ export const HISTORY_LABELS: Record<History, string> = {
   any: "Any",
 };
 
-/** Summary line 1: "20 questions · 20 marks · 20 min · Economic Issues (Inflation) · 2018–2025 · Prefer new". */
-export function summary(
-  c: SetupConfig,
-  names: Record<string, string>,
-  years: [number, number] | null,
-) {
+/** Summary line 1: "20 questions · 20 marks · 20 min · Economic Issues (Inflation) · Prefer new". */
+export function summary(c: SetupConfig, names: Record<string, string>) {
   const n = (k: number, w: string) => `${k} ${w}${k === 1 ? "" : "s"}`;
   const size =
     c.mode === "mcq"
@@ -340,13 +326,10 @@ export function summary(
         })
         .join(" · ")
     : "Whole course";
-  const from = c.year_from ?? years?.[0];
-  const to = c.year_to ?? years?.[1];
   return [
     size,
     minutes === null ? "Untimed" : `${minutes} min`,
     topics,
-    from && to ? (from === to ? `${from}` : `${from}–${to}`) : null,
     HISTORY_LABELS[c.history],
   ]
     .filter(Boolean)

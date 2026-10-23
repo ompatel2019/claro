@@ -137,14 +137,13 @@ it("summarises the setup in one line and counts extra filters", () => {
     topics: ["t3"],
     subtopics: ["t3-inflation", "t3-unemployment"],
     difficulty: ["foundation" as const],
-    year_from: 2022,
   };
-  expect(summary(c, names, [2018, 2025])).toBe(
-    "30 marks · 45 min · Economic Issues (Inflation, Unemployment) · 2022–2025 · Prefer new",
+  expect(summary(c, names)).toBe(
+    "30 marks · 45 min · Economic Issues (Inflation, Unemployment) · Prefer new",
   );
-  expect(filtersOn(c)).toBe(2);
+  expect(filtersOn(c)).toBe(1);
   expect(
-    summary({ ...DEFAULTS, timed: false, history: "mistakes" }, names, null),
+    summary({ ...DEFAULTS, timed: false, history: "mistakes" }, names),
   ).toBe("20 questions · 20 marks · Untimed · Whole course · Mistakes only");
 });
 
@@ -261,7 +260,7 @@ it("mixed estimate and summary follow the requested buckets, including zero-size
   expect(estimateMinutes(c)).toBe(39);
   expect(estimateMinutes(withMixedCount(c, "mcq_count", 30))).toBe(30);
   expect(estimateMinutes(withMixedCount(c, "mcq_count", 0))).toBe(45);
-  expect(summary(c, {}, null)).toContain(
+  expect(summary(c, {})).toContain(
     "30 marks · 12 multis + 18 marks of shorts · 39 min",
   );
   expect(estimateMinutes({ ...c, timed: false })).toBeNull();
@@ -309,4 +308,11 @@ it("keeps five-mark mixed totals through links, saved settings and type switches
   expect(restore(c)).toMatchObject(c);
   expect(fromParams({ type: "mixed", size: "5" }, DEFAULTS)).toMatchObject(c);
   expect(withMode(withMode(c, "mcq"), "mixed").target).toBe(5);
+});
+
+it("drops retired year filters from saved setups and URL prefills", () => {
+  const c = restore({ ...DEFAULTS, year_from: 2022, year_to: 2025 });
+  expect(c).not.toHaveProperty("year_from");
+  expect(c).not.toHaveProperty("year_to");
+  expect(fromParams({ year_from: "2022" }, c)).toBeNull();
 });

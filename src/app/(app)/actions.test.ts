@@ -2,6 +2,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   requireProfile: vi.fn(),
+  rpc: vi.fn(),
   getUser: vi.fn(),
   select: vi.fn(),
   single: vi.fn(),
@@ -15,6 +16,7 @@ vi.mock("@/utils/supabase/server", () => ({
   createClient: async () => ({
     auth: { getUser: mocks.getUser },
     from: mocks.from,
+    rpc: mocks.rpc,
   }),
 }));
 vi.mock("@/env/client", () => ({
@@ -24,7 +26,7 @@ vi.mock("@/env/client", () => ({
   },
 }));
 vi.mock("next/cache", () => ({ revalidatePath: mocks.revalidatePath }));
-import { saveProfile } from "./actions";
+import { saveProfile, startSprint } from "./actions";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -137,4 +139,21 @@ it("does not report success when no profile row was updated", async () => {
   });
   expect(mocks.select).toHaveBeenCalledWith("id");
   expect(mocks.revalidatePath).not.toHaveBeenCalled();
+});
+
+it("strips retired year filters before building a sprint", async () => {
+  mocks.rpc.mockResolvedValue({
+    data: null,
+    error: { message: "no questions match" },
+  });
+  const input = new FormData();
+  input.set(
+    "config",
+    JSON.stringify({ mode: "mcq", year_from: 2022, year_to: 2025 }),
+  );
+  await startSprint({}, input);
+  expect(mocks.requireProfile).toHaveBeenCalled();
+  const config = mocks.rpc.mock.calls[0][1].p_config;
+  expect(config).not.toHaveProperty("year_from");
+  expect(config).not.toHaveProperty("year_to");
 });

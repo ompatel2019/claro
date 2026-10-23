@@ -30,8 +30,6 @@ const SprintConfig = z
       .array(z.enum(["foundation", "standard", "challenging"]))
       .default([]),
     verbs: z.array(z.string().max(40)).max(20).default([]),
-    year_from: z.number().int().nullable().default(null),
-    year_to: z.number().int().nullable().default(null),
     origins: z.array(z.enum(["nesa", "a1"])).default([]),
     history: z
       .enum(["prefer_new", "new_only", "mistakes", "flagged", "any"])

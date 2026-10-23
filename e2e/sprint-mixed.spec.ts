@@ -42,11 +42,14 @@ for (const width of [400, 1280]) {
       await expect(mc).toHaveValue("10");
       await expect(shorts).toHaveValue("10");
       await mc.fill("999");
+      await mc.blur();
       await expect(mc).toHaveValue("20");
       await expect(shorts).toHaveValue("0");
       await shorts.fill("-1");
+      await shorts.blur();
       await expect(shorts).toHaveValue("0");
       await mc.fill("11");
+      await mc.blur();
       await expect(shorts).toHaveValue("9");
       await page.goto("/student/sprint");
       await reviewSprintSetup(page);
@@ -103,6 +106,9 @@ for (const width of [400, 1280]) {
       await page
         .getByRole("spinbutton", { name: "Multiple choice questions" })
         .fill("20");
+      await page
+        .getByRole("spinbutton", { name: "Multiple choice questions" })
+        .blur();
       await expect(
         page.getByText(/Only 12 multis and 17 marks of shorts match/),
       ).toBeVisible();
