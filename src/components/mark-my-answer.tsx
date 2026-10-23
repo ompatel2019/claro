@@ -34,14 +34,6 @@ import {
   wordGuide,
 } from "@/lib/limits";
 import { Button } from "./ui/button";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardAction,
-} from "./ui/card";
 import { PortalIcon } from "./icons";
 import { Input } from "./ui/input";
 import { Textarea } from "./ui/textarea";
@@ -538,7 +530,8 @@ export function MarkMyAnswer({
       <form
         hidden={busy}
         inert={busy}
-        className="grid items-start gap-5 xl:grid-cols-2"
+        className="ma-form"
+        aria-label="Your question and answer"
         onSubmit={(e) => {
           e.preventDefault();
           void submit();
@@ -550,57 +543,56 @@ export function MarkMyAnswer({
           }
         }}
       >
-        <Card>
-          <CardHeader>
-            <CardTitle>Question</CardTitle>
-            <CardDescription>
-              {source === "bank"
-                ? "Pick one from the Claro bank"
-                : "Bring a question from anywhere"}
-            </CardDescription>
-            <CardAction>
-              {allowOwnQuestion ? (
-                <ToggleGroup
-                  value={[source]}
-                  onValueChange={(v) => {
-                    if (v[0]) setSource(v[0]);
-                  }}
-                  aria-label="Question source"
-                  className="max-w-full"
-                  disabled={questionLocked}
+        <section className="ma-field" aria-labelledby="ma-question-title">
+          <div className="ma-field-head">
+            <div>
+              <h2 id="ma-question-title" className="ma-step">
+                <span className="ma-step-n" aria-hidden>
+                  1
+                </span>
+                The question
+              </h2>
+              <p className="text-muted-foreground mt-1 text-[13px]">
+                {source === "bank"
+                  ? "Pick one from the Claro bank"
+                  : "Bring a question from anywhere"}
+              </p>
+            </div>
+            {allowOwnQuestion ? (
+              <ToggleGroup
+                value={[source]}
+                onValueChange={(v) => {
+                  if (v[0]) setSource(v[0]);
+                }}
+                aria-label="Question source"
+                className="max-w-full"
+                disabled={questionLocked}
+              >
+                <ToggleGroupItem value="bank" aria-label="From the Claro bank">
+                  Claro bank
+                </ToggleGroupItem>
+                <ToggleGroupItem value="own" aria-label="My own question">
+                  My own
+                </ToggleGroupItem>
+              </ToggleGroup>
+            ) : initial?.question ? (
+              <p className="text-sm font-medium">Your saved question</p>
+            ) : (
+              <ToggleGroup value={["bank"]} aria-label="Question source">
+                <ToggleGroupItem value="bank" aria-label="From the Claro bank">
+                  Claro bank
+                </ToggleGroupItem>
+                <ToggleGroupItem
+                  value="own"
+                  aria-label="My own question"
+                  disabled
                 >
-                  <ToggleGroupItem
-                    value="bank"
-                    aria-label="From the Claro bank"
-                  >
-                    Claro bank
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="own" aria-label="My own question">
-                    My own
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              ) : initial?.question ? (
-                <p className="text-sm font-medium">Your saved question</p>
-              ) : (
-                <ToggleGroup value={["bank"]} aria-label="Question source">
-                  <ToggleGroupItem
-                    value="bank"
-                    aria-label="From the Claro bank"
-                  >
-                    Claro bank
-                  </ToggleGroupItem>
-                  <ToggleGroupItem
-                    value="own"
-                    aria-label="My own question"
-                    disabled
-                  >
-                    My own
-                  </ToggleGroupItem>
-                </ToggleGroup>
-              )}
-            </CardAction>
-          </CardHeader>
-          <CardContent className="space-y-3">
+                  My own
+                </ToggleGroupItem>
+              </ToggleGroup>
+            )}
+          </div>
+          <div className="space-y-3">
             {source === "bank" ? (
               <>
                 <label className="relative grid gap-1.5 text-sm font-medium">
@@ -885,33 +877,41 @@ export function MarkMyAnswer({
                 you submit.
               </p>
             )}
-          </CardContent>
-        </Card>
-        <Card className="xl:sticky xl:top-20">
-          <CardHeader>
-            <CardTitle>Your answer</CardTitle>
-            <CardDescription>Write it as you would in the exam</CardDescription>
-            <CardAction>
-              <ToggleGroup
-                value={[mode]}
-                onValueChange={(v) => {
-                  if (v[0]) void changeMode(v[0] as "type" | "photo");
-                }}
-                aria-label="Answer format"
-                disabled={locked}
-              >
-                <ToggleGroupItem value="type">
-                  <PortalIcon name="keyboard" />
-                  Type
-                </ToggleGroupItem>
-                <ToggleGroupItem value="photo">
-                  <PortalIcon name="camera" />
-                  Photo
-                </ToggleGroupItem>
-              </ToggleGroup>
-            </CardAction>
-          </CardHeader>
-          <CardContent className="space-y-3 [&_textarea]:min-h-[240px] [&_textarea]:text-[15px] [&_textarea]:leading-7">
+          </div>
+        </section>
+        <section className="ma-field" aria-labelledby="ma-answer-title">
+          <div className="ma-field-head">
+            <div>
+              <h2 id="ma-answer-title" className="ma-step">
+                <span className="ma-step-n" aria-hidden>
+                  2
+                </span>
+                Your answer
+              </h2>
+              <p className="text-muted-foreground mt-1 text-[13px]">
+                Write it as you would in the exam
+              </p>
+            </div>
+            <ToggleGroup
+              value={[mode]}
+              onValueChange={(v) => {
+                if (v[0]) void changeMode(v[0] as "type" | "photo");
+              }}
+              aria-label="Answer format"
+              className="ma-mode"
+              disabled={locked}
+            >
+              <ToggleGroupItem value="type">
+                <PortalIcon name="keyboard" />
+                Type
+              </ToggleGroupItem>
+              <ToggleGroupItem value="photo">
+                <PortalIcon name="camera" />
+                Photo
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
+          <div className="space-y-3">
             {question && (
               <div className="bg-muted rounded-xl px-3.5 py-3">
                 <p className="text-muted-foreground text-xs">Answering</p>
@@ -931,12 +931,13 @@ export function MarkMyAnswer({
               </p>
             )}
             {mode === "type" ? (
-              <div>
+              <div className="ma-booklet">
                 <label className="sr-only" htmlFor="single-answer">
                   Your answer
                 </label>
-                <Textarea
+                <textarea
                   id="single-answer"
+                  className="ma-answer"
                   placeholder="Start with the key idea, then explain how one thing leads to another."
                   value={answer.answer_text ?? ""}
                   disabled={busy || submitted || offline}
@@ -949,7 +950,7 @@ export function MarkMyAnswer({
                       patch({ answer_text: e.target.value });
                   }}
                 />
-                <div className="text-muted-foreground mt-2 flex items-center justify-between gap-3 text-xs">
+                <div className="ma-booklet-foot">
                   <span>
                     {
                       (answer.answer_text ?? "")
@@ -962,6 +963,7 @@ export function MarkMyAnswer({
                       ? ` · aim for about ${wordGuide(question.marks).join("–")}`
                       : ""}
                   </span>
+                  <span>Draft saved in this browser</span>
                 </div>
               </div>
             ) : (
@@ -1002,30 +1004,37 @@ export function MarkMyAnswer({
                 onError={setError}
               />
             )}
-          </CardContent>
-          <div className="flex flex-wrap items-center justify-between gap-3 px-5">
-            <p className="text-muted-foreground text-xs">
-              Marked against the question’s marking criteria
-            </p>
-            <p className="sr-only" role="status">
-              {remaining} of {MARK_MY_ANSWER_DAILY_LIMIT} checks left today
-            </p>
-            <Button type="submit" disabled={!valid || locked || filling}>
-              <PortalIcon name="sparkles" />
-              {busy ? "Marking…" : error ? "Retry" : "Mark my answer"}
-            </Button>
-            {remaining === 0 && answer.id === "draft" && (
-              <p role="alert" className="w-full text-sm">
-                {"You've used today's 20 checks. More at midnight."}
-              </p>
-            )}
-            {error && (
-              <p role="alert" className="text-destructive w-full text-sm">
-                {error}
-              </p>
-            )}
           </div>
-        </Card>
+        </section>
+        <div className="ma-go">
+          {remaining === 0 && answer.id === "draft" && (
+            <p role="alert" className="ma-note">
+              <PortalIcon name="clock" size={18} strokeWidth={1.5} />
+              {"You've used today's 20 checks. More at midnight."}
+            </p>
+          )}
+          {error && (
+            <p role="alert" className="ma-note ma-note-error">
+              <PortalIcon name="circle-alert" size={18} strokeWidth={1.5} />
+              {error}
+            </p>
+          )}
+          <p className="text-muted-foreground mr-auto text-[13px]">
+            Marked against the question’s marking criteria
+          </p>
+          <p className="sr-only" role="status">
+            {remaining} of {MARK_MY_ANSWER_DAILY_LIMIT} checks left today
+          </p>
+          <Button
+            type="submit"
+            size="lg"
+            className="home-primary"
+            disabled={!valid || locked || filling}
+          >
+            {busy ? "Marking…" : error ? "Retry" : "Mark my answer"}
+            <PortalIcon name="arrow-right" size={20} strokeWidth={1.5} />
+          </Button>
+        </div>
       </form>
       <Dialog
         open={/session expired|sign-in expired|unauthorised/i.test(error)}

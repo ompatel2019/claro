@@ -5,13 +5,14 @@ import { Cards, PortalIcon } from "@/components/icons";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import { sydneyToday } from "@/lib/flashcards";
-import { DECK_DEFAULTS, filterDeck } from "@/lib/deck";
+import { DECK_DEFAULTS, filterDeck, type DeckCard } from "@/lib/deck";
 import { loadDeckBank } from "@/lib/flashcard-data";
 import { dateLabel, plural, type Topic } from "@/lib/practice";
 import { FlashcardStart } from "@/components/flashcard-start";
 import { FlashcardBuilder } from "@/components/flashcard-builder";
 import { PageHeader, EmptyState } from "@/components/claro/layout";
 import { Meter } from "@/components/claro/data-display";
+import { PenCaret } from "@/components/claro/markup-answer";
 import { NewCard } from "@/components/student/flashcards/new-card";
 import { buttonVariants } from "@/components/ui/button";
 import { addDays } from "@/lib/activity";
@@ -60,11 +61,6 @@ export default async function Flashcards({
   const today = sydneyToday();
   const tomorrow = addDays(today, 1);
   const history = { progress, today, userId: profile.id };
-  const due = filterDeck(
-    cards,
-    { ...DECK_DEFAULTS, which: "due" },
-    history,
-  ).length;
   const ids = new Set(cards.map((c) => c.id));
   const activeProgress = progress.filter((p) => ids.has(p.flashcard_id));
   const tomorrowCount = activeProgress.filter(
@@ -95,21 +91,26 @@ export default async function Flashcards({
     { ...DECK_DEFAULTS, which: "due" },
     history,
   );
+  const due = dueCards.length;
+  const inTopic = (c: DeckCard, id: string) =>
+    c.topic_id === id ||
+    c.topic_id.startsWith(`${id}-`) ||
+    topics.some((child) => child.id === c.topic_id && child.parent_id === id);
   const byTopic = topics
     .filter((t) => !t.parent_id)
     .map((t) => ({
       ...t,
-      count: dueCards.filter(
-        (c) =>
-          c.topic_id === t.id ||
-          c.topic_id.startsWith(`${t.id}-`) ||
-          topics.some(
-            (child) => child.id === c.topic_id && child.parent_id === t.id,
-          ),
-      ).length,
+      count: dueCards.filter((c) => inTopic(c, t.id)).length,
     }));
-  const maxDue = Math.max(1, ...byTopic.map((t) => t.count));
   const progressById = new Map(activeProgress.map((p) => [p.flashcard_id, p]));
+  const known = (c: DeckCard) => {
+    const p = progressById.get(c.id);
+    return !!p && p.reviews > 0 && Number(p.last_mark) === 1;
+  };
+  const decks = byTopic.map((t) => {
+    const deck = cards.filter((c) => inTopic(c, t.id));
+    return { ...t, total: deck.length, known: deck.filter(known).length };
+  });
   const states = [
     {
       label: "New",
@@ -126,19 +127,17 @@ export default async function Flashcards({
     },
     {
       label: "Mastered",
-      count: cards.filter((c) => {
-        const p = progressById.get(c.id);
-        return p && p.reviews > 0 && Number(p.last_mark) === 1;
-      }).length,
+      count: cards.filter(known).length,
       tone: "bg-chart-1",
     },
   ];
   const mine = ownCount.count ?? 0;
+  const knownTotal = states[2].count;
   return (
     <div>
       <PageHeader
         title="Flashcards"
-        description="Build the exact deck you want to drill."
+        eyebrow="Key terms for every topic, brought back just before you'd forget them"
         actions={
           <>
             <Link
@@ -148,79 +147,125 @@ export default async function Flashcards({
               <PortalIcon name="layers" />
               My cards ({mine})
             </Link>
-            <NewCard topics={topics} />
+            <NewCard topics={topics} variant="outline" />
           </>
         }
       />
-      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-3 xl:gap-5">
-        <Card className="h-full xl:col-span-2">
-          <CardContent className="grid gap-6 md:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] md:gap-8">
-            <div className="flex flex-col">
-              <p className="text-muted-foreground text-[13px] font-medium">
-                Due today
-              </p>
-              <p className="mt-1 flex items-baseline gap-2">
-                <span className="text-[48px] leading-none font-bold tracking-[-0.045em]">
-                  {due}
-                </span>
-                <span className="text-muted-foreground">cards</span>
-              </p>
-              <p className="text-muted-foreground mt-2 text-[13px]">
-                {due
-                  ? `About ${plural(Math.max(1, Math.round(due * 0.33)), "minute")} · ${tomorrowCount} due tomorrow`
-                  : next
-                    ? `Nothing due. Next review ${dateLabel(next, true)}.`
-                    : "Nothing due. Start a deck below."}
-              </p>
-              {due > 0 && (
-                <div className="mt-5 md:mt-auto md:pt-5">
-                  <FlashcardStart due label="Review due cards" />
-                </div>
-              )}
-            </div>
-            <div>
-              <p className="text-muted-foreground mb-3 text-[13px] font-medium">
-                Due by topic
-              </p>
-              <ul className="grid gap-3">
-                {byTopic.map((t) => (
-                  <li key={t.id} className="grid gap-1.5">
-                    <div className="flex justify-between gap-3 text-[13px]">
-                      <span>{t.name}</span>
-                      <span className="font-semibold tabular-nums">
-                        {t.count}
-                      </span>
-                    </div>
-                    <Meter
-                      value={(t.count / maxDue) * 100}
-                      label={`${t.name}: ${t.count} due`}
-                    />
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </CardContent>
-          {open && (
-            <div className="bg-muted mx-5 flex items-center gap-3 rounded-xl px-3.5 py-3">
-              <span className="bg-card text-muted-foreground grid size-8 shrink-0 place-items-center rounded-lg">
-                <Cards className="size-4" aria-hidden />
-              </span>
-              <p className="min-w-0 flex-1 text-[13px]">
-                <span className="font-semibold">Unfinished session</span>
-                <span className="text-muted-foreground">
-                  {" "}
-                  · {reviewed} of {openIds.length} reviewed
-                </span>
-              </p>
+      <section className="home-next fc-due" aria-labelledby="due-title">
+        <p className="text-ink-2 flex items-center gap-2 text-sm font-semibold">
+          <PenCaret />
+          Due today
+        </p>
+        <h2
+          id="due-title"
+          className="mt-2.5 text-2xl leading-8 font-[650] tracking-[-0.015em]"
+        >
+          {due ? `${plural(due, "card")} to review` : "Nothing due today"}
+        </h2>
+        <p className="text-ink-2 mt-2.5 max-w-[60ch]">
+          {due
+            ? `About ${plural(Math.max(1, Math.round(due * 0.33)), "minute")} · ${tomorrowCount} due tomorrow`
+            : next
+              ? `Nothing due. Next review ${dateLabel(next, true)}.`
+              : "Nothing due. Start a deck below."}
+        </p>
+        {due > 0 && (
+          <ul className="mt-3.5 flex flex-wrap gap-2" aria-label="Due by topic">
+            {byTopic
+              .filter((t) => t.count)
+              .map((t) => (
+                <li key={t.id} className="fc-fact">
+                  {t.name} · <b>{t.count}</b>
+                </li>
+              ))}
+          </ul>
+        )}
+        {(due > 0 || open) && (
+          <div className="mt-5 flex flex-wrap items-start gap-3">
+            {due > 0 && (
+              <FlashcardStart
+                due
+                label="Review due cards"
+                icon={null}
+                trailing={
+                  <PortalIcon name="arrow-right" size={20} strokeWidth={1.5} />
+                }
+                size="lg"
+                className="home-primary"
+              />
+            )}
+            {open && (
               <Link
-                className={buttonVariants({ variant: "outline", size: "sm" })}
+                className={cn(
+                  buttonVariants({ variant: "outline", size: "lg" }),
+                  "h-12 bg-transparent shadow-none",
+                )}
                 href={`/student/flashcards/${open.id}`}
               >
-                Continue
+                <Cards aria-hidden />
+                Continue session · {reviewed} of {openIds.length} reviewed
               </Link>
-            </div>
-          )}
-        </Card>
+            )}
+          </div>
+        )}
+      </section>
+      <section className="mt-7" aria-labelledby="decks-title">
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 id="decks-title" className="text-lg leading-[26px] font-semibold">
+            Topic decks
+          </h2>
+          <p className="text-muted-foreground text-[13px]">
+            {plural(cards.length, "card")} · {knownTotal} known
+          </p>
+        </div>
+        <ul className="grid gap-4 md:grid-cols-2">
+          {decks.map((d) => (
+            <li key={d.id} className="fc-deck">
+              <h3 className="font-semibold">{d.name}</h3>
+              <p className="text-muted-foreground text-[13px]">
+                {plural(d.total, "card")} · {d.count} due today
+              </p>
+              <Meter
+                value={d.total ? (d.known / d.total) * 100 : 0}
+                label={`${d.name}: ${d.known} of ${d.total} known`}
+                className="h-2"
+              />
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-[13px]">
+                  {d.known} of {d.total} known
+                </p>
+                <FlashcardStart
+                  config={{ ...DECK_DEFAULTS, topics: [d.id] }}
+                  disabled={!d.total}
+                  label="Study deck"
+                  variant="outline"
+                  size="sm"
+                  icon={<Cards aria-hidden />}
+                />
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p className="text-muted-foreground mt-5 flex max-w-[72ch] items-start gap-2 text-[13px] leading-[18px]">
+          <PortalIcon
+            name="circle-alert"
+            size={16}
+            strokeWidth={1.5}
+            className="mt-px shrink-0"
+          />
+          Rate each card honestly. Missed cards come back later in the same
+          session and again tomorrow, and the ones you know wait a little longer
+          each time.
+        </p>
+      </section>
+      <div className="mt-7 grid grid-cols-1 items-start gap-4 xl:grid-cols-3 xl:gap-5">
+        <FlashcardBuilder
+          cards={cards}
+          defaults={{ ...DECK_DEFAULTS, kinds: ["term"] }}
+          topics={topics}
+          history={history}
+          topic={params.topic}
+        />
         <Card className="h-full">
           <CardHeader>
             <CardTitle>Card library</CardTitle>
@@ -274,14 +319,7 @@ export default async function Flashcards({
             </dl>
           </CardContent>
         </Card>
-        <FlashcardBuilder
-          cards={cards}
-          defaults={{ ...DECK_DEFAULTS, kinds: ["term"] }}
-          topics={topics}
-          history={history}
-          topic={params.topic}
-        />
-        <Card id="my-cards" className="scroll-mt-20 xl:col-span-3">
+        <Card id="my-cards" className="scroll-mt-20 xl:col-span-2">
           <CardHeader className="flex items-start justify-between gap-3">
             <div>
               <CardTitle>My cards</CardTitle>

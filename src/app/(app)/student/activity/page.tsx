@@ -1,6 +1,6 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
-import { Sprint, Cards, Pen } from "@/components/icons";
+import { Sprint } from "@/components/icons";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import {
@@ -17,6 +17,8 @@ import { sydneyToday } from "@/lib/flashcards";
 import { type Topic } from "@/lib/practice";
 import { PageHeader } from "@/components/claro/layout";
 import { ActivityBrowser } from "@/components/activity-browser";
+import { SessionIcon } from "@/components/student/activity/session-icon";
+import { StatusPill } from "@/components/status-pill";
 import { buttonVariants } from "@/components/ui/button";
 export const metadata = pageMetadata("Activity");
 
@@ -96,10 +98,14 @@ export default async function Activity({
     .limit(4);
   const pending = (pendingResult.data ?? []).filter((s) => !s.finished_at);
   return (
-    <div className="min-w-0 space-y-5">
+    <div className="min-w-0">
       <PageHeader
         title="Activity"
-        description="Everything you've done, all in one place."
+        eyebrow={
+          filters.sort === "newest"
+            ? "Every session, newest first"
+            : "Every session"
+        }
         actions={
           <Link href="/student/sprint" className={buttonVariants()}>
             <Sprint aria-hidden /> Start sprint
@@ -107,66 +113,54 @@ export default async function Activity({
         }
       />
       {pending.length > 0 && (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {pending.map((s) => {
-            const r = rows.find((r) => r.id === s.id);
-            const label = sessionTitle(s, topics.data as Topic[])
-              .split(" · ")
-              .slice(0, s.kind === "flashcards" ? 2 : 1)
-              .join(" · ");
-            return (
-              <div
-                key={s.id}
-                className="bg-card shadow-card flex flex-wrap items-center gap-x-3 gap-y-4 rounded-2xl border p-3.5 max-sm:p-3.5"
-              >
-                <span className="bg-muted text-muted-foreground grid size-9 shrink-0 place-items-center rounded-xl">
-                  {s.kind === "flashcards" ? (
-                    <Cards className="size-4" aria-hidden />
-                  ) : s.kind === "single" ? (
-                    <Pen className="size-4" aria-hidden />
-                  ) : (
-                    <Sprint className="size-4" aria-hidden />
-                  )}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-sm font-semibold">{label}</p>
-                    <span className="rounded-full border px-2 text-[11px]">
-                      In progress
-                    </span>
+        <section className="ac-card mb-5" aria-label="Unfinished sessions">
+          <ul>
+            {pending.map((s) => {
+              const r = rows.find((r) => r.id === s.id);
+              const label = sessionTitle(s, topics.data as Topic[])
+                .split(" · ")
+                .slice(0, s.kind === "flashcards" ? 2 : 1)
+                .join(" · ");
+              return (
+                <li key={s.id} className="ac-row live">
+                  <SessionIcon kind={s.kind} />
+                  <div className="min-w-0">
+                    <p className="ac-title">{label}</p>
+                    <p className="ac-meta">
+                      <span>
+                        {s.kind === "flashcards" &&
+                        Array.isArray(s.flashcard_reviews)
+                          ? `${new Set(s.flashcard_reviews.map((v: { flashcard_id: string }) => v.flashcard_id)).size} of ${s.config.card_ids?.length ?? r?.items ?? 0} reviewed`
+                          : s.kind !== "flashcards" && r
+                            ? `${r.answered} of ${r.items} answered`
+                            : "Unfinished session"}
+                      </span>
+                      <span>
+                        Started{" "}
+                        {sydneyToday(new Date(s.started_at)) === today
+                          ? "today"
+                          : new Date(s.started_at).toLocaleDateString("en-AU", {
+                              day: "numeric",
+                              month: "short",
+                              timeZone: "Australia/Sydney",
+                            })}
+                      </span>
+                    </p>
                   </div>
-                  <p className="text-muted-foreground text-[13px]">
-                    {s.kind === "flashcards" &&
-                    Array.isArray(s.flashcard_reviews)
-                      ? `${new Set(s.flashcard_reviews.map((v: { flashcard_id: string }) => v.flashcard_id)).size} of ${s.config.card_ids?.length ?? r?.items ?? 0} reviewed`
-                      : s.kind !== "flashcards" && r
-                        ? `${r.answered} of ${r.items} answered`
-                        : "Unfinished session"}{" "}
-                    · started{" "}
-                    {sydneyToday(new Date(s.started_at)) === today
-                      ? "today"
-                      : new Date(s.started_at).toLocaleDateString("en-AU", {
-                          day: "numeric",
-                          month: "short",
-                          timeZone: "Australia/Sydney",
-                        })}
-                  </p>
-                </div>
-                <div className="max-sm:w-full sm:contents">
+                  <div className="ac-res">
+                    <StatusPill pill="In progress" />
+                  </div>
                   <Link
                     href={sessionHref(s)!}
-                    className={buttonVariants({
-                      size: "sm",
-                      className: "max-sm:mr-auto max-sm:basis-auto",
-                    })}
+                    className={buttonVariants({ size: "sm" })}
                   >
                     {s.kind === "flashcards" ? "Continue" : "Finish and mark"}
                   </Link>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
       )}
       <ActivityBrowser
         key={JSON.stringify({ ...filters, page: undefined })}
