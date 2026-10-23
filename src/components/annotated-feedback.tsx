@@ -84,6 +84,7 @@ export function AnnotatedFeedback({
   answerOnly = false,
   aiNote = true,
   flush = false,
+  bare = false,
 }: {
   row: ReviewRow;
   photos?: string[];
@@ -101,6 +102,8 @@ export function AnnotatedFeedback({
   aiNote?: boolean;
   /** Draw the marked answer inside the host's card, with no frame of its own. */
   flush?: boolean;
+  /** Sprint results: no "How to reach full marks" and no actions row; the host owns both. */
+  bare?: boolean;
 }) {
   const nextCommentId = useRef(
     Math.min(0, ...(edit?.comments.map((c) => c.id) ?? [])) - 1,
@@ -794,7 +797,7 @@ export function AnnotatedFeedback({
 
         {!answerOnly && showMark && (
           <div className="space-y-2">
-            {Number(row.mark) < max && outline.length > 0 && (
+            {!bare && Number(row.mark) < max && outline.length > 0 && (
               <FeedbackDetails
                 name="outline"
                 title="How to reach full marks"
@@ -827,7 +830,7 @@ export function AnnotatedFeedback({
           </div>
         )}
       </AnswerContainer>
-      {!answerOnly && (
+      {!answerOnly && !bare && (
         <div className="flex flex-wrap gap-2">
           {!edit && !singleResult && row.topic_id && (
             <Link

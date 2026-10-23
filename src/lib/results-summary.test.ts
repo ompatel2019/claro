@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isMetaLine, questionRef, summaryView } from "./results-summary";
+import { isMetaLine, questionRefs, summaryView } from "./results-summary";
 
 describe("isMetaLine", () => {
   it.each([
@@ -27,77 +27,41 @@ describe("isMetaLine", () => {
 
 describe("summaryView", () => {
   it("drops meta lines and caps strengths and fixes at three", () => {
-    const view = summaryView({
-      strengths: [
-        "This summary covers your written short answers; multiple-choice (MC) answers were not supplied, so it makes no claims about your MC performance.",
-        "S1 in Q1.",
-        "S2 in Q4.",
-        "S3 in Q5.",
-        "S4 in Q3.",
-      ],
-      top_fixes: ["F1 in Q2.", "F2 in Q3.", "F3 in Q3.", "F4 in Q6."],
-      next_steps: ["Rewrite the Q2 working with the table figures."],
+    expect(
+      summaryView({
+        strengths: [
+          "This summary covers your written short answers; multiple-choice (MC) answers were not supplied, so it makes no claims about your MC performance.",
+          "S1 in Q1.",
+          "S2 in Q4.",
+          "S3 in Q5.",
+          "S4 in Q3.",
+        ],
+        top_fixes: ["F1 in Q2.", "F2 in Q3.", "F3 in Q3.", "F4 in Q6."],
+      }),
+    ).toEqual({
+      strengths: ["S1 in Q1.", "S2 in Q4.", "S3 in Q5."],
+      fixes: ["F1 in Q2.", "F2 in Q3.", "F3 in Q3."],
     });
-    expect(view.strengths).toEqual(["S1 in Q1.", "S2 in Q4.", "S3 in Q5."]);
-    expect(view.fixes).toEqual(["F1 in Q2.", "F2 in Q3.", "F3 in Q3."]);
-    expect(view.nextStep).toEqual({
-      text: "Rewrite the Q2 working with the table figures.",
-      question: 2,
-    });
-  });
-
-  it("uses the first fix as the next step without repeating it", () => {
-    const view = summaryView({
-      improvements: ["In Q2, show the substitution.", "In Q3, link price."],
-    });
-    expect(view.nextStep).toEqual({
-      text: "In Q2, show the substitution.",
-      question: 2,
-    });
-    expect(view.fixes).toEqual(["In Q3, link price."]);
-  });
-
-  it("removes a fix that repeats the next step", () => {
-    const view = summaryView({
-      top_fixes: ["Do  X in Q2.", "Do Y in Q3."],
-      next_steps: ["do x in Q2."],
-    });
-    expect(view.fixes).toEqual(["Do Y in Q3."]);
   });
 
   it("prefers top_fixes over improvements and ignores non-strings", () => {
-    const view = summaryView({
-      top_fixes: ["A"],
-      improvements: ["B"],
-      strengths: [1, null, " ", "Kept"] as unknown as string[],
-      next_steps: ["Step"],
-    });
-    expect(view.fixes).toEqual(["A"]);
-    expect(view.strengths).toEqual(["Kept"]);
-    expect(view.nextStep).toEqual({ text: "Step", question: null });
-  });
-
-  it("can keep the next step in the fixes for pages without a next step", () => {
-    const view = summaryView(
-      { improvements: ["In Q2, show the substitution."] },
-      { withoutStep: false },
-    );
-    expect(view.fixes).toEqual(["In Q2, show the substitution."]);
+    expect(
+      summaryView({
+        top_fixes: ["A"],
+        improvements: ["B"],
+        strengths: [1, null, " ", "Kept"] as unknown as string[],
+      }),
+    ).toEqual({ strengths: ["Kept"], fixes: ["A"] });
+    expect(summaryView({ improvements: ["B"] }).fixes).toEqual(["B"]);
   });
 
   it("handles a missing summary", () => {
-    expect(summaryView(null)).toEqual({
-      strengths: [],
-      fixes: [],
-      nextStep: null,
-    });
+    expect(summaryView(null)).toEqual({ strengths: [], fixes: [] });
   });
 });
 
-describe("questionRef", () => {
-  it("reads the first cited question", () => {
-    expect(questionRef("Compare Q12 with Q3")).toBe(12);
-    expect(questionRef("No question")).toBeNull();
-    expect(questionRef("SQ3L")).toBeNull();
-  });
+it("reads the cited questions in order without repeats", () => {
+  expect(questionRefs("Q4 and Q5: Q5 links hours")).toEqual([4, 5]);
+  expect(questionRefs("Compare Q12 with Q3")).toEqual([12, 3]);
+  expect(questionRefs("No question, SQ3L")).toEqual([]);
 });

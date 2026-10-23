@@ -7,12 +7,15 @@ import {
   TYPE_LABEL,
   type McGridRow,
 } from "@/lib/results";
-import { summaryView } from "@/lib/results-summary";
+import { isMetaLine, questionRefs, summaryView } from "@/lib/results-summary";
 import { answerPillState } from "@/lib/answer-pill";
+import { firstLost } from "@/lib/results-stats";
+import { formatSampleMaths } from "@/lib/sample-maths";
+import Link from "next/link";
+import { buttonVariants } from "./ui/button";
 import { PortalIcon } from "./icons";
 import { QuestionView } from "./question-view";
 import { Badge } from "./claro/controls";
-import { PenTick, PenCaret } from "./claro/markup-answer";
 import { AnnotatedFeedback } from "./annotated-feedback";
 import { AI_NOTE } from "./annotated-feedback/ai-note";
 import { ReportProblem } from "./feedback-widget";
@@ -33,6 +36,7 @@ export function ResultsAnswers({
   writtenAction,
   singleResult = false,
   sprintLayout = false,
+  cards = {},
 }: {
   rows: ReviewRow[];
   id: string;
@@ -43,6 +47,8 @@ export function ResultsAnswers({
   writtenAction?: (row: ReviewRow) => React.ReactNode;
   singleResult?: boolean;
   sprintLayout?: boolean;
+  /** Flashcard counts by topic, for the sprint actions row. */
+  cards?: Record<string, number>;
 }) {
   const report = (r: ReviewRow) =>
     !readOnly &&
@@ -77,7 +83,106 @@ export function ResultsAnswers({
       />
     );
   }
+  const sprintView = (r: ReviewRow) => {
+    const state = markingState(r);
+    const sample = r.type !== "mcq" && r.sample_answer;
+    return (
+      <div key={r.attempt_id} className="space-y-4">
+        <Card
+          id={`q-${r.position}`}
+          className="scroll-mt-20 overflow-visible [--cma-sticky-top:72px]"
+        >
+          <CardHeader className="space-y-3">
+            <p className="flex flex-wrap items-center gap-1.5">
+              <Badge variant="secondary">Question {r.position}</Badge>
+              <Badge variant="secondary">
+                {r.marks} {r.marks === 1 ? "mark" : "marks"}
+              </Badge>
+              {r.topic_id && (
+                <Badge variant="secondary">{name(r.topic_id)}</Badge>
+              )}
+              {r.type === "mcq" && scored(r) && (
+                <span className="text-ink ml-1 text-sm font-semibold tabular-nums">
+                  {markLabel(r)}
+                </span>
+              )}
+            </p>
+            <div className="[&>div>div:first-child]:text-[17px]">
+              <QuestionView question={r} showMetadata={readOnly} />
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {r.type === "mcq" ? (
+              <McReview row={r} />
+            ) : (
+              <AnnotatedFeedback
+                readOnly={readOnly}
+                aiNote={false}
+                flush
+                bare
+                showReferences={false}
+                row={r}
+                photos={(r.image_paths ?? []).flatMap(
+                  (p) => photos.get(p) ?? [],
+                )}
+              />
+            )}
+            {sample && (
+              <details className="group border-t pt-3">
+                <summary className="flex h-9 w-fit cursor-pointer list-none items-center gap-1.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+                  Full-marks answer
+                  <PortalIcon
+                    name="chevron-down"
+                    aria-hidden
+                    className="text-muted-foreground size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+                  />
+                </summary>
+                <p className="text-ink-2 mt-1 max-w-prose text-[15px] leading-relaxed whitespace-pre-wrap">
+                  {formatSampleMaths(sample)}
+                </p>
+              </details>
+            )}
+          </CardContent>
+        </Card>
+        {!readOnly && (
+          <div className="flex flex-wrap items-center gap-2">
+            {r.topic_id && (
+              <Link
+                href={`/student/sprint?type=${r.type}&sub=${encodeURIComponent(r.topic_id)}`}
+                className={buttonVariants()}
+              >
+                <PortalIcon name="pen-line" aria-hidden className="size-4" />
+                Practise a similar question
+              </Link>
+            )}
+            {r.topic_id && !!cards[r.topic_id] && (
+              <Link
+                href={`/student/flashcards?topic=${encodeURIComponent(r.topic_id)}`}
+                className={buttonVariants({ variant: "outline" })}
+              >
+                <PortalIcon name="copy" aria-hidden className="size-4" />
+                {name(r.topic_id)} flashcards
+              </Link>
+            )}
+            <span className="hidden flex-1 sm:block" />
+            {r.type !== "mcq" && ["marked", "reviewed"].includes(state) && (
+              <QuestionMark attemptId={r.attempt_id} quiet />
+            )}
+            {r.question_id && (
+              <ReportProblem
+                quiet
+                questionId={r.question_id}
+                sessionId={id}
+                label={`Linked: ${r.source}`}
+              />
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
   const views = rows.map((r) => {
+    if (sprintLayout) return sprintView(r);
     const state = markingState(r);
     return (
       <Card
@@ -143,7 +248,7 @@ export function ResultsAnswers({
       <>
         <ResultsBrowser
           sprintLayout={sprintLayout}
-          initial={firstBelow(rows)}
+          initial={sprintLayout ? firstLost(rows) : firstBelow(rows)}
           views={views}
           mcGrid={mcGrid}
           items={rows.map((r) => {
@@ -173,7 +278,7 @@ export function ResultsAnswers({
               state: answerPillState({
                 mark: r.mark,
                 max: r.max_marks ?? r.marks,
-                answered: state !== "not_answered",
+                answered: !["not_answered", "skipped"].includes(state),
                 scored: scored(r),
               }),
               pill:
@@ -208,8 +313,8 @@ export function OverallFeedback({
   nextStep?: React.ReactNode;
   hideNextStep?: boolean;
 }) {
-  // Stored summaries can carry meta lines; the sprint page shows the next step on its own.
-  const view = summaryView(summary, { withoutStep: hideNextStep });
+  // Stored summaries can carry meta lines; show three of each, one line apiece.
+  const view = summaryView(summary);
   return (
     <section aria-label="Overall feedback" className="grid gap-5">
       <h2 className="sr-only">Overall feedback</h2>
@@ -225,114 +330,103 @@ export function OverallFeedback({
           </CardHeader>
           <CardContent className="space-y-4">
             {nextStep ?? (
-              <>
-                <section
-                  className="bg-brand-soft/60 border-brand/30 space-y-3 rounded-xl border p-4"
-                  aria-label="Next steps"
-                >
-                  <h3 className="text-sm font-semibold">Next steps</h3>
-                  {!!summary?.next_steps?.length && (
-                    <ul className="space-y-2 text-[13px]">
-                      {summary.next_steps.map((text, i) => (
-                        <li key={i}>{text}</li>
-                      ))}
-                    </ul>
-                  )}
-                </section>
-              </>
+              <section
+                className="bg-brand-soft/60 border-brand/30 space-y-3 rounded-xl border p-4"
+                aria-label="Next steps"
+              >
+                <h3 className="text-sm font-semibold">Next steps</h3>
+                {!!summary?.next_steps?.length && (
+                  <ul className="space-y-2 text-[13px]">
+                    {summary.next_steps.map((text, i) => (
+                      <li key={i}>{text}</li>
+                    ))}
+                  </ul>
+                )}
+              </section>
             )}
           </CardContent>
         </Card>
       )}
-      <Card>
-        <CardHeader>
-          <CardTitle>
-            <h2>Strengths and fixes</h2>
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-5">
-          {summary ? (
-            <div className="grid gap-5 sm:grid-cols-2">
-              {(
-                [
-                  ["Strengths", view.strengths, false],
-                  ["Top fixes", view.fixes, true],
-                ] as const
-              ).map(([label, lines, lost]) => (
-                <section key={label} className="space-y-2">
-                  <h3
-                    className={
-                      hideNextStep
-                        ? "text-ink-2 flex items-center gap-1.5 text-xs font-semibold"
-                        : lost
-                          ? "text-destructive flex items-center gap-1.5 text-xs font-semibold"
-                          : "text-success flex items-center gap-1.5 text-xs font-semibold"
-                    }
-                  >
-                    <PortalIcon
-                      name={lost ? "circle-alert" : "circle-check"}
-                      className="size-3.5"
-                    />
-                    {label}
-                  </h3>
-                  <ul className="space-y-2 text-[13px]">
-                    {lines.map((text, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        {!hideNextStep ? (
-                          lost ? (
-                            <PenCaret className="text-destructive mt-0.5 shrink-0" />
-                          ) : (
-                            <PenTick className="text-success mt-0.5 shrink-0" />
-                          )
-                        ) : lost ? (
-                          <PortalIcon
-                            name="arrow-right"
-                            className="text-muted-foreground mt-0.5 size-4 shrink-0"
-                          />
-                        ) : (
-                          <PortalIcon
-                            name="check"
-                            className="text-success mt-0.5 size-4 shrink-0"
-                          />
-                        )}
-                        <span>
-                          {text.split(/(\bQ\d+\b)/g).map((part, index) =>
-                            /^Q\d+$/.test(part) ? (
-                              <a
-                                key={index}
-                                href={`#q-${part.slice(1)}`}
-                                className="font-medium underline underline-offset-4"
-                              >
-                                {part}
-                              </a>
-                            ) : (
-                              part
-                            ),
-                          )}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              ))}
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <p role="status" className="text-muted-foreground text-[13px]">
-                {pending
-                  ? "Your overall feedback will appear here once marking finishes."
-                  : "An overall summary isn’t available for this sprint. Review each answer’s feedback above."}
-              </p>
-              {pending && (
-                <div
-                  aria-hidden="true"
-                  className="bg-muted h-4 w-2/3 animate-pulse rounded"
-                />
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <div className="space-y-3">
+        <h2 className="text-ink text-lg font-semibold tracking-tight">
+          Strengths and fixes
+        </h2>
+        {hideNextStep &&
+        summary &&
+        !view.strengths.length &&
+        !view.fixes.length ? (
+          <p className="bg-card text-ink-2 rounded-xl border p-4 text-[13px]">
+            {summary.next_steps?.find((t) => t.trim() && !isMetaLine(t)) ??
+              "No overall strengths or fixes for this sprint. Review each answer above."}
+          </p>
+        ) : summary ? (
+          <div className="bg-card grid overflow-hidden rounded-xl border max-sm:divide-y sm:grid-cols-2 sm:divide-x">
+            {(
+              [
+                ["Strengths", view.strengths, "check"],
+                ["Fixes", view.fixes, "arrow-up-right"],
+              ] as const
+            ).map(([label, lines, icon]) => (
+              <section key={label} aria-label={label} className="min-w-0">
+                <h3 className="text-ink flex items-center gap-2 border-b px-4 py-3 text-sm font-semibold">
+                  <PortalIcon
+                    name={icon}
+                    aria-hidden
+                    className="text-brand-text size-4"
+                  />
+                  {label}
+                </h3>
+                <ul className="divide-y">
+                  {!lines.length && (
+                    <li className="text-muted-foreground px-4 py-2.5 text-[13px]">
+                      Nothing to add this time.
+                    </li>
+                  )}
+                  {lines.map((text, i) => (
+                    <li
+                      key={i}
+                      className="flex items-baseline gap-4 px-4 py-2.5 text-[13px]"
+                    >
+                      <span
+                        className="text-ink-2 min-w-0 flex-1 sm:truncate"
+                        title={text}
+                      >
+                        {text}
+                      </span>
+                      <span className="flex shrink-0 gap-2">
+                        {questionRefs(text).map((n) => (
+                          <a
+                            key={n}
+                            href={`#q-${n}`}
+                            aria-label={`Go to Q${n}`}
+                            className="text-brand-text font-semibold underline underline-offset-4"
+                          >
+                            Q{n}
+                          </a>
+                        ))}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </div>
+        ) : (
+          <div className="bg-card space-y-3 rounded-xl border p-4">
+            <p role="status" className="text-muted-foreground text-[13px]">
+              {pending
+                ? "Your overall feedback will appear here once marking finishes."
+                : "An overall summary isn’t available for this sprint. Review each answer’s feedback above."}
+            </p>
+            {pending && (
+              <div
+                aria-hidden="true"
+                className="bg-muted h-4 w-2/3 animate-pulse rounded"
+              />
+            )}
+          </div>
+        )}
+      </div>
     </section>
   );
 }

@@ -6,6 +6,7 @@ import {
   WEEKLY_DISPUTES_PER_STUDENT,
   DISPUTE_REJECTION_COOLDOWN_HOURS,
 } from "@/lib/limits";
+import { PortalIcon } from "./icons";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -16,7 +17,14 @@ import {
 import { Textarea } from "./ui/textarea";
 
 /** §2.5: ask our team to re-check a written mark. */
-export function QuestionMark({ attemptId }: { attemptId: string }) {
+export function QuestionMark({
+  attemptId,
+  quiet = false,
+}: {
+  attemptId: string;
+  /** A quiet text action with no helper sentence, for the results actions row. */
+  quiet?: boolean;
+}) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [note, setNote] = useState("");
@@ -44,10 +52,17 @@ export function QuestionMark({ attemptId }: { attemptId: string }) {
   }
   return (
     <div className="space-y-2" id={`dispute-${attemptId}`}>
-      <p className="text-muted-foreground text-sm">
-        Think a written mark missed something? Request a marking review.
-      </p>
-      <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
+      {!quiet && (
+        <p className="text-muted-foreground text-sm">
+          Think a written mark missed something? Request a marking review.
+        </p>
+      )}
+      <Button
+        variant={quiet ? "ghost" : "outline"}
+        size="sm"
+        onClick={() => setOpen(true)}
+      >
+        {quiet && <PortalIcon name="message-circle" aria-hidden />}
         Question this mark
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>

@@ -248,29 +248,24 @@ test.describe("Local results feedback", () => {
     expect(Date.now() - start).toBeGreaterThan(14_000);
   });
   for (const width of [390, 1280]) {
-    test(`next steps, question links and honest guidelines at ${width}px`, async ({
+    test(`stat strip, question card and actions at ${width}px`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto(`/student/activity/${sessionId(1)}`);
-      const next = page.getByRole("region", { name: "Your next step" });
-      await expect(next).toBeVisible();
       await expect(
-        next.getByRole("link", { name: "Practise", exact: true }),
-      ).toHaveAttribute("href", "/student/sprint?type=mixed&sub=inflation");
-      await expect(
-        next.getByRole("link", { name: "Review cards", exact: true }),
-      ).toHaveAttribute("href", "/student/flashcards?topic=inflation");
+        page.getByRole("heading", { name: "Your next step" }),
+      ).toHaveCount(0);
       const headings = await page.getByRole("heading").allTextContents();
-      expect(headings.indexOf("Your next step")).toBeLessThan(
-        headings.indexOf("Your answer, marked"),
-      );
-      expect(headings.indexOf("Your next step")).toBeLessThan(
-        headings.indexOf("Strengths"),
+      expect(headings.indexOf("Your answers")).toBeLessThan(
+        headings.indexOf("Strengths and fixes"),
       );
       await expect(
-        page.getByText("Sun 18 Oct · 6:00", { exact: true }),
+        page.getByText(/^Sun 18 Oct, \d+:\d{2} [ap]m · \d+ questions?$/),
       ).toBeVisible();
+      const stats = page.getByRole("region", { name: "Summary" });
+      for (const label of ["Score", "Time", "Full marks"])
+        await expect(stats.getByText(label, { exact: true })).toBeVisible();
       await page.getByRole("button", { name: /^Question 2,/ }).click();
       await expect(page.getByText("Question 2", { exact: true })).toBeVisible();
       const score = page
@@ -287,38 +282,29 @@ test.describe("Local results feedback", () => {
       await expect(
         slider.getByRole("group", { name: "Comment 1 of 2" }),
       ).toContainText("Your next mark: Stored per-comment advice.");
-      await expect(
-        page.getByRole("heading", { name: "Marking criteria" }),
-      ).toBeVisible();
-      await expect(page.getByText(/guidelines are incomplete/)).toBeVisible();
+      // One flat card: no criteria table and no "How to reach full marks".
       await expect(page.locator("#q-2 table")).toHaveCount(0);
       await expect(
         page.getByText("How to reach full marks", { exact: true }),
-      ).toBeVisible();
+      ).toHaveCount(0);
+      await expect(
+        page.getByRole("link", { name: "Practise a similar question" }),
+      ).toHaveAttribute("href", /^\/student\/sprint\?type=\w+&sub=inflation$/);
+      await expect(
+        page.getByRole("link", { name: /flashcards$/ }),
+      ).toHaveAttribute("href", "/student/flashcards?topic=inflation");
       await page.getByRole("button", { name: /^Question 3,/ }).click();
       await expect(page.getByText("Question 3", { exact: true })).toBeVisible();
+      const sample = page
+        .locator("#q-3 details")
+        .filter({ hasText: "Full-marks answer" });
+      await expect(sample).not.toHaveAttribute("open");
+      await sample.getByText("Full-marks answer", { exact: true }).click();
       await expect(
-        page.getByText("How to reach full marks", { exact: true }),
-      ).toHaveCount(0);
-      await expect(page.locator("#q-3 table")).toHaveCount(1);
-      const criteria = page.getByRole("region", { name: "Marking criteria" });
-      const sample = page.getByRole("region", { name: "Sample answer" });
-      await expect(criteria).toBeVisible();
-      await expect(sample).toBeVisible();
-      await expect(sample.locator("p").first()).toHaveText(
-        "Higher demand increases prices when supply is constrained.",
-      );
-      expect(await sample.evaluate((el) => el.closest("details"))).toBeNull();
-      const reviewHeadings = await page
-        .locator("#q-3")
-        .getByRole("heading")
-        .allTextContents();
-      expect(reviewHeadings.indexOf("Marking criteria")).toBeLessThan(
-        reviewHeadings.indexOf("Your answer, marked"),
-      );
-      expect(reviewHeadings.indexOf("Your answer, marked")).toBeLessThan(
-        reviewHeadings.indexOf("Sample answer"),
-      );
+        sample.getByText(
+          "Higher demand increases prices when supply is constrained.",
+        ),
+      ).toBeVisible();
 
       expect(
         await page.evaluate(
@@ -331,13 +317,13 @@ test.describe("Local results feedback", () => {
       });
     });
   }
-  test("partial-mark comparison keeps criteria, semantic notes and sample visible", async ({
+  test("partial-mark comparison keeps semantic notes and the full-marks answer", async ({
     page,
   }) => {
     await page.goto(`/student/activity/${sessionId(9)}`);
     await page.getByRole("button", { name: /^Question 2,/ }).click();
     const review = page.locator("#q-2");
-    await expect(review.getByRole("table")).toBeVisible();
+    await expect(review.getByRole("table")).toHaveCount(0);
     const score = review.getByRole("complementary", {
       name: "Your mark: 3/5",
       exact: true,
@@ -363,7 +349,7 @@ test.describe("Local results feedback", () => {
       review.getByRole("button", { name: /^Strength 2,/ }),
     ).toHaveClass(/cma-hl--earned/);
     await expect(
-      review.getByRole("region", { name: "Sample answer" }),
+      review.getByText("Full-marks answer", { exact: true }),
     ).toBeVisible();
     const slider = review.getByRole("region", {
       name: "Comments",
@@ -389,12 +375,18 @@ test.describe("Local results feedback", () => {
     );
     await slider.getByRole("button", { name: "Previous comment" }).click();
     await expect(fixSlide).toContainText("Explain the link to supply.");
-    await page.getByRole("link", { name: "Q3", exact: true }).click();
+    await page
+      .getByRole("link", { name: "Go to Q3", exact: true })
+      .first()
+      .click();
     await expect(page.locator("#q-3")).toBeInViewport();
     await page.getByRole("button", { name: /^Question 2,/ }).click();
     await expect(page.locator("#q-2")).toBeVisible();
     await expect(page).toHaveURL(/#q-3$/);
-    await page.getByRole("link", { name: "Q3", exact: true }).click();
+    await page
+      .getByRole("link", { name: "Go to Q3", exact: true })
+      .first()
+      .click();
     await expect(page.locator("#q-3")).toBeInViewport();
     await expect(
       page.getByRole("button", { name: /^Question 3,/ }),
@@ -467,9 +459,7 @@ test.describe("Local results feedback", () => {
       await page.goto(`/student/activity/${sessionId(suffix)}`);
       await expect(page.getByText(message, { exact: false })).toBeVisible();
       await expect(
-        page
-          .getByRole("region", { name: "Your next step", exact: true })
-          .getByRole("link", { name: "Practise", exact: true }),
+        page.getByRole("link", { name: "Practise a similar question" }),
       ).toBeVisible();
     });
   }

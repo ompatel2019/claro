@@ -145,7 +145,7 @@ it("reselects and scrolls to a summary question after manual navigation with the
     </>,
   );
   await act(async () => {});
-  fireEvent.click(screen.getByRole("link", { name: "Q3" }));
+  fireEvent.click(screen.getByRole("link", { name: "Go to Q3" }));
   expect(screen.getByText("Answer to Q3")).toBeVisible();
   await waitFor(() => expect(scroll).toHaveBeenCalledTimes(1));
   fireEvent.click(
@@ -153,106 +153,50 @@ it("reselects and scrolls to a summary question after manual navigation with the
   );
   expect(screen.getByText("Answer to Q2")).toBeVisible();
   expect(window.location.hash).toBe("#q-3");
-  fireEvent.click(screen.getByRole("link", { name: "Q3" }));
+  fireEvent.click(screen.getByRole("link", { name: "Go to Q3" }));
   expect(screen.getByText("Answer to Q3")).toBeVisible();
   await waitFor(() => expect(scroll).toHaveBeenCalledTimes(2));
   // Clicking the selected question again still scrolls to its answer.
-  fireEvent.click(screen.getByRole("link", { name: "Q3" }));
+  fireEvent.click(screen.getByRole("link", { name: "Go to Q3" }));
   await waitFor(() => expect(scroll).toHaveBeenCalledTimes(3));
 });
 
-it("shows an icon and word for every sprint answer, including spaced and decimal marks", () => {
-  const scores = ["4 / 4", "1.5 / 4", "0 / 1", null];
-  const sprintItems = scores.map((mark, i) => ({
-    ...items[0],
-    position: i + 1,
-    mark,
-  }));
+it("draws sprint tiles from the result state, with the open tile in brand-soft", () => {
+  const states = ["full", "dropped", "not_answered", "pending"] as const;
   render(
     <ResultsBrowser
       sprintLayout
-      items={sprintItems}
-      views={scores.map((_, i) => (
-        <p key={i}>Review {i + 1}</p>
-      ))}
-      initial={0}
-    />,
-  );
-  for (const [i, word] of [
-    "Earned",
-    "Part marks",
-    "Missed",
-    "Not answered",
-  ].entries()) {
-    const tile = screen.getByRole("button", {
-      name: new RegExp(`^Question ${i + 1}(,|$)`),
-    });
-    expect(tile).toHaveTextContent(word);
-    expect(tile.querySelector("svg")).toBeTruthy();
-  }
-  expect(
-    screen.getByRole("button", { name: "Question 2, 1.5/4 marks" }),
-  ).toHaveTextContent("1.5/4");
-  fireEvent.click(screen.getByRole("button", { name: "Table view" }));
-  expect(screen.getByRole("table", { name: "Questions" })).toHaveTextContent(
-    "Part marks",
-  );
-});
-
-it("preserves unanswered and review states alongside scores in sprint tiles and tables", () => {
-  const pills = [
-    "Not answered",
-    "Provisional",
-    "Being double-checked",
-    "Checked by our team",
-  ] as const;
-  const tones = [
-    "bg-destructive-soft border-destructive text-destructive",
-    "bg-warning-soft border-warning text-warning",
-    "bg-warning-soft border-warning text-warning",
-    "bg-success-soft border-success text-success",
-  ];
-  const states = ["not_answered", "part", "part", "full"] as const;
-  render(
-    <ResultsBrowser
-      sprintLayout
-      items={pills.map((pill, i) => ({
+      items={states.map((state, i) => ({
         ...items[0],
         position: i + 1,
-        mark: i === 0 ? "0 / 4" : i === 3 ? "4 / 4" : "2 / 4",
-        pill,
-        tone: tones[i],
-        state: states[i],
+        mark: ["2 / 2", "1.5 / 4", null, null][i],
+        pill: state === "not_answered" ? "Not answered" : null,
+        state,
       }))}
       views={views}
-      initial={0}
+      initial={1}
     />,
   );
-  for (const [i, pill] of pills.entries()) {
-    const tile = screen.getByRole("button", {
-      name: new RegExp(`^Question ${i + 1},`),
-    });
-    expect(tile).toHaveTextContent(pill);
-    expect(tile).toHaveClass(
-      i === 0
-        ? "text-muted-foreground"
-        : i === 3
-          ? "text-brand-foreground"
-          : "text-brand-text",
-    );
-    expect(tile).not.toHaveClass("ring-primary");
-    expect(within(tile).getByText(pill)).toHaveClass("text-current");
-    if (i === 0) expect(tile).not.toHaveTextContent("Missed");
-    else expect(tile).toHaveTextContent(i === 3 ? "Earned" : "Part marks");
+  const tile = (n: number) =>
+    screen.getByRole("button", { name: new RegExp(`^Question ${n}(,|$)`) });
+  expect(tile(1)).toHaveClass("bg-brand", "text-navy-deep");
+  expect(tile(2)).toHaveClass("bg-brand-soft", "text-brand-text");
+  expect(tile(2)).toHaveAttribute("aria-current", "true");
+  expect(tile(2)).toHaveTextContent("1.5/4");
+  expect(tile(3)).toHaveClass("bg-muted");
+  expect(tile(3)).toHaveTextContent("—");
+  for (const n of [1, 2, 3, 4]) {
+    expect(tile(n).querySelector("svg")).toBeTruthy();
+    expect(tile(n).className).not.toMatch(/(^|\s)ring-/);
   }
-  fireEvent.click(screen.getByRole("button", { name: "Table view" }));
-  const table = screen.getByRole("table", { name: "Questions" });
-  for (const pill of pills) expect(within(table).getByText(pill)).toBeVisible();
-  expect(table).not.toHaveTextContent("Missed");
-  expect(table).toHaveTextContent("0/4");
+  fireEvent.click(tile(1));
+  expect(tile(2)).toHaveClass("bg-destructive-soft", "text-destructive-text");
+  expect(screen.getByRole("list", { name: "Key" })).toHaveTextContent(
+    "Open nowFull marksMarks droppedNot answered",
+  );
 });
 
-it("drops the redundant Marked chip on coloured sprint tiles but keeps it in the table", () => {
+it("lists every question in a bordered table with the open row highlighted", () => {
   render(
     <ResultsBrowser
       sprintLayout
@@ -261,20 +205,52 @@ it("drops the redundant Marked chip on coloured sprint tiles but keeps it in the
           ...items[0],
           position: 1,
           mark: "2 / 2",
-          pill: "Marked",
           state: "full",
+          pill: "Marked",
+        },
+        {
+          ...items[0],
+          position: 2,
+          mark: "0 / 4",
+          state: "dropped",
+          pill: "Checked by our team",
         },
       ]}
       views={views}
       initial={0}
     />,
   );
-  const tile = screen.getByRole("button", { name: /^Question 1,/ });
-  expect(tile).toHaveClass("bg-brand", "text-brand-foreground");
-  expect(tile).not.toHaveTextContent("Marked");
-  expect(tile).toHaveAttribute("aria-current", "true");
   fireEvent.click(screen.getByRole("button", { name: "Table view" }));
-  expect(screen.getByRole("table", { name: "Questions" })).toHaveTextContent(
-    "Marked",
+  const table = screen.getByRole("table", { name: "Questions" });
+  const rows = within(table).getAllByRole("row");
+  expect(rows[1]).toHaveAttribute("data-open", "true");
+  expect(rows[1]).toHaveTextContent("Full marks");
+  expect(rows[1]).not.toHaveTextContent("Marked");
+  expect(rows[2]).toHaveTextContent("0/4");
+  expect(rows[2]).toHaveTextContent("Marks dropped");
+  expect(within(rows[2]).getByText("Checked by our team")).toBeVisible();
+  fireEvent.click(rows[2]);
+  expect(rows[2]).toHaveAttribute("data-open", "true");
+  expect(rows[1]).not.toHaveAttribute("data-open");
+});
+
+it("pages to the previous and next question below the open one", () => {
+  Element.prototype.scrollIntoView = vi.fn();
+  render(
+    <ResultsBrowser
+      sprintLayout
+      items={[1, 2, 3].map((position) => ({ ...items[0], position }))}
+      views={[1, 2, 3].map((n) => (
+        <p key={n}>Review {n}</p>
+      ))}
+      initial={0}
+    />,
   );
+  const pager = screen.getByRole("navigation", {
+    name: "Previous and next question",
+  });
+  expect(within(pager).queryByText("Previous question")).toBeNull();
+  fireEvent.click(within(pager).getByRole("button", { name: /Next question/ }));
+  expect(screen.getByText("Review 2")).toBeVisible();
+  expect(within(pager).getByText("Previous question")).toBeVisible();
 });

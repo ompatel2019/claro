@@ -1,4 +1,4 @@
-/** Display-time clean-up of the stored sprint summary: drops meta lines, caps lists, picks one next step. */
+/** Display-time clean-up of the stored sprint summary: drops meta lines and caps each list at three. */
 
 export type SummaryLists = {
   strengths?: string[];
@@ -27,33 +27,19 @@ const clean = (lines: unknown) =>
   (Array.isArray(lines) ? lines : [])
     .filter((l): l is string => typeof l === "string")
     .map((l) => l.trim())
-    .filter((l) => l && !isMetaLine(l));
+    .filter((l) => l && !isMetaLine(l))
+    .slice(0, SUMMARY_CAP);
 
-/** First question number cited in a line ("Q3" -> 3). */
-export function questionRef(text: string) {
-  const m = /\bQ(\d+)\b/.exec(text);
-  return m ? Number(m[1]) : null;
+/** Question numbers cited in a line, in order and without repeats ("Q4 and Q5" -> [4, 5]). */
+export function questionRefs(text: string) {
+  return [
+    ...new Set([...text.matchAll(/\bQ(\d+)\b/g)].map((m) => Number(m[1]))),
+  ];
 }
 
-/**
- * The one next step: the first usable next_steps line, else the first fix.
- * Fixes never repeat it, and each list is capped at three.
- */
-export function summaryView(
-  summary: SummaryLists | null | undefined,
-  { withoutStep = true } = {},
-) {
-  const steps = clean(summary?.next_steps);
-  const fixesAll = clean(summary?.top_fixes ?? summary?.improvements);
-  const step = steps[0] ?? fixesAll[0] ?? null;
-  const same = (a: string, b: string) =>
-    a.replace(/\s+/g, " ").toLowerCase() ===
-    b.replace(/\s+/g, " ").toLowerCase();
+export function summaryView(summary: SummaryLists | null | undefined) {
   return {
-    strengths: clean(summary?.strengths).slice(0, SUMMARY_CAP),
-    fixes: fixesAll
-      .filter((f) => !withoutStep || !step || !same(f, step))
-      .slice(0, SUMMARY_CAP),
-    nextStep: step ? { text: step, question: questionRef(step) } : null,
+    strengths: clean(summary?.strengths),
+    fixes: clean(summary?.top_fixes ?? summary?.improvements),
   };
 }

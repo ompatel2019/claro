@@ -144,11 +144,8 @@ it.each([
   "renders writing-pattern summaries and sparse or legacy lists faithfully: %j",
   (summary) => {
     render(<OverallFeedback summary={summary} pending={false} />);
-    for (const label of ["Strengths", "Top fixes", "Next steps"])
+    for (const label of ["Strengths", "Fixes", "Next steps"])
       expect(screen.getByRole("heading", { name: label })).toBeVisible();
-    expect(screen.getByRole("heading", { name: "Top fixes" })).toHaveClass(
-      "text-destructive",
-    );
     for (const line of Object.values(summary).flat())
       expect(screen.getByText(line)).toBeVisible();
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
@@ -219,7 +216,7 @@ it("puts stored next steps before strengths and fixes", () => {
     "Next steps",
     "Strengths and fixes",
     "Strengths",
-    "Top fixes",
+    "Fixes",
   ]);
 });
 
@@ -238,35 +235,36 @@ it("keeps the supplied next step available while a summary is pending", () => {
   expect(screen.getByRole("status")).toBeVisible();
 });
 
-it("keeps question jump links and semantic strength/fix icons in the summary", () => {
+it("keeps one line per point with its question links on the right", () => {
   render(
     <OverallFeedback
+      hideNextStep
       pending={false}
       summary={{
         strengths: ["At Q3, define inflation."],
-        top_fixes: ["At Q2, explain supply."],
+        top_fixes: ["Q4 and Q5: link hours to output, as Q5 asks."],
       }}
     />,
   );
-  expect(screen.getByRole("link", { name: "Q3" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Go to Q3" })).toHaveAttribute(
     "href",
     "#q-3",
   );
-  expect(screen.getByRole("link", { name: "Q2" })).toHaveAttribute(
-    "href",
-    "#q-2",
-  );
-  for (const [name, colour] of [
-    ["Strengths", "success"],
-    ["Top fixes", "destructive"],
-  ]) {
-    const heading = screen.getByRole("heading", { name });
-    expect(heading).toHaveClass(`text-${colour}`);
-    expect(heading.querySelector("svg")).toBeTruthy();
-    expect(heading.closest("section")?.querySelector("li svg")).toHaveClass(
-      `text-${colour}`,
-    );
-  }
+  const fix = screen.getByText(/^Q4 and Q5: link hours/);
+  expect(fix).toHaveClass("sm:truncate");
+  expect(fix).toHaveAttribute("title", fix.textContent);
+  expect(
+    Array.from(fix.closest("li")!.querySelectorAll("a"), (a) =>
+      a.getAttribute("href"),
+    ),
+  ).toEqual(["#q-4", "#q-5"]);
+  for (const name of ["Strengths", "Fixes"])
+    expect(
+      screen.getByRole("heading", { name }).querySelector("svg"),
+    ).toBeTruthy();
+  expect(
+    screen.queryByRole("heading", { name: "Your next step" }),
+  ).not.toBeInTheDocument();
 });
 
 it("keeps unanswered MC rows distinct from incorrect answers in sprint tiles and Table view", () => {
@@ -300,19 +298,80 @@ it("keeps unanswered MC rows distinct from incorrect answers in sprint tiles and
   const unanswered = screen.getByRole("button", {
     name: "Question 1, 0/1 marks, Not answered",
   });
-  expect(unanswered).toHaveTextContent("Not answered");
-  expect(unanswered).not.toHaveTextContent("Missed");
+  expect(unanswered).toHaveTextContent("—");
   expect(unanswered.querySelector("svg")).toBeTruthy();
+  // Q1 is open (the first lost mark), so its colour is brand-soft; Q2 shows dropped marks.
+  expect(unanswered).toHaveAttribute("aria-current", "true");
   expect(
     screen.getByRole("button", { name: "Question 2, 0/1 marks" }),
-  ).toHaveTextContent("Missed");
+  ).toHaveClass("bg-destructive-soft");
   fireEvent.click(screen.getByRole("button", { name: "Table view" }));
   const table = screen.getByRole("table", { name: "Questions" });
-  const unansweredRow = table.querySelectorAll("tbody tr")[0];
+  const [unansweredRow, wrongRow] = table.querySelectorAll("tbody tr");
   expect(unansweredRow).toHaveTextContent("Not answered");
-  expect(unansweredRow).not.toHaveTextContent("Missed");
-  expect(unansweredRow.querySelector("svg")).toBeTruthy();
-  expect(table.querySelectorAll("tbody tr")[1]).toHaveTextContent("Missed");
+  expect(unansweredRow).not.toHaveTextContent("Marks dropped");
+  expect(wrongRow).toHaveTextContent("Marks dropped");
+});
+
+it("builds the sprint question card: badges, full-marks answer, then the actions row", () => {
+  const row = (position: number, mark: number): ReviewRow =>
+    ({
+      attempt_id: `w-${position}`,
+      position,
+      question_id: `q-${position}`,
+      type: "short",
+      marks: 2,
+      max_marks: 2,
+      mark,
+      status: "marked",
+      check_status: "skipped",
+      feedback: null,
+      stem: `Stem ${position}`,
+      source: "Practice",
+      topic_id: "growth",
+      image_paths: [],
+      review: null,
+      answer_text: "Answer",
+      sample_answer: "Real GDP = 840/105 x 100/1 = $800 m",
+    }) as unknown as ReviewRow;
+  const props = {
+    sprintLayout: true,
+    rows: [row(1, 2), row(2, 1)],
+    id: "sprint",
+    name: () => "Economic growth",
+    photos: new Map(),
+  };
+  const { rerender } = render(<ResultsAnswers {...props} />);
+  // Opens on the first question that lost marks.
+  expect(screen.getByText("Stem 2")).toBeVisible();
+  for (const badge of ["Question 2", "2 marks", "Economic growth"])
+    expect(screen.getAllByText(badge)[0]).toBeVisible();
+  const sample = screen.getByText("Full-marks answer").closest("details")!;
+  expect(sample).not.toHaveAttribute("open");
+  expect(sample).toHaveTextContent("Real GDP = 840 ÷ 105 × 100 = $800m");
+  expect(
+    screen.getByRole("link", { name: "Practise a similar question" }),
+  ).toHaveAttribute("href", "/student/sprint?type=short&sub=growth");
+  expect(
+    screen.queryByRole("link", { name: /flashcards/ }),
+  ).not.toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Question this mark" }),
+  ).toBeVisible();
+  expect(
+    screen.getByRole("button", { name: "Report a problem" }),
+  ).toBeVisible();
+  expect(
+    screen.queryByText(/Think a written mark missed something/),
+  ).not.toBeInTheDocument();
+  rerender(<ResultsAnswers {...props} cards={{ growth: 4 }} />);
+  expect(
+    screen.getByRole("link", { name: "Economic growth flashcards" }),
+  ).toHaveAttribute("href", "/student/flashcards?topic=growth");
+  rerender(<ResultsAnswers {...props} readOnly />);
+  expect(
+    screen.queryByRole("link", { name: "Practise a similar question" }),
+  ).not.toBeInTheDocument();
 });
 
 it("shows the AI line once under all questions, not under each written answer", () => {
@@ -371,7 +430,7 @@ it("shows the AI line once under all questions, not under each written answer", 
   ).not.toBeInTheDocument();
 });
 
-it("drops meta lines, caps each list at three and skips the next step in fixes", () => {
+it("drops meta lines and caps strengths and fixes at three each", () => {
   render(
     <OverallFeedback
       hideNextStep
@@ -388,17 +447,45 @@ it("drops meta lines, caps each list at three and skips the next step in fixes",
       }}
     />,
   );
-  const items = screen.getAllByRole("listitem").map((li) => li.textContent);
+  const items = screen
+    .getAllByRole("listitem")
+    .map((li) => li.querySelector("span")?.textContent);
   expect(items).toEqual([
     "S1 in Q1.",
     "S2 in Q4.",
     "S3 in Q5.",
+    "F1 in Q2.",
     "F2 in Q3.",
     "F3 in Q3.",
-    "F4 in Q6.",
   ]);
-  expect(screen.getAllByRole("link", { name: "Q3" })[0]).toHaveAttribute(
+  expect(screen.getAllByRole("link", { name: "Go to Q3" })[0]).toHaveAttribute(
     "href",
     "#q-3",
   );
+});
+
+it("falls back to one plain line when a summary has no strengths or fixes", () => {
+  const { rerender } = render(
+    <OverallFeedback
+      hideNextStep
+      pending={false}
+      summary={{
+        strengths: [],
+        improvements: [],
+        next_steps: ["There is not enough writing to assess habits."],
+      }}
+    />,
+  );
+  expect(
+    screen.getByText("There is not enough writing to assess habits."),
+  ).toBeVisible();
+  expect(screen.queryByRole("heading", { name: "Fixes" })).toBeNull();
+  rerender(
+    <OverallFeedback
+      hideNextStep
+      pending={false}
+      summary={{ strengths: ["Clear terms in Q1."], top_fixes: [] }}
+    />,
+  );
+  expect(screen.getByText("Nothing to add this time.")).toBeVisible();
 });
