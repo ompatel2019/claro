@@ -172,6 +172,25 @@ describe("tightenText", () => {
     );
   });
 
+  it("keeps diagnoses and advice next to meta clauses (codex review)", () => {
+    expect(body("You may be confusing inflation with deflation.")).toBe(
+      "You may be confusing inflation with deflation.",
+    );
+    expect(body("You might need a second example.")).toBe(
+      "You might need a second example.",
+    );
+    expect(
+      body(
+        "Repeating the definition will not earn another mark; explain how higher rates reduce borrowing. Name the transmission mechanism.",
+      ),
+    ).toBe(
+      "Explain how higher rates reduce borrowing. Name the transmission mechanism.",
+    );
+    expect(body("Explain the lag; this will not change your mark.")).toBe(
+      "Explain the lag.",
+    );
+  });
+
   it("drops a hedged improvement tacked onto a strength, but only on strengths", () => {
     const text =
       "You trace the cost-push chain clearly. Adding why oil matters would deepen it.";

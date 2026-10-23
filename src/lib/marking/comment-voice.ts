@@ -53,6 +53,7 @@ const META_SENTENCE = [
   /\bthis (summary|feedback|report|comment|review)\b.*\b(covers?|is based|only|focus(es)?|looks at|includes?)\b/i,
   /\b(multiple[- ]choice|MCQs?|MC)\b(?=[^.]*\b(answers?|questions?|responses?|items?)\b)[^.]*\b(not|weren't|were not|aren't|are not)\b[^.]*\b(supplied|provided|included|available|assessed|shown|given)\b/i,
   /\bwithout (changing|affecting) (the|your) mark\b/i,
+  /^already at full marks[.!]?$/i,
   /\b(not|never|won't|will not|without|doesn't|does not) (add|adding|change|changing|affect|affecting|earn|earning|cost|costing|lift|lifting) (a|the|your|any|another|an extra) (extra )?marks?\b/i,
   /\bas an ai\b/i,
 ];
@@ -80,7 +81,6 @@ const OPENERS: RegExp[] = [
   /^this (demonstrates|shows) that\s+/i,
   /^already at full marks[;:,.]\s*/i,
   /^(you )?(might|may) (want to|wish to)\s+/i,
-  /^you (could|might|may) (also )?(want to )?(?=[a-z])/i,
   /^try to\s+/i,
 ];
 
@@ -148,10 +148,21 @@ const HEDGES: [RegExp, string][] = [
   [new RegExp(`\\b(${WRITING}) would benefit from\\b`, "gi"), "$1 needs"],
 ];
 
+/** "You could/might/may (also) (want to) <verb>" becomes the imperative, for known verbs only. */
+const MODAL_SUGGESTION = new RegExp(
+  `^you (?:could|might|may) (?:also )?(?:want to )?(?=(?:${Object.values(
+    GERUNDS,
+  )
+    .map((verb) => verb.toLowerCase())
+    .join("|")})\\b)`,
+  "i",
+);
+
 function stripOpeners(sentence: string): string {
   let s = sentence.trim();
   for (let guard = 0; guard < 4; guard++) {
     const before = s;
+    s = s.replace(MODAL_SUGGESTION, "");
     const consider =
       /^(you (could|might|may|should) )?consider ([a-z]+ing)\b\s*/i.exec(s);
     if (consider && GERUNDS[consider[3].toLowerCase()]) {
@@ -164,6 +175,20 @@ function stripOpeners(sentence: string): string {
   }
   for (const [re, to] of HEDGES) s = s.replace(re, to);
   return capitalise(s.replace(/\s{2,}/g, " ").trim());
+}
+
+/**
+ * Drop a meta sentence, or only its meta clauses when it also carries advice
+ * ("Repeating it will not earn another mark; explain the mechanism.").
+ */
+function dropMetaClauses(sentence: string): string[] {
+  if (!isMetaSentence(sentence)) return [sentence];
+  const clauses = sentence.split(/;\s*/u);
+  if (clauses.length < 2) return [];
+  const kept = clauses.filter((clause) => !isMetaSentence(clause.trim()));
+  if (!kept.length) return [];
+  const joined = capitalise(kept.join("; ").trim());
+  return [/[.!?]["'”’)\]]*$/u.test(joined) ? joined : `${joined}.`];
 }
 
 export function isMetaSentence(sentence: string) {
@@ -181,7 +206,7 @@ export function tightenText(text: string, opts: TightenOptions): string {
   const original = text;
   if (!text || !text.trim()) return original;
   let sentences = splitSentences(text.trim())
-    .filter((s) => !isMetaSentence(s))
+    .flatMap(dropMetaClauses)
     .filter((s) => !PADDING_SENTENCE.test(s.trim()))
     .map(stripOpeners)
     .filter((s) => /[\p{L}\p{N}]/u.test(s));
