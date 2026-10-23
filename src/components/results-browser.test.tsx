@@ -315,3 +315,32 @@ it("lets a terminal status pill speak for an unmarked row in the table", () => {
   expect(failed).not.toHaveTextContent("Being marked");
   expect(marking).toHaveTextContent("Being marked");
 });
+
+it("keys each question's actions so a draft never carries to the next question", () => {
+  const { container } = render(
+    <ResultsBrowser
+      sprintLayout
+      items={[1, 2].map((position) => ({
+        ...items[0],
+        position,
+        mark: "1 / 2",
+        state: "part" as const,
+      }))}
+      views={views}
+      actions={[1, 2].map((n) => (
+        <input key={n} aria-label={`Draft ${n}`} defaultValue="" />
+      ))}
+      initial={0}
+    />,
+  );
+  fireEvent.change(within(container).getByLabelText("Draft 1"), {
+    target: { value: "Unsent" },
+  });
+  fireEvent.click(
+    within(container).getByRole("button", { name: /^Question 2,/ }),
+  );
+  fireEvent.click(
+    within(container).getByRole("button", { name: /^Question 1,/ }),
+  );
+  expect(within(container).getByLabelText("Draft 1")).toHaveValue("");
+});

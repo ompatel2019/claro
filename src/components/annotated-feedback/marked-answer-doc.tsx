@@ -230,6 +230,15 @@ export function MarkedAnswerDoc({
     setFocused(next);
   }
 
+  /** Keyboard focus on a comment slid out of the clipped column brings it back into view. */
+  function revealCard(el: HTMLElement) {
+    const view = el.closest(".cma-cols")?.getBoundingClientRect();
+    const card = el.getBoundingClientRect();
+    if (!view || card.top >= view.top) return;
+    const floor = -(el.parentElement?.offsetTop ?? 0);
+    setShift((now) => columnShift(view.top, card.top, now, floor));
+  }
+
   useHighlightSync(
     doc,
     activeId,
@@ -585,6 +594,7 @@ export function MarkedAnswerDoc({
                         data-dim={dim || undefined}
                         aria-pressed={pressed}
                         onClick={() => focusComment(id, "card")}
+                        onFocus={(e) => revealCard(e.currentTarget)}
                         className={`cma-cm cma-cm--${tone(c)}`}
                       >
                         <CommentContent c={c} next={c === nextComment} inline />

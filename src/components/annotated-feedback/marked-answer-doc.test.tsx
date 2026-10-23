@@ -540,4 +540,23 @@ describe("comment column", () => {
     expect(scrollIntoView).not.toHaveBeenCalled();
     focus.mockRestore();
   });
+
+  it("brings a comment slid out of the column back into view when it takes keyboard focus", () => {
+    render(<MarkedAnswerDoc text={text} comments={comments} column />);
+    const list = screen.getByRole("region", { name: "Comments" });
+    const rect = (top: number) =>
+      ({ top, bottom: top + 80, left: 0, right: 0 }) as DOMRect;
+    list.getBoundingClientRect = () => rect(100);
+    card(11).getBoundingClientRect = () => rect(40);
+    fireEvent.focus(card(11));
+    expect(list.querySelector("ol")).toHaveStyle({
+      transform: "translateY(60px)",
+    });
+    // Already in view: nothing moves.
+    card(22).getBoundingClientRect = () => rect(300);
+    fireEvent.focus(card(22));
+    expect(list.querySelector("ol")).toHaveStyle({
+      transform: "translateY(60px)",
+    });
+  });
 });

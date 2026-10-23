@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import type { McGridRow } from "@/lib/results";
 import {
   RESULT_ICON,
@@ -586,7 +586,8 @@ function SprintAnswers({
           </ul>
         </div>
       )}
-      {actions}
+      {/* Keyed by question: a draft in one question's actions (e.g. a dispute) never carries over. */}
+      <Fragment key={`actions-${index}`}>{actions}</Fragment>
       <nav
         aria-label="Previous and next question"
         className="grid grid-cols-2 gap-3"
