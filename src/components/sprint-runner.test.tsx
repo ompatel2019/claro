@@ -959,3 +959,27 @@ it("keeps long-sprint progress targets usable and preserves answered and flagged
     expect(buttons[54]).toHaveAttribute("aria-current", "step"),
   );
 });
+
+it("View booklet blocks F and option keys, then jumps to the clicked question", async () => {
+  const second = {
+    ...attempt,
+    id: "b",
+    question_id: "q2",
+    choice_index: null,
+    question: { ...attempt.question, id: "q2", stem: "What is deflation?" },
+  } satisfies Attempt;
+  show([attempt, second], { ...session.config, feedback: "end" });
+  fireEvent.click(screen.getByRole("button", { name: "View booklet" }));
+  const dialog = await screen.findByRole("dialog", { name: "Booklet" });
+  for (const key of ["f", "a", "1"]) fireEvent.keyDown(dialog, { key });
+  expect(mocks.update).not.toHaveBeenCalled();
+  fireEvent.click(
+    within(dialog).getByRole("button", { name: "Question 1: Answered" }),
+  );
+  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  await waitFor(() =>
+    expect(
+      screen.getByRole("button", { name: "Question 1: Answered" }),
+    ).toHaveAttribute("aria-current", "step"),
+  );
+});

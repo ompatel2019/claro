@@ -65,7 +65,10 @@ export function SprintFocusShell(
         e.metaKey ||
         e.ctrlKey ||
         e.altKey ||
-        isTyping(e.target)
+        isTyping(e.target) ||
+        // An open dialog (booklet, shortcuts) owns the keyboard; B/C/arrows stay inert behind it.
+        (e.target instanceof Element &&
+          e.target.closest('[data-slot="dialog-content"]'))
       )
         return;
       const k = e.key.toLowerCase();
