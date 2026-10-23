@@ -618,13 +618,19 @@ export function SprintRunner({
             disabled={busy}
             onClick={() => go(i)}
             className={cn(
-              "relative h-3 min-w-0 flex-1 rounded-full border",
-              answered(row) ? "bg-primary border-primary" : "bg-muted",
+              "focus-visible:outline-ring relative flex h-8 min-w-8 flex-1 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2",
               i === index && "outline-ring outline-2 outline-offset-2",
             )}
           >
+            <span
+              aria-hidden
+              className={cn(
+                "h-3 w-full rounded-full border",
+                answered(row) ? "bg-primary border-primary" : "bg-muted",
+              )}
+            />
             {row.flagged && (
-              <span className="bg-brand absolute -top-1.5 right-0 size-1.5 rounded-full" />
+              <span className="bg-brand absolute top-1 right-0 size-1.5 rounded-full" />
             )}
           </button>
         ))}

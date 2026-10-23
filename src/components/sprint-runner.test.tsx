@@ -54,16 +54,19 @@ vi.mock("./session-shell", () => ({
 vi.mock("./student/sprint/focus-shell", () => ({
   SprintFocusShell: ({
     booklet,
+    progress,
     children,
     onExit,
   }: {
     booklet: React.ReactNode;
+    progress: React.ReactNode;
     children: React.ReactNode;
     onExit: () => void;
   }) => (
     <>
       <button onClick={onExit}>Save and exit</button>
       {booklet}
+      <nav aria-label="Question progress">{progress}</nav>
       {children}
     </>
   ),
@@ -931,4 +934,26 @@ it("switches between typing and photo without losing the typed draft", () => {
   expect(screen.queryByLabelText("Your answer")).toBeNull();
   fireEvent.click(screen.getByRole("button", { name: "Type" }));
   expect(screen.getByLabelText("Your answer")).toHaveValue("Demand grows.");
+});
+
+it("keeps long-sprint progress targets usable and preserves answered and flagged states", async () => {
+  show(
+    Array.from({ length: 55 }, (_, i) => ({
+      ...attempt,
+      id: `a${i}`,
+      question_id: `q${i}`,
+      position: i + 1,
+      flagged: i === 54,
+    })),
+  );
+  const nav = screen.getByRole("navigation", { name: "Question progress" });
+  const buttons = within(nav).getAllByRole("button");
+  expect(buttons).toHaveLength(55);
+  expect(buttons[54]).toHaveAccessibleName("Question 55, flagged, answered");
+  expect(buttons[54]).toHaveClass("h-8", "min-w-8");
+  expect(buttons[54].querySelector(".bg-brand")).toBeTruthy();
+  fireEvent.click(buttons[54]);
+  await waitFor(() =>
+    expect(buttons[54]).toHaveAttribute("aria-current", "step"),
+  );
 });

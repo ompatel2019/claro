@@ -39,6 +39,12 @@ export function SprintFocusShell(
     children,
   } = props;
   const bookletId = useId();
+  const progressRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    progressRef.current
+      ?.querySelector('[aria-current="step"]')
+      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [position, total]);
   const [rail, setRail] = useState(false);
   const [sheet, setSheet] = useState(false);
   const [calc, setCalc] = useState(false);
@@ -180,7 +186,12 @@ export function SprintFocusShell(
         aria-label="Question progress"
         className="bg-background border-b px-4 py-3 sm:px-8"
       >
-        <div className="mx-auto flex max-w-5xl gap-1.5">{progress}</div>
+        <div
+          ref={progressRef}
+          className="mx-auto flex max-w-5xl gap-1.5 overflow-x-auto p-1"
+        >
+          {progress}
+        </div>
       </nav>
       <div className="flex flex-1">
         {rail && (

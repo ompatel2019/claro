@@ -36,22 +36,31 @@ function AnswerState({ item }: { item: ResultItem }) {
       : partly
         ? "Part marks"
         : "Missed"
-    : (item.pill ?? (item.mark ? "Pending" : "Not answered"));
+    : item.pill
+      ? null
+      : item.mark
+        ? "Pending"
+        : "Not answered";
   return (
-    <span className="flex items-center gap-1 text-[11px] font-medium">
-      <PortalIcon
-        name={
-          score
-            ? earned
-              ? "check"
-              : partly
-                ? "circle-alert"
-                : "x"
-            : "circle-alert"
-        }
-        className="size-3"
-      />
-      {word}
+    <span className="flex flex-col items-start gap-1">
+      {item.pill && <StatusPill pill={item.pill} />}
+      {word && item.pill !== "Not answered" && (
+        <span className="flex items-center gap-1 text-[11px] font-medium">
+          <PortalIcon
+            name={
+              score
+                ? earned
+                  ? "check"
+                  : partly
+                    ? "circle-alert"
+                    : "x"
+                : "circle-alert"
+            }
+            className="size-3"
+          />
+          {word}
+        </span>
+      )}
     </span>
   );
 }
@@ -383,6 +392,12 @@ export function ResultsBrowser({
                             : "grid size-12 content-center rounded-xl border border-transparent text-sm font-medium tabular-nums",
                           sprintLayout
                             ? it.tone
+                                .replace(/text-success\b/g, "text-success-text")
+                                .replace(/text-warning\b/g, "text-warning-text")
+                                .replace(
+                                  /text-destructive\b/g,
+                                  "text-destructive-text",
+                                )
                             : it.tone
                                 .replace(
                                   /border-(success|warning|destructive)/g,

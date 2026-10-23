@@ -60,6 +60,7 @@ export function RecommendedSprint({
       </div>
       <form action={action}>
         <Button
+          variant="outline"
           name="config"
           value={JSON.stringify(config)}
           type="submit"

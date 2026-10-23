@@ -182,3 +182,52 @@ it("shows an icon and word for every sprint answer, including spaced and decimal
     "Part marks",
   );
 });
+
+it("preserves unanswered and review states alongside scores in sprint tiles and tables", () => {
+  const pills = [
+    "Not answered",
+    "Provisional",
+    "Being double-checked",
+    "Checked by our team",
+  ] as const;
+  const tones = [
+    "bg-destructive-soft border-destructive text-destructive",
+    "bg-warning-soft border-warning text-warning",
+    "bg-warning-soft border-warning text-warning",
+    "bg-success-soft border-success text-success",
+  ];
+  render(
+    <ResultsBrowser
+      sprintLayout
+      items={pills.map((pill, i) => ({
+        ...items[0],
+        position: i + 1,
+        mark: i === 0 ? "0 / 4" : i === 3 ? "4 / 4" : "2 / 4",
+        pill,
+        tone: tones[i],
+      }))}
+      views={views}
+      initial={0}
+    />,
+  );
+  for (const [i, pill] of pills.entries()) {
+    const tile = screen.getByRole("button", {
+      name: new RegExp(`^Question ${i + 1},`),
+    });
+    expect(tile).toHaveTextContent(pill);
+    expect(tile).toHaveClass(
+      i === 0
+        ? "text-destructive-text"
+        : i === 3
+          ? "text-success-text"
+          : "text-warning-text",
+    );
+    if (i === 0) expect(tile).not.toHaveTextContent("Missed");
+    else expect(tile).toHaveTextContent(i === 3 ? "Earned" : "Part marks");
+  }
+  fireEvent.click(screen.getByRole("button", { name: "Table view" }));
+  const table = screen.getByRole("table", { name: "Questions" });
+  for (const pill of pills) expect(within(table).getByText(pill)).toBeVisible();
+  expect(table).not.toHaveTextContent("Missed");
+  expect(table).toHaveTextContent("0/4");
+});

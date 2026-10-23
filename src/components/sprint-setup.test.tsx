@@ -529,6 +529,7 @@ it("starts the recommendation with the measured dot point and check-as-you-go fe
   const button = screen.getByRole("button", {
     name: "Start recommended sprint",
   });
+  expect(button).toHaveAttribute("data-variant", "outline");
   const config = JSON.parse(button.getAttribute("value")!);
   expect(config).toMatchObject({
     mode: "mixed",
