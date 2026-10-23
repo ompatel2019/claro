@@ -107,6 +107,7 @@ for (const [width, height] of [
     await page.getByRole("button", { name: "Mixed", exact: true }).click();
     const marks = page.getByRole("spinbutton", { name: "Marks", exact: true });
     await marks.fill("5");
+    await marks.press("Enter");
     await expect(marks).toHaveValue("5");
     await expect(
       page.getByRole("button", { name: "Decrease total marks" }),
@@ -115,6 +116,7 @@ for (const [width, height] of [
       page.getByRole("spinbutton", { name: "Multiple choice questions" }),
     ).toHaveValue("3");
     await marks.fill("30");
+    await marks.press("Enter");
     await page
       .getByRole("button", { name: "Decrease multiple choice questions" })
       .click();
