@@ -83,20 +83,6 @@ export function ResultsAnswers({
             <span className="text-xs">
               {name(r.topic_id)} · {r.marks} {r.marks === 1 ? "mark" : "marks"}
             </span>
-            {r.type !== "mcq" && scored(r) && (
-              <Badge
-                variant={
-                  Number(r.mark) >= Number(r.max_marks ?? r.marks)
-                    ? "success"
-                    : Number(r.mark) > 0
-                      ? "warning"
-                      : "brand"
-                }
-                className="ml-auto"
-              >
-                {r.mark} of {r.max_marks ?? r.marks} marks
-              </Badge>
-            )}
             {r.type === "mcq" && scored(r) && (
               <span className="text-ink font-semibold tabular-nums">
                 {markLabel(r)}
@@ -191,10 +177,7 @@ export function OverallFeedback({
   nextStep?: React.ReactNode;
 }) {
   return (
-    <section
-      aria-label="Overall feedback"
-      className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]"
-    >
+    <section aria-label="Overall feedback" className="grid gap-5">
       <h2 className="sr-only">Overall feedback</h2>
       <Card>
         <CardHeader>
@@ -233,7 +216,7 @@ export function OverallFeedback({
         </CardHeader>
         <CardContent className="space-y-5">
           {summary ? (
-            <div className="grid gap-5">
+            <div className="grid gap-5 sm:grid-cols-2">
               {(
                 [
                   ["Strengths", summary.strengths, false],
@@ -248,7 +231,7 @@ export function OverallFeedback({
                   <h3
                     className={
                       lost
-                        ? "text-warning-text flex items-center gap-1.5 text-xs font-semibold"
+                        ? "text-destructive flex items-center gap-1.5 text-xs font-semibold"
                         : "text-success flex items-center gap-1.5 text-xs font-semibold"
                     }
                   >
@@ -262,11 +245,25 @@ export function OverallFeedback({
                     {(lines ?? []).map((text, i) => (
                       <li key={i} className="flex items-start gap-2">
                         {lost ? (
-                          <PenCaret className="mt-0.5 shrink-0" />
+                          <PenCaret className="text-destructive mt-0.5 shrink-0" />
                         ) : (
-                          <PenTick className="mt-0.5 shrink-0" />
+                          <PenTick className="text-success mt-0.5 shrink-0" />
                         )}
-                        <span>{text}</span>
+                        <span>
+                          {text.split(/(\bQ\d+\b)/g).map((part, index) =>
+                            /^Q\d+$/.test(part) ? (
+                              <a
+                                key={index}
+                                href={`#q-${part.slice(1)}`}
+                                className="font-medium underline underline-offset-4"
+                              >
+                                {part}
+                              </a>
+                            ) : (
+                              part
+                            ),
+                          )}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -278,7 +275,7 @@ export function OverallFeedback({
               <p role="status" className="text-muted-foreground text-[13px]">
                 {pending
                   ? "Your overall feedback will appear here once marking finishes."
-                  : "An overall summary isn’t available for this sprint. Each answer’s feedback is below."}
+                  : "An overall summary isn’t available for this sprint. Review each answer’s feedback above."}
               </p>
               {pending && (
                 <div

@@ -18,13 +18,19 @@ export function ResultStat({
 }) {
   const match = comparison?.match(/^([+−])(\d+)(.*?) vs your average$/);
   return (
-    <Card className="min-h-0 justify-center px-5 sm:min-h-36">
+    <Card
+      className={
+        score
+          ? "col-span-full min-h-0 justify-center px-5 sm:min-h-36"
+          : "min-h-0 justify-center px-3 sm:px-5"
+      }
+    >
       <div className="flex items-center gap-4">
         {score && (
           <ScoreRing
             score={score.mark}
             of={score.max}
-            size={80}
+            size={120}
             showPct={false}
           />
         )}

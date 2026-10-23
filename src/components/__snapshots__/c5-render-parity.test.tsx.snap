@@ -1,150 +1,150 @@
 // Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
 
-exports[`preserves feedback disabled / single=false / wide=false 1`] = `"22483:9cfb6ab0729d7a25ee9e853230ff0e12cb99a60bc89a5553da670db1ad828df8"`;
+exports[`preserves feedback disabled / single=false / wide=false 1`] = `"22291:d0085b413c3e75fbddb6ced4653dd944e840a3979dd5b891cf957a6fcc769bca"`;
 
-exports[`preserves feedback disabled / single=false / wide=true 1`] = `"22620:d6f49c23662c7e7d744736cc6b4c049d8c04e192825e840f434d38a67369bda1"`;
+exports[`preserves feedback disabled / single=false / wide=true 1`] = `"22428:cc38bcd1b3ac4da1dfedd5580a50ed17c9b946077f9db8b6f962e4c085b5e7d7"`;
 
-exports[`preserves feedback disabled / single=true / wide=false 1`] = `"22678:58d046229b462a9e1269a073103ab62cbf4c6330ce9137bfaddf390f96b79ae1"`;
+exports[`preserves feedback disabled / single=true / wide=false 1`] = `"22336:1ebc541e08de59cdde46ce5d4dccd9e57ad5c449f7dbdf2fbcb8a7c573d84c8c"`;
 
-exports[`preserves feedback disabled / single=true / wide=true 1`] = `"22815:e4dee66ce9ab1b06b5feb558049aa9c8369c9d385387c345ef0653ff4e3af38a"`;
+exports[`preserves feedback disabled / single=true / wide=true 1`] = `"22473:ff1668e7cbea4ddfc4c92b069fff7d0d3a3152029280532dab863db82e34026d"`;
 
 exports[`preserves feedback disclosures 1`] = `"200:adf57a9c48d4715b926a280513dc376139d7e989b91f0cc98dcd7630400cb433"`;
 
-exports[`preserves feedback edit / single=false / wide=false 1`] = `"22435:5ac381dbbccb3a1ad65f4aa465949848d8e62f414a60f7ea4819920024fbeae7"`;
+exports[`preserves feedback edit / single=false / wide=false 1`] = `"22243:d7919fe485f226ab76857d41b3f2dd32c33f4f85e5ae06d6432c25eefa45408e"`;
 
-exports[`preserves feedback edit / single=false / wide=true 1`] = `"22572:af65040b0e46ef810630fa33099fbdd1c518002b61f9daff97b45a2912d2b6e9"`;
+exports[`preserves feedback edit / single=false / wide=true 1`] = `"22380:56d540ae67bb46edb674cebc722a283f61b745bd8d2f366e1ea149a22421a569"`;
 
-exports[`preserves feedback edit / single=true / wide=false 1`] = `"22642:f01c737c244bef029ba590347057a362e87a9929e5990fba3b94f630702810bd"`;
+exports[`preserves feedback edit / single=true / wide=false 1`] = `"22288:977fb5c8ad76da98f1cb509da1d52a533f0c822b71cabe464dbc39e90b4d297b"`;
 
-exports[`preserves feedback edit / single=true / wide=true 1`] = `"22779:7cfe0fbf59674e1a09e0846e1fe88c245d30dad9dfebdeea2724d5910380f43e"`;
+exports[`preserves feedback edit / single=true / wide=true 1`] = `"22425:c558cb3c6407b313d8113ae8f6f5cbfcb0e7b19a63e7e89616a9e7b17f4e7f5f"`;
 
-exports[`preserves feedback empty / single=false / wide=false 1`] = `"4068:f5f239c0e04e85ff43222557b8395e3e3022960d66d5ac57f5c038327eff9599"`;
+exports[`preserves feedback empty / single=false / wide=false 1`] = `"4070:e2b90f57ffaf0322243677cdc9d751963711a5c0f161ed0890666bbde6f93e1e"`;
 
-exports[`preserves feedback empty / single=false / wide=true 1`] = `"4068:f5f239c0e04e85ff43222557b8395e3e3022960d66d5ac57f5c038327eff9599"`;
+exports[`preserves feedback empty / single=false / wide=true 1`] = `"4070:e2b90f57ffaf0322243677cdc9d751963711a5c0f161ed0890666bbde6f93e1e"`;
 
-exports[`preserves feedback empty / single=true / wide=false 1`] = `"4030:928250413aa5550178ab9ad80832b5928fdb2cbe002f6684c38116556aa3d023"`;
+exports[`preserves feedback empty / single=true / wide=false 1`] = `"3708:e19ad87de03f2aa5de944d9406c569329b18d897c86e749a1c008fd1fb7cd470"`;
 
-exports[`preserves feedback empty / single=true / wide=true 1`] = `"4030:928250413aa5550178ab9ad80832b5928fdb2cbe002f6684c38116556aa3d023"`;
+exports[`preserves feedback empty / single=true / wide=true 1`] = `"3708:e19ad87de03f2aa5de944d9406c569329b18d897c86e749a1c008fd1fb7cd470"`;
 
-exports[`preserves feedback failed / single=false / wide=false 1`] = `"2316:5e04a6507b7bf0e5c541427efa15c5ce5cfb91d620f880e602436873e887111d"`;
+exports[`preserves feedback failed / single=false / wide=false 1`] = `"3152:9fa07f04a1e775d99adf85d2d36a2a1642e314b9680e516f95f675493e2354b7"`;
 
-exports[`preserves feedback failed / single=false / wide=true 1`] = `"2348:438596ad1d2a287137c61ed78ab1fedd033a0114e6efee3558aa532eed12a2d4"`;
+exports[`preserves feedback failed / single=false / wide=true 1`] = `"3184:cd6d6fdc1333348ee09d7a29ab4f2a893afe378f17dfa8d872089f83c2a016a1"`;
 
-exports[`preserves feedback failed / single=true / wide=false 1`] = `"2171:ac60dc22dc272b093842fb3d9a8e2777936ffd3aceea4fa47b1d9c5a4c020067"`;
+exports[`preserves feedback failed / single=true / wide=false 1`] = `"2845:5cd06e3495404bb4bc72e8e77d8e7f9b19a54ae52d4fe7d6f214ef5feacdae26"`;
 
-exports[`preserves feedback failed / single=true / wide=true 1`] = `"2203:bc40ecfb88e02297f4ce1accaa2aa5d09c67988b7537f8830fcc8008bd18d06e"`;
+exports[`preserves feedback failed / single=true / wide=true 1`] = `"2877:3abe64802084de61e4d8b9499a7ebdd8aaea719aff05f9c41302b4f1c8e53289"`;
 
-exports[`preserves feedback fixes / single=false / wide=false 1`] = `"14404:0cb09bcd9976a3154e4ef658a6f21aac0e95b29095c5e6d9bed6a6b903d3ce89"`;
+exports[`preserves feedback fixes / single=false / wide=false 1`] = `"14139:c730109798f893e466e47b55e819a480006eca8b7ae3088e4f75159f945bfd23"`;
 
-exports[`preserves feedback fixes / single=false / wide=true 1`] = `"14436:42debf1add9e46528ec552edba3bf4edf2c6fca66279f5b2eb176ec55008413b"`;
+exports[`preserves feedback fixes / single=false / wide=true 1`] = `"14171:42067fe36d92565b117a52c044eb3ce54802e56b058f2f80a52e7a72b9ca476f"`;
 
-exports[`preserves feedback fixes / single=true / wide=false 1`] = `"14821:f9669454ea70a15f5f5c7ef8cf3451d2baa814022b67c851a4abfc53f9ac89b2"`;
+exports[`preserves feedback fixes / single=true / wide=false 1`] = `"13773:6d69e4f42b567a410c6bdbaf7cf43fcf9b442f13ca8e2817d4d1f1e2aa284a8f"`;
 
-exports[`preserves feedback fixes / single=true / wide=true 1`] = `"14853:f09eb63e84a8cd66a2d5dda33259520a006907db8f5d4b9422084df93f14a0ec"`;
+exports[`preserves feedback fixes / single=true / wide=true 1`] = `"13805:6adc1e0a371f5fd921ec836e45bb37083b4342c82e589b37dfc63c03d184d5d6"`;
 
-exports[`preserves feedback full / single=false / wide=false 1`] = `"14008:349624c2a6c1dd24b22a5ddf4268f6ca0c2e503f98f66ea8f479a88c59160947"`;
+exports[`preserves feedback full / single=false / wide=false 1`] = `"13911:6888a8b27132a2f61aea8287d6ea6350b209b63276dc8739612c6190a2548e80"`;
 
-exports[`preserves feedback full / single=false / wide=true 1`] = `"14145:8790c53da227f36608c797662093f3f54da5aa5bebf5a6b99e66dd588d65db3e"`;
+exports[`preserves feedback full / single=false / wide=true 1`] = `"14048:fd73f45ec20fbc0995e53419827a90c3429721422149e309e950df0de094a3df"`;
 
-exports[`preserves feedback full / single=true / wide=false 1`] = `"15793:27c505b1933fd8ead1834a1a7b7baef722576ae5bb220245715e62e6d3b581d3"`;
+exports[`preserves feedback full / single=true / wide=false 1`] = `"13533:9579b8b4e3096548ef31b7f43f44e15509065c3ed4caa138f24095a111785659"`;
 
-exports[`preserves feedback full / single=true / wide=true 1`] = `"15930:722542bbf1f3ecdd99b1b6cea3dba7d1c293c05462c43029badde08736597c25"`;
+exports[`preserves feedback full / single=true / wide=true 1`] = `"13670:a02a24220a08c2af29a361e84bc78e1a83dcab557a72a2b7bc44545404326e9a"`;
 
-exports[`preserves feedback in_review / single=false / wide=false 1`] = `"16000:12fa3690ee78673ad91f6c750331e7189be35f239b2bf39786a133b748ab9845"`;
+exports[`preserves feedback in_review / single=false / wide=false 1`] = `"15808:c33ac677b05f1cf3dd076e1d89132655d00ff592a235db0a385f5789bff0870f"`;
 
-exports[`preserves feedback in_review / single=false / wide=true 1`] = `"16137:513cda13dedbb7eac3375e3f86d52a343f2773f44990aa6e392b96ee094a17c3"`;
+exports[`preserves feedback in_review / single=false / wide=true 1`] = `"15945:c4a38515bf17f2b01f1e8d25f9325dd28737734c0030fda2af3ea1f93efdca57"`;
 
-exports[`preserves feedback in_review / single=true / wide=false 1`] = `"16459:d93c8c4a72fee2dda82b86ed57544c45bd7cf55fc5b4fb4df2eb0eaf0b51cd07"`;
+exports[`preserves feedback in_review / single=true / wide=false 1`] = `"15484:bd523323d41c43e0825d2bc9a570dd3833785086cac129c8ed1a4359fb328d4a"`;
 
-exports[`preserves feedback in_review / single=true / wide=true 1`] = `"16596:d5c223c967acdd56f9c8be3cfc67b3702b12b0d201bbe538aaeaf74a92fb2298"`;
+exports[`preserves feedback in_review / single=true / wide=true 1`] = `"15621:2221807d87cefa0ad18835139631396081956268426558a0ae6b2a273548d81c"`;
 
-exports[`preserves feedback incomplete / single=false / wide=false 1`] = `"14117:dde963b28a6f51c0fa5da068c7ddf95931c58996177c04301710bf5bfe5f7ed5"`;
+exports[`preserves feedback incomplete / single=false / wide=false 1`] = `"13977:094c9dfc00c5b29cde9c42bc414e5bc8e742620e4d109927d5f07369e509d82d"`;
 
-exports[`preserves feedback incomplete / single=false / wide=true 1`] = `"14254:7d7c77ca5c05fd28b08a1e3e0a9df8a433ef5b2aa075cf100ff0634bc8995dc7"`;
+exports[`preserves feedback incomplete / single=false / wide=true 1`] = `"14114:d52e3ff5cca3a08f62b72a50540a7503a1f6d8bc01f9dd583814515f5bfe201f"`;
 
-exports[`preserves feedback incomplete / single=true / wide=false 1`] = `"15433:eb6fb725e2d6ed0baa9dbf4348446293767d3816169305117ad6a32ea6e8304a"`;
+exports[`preserves feedback incomplete / single=true / wide=false 1`] = `"14349:a501f3b0749851524cd9b7eb62c85113faf07d0f46ab264241ce8283c4deb4d7"`;
 
-exports[`preserves feedback incomplete / single=true / wide=true 1`] = `"15570:6d8c4f38147aebabf54c7a9ddab7b1c04d263d07b7298dc1ef6e461e7ffe0f16"`;
+exports[`preserves feedback incomplete / single=true / wide=true 1`] = `"14486:72295445ca9e5306b1aa6600c9f066c0f3a1128c7e87dab897aaa5d40fed8587"`;
 
-exports[`preserves feedback low / single=false / wide=false 1`] = `"1859:2da6dad7d87dd95c6069ce812ddfdf9007fb92f1ae4dedf76b694921b65a53c5"`;
+exports[`preserves feedback low / single=false / wide=false 1`] = `"2589:f1aa9f953c635a5f4c477198664635dbbae3c1448e901c45ea648e4a09d791e1"`;
 
-exports[`preserves feedback low / single=false / wide=true 1`] = `"1891:f96f12f0cd29a633adeb353b0165f8d0b84b27914afacac65bb29c08b3cc4c73"`;
+exports[`preserves feedback low / single=false / wide=true 1`] = `"2621:f236858fd81bf8f681e9401e074f04f39d7364d693a356441e2cca10c383f794"`;
 
-exports[`preserves feedback low / single=true / wide=false 1`] = `"1608:086bc055dd78917caa5b05bad951159d35b523ec7615d38f59f407fc372c1d9b"`;
+exports[`preserves feedback low / single=true / wide=false 1`] = `"2282:de5234f302c427b7cbe2a6e5f1dad914949ecdff68bed0e291cf66a741b0f79d"`;
 
-exports[`preserves feedback low / single=true / wide=true 1`] = `"1640:06e27c2de1e95c4df0c731b9edfd562500b46422a31173ce811717a1b0975faa"`;
+exports[`preserves feedback low / single=true / wide=true 1`] = `"2314:f4bce880b72306bd5282e6a2657e448e8eb846774b176530c4e2a1b8cf0822c5"`;
 
-exports[`preserves feedback marked / single=false / wide=false 1`] = `"15968:f228e1d937cecba704f4a5da1fcb373cb001654f7827a5555d53822e1af39a8b"`;
+exports[`preserves feedback marked / single=false / wide=false 1`] = `"15776:880e633dfc7c51f49110c7910b1dc46f174b5265f4b40644865dae02ce72b34c"`;
 
-exports[`preserves feedback marked / single=false / wide=true 1`] = `"16105:6f292b19cf5c9e9ecbee115bf49cb10a540fcb554702ee3e3ada000fef07f028"`;
+exports[`preserves feedback marked / single=false / wide=true 1`] = `"15913:f31bf5321aff6d8d03fb984d679da606ce64084a1a5c925fa4ce771b22b3edb6"`;
 
-exports[`preserves feedback marked / single=true / wide=false 1`] = `"16385:dd433ff9ced5a165c10db08effc5956e7b0da43ca15314208482b6d9e909a683"`;
+exports[`preserves feedback marked / single=true / wide=false 1`] = `"15410:a625ae06855f607aae948aaff90ab6072d84bc7a8e1209dcdc0e4b4b664ec9f9"`;
 
-exports[`preserves feedback marked / single=true / wide=true 1`] = `"16522:65bfba176a848c049479d37e616eec1d2d1af9ade016b4065e0c260071745a23"`;
+exports[`preserves feedback marked / single=true / wide=true 1`] = `"15547:98cd2e1b7599932928f9203bf803b74ea5b466d1121abb24a64f55a9d8dc7f85"`;
 
-exports[`preserves feedback marking / single=false / wide=false 1`] = `"2060:bf0d74baabbcb9319e7ea9953860876b063f0a298baedb6b80e040576c5bea9b"`;
+exports[`preserves feedback marking / single=false / wide=false 1`] = `"2896:c2b4d761f9621c117497dc94b9080f80c5f8e77da033f4dad27a08eff70b6564"`;
 
-exports[`preserves feedback marking / single=false / wide=true 1`] = `"2092:13856a68823b4693a7938781b587937db3d5c5d99e2a5f318668ab7aa2a46b1a"`;
+exports[`preserves feedback marking / single=false / wide=true 1`] = `"2928:7e3b605ff6d12a44b59fb69ac486417f4280b3c2d7ee2a2b7b7ea5b8cf8547a3"`;
 
-exports[`preserves feedback marking / single=true / wide=false 1`] = `"1915:c7d8ab49f3106ebeb95c0ed15c30be41379c10539b6a773b1bff1c6b18babb90"`;
+exports[`preserves feedback marking / single=true / wide=false 1`] = `"2589:9c5841a6d261f3013d03ef1021a9ec3683c25a56a0bc66d84b4f04c1e630bed4"`;
 
-exports[`preserves feedback marking / single=true / wide=true 1`] = `"1947:c3e8d7d1feb01ea70761549f3d8e64642a35edaf0e593955cb1e00fc4ea1a3af"`;
+exports[`preserves feedback marking / single=true / wide=true 1`] = `"2621:ccbcef92ac948237828097287bb7ab092e8787970a84e99d3b1c4d2883d8ba9b"`;
 
-exports[`preserves feedback not_answered / single=false / wide=false 1`] = `"1995:c4c79c88c06c70f0e5f82a6373ef3fff04c473b08545e55e149e9982a431805e"`;
+exports[`preserves feedback not_answered / single=false / wide=false 1`] = `"2725:e2be7a678fa6f6b0763b8e71fd59f0b5eba28b8f230c756ac1cd181b500ff47f"`;
 
-exports[`preserves feedback not_answered / single=false / wide=true 1`] = `"2027:dd9b56d040ed96036481e4c65e11df3a8f4fca4135b1132ac56bed5cf2e4a8ec"`;
+exports[`preserves feedback not_answered / single=false / wide=true 1`] = `"2757:30779e2bc3a4685da2fad2dcef0730688c348a0bcf513416ccdd43abe22c2d08"`;
 
-exports[`preserves feedback not_answered / single=true / wide=false 1`] = `"1744:b7ee32970b3273757ce3ded60e1314717a1d88df56ff1c888f40df6c579cd10a"`;
+exports[`preserves feedback not_answered / single=true / wide=false 1`] = `"2418:a89b3419a998f1056d34aca4ccefa5208d1a25c52bd474a434a77e7bd741e29c"`;
 
-exports[`preserves feedback not_answered / single=true / wide=true 1`] = `"1776:51c0fe898e3fdbf4015d2a1e0601a163ba303ce621f0b562cda47faa5b0b46a2"`;
+exports[`preserves feedback not_answered / single=true / wide=true 1`] = `"2450:c5232b920a299f955479b91d81af59c896effdcb78bd4c74ef8e172fb470be5a"`;
 
-exports[`preserves feedback photo / single=false / wide=false 1`] = `"5191:d1dc15fd820755d662e754dc577f714844664cb730779058ca392e316d95640d"`;
+exports[`preserves feedback photo / single=false / wide=false 1`] = `"5262:eff774f97d6d5acd3d67d1b9598bce278641e787aa440b016df6c0f3fae8f393"`;
 
-exports[`preserves feedback photo / single=false / wide=true 1`] = `"5191:d1dc15fd820755d662e754dc577f714844664cb730779058ca392e316d95640d"`;
+exports[`preserves feedback photo / single=false / wide=true 1`] = `"5262:eff774f97d6d5acd3d67d1b9598bce278641e787aa440b016df6c0f3fae8f393"`;
 
-exports[`preserves feedback photo / single=true / wide=false 1`] = `"5222:6dcba38ff780bad3a2da47effc55a9dd361d64e6da8b28d7511f530cb98cce57"`;
+exports[`preserves feedback photo / single=true / wide=false 1`] = `"4900:b0f045b455e703724240b679cfcc5c6e5c03cc062d17fa9be6b92dab6e6f1c02"`;
 
-exports[`preserves feedback photo / single=true / wide=true 1`] = `"5222:6dcba38ff780bad3a2da47effc55a9dd361d64e6da8b28d7511f530cb98cce57"`;
+exports[`preserves feedback photo / single=true / wide=true 1`] = `"4900:b0f045b455e703724240b679cfcc5c6e5c03cc062d17fa9be6b92dab6e6f1c02"`;
 
-exports[`preserves feedback reviewed / single=false / wide=false 1`] = `"15946:96519ad4cac40cbeed34e62fe14d5a0a2410a75e6fb062a66336eeaf9ffee4d2"`;
+exports[`preserves feedback reviewed / single=false / wide=false 1`] = `"15754:25aefa65bb4b83784abe765679ba76e69ee3f117b463fc5845795bfdd099ee45"`;
 
-exports[`preserves feedback reviewed / single=false / wide=true 1`] = `"16083:a71ab0fc8b0d5785af51443a63891f9cf312062388819ba7e3a111da72b1ec98"`;
+exports[`preserves feedback reviewed / single=false / wide=true 1`] = `"15891:f7ddcf20697d58502fa7c2e213d7adf1b77bd5d994709918659cbea52116061d"`;
 
-exports[`preserves feedback reviewed / single=true / wide=false 1`] = `"16363:b28dfdc109ddd17e1edc51ef1acb4d6eb6b0897dd6063fb5240952f1a74dcd4e"`;
+exports[`preserves feedback reviewed / single=true / wide=false 1`] = `"15388:0c8ad0d2ae342a48ecc8098d4498b4b7d5b391348ea5e18de42bde868202b078"`;
 
-exports[`preserves feedback reviewed / single=true / wide=true 1`] = `"16500:0a24abcda60d1262f98dd0a8732c4396f6fb6b5dcc6367589b318f23c3eaabeb"`;
+exports[`preserves feedback reviewed / single=true / wide=true 1`] = `"15525:d9b46a69cd52f8a98f5827a1a3fa25c833d6a976e71c66a0e78117b448cedb1e"`;
 
-exports[`preserves feedback skipped / single=false / wide=false 1`] = `"1367:be69f281d9a3b2ff55f7c2bcdc8ca9ffa76860c5545bc97fa33f6de161ab8522"`;
+exports[`preserves feedback skipped / single=false / wide=false 1`] = `"2203:6a23adc52dbb789f07abab9c8d3e87f2963006632af5d0ba69fc573eca30bc89"`;
 
-exports[`preserves feedback skipped / single=false / wide=true 1`] = `"1399:01fe7b17bed0bd60b05097fbb2275eed3e357d253b081590b5ac7473944e458e"`;
+exports[`preserves feedback skipped / single=false / wide=true 1`] = `"2235:37c18be30513a6b44acf7540d74775efa54c7acad25a3d60487c0d7f60ce8106"`;
 
-exports[`preserves feedback skipped / single=true / wide=false 1`] = `"1222:99f8c06ac2b0f570b06dfda9e0d47b53703148990b3d9fe26f69de3cfc5d65f2"`;
+exports[`preserves feedback skipped / single=true / wide=false 1`] = `"1896:ad9d580c9aa548a87657288dd79386d234fd423c399a8419fb5b55cd70eaaff6"`;
 
-exports[`preserves feedback skipped / single=true / wide=true 1`] = `"1254:57c6024d60aec0c3a08112888148b4abdd09654b317cc33f6334dd03f526891b"`;
+exports[`preserves feedback skipped / single=true / wide=true 1`] = `"1928:c66865f132b8de61fe9bab06280f3b1c1c925ea9782d094881479fd3e11f184c"`;
 
-exports[`preserves feedback strengths / single=false / wide=false 1`] = `"13109:0be2574d8acca614909771d0306a64414095ca79cf02ae0100ee942616895109"`;
+exports[`preserves feedback strengths / single=false / wide=false 1`] = `"12800:68906ac9fe5a39fec1732054e8dac79859f91d781f9d2270d548fe8c423bd38f"`;
 
-exports[`preserves feedback strengths / single=false / wide=true 1`] = `"13141:621c2837cc93ec0b480ef3a1fe565afa95238119e6d69dccb04cfd6c462dfea8"`;
+exports[`preserves feedback strengths / single=false / wide=true 1`] = `"12832:3b0b2bc67189393174d373108296d1bc905b360f150ab075802aa36546c7447c"`;
 
-exports[`preserves feedback strengths / single=true / wide=false 1`] = `"13526:9fff0d570444d24e5d8652c3230ef49823e6ab0ee25ae00cbff13ba7b3831e68"`;
+exports[`preserves feedback strengths / single=true / wide=false 1`] = `"12434:96e9a9fff69d64978e5d4e0f848b1d4f0969ed9c4cb2d862ab94a30bf2e30c10"`;
 
-exports[`preserves feedback strengths / single=true / wide=true 1`] = `"13558:7c9d5243851526765a2cb428faab2fdf5ed021c6dfe600775bb7e0ba35a848cf"`;
+exports[`preserves feedback strengths / single=true / wide=true 1`] = `"12466:64bac2f3c7143a3e9898bdd95fb887b7d63c41fcaa4df6f03ecfde595c182c9e"`;
 
-exports[`preserves feedback transcript / single=false / wide=false 1`] = `"20269:ad8e081a49e0fa4dc1b200399a832fa23487f958949b99aa2440ffb00dd3390b"`;
+exports[`preserves feedback transcript / single=false / wide=false 1`] = `"20077:1b8e4c89ce4dc2cc2353553b42ba324c55bc41b1d0af91e2c4f020f5c4b245de"`;
 
-exports[`preserves feedback transcript / single=false / wide=true 1`] = `"20406:4eb0f133c8e03232d2058e42a29bdf95015e12fc7c700aec667081b1d1a09df7"`;
+exports[`preserves feedback transcript / single=false / wide=true 1`] = `"20214:4773a824e1743ef4f46aeab5dfd8d6b8909baf7012dc0f99a7c48e4b92c00025"`;
 
-exports[`preserves feedback transcript / single=true / wide=false 1`] = `"20686:e84ba667c089160454ce4e768b865c588e49045f2bff383b5b109f737adefbd3"`;
+exports[`preserves feedback transcript / single=true / wide=false 1`] = `"19711:909b55f4d25a450edfb5522d50a892e6bb664de0c88c3fd7fb9d06e84519525b"`;
 
-exports[`preserves feedback transcript / single=true / wide=true 1`] = `"20823:298ad60357250fce610c5014fc3e7ad18cfb16c406fbf84f642f34b52c17bc4d"`;
+exports[`preserves feedback transcript / single=true / wide=true 1`] = `"19848:5a7523368b2ab2da9f6c4813b22d8d141aed0142daf0d693860877770d8ec058"`;
 
-exports[`preserves feedback unreadable / single=false / wide=false 1`] = `"1962:51db6343e0e788a0c38774dfb49c1e779881c57445c220e280e1149de6bc9797"`;
+exports[`preserves feedback unreadable / single=false / wide=false 1`] = `"2798:c99d3ff47431c4e13891f7cbe406efd05db0b08afb8481c428bc42d15aea66d9"`;
 
-exports[`preserves feedback unreadable / single=false / wide=true 1`] = `"1994:1b48121413eda76f3bd64953be4e2fea1498aab9195a8ddaf78d8978fbcb46f8"`;
+exports[`preserves feedback unreadable / single=false / wide=true 1`] = `"2830:64123d4ee838831d4a17a22dfbaa8b43a5d8517deddbfb1b3f5c919880ee61ed"`;
 
-exports[`preserves feedback unreadable / single=true / wide=false 1`] = `"1817:a222bd2d7272dec225158efe8265a3670a36156656e507decda6ff0462c63b81"`;
+exports[`preserves feedback unreadable / single=true / wide=false 1`] = `"2491:f060d0635b90db0d0ed5cc7166100bf3243a94203bd47658d5df50d8b5cc70a8"`;
 
-exports[`preserves feedback unreadable / single=true / wide=true 1`] = `"1849:447b7f5fd4ec47161c6c90770df3da92c0068373c338665a14c0a1283876ea23"`;
+exports[`preserves feedback unreadable / single=true / wide=true 1`] = `"2523:55141e6f089fac522dbec34ca611a972cf5c532d41e7fc6aa1a3835eee7331f3"`;
 
 exports[`preserves quick starts both / error 1`] = `"6087:66872ddcdfda6ae1066b681a3b9ed499bc14e7584fb72107eae2d3baabb79a48"`;
 

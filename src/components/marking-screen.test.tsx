@@ -16,11 +16,9 @@ it("announces a branded full-page pending screen without invented progress", () 
   expect(screen.getByRole("heading")).toHaveTextContent("Marking your answers");
   expect(status.className).toContain("fixed inset-0");
   expect(screen.queryByRole("progressbar")).toBeNull();
-  const graphic = status.querySelector("svg.motion-safe\\:animate-pulse");
+  const graphic = status.querySelector("svg[viewBox='0 0 200 144']");
   expect(graphic).toHaveAttribute("aria-hidden", "true");
-  expect(graphic?.getAttribute("class")).toContain(
-    "motion-reduce:animate-none",
-  );
+  expect(graphic?.querySelectorAll("path[pathLength='1']")).toHaveLength(3);
 });
 it("uses singular copy for Mark my answer", () => {
   render(<MarkingScreen single />);
