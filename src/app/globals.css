@@ -1244,3 +1244,29 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   line-height: 18px;
   font-weight: 400;
 }
+
+/* Student Flashcards: due-today stage tags and topic decks. */
+.fc-fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.fc-deck {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 18px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+}

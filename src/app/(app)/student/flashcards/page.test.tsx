@@ -94,7 +94,7 @@ it("renders honest empty counts and the personal-card creation entry point", asy
   ).toBeInTheDocument();
 });
 
-it("derives the due-topic meter, library states and deduplicated unfinished reviews from loaded data", async () => {
+it("derives the due stage, topic decks, library states and deduplicated unfinished reviews from loaded data", async () => {
   fixtures.cards = [
     { id: "a", topic_id: "t1-trade", kind: "term", owner_id: null },
     { id: "b", topic_id: "t1-trade", kind: "stat", owner_id: "student" },
@@ -137,18 +137,27 @@ it("derives the due-topic meter, library states and deduplicated unfinished revi
     screen.getByRole("img", { name: "New 1, Learning 1, Mastered 1" }),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("meter", { name: "Global Economy: 1 due" }),
-  ).toHaveAttribute("aria-valuenow", "100");
+    screen.getByRole("heading", { name: "1 card to review" }),
+  ).toBeInTheDocument();
+  expect(
+    within(screen.getByRole("list", { name: "Due by topic" })).getByText(
+      /Global Economy/,
+    ),
+  ).toHaveTextContent("Global Economy · 1");
+  expect(
+    screen.getByRole("meter", { name: "Global Economy: 1 of 3 known" }),
+  ).toHaveAttribute("aria-valuenow", "33.33333333333333");
+  expect(screen.getByText("3 cards · 1 due today")).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Study deck" }),
+  ).toBeInTheDocument();
   expect(
     screen.getByText("About 1 minute · 1 due tomorrow"),
   ).toBeInTheDocument();
   expect(screen.getByText(/About 1 minute/)).toBeInTheDocument();
-  const resume = screen.getByText("Unfinished session").parentElement!;
-  expect(within(resume).getByText(/1 of 2 reviewed/)).toBeInTheDocument();
-  expect(screen.getByRole("link", { name: "Continue" })).toHaveAttribute(
-    "href",
-    "/student/flashcards/unfinished",
-  );
+  expect(
+    screen.getByRole("link", { name: "Continue session · 1 of 2 reviewed" }),
+  ).toHaveAttribute("href", "/student/flashcards/unfinished");
   expect(screen.getByRole("link", { name: "Manage my cards" })).toHaveAttribute(
     "href",
     "/student/flashcards/mine",
