@@ -119,6 +119,22 @@ it("shows stacked spend, calls, written average and over-limit student links, cl
   );
   expect(over).toHaveTextContent("151 calls");
 });
+it("still charts direct-provider-only spend when the OpenRouter tables are empty", async () => {
+  const data = spend();
+  data.perDay = [
+    { day: "2026-10-09", usd: 2.5, models: { "gpt-direct": 2.5 } },
+  ];
+  vi.mocked(loadSpend).mockResolvedValue(data);
+  render(await SpendPage({ searchParams: Promise.resolve({}) }));
+  expect(
+    screen.getByText(/\(Sydney, through now\) · 0 OpenRouter calls$/),
+  ).toBeInTheDocument();
+  expect(screen.getByRole("img")).toHaveAccessibleName(
+    "Spend per day, Sydney dates, stacked by model",
+  );
+  expect(screen.queryByText("No spend in this range")).toBeNull();
+  expect(screen.getByText("No model spend yet")).toBeInTheDocument();
+});
 it("reflects historical inclusive custom dates and defaults invalid ranges", async () => {
   const range = { from: "2026-09-01", to: "2026-09-30" };
   vi.mocked(loadSpend).mockResolvedValue(spend(range));
