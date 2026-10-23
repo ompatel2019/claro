@@ -54,8 +54,6 @@ const pool: Pool = {
   all_subtopics: 60,
   verbs: { Explain: 10 },
   difficulty: { standard: 20 },
-  all_years: 70,
-  years: [2020, 2025],
   trial: true,
 };
 const comments = [
@@ -180,7 +178,6 @@ for (const mode of ["mcq", "short", "mixed"] as const) {
         scenario === "custom" ? DEFAULTS : null,
         counts,
         scenario === "error",
-        scenario === "custom",
         scenario === "custom",
       ];
       state.pending = scenario === "pending";

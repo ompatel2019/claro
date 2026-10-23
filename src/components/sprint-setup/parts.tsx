@@ -1,3 +1,7 @@
+import { useId } from "react";
+import { Minus, Plus } from "../icons";
+import { Button } from "../ui/button";
+import { Input } from "../ui/input";
 import { cn } from "@/lib/utils";
 import { Chip as FoundationChip } from "../claro/controls";
 import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
@@ -82,5 +86,70 @@ export function Chip({
     >
       {children}
     </FoundationChip>
+  );
+}
+
+/** A single bounded value shared by buttons and direct keyboard input. */
+export function Stepper({
+  label,
+  inputLabel = label,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  inputLabel?: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (value: number) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <label htmlFor={id} className="min-w-0 text-sm font-medium">
+        {label}
+        <span className="text-muted-foreground block text-xs font-normal">
+          {min}–{max}
+        </span>
+      </label>
+      <div className="flex shrink-0 items-center gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label={`Decrease ${label.toLowerCase()}`}
+          disabled={value <= min}
+          onClick={() => onChange(value - 1)}
+        >
+          <Minus />
+        </Button>
+        <Input
+          id={id}
+          aria-label={inputLabel}
+          type="number"
+          min={min}
+          max={max}
+          step={1}
+          className="w-16 text-center tabular-nums"
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value))}
+        />
+        <span className="sr-only" aria-live="polite">
+          {label}: {value}
+        </span>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          aria-label={`Increase ${label.toLowerCase()}`}
+          disabled={value >= max}
+          onClick={() => onChange(value + 1)}
+        >
+          <Plus />
+        </Button>
+      </div>
+    </div>
   );
 }

@@ -17,23 +17,24 @@ for (const width of [400, 1280]) {
     test.afterAll(async () => {
       await cleanupSessions(ids);
     });
-    test("S3: custom sizing, validation, advanced and reset preserve a prefill", async ({
+    test("S3: bounded sizing, advanced and reset preserve a prefill", async ({
       page,
     }) => {
       await page.goto("/student/sprint?type=short&size=45");
       await reviewSprintSetup(page);
-      const marks = page.getByRole("textbox", { name: "Marks", exact: true });
+      const marks = page.getByRole("spinbutton", {
+        name: "Marks",
+        exact: true,
+      });
       const start = page.getByRole("button", { name: /^Start (sprint|with)/ });
       await expect(marks).toHaveValue("45");
       await marks.fill("999");
       await marks.blur();
-      await expect(marks).toHaveValue("999");
-      await expect(marks).toHaveAttribute("aria-invalid", "true");
-      await expect(start).toBeDisabled();
-      await page.keyboard.press("Control+Enter");
-      await expect(page).toHaveURL(/\/student\/sprint\?/);
-      await marks.fill("60");
-      await expect(marks).toHaveAttribute("aria-invalid", "false");
+      await expect(marks).toHaveValue("60");
+      await expect(
+        page.getByRole("button", { name: "Increase total marks" }),
+      ).toBeDisabled();
+      await expect(start).toBeEnabled();
       await expect(
         page.getByRole("radiogroup", { name: "Question history" }),
       ).toBeHidden();
@@ -50,7 +51,7 @@ for (const width of [400, 1280]) {
         page.getByRole("button", { name: "Multiple choice", exact: true }),
       ).toHaveAttribute("aria-pressed", "true");
       await expect(
-        page.getByRole("textbox", { name: "Questions", exact: true }),
+        page.getByRole("spinbutton", { name: "Questions", exact: true }),
       ).toHaveValue("20");
       expect(
         await page.evaluate(
@@ -58,7 +59,7 @@ for (const width of [400, 1280]) {
         ),
       ).toBe(true);
     });
-    test("S3: count errors and empty pools remain visible with custom controls", async ({
+    test("S3: count errors and empty pools remain visible with sizing controls", async ({
       page,
     }) => {
       await page.route("**/rest/v1/rpc/sprint_pool", (route) =>

@@ -132,11 +132,11 @@ const TYPES: Record<string, string> = {
   "Short answer": "short",
   Mixed: "mixed",
 };
-/** Reveal custom sizing and filters on the single-page setup. */
+/** Wait for the single-page setup controls to mount. */
 export async function reviewSprintSetup(page: Page) {
-  const custom = page.getByRole("button", { name: "Custom", exact: true });
-  if ((await custom.getAttribute("aria-pressed")) !== "true")
-    await custom.click();
+  await expect(
+    page.getByRole("region", { name: "Question type", exact: true }),
+  ).toBeVisible();
 }
 /** Starts a sprint of one type on Inflation through the §3.2 setup page. */
 export async function start(
