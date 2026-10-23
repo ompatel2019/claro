@@ -150,9 +150,7 @@ describe("tightenText", () => {
         "Already at full marks; a clearer sentence would strengthen the link without changing the mark.",
         { maxSentences: 1 },
       ),
-    ).toBe(
-      "Already at full marks; a clearer sentence would strengthen the link without changing the mark.",
-    );
+    ).toBe("A clearer sentence would strengthen the link.");
     expect(
       tightenText(
         "Already at full marks; correct 'economics' to 'economies'.",
@@ -198,6 +196,11 @@ describe("tightenText", () => {
         "This will not change your mark, but name the lag. Then add a result.",
       ),
     ).toBe("Name the lag. Then add a result.");
+    expect(
+      body(
+        "Your mechanism is correct. Remove the repeated definition without changing your mark.",
+      ),
+    ).toBe("Your mechanism is correct. Remove the repeated definition.");
     // Advice whose own subject is not the comment is kept whole (codex review).
     for (const text of [
       "Your definition is accurate. Do not add a statistic because it will not earn another mark.",

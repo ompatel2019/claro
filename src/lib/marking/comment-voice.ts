@@ -52,7 +52,6 @@ function capitalise(s: string) {
 const META_SENTENCE = [
   /\bthis (summary|feedback|report|comment|review)\b.*\b(covers?|is based|only|focus(es)?|looks at|includes?)\b/i,
   /\b(multiple[- ]choice|MCQs?|MC)\b(?=[^.]*\b(answers?|questions?|responses?|items?)\b)[^.]*\b(not|weren't|were not|aren't|are not)\b[^.]*\b(supplied|provided|included|available|assessed|shown|given)\b/i,
-  /\bwithout (changing|affecting) (the|your) mark\b/i,
   /^already at full marks[.!]?$/i,
   // Only when the subject is the comment itself ("This/It/That (change)"), so
   // advice such as "Do not add a statistic because it will not earn a mark" stays.
@@ -176,6 +175,11 @@ function stripOpeners(sentence: string): string {
     if (s === before) break;
   }
   for (const [re, to] of HEDGES) s = s.replace(re, to);
+  // "… without changing your mark" is a meta qualifier: strip it, keep the advice.
+  s = s.replace(
+    /,?\s+without (?:changing|affecting) (?:the|your) mark\b/gi,
+    "",
+  );
   return capitalise(s.replace(/\s{2,}/g, " ").trim());
 }
 
