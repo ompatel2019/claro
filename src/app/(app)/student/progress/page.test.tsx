@@ -72,15 +72,17 @@ it("renders range-scoped breakdowns and per-card empty states while keeping unto
   expect(mocks.load).toHaveBeenCalledWith("year", "2026-10-09");
   expect(screen.getAllByText("No activity in this range")).toHaveLength(1);
   expect(
-    screen.getByRole("link", { name: "Start Global economy" }),
+    screen.getByRole("link", { name: "Sprint on Global economy" }),
   ).toHaveAttribute("href", "/student/sprint?topics=t1");
   expect(
     screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
   ).toEqual([
-    "Your practice",
     "Practice average",
     "Marks by topic",
+    "Your practice",
     "Where your marks go",
+    "By question type",
+    "Practice days",
   ]);
   expect(screen.getByText("Marks earned")).toBeVisible();
   expect(screen.getByText("Days studied")).toBeVisible();

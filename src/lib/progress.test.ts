@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   weeklyScores,
+  weakestTopics,
+  type TopicProgress,
   parseRange,
   rangeFrom,
   reportHref,
@@ -107,4 +109,21 @@ it("bounds weekly history by Sydney date before averaging and rejects unscored s
       "2026-10-09",
     ),
   ).toEqual([{ day: "2026-09-28", value: 60 }]);
+});
+
+it("orders scored topics weakest first without mutating data or prioritising unstarted topics", () => {
+  const rows = [
+    { id: "new", pct: null, sort: 0 },
+    { id: "strong", pct: 90, sort: 1 },
+    { id: "weak", pct: 0, sort: 2 },
+    { id: "tie", pct: 90, sort: 3 },
+  ] as TopicProgress[];
+  expect(weakestTopics(rows).map((r) => r.id)).toEqual([
+    "weak",
+    "strong",
+    "tie",
+    "new",
+  ]);
+  expect(rows[0].id).toBe("new");
+  expect(weakestTopics([])).toEqual([]);
 });

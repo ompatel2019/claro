@@ -12,10 +12,12 @@ test.describe("Student progress summaries", () => {
       await historyStudent.addAnswers(2);
       await page.goto("/student/progress?range=all");
       await expect(page.getByRole("heading", { level: 2 })).toHaveText([
-        "Your practice",
         "Practice average",
         "Marks by topic",
+        "Your practice",
         "Where your marks go",
+        "By question type",
+        "Practice days",
       ]);
       await expect(
         page.getByText("Questions answered", { exact: true }),

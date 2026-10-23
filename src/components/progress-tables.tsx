@@ -7,7 +7,11 @@ import { type TableSorting } from "./data-table";
 import { Meter } from "./claro/data-display";
 import { buttonVariants } from "./ui/button";
 import { dateLabel } from "@/lib/practice";
-import { practiseHref, type TopicProgress } from "@/lib/progress";
+import {
+  practiseHref,
+  weakestTopics,
+  type TopicProgress,
+} from "@/lib/progress";
 
 /** Keep topic table sorting shareable through URL parameters. */
 function useTableSort(key: string, columns: string[]) {
@@ -33,12 +37,8 @@ function useTableSort(key: string, columns: string[]) {
 }
 
 export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
-  const parents = rows
-    .filter((r) => !r.parent_id)
-    .sort((a, b) => a.sort - b.sort);
-  const [open, setOpen] = useState<Set<string>>(
-    () => new Set(parents.length === 4 ? [parents.at(-1)!.id] : []),
-  );
+  const parents = weakestTopics(rows.filter((r) => !r.parent_id));
+  const [open, setOpen] = useState<Set<string>>(() => new Set());
   const sort = useTableSort("topicsSort", [
     "name",
     "answered",
@@ -79,7 +79,7 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
               : av - Number(bv)) * (sort.sorting!.dir === "desc" ? -1 : 1)
           );
         })
-      : items;
+      : weakestTopics(items);
   const row = (r: TopicProgress) => (
     <tr
       key={r.id}
@@ -103,24 +103,26 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
             className="flex items-center gap-2 text-left font-semibold"
           >
             <PortalIcon
+              strokeWidth={1.5}
               name="chevron-right"
               className={
                 open.has(r.id)
-                  ? "text-muted-foreground size-4 shrink-0 rotate-90"
-                  : "text-muted-foreground size-4 shrink-0"
+                  ? "text-muted-foreground size-5 shrink-0 rotate-90"
+                  : "text-muted-foreground size-5 shrink-0"
               }
             />
             <span className="min-w-0">
               {r.name}
               {r.id === focus && (
-                <span className="bg-brand-soft text-brand ml-2 inline-block rounded-full px-2 py-1 text-[11px] font-medium">
+                <span className="bg-brand-soft text-brand-text ml-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium">
+                  <PortalIcon name="circle-dot" size={20} strokeWidth={1.5} />{" "}
                   Focus
                 </span>
               )}
             </span>
           </button>
         )}
-        <span className="sr-only">
+        <span className="progress-topic-meta">
           {r.answered} answered · {r.earned} / {r.possible} marks · Last
           practised{" "}
           {r.last_answered ? dateLabel(r.last_answered, true) : "Not started"}
@@ -157,31 +159,60 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
         }
       >
         <Link
-          aria-label={`${r.answered ? "Practise" : "Start"} ${r.name}`}
+          aria-label={`Sprint on ${r.name}`}
           href={practiseHref(r)}
           className={buttonVariants({
-            variant: r.parent_id ? "ghost" : "outline",
+            variant:
+              r.id === focus ? "default" : r.parent_id ? "ghost" : "outline",
             size: "sm",
             className: r.parent_id ? "text-[13px]" : "border-input!",
           })}
         >
-          {r.parent_id ? "Sprint" : "Practise"}
+          Sprint
         </Link>
       </td>
     </tr>
   );
   return (
     <div className="relative overflow-x-auto">
+      <label className="text-muted-foreground flex items-center gap-3 px-5 pb-4 text-xs lg:hidden">
+        Sort topics
+        <select
+          className="bg-card text-foreground min-w-0 rounded-full border px-3 py-2"
+          value={sort.sorting ? `${sort.sorting.id}:${sort.sorting.dir}` : ""}
+          onChange={(e) => {
+            const [id, dir] = e.target.value.split(":");
+            sort.onSortChange(
+              id ? { id, dir: dir === "desc" ? "desc" : "asc" } : null,
+            );
+          }}
+        >
+          <option value="">Weakest first</option>
+          {[
+            ["name", "Topic"],
+            ["answered", "Answered"],
+            ["marks", "Marks"],
+            ["pct", "Average"],
+            ["last", "Last practised"],
+          ].flatMap(([id, label]) =>
+            ["asc", "desc"].map((dir) => (
+              <option key={`${id}:${dir}`} value={`${id}:${dir}`}>
+                {label} · {dir === "asc" ? "ascending" : "descending"}
+              </option>
+            )),
+          )}
+        </select>
+      </label>
       <table
         aria-label="Marks by topic"
-        className="w-full min-w-[720px] table-fixed text-sm md:table-auto"
+        className="progress-topics w-full table-fixed text-sm tabular-nums"
       >
         <colgroup>
-          <col className="w-[25%] md:w-[32%]" />
-          <col className="w-[11%] md:w-[8%]" />
-          <col className="w-[9%]" />
-          <col className="w-[30%]" />
-          <col className="w-[12%]" />
+          <col />
+          <col />
+          <col />
+          <col />
+          <col />
           <col />
         </colgroup>
         <thead className="text-muted-foreground border-t text-left text-xs">
@@ -195,6 +226,13 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
             ].map(([id, label]) => (
               <th
                 key={id}
+                aria-sort={
+                  sort.sorting?.id === id
+                    ? sort.sorting.dir === "asc"
+                      ? "ascending"
+                      : "descending"
+                    : "none"
+                }
                 className={`h-10 px-3 font-medium first:pl-5 ${id === "answered" || id === "marks" ? "text-right" : ""}`}
               >
                 <button

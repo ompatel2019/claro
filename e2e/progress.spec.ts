@@ -56,7 +56,7 @@ test.describe("Student progress (read only)", () => {
     );
     const practice = page
       .getByRole("table", { name: "Marks by topic", exact: true })
-      .getByRole("link", { name: /^(Practise|Start) / });
+      .getByRole("link", { name: /^Sprint on / });
     await expect(practice.first()).toBeVisible();
     for (const link of await practice.all()) {
       const target = new URL((await link.getAttribute("href"))!, page.url());
@@ -151,9 +151,7 @@ test.describe("Student progress (read only)", () => {
           container.evaluate((el) => el.scrollWidth >= el.clientWidth),
         )
         .toBe(true);
-      const action = table
-        .getByRole("link", { name: /^(Practise|Start) / })
-        .first();
+      const action = table.getByRole("link", { name: /^Sprint on / }).first();
       await action.scrollIntoViewIfNeeded();
       await expect(action).toBeInViewport();
       await expect
@@ -165,6 +163,87 @@ test.describe("Student progress (read only)", () => {
           ),
         )
         .toBe(true);
+    });
+  }
+});
+
+// Read-only hydration coverage against a local Supabase double; no account writes.
+test.describe("Progress with local synthetic reads", () => {
+  test.skip(
+    ({ baseURL }) => baseURL !== "http://localhost:3284",
+    "Requires the local Progress mock on port 54484",
+  );
+  test.beforeEach(async ({ context }) => {
+    const id = "11111111-1111-4111-8111-111111111111";
+    const exp = Math.floor(Date.now() / 1000) + 3600;
+    const token =
+      [
+        { alg: "HS256", typ: "JWT" },
+        { sub: id, aud: "authenticated", role: "authenticated", exp },
+      ]
+        .map((p) => Buffer.from(JSON.stringify(p)).toString("base64url"))
+        .join(".") + ".c2lnbmF0dXJl";
+    await context.addCookies([
+      {
+        name: "sb-127-auth-token",
+        value:
+          "base64-" +
+          Buffer.from(
+            JSON.stringify({
+              access_token: token,
+              refresh_token: "synthetic-refresh",
+              expires_at: exp,
+              token_type: "bearer",
+              user: { id },
+            }),
+          ).toString("base64url"),
+        url: "http://localhost:3284",
+      },
+    ]);
+  });
+  for (const width of [390, 1440]) {
+    test(`real page ranges, dot points and score filters at ${width}px`, async ({
+      page,
+    }) => {
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto("/student/progress");
+      await expect(
+        page.getByRole("heading", { level: 1, name: "Progress" }),
+      ).toBeVisible();
+      const topics = page.getByRole("table", { name: "Marks by topic" });
+      const topic = topics.getByRole("button", {
+        name: "Economic Issues",
+        exact: true,
+      });
+      await topic.click();
+      await expect(topic).toHaveAttribute("aria-expanded", "true");
+      await expect(
+        topics.getByRole("link", { name: "Sprint on Inflation" }),
+      ).toHaveAttribute("href", "/student/sprint?topics=t3&sub=inflation");
+      await page.getByRole("button", { name: "Show chart data" }).click();
+      await expect(page.getByRole("link", { name: /60%/ })).toHaveAttribute(
+        "href",
+        "/student/sprint/synthetic-2/results",
+      );
+      await page.getByText("Filter score history", { exact: true }).click();
+      await page.getByRole("button", { name: "Sprints", exact: true }).click();
+      await expect(page).toHaveURL(/kind=sprint/);
+      await expect(
+        page.getByRole("button", { name: "Sprints", exact: true }),
+      ).toHaveAttribute("aria-pressed", "true");
+      const range = page.getByRole("combobox", { name: "Progress range" });
+      await range.click();
+      await page.getByRole("option", { name: "All time", exact: true }).click();
+      await expect(page.getByTestId("progress-page")).toHaveAttribute(
+        "data-range",
+        "all",
+      );
+      expect(new URL(page.url()).searchParams.get("kind")).toBe("sprint");
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
     });
   }
 });
