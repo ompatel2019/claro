@@ -1,6 +1,5 @@
 "use client";
 import { ActiveNavProvider, useActiveNav } from "@/components/claro/active-nav";
-import { AskClaro } from "@/components/claro/ask-claro";
 import { CommandPalette } from "@/components/claro/command-palette";
 import { ExamCountdown, TopBar } from "@/components/claro/layout";
 import { ThemeToggle, setTheme } from "./theme-toggle";
@@ -130,6 +129,9 @@ export function activeItem(kind: keyof typeof nav, path: string) {
   );
 }
 
+const navButtonClassName =
+  "data-active:before:bg-brand h-9 overflow-visible rounded-xl font-medium data-active:font-semibold data-active:before:absolute data-active:before:-left-3 data-active:before:h-5 data-active:before:w-[3px] data-active:before:rounded-r";
+
 const studentIcons: Record<
   string,
   React.ComponentProps<typeof PortalIcon>["name"]
@@ -224,7 +226,7 @@ function AppShellContent({
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
-                          className="data-active:before:bg-brand h-9 overflow-visible rounded-xl font-medium data-active:font-semibold data-active:before:absolute data-active:before:-left-3 data-active:before:h-5 data-active:before:w-[3px] data-active:before:rounded-r"
+                          className={navButtonClassName}
                           isActive={isActive}
                           tooltip={item.label}
                           render={
@@ -255,6 +257,7 @@ function AppShellContent({
                 </SidebarMenu>
               </SidebarGroup>
             ))}
+            {kind === "student" && <FeedbackNavItem />}
           </nav>
         </SidebarContent>
         <SidebarFooter className="border-sidebar-border gap-2 border-t px-3 pt-3 pb-4">
@@ -419,8 +422,32 @@ function AppShellContent({
           {children}
         </div>
       </SidebarInset>
-      {kind === "student" && <AskClaro />}
     </SidebarProvider>
+  );
+}
+
+function FeedbackNavItem() {
+  const feedback = useFeedback();
+  const { isMobile, setOpenMobile } = useSidebar();
+  return (
+    <SidebarGroup>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <SidebarMenuButton
+            type="button"
+            className={navButtonClassName}
+            tooltip="Feedback"
+            onClick={() => {
+              if (isMobile) setOpenMobile(false);
+              feedback();
+            }}
+          >
+            <PortalIcon name="message-circle" />
+            <span>Feedback</span>
+          </SidebarMenuButton>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </SidebarGroup>
   );
 }
 
