@@ -11,7 +11,8 @@ export type SetupConfig = {
   size_by: "marks" | "questions";
   target: number;
   mcq_count: number;
-  short_marks: number;
+  short_count: number;
+  marks_per_short: number | null;
   difficulty: Difficulty[];
   verbs: string[];
   origins: ("nesa" | "a1")[];
@@ -31,6 +32,8 @@ export type Pool = {
   mcq_questions?: number;
   mcq_new?: number;
   short_marks?: number;
+  short_questions?: number;
+  short_mark_values?: Record<string, number>;
   any: number;
   new: number;
   mistakes: number;
@@ -48,13 +51,13 @@ export const SIZES: Record<string, Size> = {
   "mcq:questions": { min: 5, max: 40 },
   "short:marks": { min: 10, max: 60 },
   "short:questions": { min: 2, max: 15 },
-  "mixed:marks": { min: 5, max: 100 },
+  "mixed:questions": { min: 5, max: 55 },
 };
 const DEFAULT_SIZE: Record<string, number> = {
   "mcq:questions": 20,
   "short:marks": 30,
   "short:questions": 5,
-  "mixed:marks": 45,
+  "mixed:questions": 15,
 };
 export const size = (c: Pick<SetupConfig, "mode" | "size_by">) =>
   SIZES[`${c.mode}:${c.size_by}`];
@@ -66,7 +69,8 @@ export const DEFAULTS: SetupConfig = {
   size_by: "questions",
   target: 20,
   mcq_count: 10,
-  short_marks: 10,
+  short_count: 5,
+  marks_per_short: null,
   difficulty: [],
   verbs: [],
   origins: [],
@@ -90,7 +94,7 @@ const sizeFor = (sizes: Record<string, number>, key: string) =>
 
 /** Switching type restores that type's last size (else its default); MC drops written-only filters. */
 export function withMode(c: SetupConfig, mode: Mode): SetupConfig {
-  const size_by = mode === "short" || mode === "mixed" ? "marks" : "questions";
+  const size_by = mode === "short" ? "marks" : "questions";
   const written = mode === "short" || mode === "mixed";
   const sizes = remember(c);
   return {
@@ -100,6 +104,7 @@ export function withMode(c: SetupConfig, mode: Mode): SetupConfig {
     size_by,
     sizes,
     ...mixedSize(sizeFor(sizes, `${mode}:${size_by}`)),
+    marks_per_short: written ? c.marks_per_short : null,
     difficulty: written ? c.difficulty : [],
     verbs: written ? c.verbs : [],
   };
@@ -113,32 +118,35 @@ export function withSizeBy(c: SetupConfig, size_by: SetupConfig["size_by"]) {
     ...mixedSize(sizeFor(sizes, `${c.mode}:${size_by}`)),
   };
 }
-/** Total changes start with an even split; an odd mark goes to MC. */
+/** Presets split question counts; each bucket stays within its own limit. */
 function mixedSize(target: number) {
-  return {
-    target,
-    mcq_count: Math.ceil(target / 2),
-    short_marks: Math.floor(target / 2),
-  };
+  const short_count = Math.min(15, Math.floor(target / 3));
+  return { target, mcq_count: Math.min(40, target - short_count), short_count };
 }
 export function withTarget(c: SetupConfig, target: number): SetupConfig {
   return { ...c, ...mixedSize(clampTarget(c, target)) };
 }
-/** Linked mixed inputs: zero is allowed, but counts never spill into the other bucket. */
+/** Independent buckets, with at least five questions in total. */
 export function withMixedCount(
   c: SetupConfig,
-  bucket: "mcq_count" | "short_marks",
+  bucket: "mcq_count" | "short_count",
   value: number,
 ): SetupConfig {
+  const other = bucket === "mcq_count" ? "short_count" : "mcq_count";
   const count = Math.min(
-    c.target,
-    Math.max(0, Number.isFinite(value) ? Math.round(value) : 0),
+    bucket === "mcq_count" ? 40 : 15,
+    Math.max(0, 5 - c[other], Number.isFinite(value) ? Math.round(value) : 0),
   );
-  return {
-    ...c,
-    [bucket]: count,
-    [bucket === "mcq_count" ? "short_marks" : "mcq_count"]: c.target - count,
-  };
+  return { ...c, [bucket]: count, target: count + c[other] };
+}
+/** Any uses a three-mark estimate; the session records actual selected marks. */
+export function estimatedMarks(c: SetupConfig) {
+  const marks = c.marks_per_short ?? 3;
+  return c.mode === "mixed"
+    ? c.mcq_count + c.short_count * marks
+    : c.mode === "short" && c.size_by === "questions"
+      ? c.target * marks
+      : c.target;
 }
 export function clampTarget(c: SetupConfig, n: number) {
   const s = size(c);
@@ -163,8 +171,10 @@ export function estimateMinutes(c: SetupConfig): number | null {
     c.mode === "mcq"
       ? mc * c.target
       : c.mode === "short"
-        ? short * c.target * (c.size_by === "marks" ? 1 : 3)
-        : mc * c.mcq_count + short * c.short_marks;
+        ? short *
+          c.target *
+          (c.size_by === "marks" ? 1 : (c.marks_per_short ?? 3))
+        : mc * c.mcq_count + short * c.short_count * (c.marks_per_short ?? 3);
   return Math.round(base);
 }
 
@@ -255,7 +265,7 @@ export function restore(saved: unknown): SetupConfig {
     ? values.feedback
     : DEFAULTS.feedback;
   if (!SIZES[`${mode}:${values.size_by}`])
-    values.size_by = mode === "mcq" ? "questions" : "marks";
+    values.size_by = mode === "short" ? "marks" : "questions";
   const sizes =
     s.sizes && typeof s.sizes === "object" && !Array.isArray(s.sizes)
       ? Object.fromEntries(
@@ -281,18 +291,26 @@ export function restore(saved: unknown): SetupConfig {
   if (s.size_by && SIZES[`${mode}:${s.size_by}`]) c = withSizeBy(c, s.size_by);
   if (typeof s.target === "number" && Number.isFinite(s.target))
     c = withTarget(c, s.target);
-  if (
-    c.mode === "mixed" &&
-    typeof s.mcq_count === "number" &&
-    Number.isFinite(s.mcq_count)
-  )
-    c = withMixedCount(c, "mcq_count", s.mcq_count);
-  else if (
-    c.mode === "mixed" &&
-    typeof s.short_marks === "number" &&
-    Number.isFinite(s.short_marks)
-  )
-    c = withMixedCount(c, "short_marks", s.short_marks);
+  c.marks_per_short =
+    Number.isInteger(s.marks_per_short) &&
+    Number(s.marks_per_short) >= 1 &&
+    Number(s.marks_per_short) <= 100
+      ? Number(s.marks_per_short)
+      : null;
+  if (mode === "mixed") {
+    // Old mark budgets become approximate question counts when reopened in setup.
+    const legacy =
+      typeof s.short_count !== "number" && typeof s.short_marks === "number";
+    const shorts = legacy
+      ? Math.round(Number(s.short_marks) / (c.marks_per_short ?? 3))
+      : s.short_count;
+    // Normalize both buckets before enforcing the minimum total.
+    if (typeof shorts === "number" && Number.isFinite(shorts))
+      c.short_count = Math.min(15, Math.max(0, Math.round(shorts)));
+    if (typeof s.mcq_count === "number" && Number.isFinite(s.mcq_count))
+      c.mcq_count = Math.min(40, Math.max(0, Math.round(s.mcq_count)));
+    c = withMixedCount(c, "mcq_count", c.mcq_count);
+  }
   return c;
 }
 
@@ -311,7 +329,7 @@ export function summary(c: SetupConfig, names: Record<string, string>) {
     c.mode === "mcq"
       ? `${n(c.target, "question")} · ${n(c.target, "mark")}`
       : c.mode === "mixed"
-        ? `${n(c.target, "mark")} · ${c.mcq_count} multis + ${c.short_marks} marks of shorts`
+        ? `${n(c.target, "question")} · ${c.mcq_count} multis + ${c.short_count} shorts · ${c.marks_per_short === null ? "about " : ""}${estimatedMarks(c)} marks`
         : c.size_by === "questions"
           ? n(c.target, "question")
           : n(c.target, "mark");

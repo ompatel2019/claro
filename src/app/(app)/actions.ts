@@ -25,6 +25,8 @@ const SprintConfig = z
     size_by: z.enum(["marks", "questions"]).optional(),
     target: z.number().int().optional(),
     mcq_count: z.number().int().min(0).max(100).optional(),
+    short_count: z.number().int().min(0).max(15).optional(),
+    marks_per_short: z.number().int().min(1).max(100).nullable().optional(),
     short_marks: z.number().int().min(0).max(100).optional(),
     difficulty: z
       .array(z.enum(["foundation", "standard", "challenging"]))
@@ -48,9 +50,21 @@ const SprintConfig = z
     (c) =>
       c.mode !== "mixed" ||
       c.mcq_count === undefined ||
+      c.short_count !== undefined ||
       c.short_marks === undefined ||
       c.mcq_count + c.short_marks === (c.target ?? 45),
     { message: "Mixed counts must add up to the total." },
+  )
+  .refine(
+    (c) =>
+      c.mode !== "mixed" ||
+      c.short_count === undefined ||
+      (c.size_by === "questions" &&
+        c.mcq_count !== undefined &&
+        c.mcq_count <= 40 &&
+        c.mcq_count + c.short_count >= 5 &&
+        c.mcq_count + c.short_count === c.target),
+    { message: "Mixed question counts must add up to the total (at least 5)." },
   );
 /** §3.2: the setup page (and quick starts) post the config as JSON; start_sprint validates the rest. */
 export async function startSprint(

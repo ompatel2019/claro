@@ -34,7 +34,7 @@ test.beforeAll(async () => {
                   ? `import React from 'react'; export default function Link({href,prefetch,...props}){return <a href={href} {...props}/>}`
                   : path.endsWith("actions")
                     ? "export async function startSprint(){return {error:'Synthetic start disabled'}}"
-                    : `export const createClient=()=>({rpc:async()=>({data:{questions:100,marks:200,mcq_questions:50,short_marks:150,any:100,new:80,mistakes:0,flagged:0,topics:{},subtopics:Object.fromEntries(Array.from({length:4},(_,i)=>Array.from({length:3},(_,j)=>['t'+(i+1)+'-'+j,10])).flat()),all_subtopics:100,verbs:{},difficulty:{},trial:false},error:null})});`,
+                    : `export const createClient=()=>({rpc:async()=>({data:{questions:100,marks:200,mcq_questions:50,short_marks:150,short_questions:50,short_mark_values:{2:10,3:10,4:10,5:10,6:10},any:100,new:80,mistakes:0,flagged:0,topics:{},subtopics:Object.fromEntries(Array.from({length:4},(_,i)=>Array.from({length:3},(_,j)=>['t'+(i+1)+'-'+j,10])).flat()),all_subtopics:100,verbs:{},difficulty:{},trial:false},error:null})});`,
               loader: "tsx",
               resolveDir: process.cwd(),
             }),
@@ -131,26 +131,25 @@ for (const [width, height] of [
     );
     await subtopics.getByRole("button", { name: "Inflation 10" }).click();
     await capture("setup-topic");
-    await page.getByRole("button", { name: "Mixed", exact: true }).click();
-    const marks = page.getByRole("spinbutton", { name: "Marks", exact: true });
-    await marks.fill("5");
-    await marks.press("Enter");
-    await expect(marks).toHaveValue("5");
-    await expect(
-      page.getByRole("button", { name: "Decrease total marks" }),
-    ).toBeDisabled();
-    await expect(
-      page.getByRole("spinbutton", { name: "Multiple choice questions" }),
-    ).toHaveValue("3");
-    await marks.fill("30");
-    await marks.press("Enter");
     await page
-      .getByRole("button", { name: "Decrease multiple choice questions" })
+      .getByRole("button", { name: "Short answer", exact: true })
       .click();
-    await expect(
-      page.getByRole("spinbutton", { name: "Short answer marks" }),
-    ).toHaveValue("16");
-    await expect(marks).toHaveValue("30");
+    await page.getByRole("button", { name: "5 marks", exact: true }).click();
+    await capture("setup-short-marks");
+    await page.getByRole("button", { name: "Mixed", exact: true }).click();
+    const mc = page.getByRole("spinbutton", {
+      name: "Multiple choice questions",
+    });
+    const shorts = page.getByRole("spinbutton", {
+      name: "Short answer questions",
+    });
+    await mc.fill("12");
+    await mc.press("Enter");
+    await shorts.fill("7");
+    await shorts.press("Enter");
+    await expect(mc).toHaveValue("12");
+    await expect(shorts).toHaveValue("7");
+    await expect(page.getByText("Total: 47 marks.")).toBeVisible();
     await capture("setup-mixed");
     const check = page.getByRole("radio", {
       name: "Check as I go",

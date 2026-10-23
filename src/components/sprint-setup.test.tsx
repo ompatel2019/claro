@@ -12,7 +12,8 @@ vi.mock("@/app/(app)/actions", () => ({ startSprint: mocks.start }));
 vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({ rpc: mocks.rpc }),
 }));
-import { SprintSetup } from "./sprint-setup";
+import { SprintSetup, QuickStarts } from "./sprint-setup";
+import { restore } from "@/lib/sprint";
 
 const render = rtlRender;
 
@@ -25,6 +26,7 @@ const topics = [1, 2, 3].map((i) => ({
 const pool = {
   questions: 30,
   marks: 45,
+  short_mark_values: { "2": 10, "5": 10 },
   any: 30,
   new: 30,
   mistakes: 0,
@@ -167,45 +169,49 @@ it("reselecting the current type keeps its size unit and count", () => {
   expect(screen.getByRole("spinbutton", { name: "Questions" })).toHaveValue(8);
 });
 
-it("mixed inputs stay linked at boundaries and reset to an even split for a preset", () => {
+it("mixed question inputs are independent and send the marks filter to the pool", async () => {
   render(<SprintSetup topics={[]} params={{}} />);
   fireEvent.click(screen.getByRole("button", { name: "Mixed" }));
   const mc = screen.getByRole("spinbutton", {
     name: "Multiple choice questions",
   });
-  const shorts = screen.getByRole("spinbutton", { name: "Short answer marks" });
-  expect(mc).toHaveValue(23);
-  expect(shorts).toHaveValue(22);
+  const shorts = screen.getByRole("spinbutton", {
+    name: "Short answer questions",
+  });
+  expect(mc).toHaveValue(10);
+  expect(shorts).toHaveValue(5);
   fireEvent.change(mc, { target: { value: "0" } });
   fireEvent.blur(mc);
-  expect(shorts).toHaveValue(45);
+  expect(shorts).toHaveValue(5);
   fireEvent.change(shorts, { target: { value: "999" } });
   fireEvent.blur(shorts);
-  expect(mc).toHaveValue(0);
-  expect(shorts).toHaveValue(45);
-  fireEvent.change(screen.getByRole("spinbutton", { name: "Marks" }), {
-    target: { value: "30" },
-  });
-  fireEvent.blur(screen.getByRole("spinbutton", { name: "Marks" }));
-  expect(mc).toHaveValue(15);
   expect(shorts).toHaveValue(15);
-  fireEvent.change(shorts, { target: { value: "5" } });
-  fireEvent.blur(shorts);
-  expect(mc).toHaveValue(25);
-  expect(
-    screen.getByText("25 multis + 5 marks of shorts = 30 marks"),
-  ).toBeVisible();
-  expect(shorts).toHaveValue(5);
+  expect(mc).toHaveValue(0);
+  fireEvent.click(await screen.findByRole("button", { name: "5 marks" }));
+  expect(screen.getByText("Total: 75 marks.")).toBeVisible();
+  await waitFor(() =>
+    expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config).toMatchObject({
+      short_count: 15,
+      mcq_count: 0,
+      marks_per_short: 5,
+      target: 15,
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Short answer" }));
+  expect(screen.getByRole("button", { name: "5 marks" })).toHaveAttribute(
+    "aria-pressed",
+    "true",
+  );
 });
 it("mixed availability warns per bucket even when combined marks exceed the total", async () => {
   mocks.rpc.mockResolvedValue({
-    data: { ...pool, marks: 100, mcq_questions: 2, short_marks: 98 },
+    data: { ...pool, marks: 100, mcq_questions: 2, short_questions: 28 },
     error: null,
   });
   render(<SprintSetup topics={[]} params={{ type: "mixed", size: "30" }} />);
   await waitFor(() =>
     expect(
-      screen.getByText(/Only 2 multis and 98 marks of shorts match/),
+      screen.getByText(/Only 2 multis and 28 short-answer questions match/),
     ).toBeVisible(),
   );
 });
@@ -217,7 +223,7 @@ it("an empty requested bucket disables start even when the other type has questi
       questions: 3,
       mcq_questions: 0,
       mcq_new: 0,
-      short_marks: 17,
+      short_questions: 3,
     },
     error: null,
   });
@@ -229,33 +235,37 @@ it("an empty requested bucket disables start even when the other type has questi
   fireEvent.blur(
     screen.getByRole("spinbutton", { name: "Multiple choice questions" }),
   );
+  fireEvent.change(
+    screen.getByRole("spinbutton", { name: "Short answer questions" }),
+    { target: { value: "0" } },
+  );
+  fireEvent.blur(
+    screen.getByRole("spinbutton", { name: "Short answer questions" }),
+  );
   await waitFor(() =>
     expect(screen.getByText("No questions match")).toBeVisible(),
   );
   expect(start()).toBeDisabled();
 });
 
-it("clamps the editable summary total and disables steppers at bounds", () => {
-  render(<SprintSetup topics={[]} params={{ type: "mixed" }} />);
-  const marks = screen.getByRole("spinbutton", { name: "Marks" });
-  expect(start().closest("form")).toContainElement(marks);
-  fireEvent.change(marks, { target: { value: "1" } });
-  fireEvent.blur(marks);
-  expect(marks).toHaveValue(5);
+it("mixed steppers enforce at least five questions and independent maxima", () => {
+  render(<SprintSetup topics={[]} params={{ type: "mixed", size: "5" }} />);
+  const mc = screen.getByRole("spinbutton", {
+    name: "Multiple choice questions",
+  });
+  const shorts = screen.getByRole("spinbutton", {
+    name: "Short answer questions",
+  });
+  expect(mc).toHaveValue(4);
+  expect(shorts).toHaveValue(1);
   expect(
-    screen.getByRole("button", { name: "Decrease total marks" }),
+    screen.getByRole("button", { name: "Decrease multiple choice questions" }),
   ).toBeDisabled();
-  expect(
-    screen.getByRole("spinbutton", { name: "Multiple choice questions" }),
-  ).toHaveValue(3);
-  fireEvent.click(screen.getByRole("button", { name: "Increase total marks" }));
-  expect(marks).toHaveValue(6);
-  fireEvent.change(marks, { target: { value: "999" } });
-  fireEvent.blur(marks);
-  expect(marks).toHaveValue(100);
-  expect(
-    screen.getByRole("button", { name: "Increase total marks" }),
-  ).toBeDisabled();
+  expect(screen.queryByRole("spinbutton", { name: "Marks" })).toBeNull();
+  fireEvent.change(mc, { target: { value: "999" } });
+  fireEvent.blur(mc);
+  expect(mc).toHaveValue(40);
+  expect(shorts).toHaveValue(1);
   expect(start()).toBeEnabled();
 });
 
@@ -477,4 +487,34 @@ it("keeps sequential marks keystrokes as a draft until blur or Enter", () => {
   fireEvent.change(marks, { target: { value: "" } });
   fireEvent.blur(marks);
   expect(marks).toHaveValue(10);
+});
+
+it("quick starts label their question counts and preserve legacy session units", () => {
+  const raw = {
+    mode: "mixed",
+    size_by: "marks",
+    target: 30,
+    mcq_count: 12,
+    short_marks: 18,
+  };
+  render(
+    <QuickStarts
+      weak={{ id: "t1", name: "Topic", parent_id: null }}
+      previous={restore(raw)}
+      previousRaw={raw}
+    />,
+  );
+  const weak = screen.getByRole("button", {
+    name: "Mixed · 8 questions · about 15 min",
+  });
+  expect(JSON.parse(weak.getAttribute("value")!)).toMatchObject({
+    size_by: "questions",
+    target: 8,
+    mcq_count: 6,
+    short_count: 2,
+  });
+  const previous = screen.getByRole("button", {
+    name: "Mixed · 30 marks · 0 topics",
+  });
+  expect(JSON.parse(previous.getAttribute("value")!)).toEqual(raw);
 });

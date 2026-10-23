@@ -33,17 +33,24 @@ export function QuickStarts({
   previousRaw?: Record<string, unknown>;
 } = {}) {
   const [state, action, pending] = useActionState(startSprint, {});
+  const previousSizeBy =
+    previousRaw?.size_by === "marks" ||
+    (previous?.mode === "mixed" &&
+      previousRaw &&
+      !("short_count" in previousRaw))
+      ? "marks"
+      : previous?.size_by;
   return (
     <form action={action} className="contents">
       {[
         ...(weak
           ? [
               {
-                label: "Mixed · 12 marks · 15 min",
+                label: "Mixed · 8 questions · about 15 min",
                 title: `Weak spot: ${weak.name}`,
                 icon: "target" as const,
                 config: {
-                  ...withTarget(withMode(DEFAULTS, "mixed"), 12),
+                  ...withTarget(withMode(DEFAULTS, "mixed"), 8),
                   topics: [weak.parent_id ?? weak.id],
                   subtopics: weak.parent_id ? [weak.id] : [],
                 },
@@ -53,7 +60,7 @@ export function QuickStarts({
         ...(previous
           ? [
               {
-                label: `${modes[previous.mode].label}${typeof previousRaw?.target === "number" ? ` · ${previousRaw.target} ${previous.size_by}` : ""} · ${previous.topics.length} topic${previous.topics.length === 1 ? "" : "s"}`,
+                label: `${modes[previous.mode].label}${typeof previousRaw?.target === "number" ? ` · ${previousRaw.target} ${previousSizeBy}` : ""} · ${previous.topics.length} topic${previous.topics.length === 1 ? "" : "s"}`,
                 title: "Same as last time",
                 icon: "rotate-ccw" as const,
                 config: previous,

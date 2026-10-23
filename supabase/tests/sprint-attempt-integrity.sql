@@ -63,7 +63,7 @@ begin
   -- Written filters and feedback-each still take the same invoker insert path.
   s := public.start_sprint('{"mode":"short","size_by":"questions","target":2,
     "topics":["t1"],"subtopics":["t1-d1-integrity"],"difficulty":["standard"],
-    "verbs":["explain"],"origins":["claro"],"year_from":2026,"year_to":2026,"feedback":"each"}');
+    "verbs":["explain"],"origins":["claro"],"feedback":"each"}');
   select id into strict a from public.attempts where session_id=s order by position limit 1;
   -- Legitimate direct answer saves, photos, transcripts and flags still work.
   update public.attempts set answer_text='Synthetic answer', transcript='Synthetic transcript',
@@ -99,7 +99,7 @@ begin
   -- Isolate individual eligibility filters (including history and no essays).
   for cfg,qid in select * from (values
     ('{"mode":"short","topics":["t1"]}'::jsonb,'d1-other'),
-    ('{"mode":"short","year_to":2025}'::jsonb,'d1-short-8'),
+    ('{"mode":"short","marks_per_short":2}'::jsonb,'d1-short-8'),
     ('{"mode":"short","difficulty":["foundation"]}'::jsonb,'d1-short-8'),
     ('{"mode":"short","verbs":["describe"]}'::jsonb,'d1-short-8'),
     ('{"mode":"short","origins":["nesa"]}'::jsonb,'d1-short-8'),
