@@ -1,8 +1,5 @@
 import { timer } from "./practice";
 
-import { HSC_EXAM, examDaysLeft } from "./hsc-exam";
-import { addDays } from "./activity";
-import { sydneyToday } from "./flashcards";
 import { weeklyScores } from "./progress";
 
 const SYDNEY = "Australia/Sydney";
@@ -60,7 +57,7 @@ export function continueTime(
 }
 
 // NSW Eastern division student dates. Week numbers follow Monday–Sunday school weeks.
-// Sources: https://education.nsw.gov.au/schooling/calendars/2026 and /2027 (19 Oct 2026).
+// Sources: https://education.nsw.gov.au/schooling/calendars/2026 and /2027 (23 Oct 2026).
 const TERMS: Record<string, [string, string][]> = {
   "2026": [
     ["02-02", "04-02"],
@@ -72,7 +69,7 @@ const TERMS: Record<string, [string, string][]> = {
     ["02-03", "04-09"],
     ["04-29", "07-02"],
     ["07-20", "09-24"],
-    ["10-12", "12-20"],
+    ["10-11", "12-17"],
   ],
 };
 /** Monday-first week of an NSW term; null outside term or for an unknown year. */
@@ -91,13 +88,6 @@ export function schoolWeek(today: string) {
     ) + 1;
   return { term: index + 1, week: week(today), weeks: week(end) };
 }
-/** Parent units only, in syllabus order; dot points must not duplicate totals. */
-export function homeUnits(topics: import("./progress").TopicProgress[]) {
-  return topics
-    .filter((t) => t.parent_id === null)
-    .sort((a, b) => a.sort - b.sort || a.id.localeCompare(b.id));
-}
-
 /** Monday buckets, averaging the marked session scores supplied by the RPC.
  * Flashcard recall percentages are not marked-answer scores. Empty weeks are omitted. */
 export function homeWeeks(history: import("./progress").HistoryScore[]) {
@@ -106,119 +96,20 @@ export function homeWeeks(history: import("./progress").HistoryScore[]) {
   );
 }
 
-/** Calendar-week comparison, never an invented comparison with an empty prior period. */
-export function homeComparison(
-  history: import("./progress").HistoryScore[],
-  today: string,
-) {
-  const start = Date.parse(today) - 6 * 864e5;
-  const previous = start - 7 * 864e5;
-  const end = Date.parse(today) + 864e5;
-  const rows = history.filter((s) =>
-    Number.isFinite(Date.parse(s.finished_at)),
-  );
-  const period = (lo: number, hi: number) =>
-    rows.filter((s) => {
-      const day = Date.parse(
-        new Intl.DateTimeFormat("en-CA", {
-          timeZone: SYDNEY,
-          year: "numeric",
-          month: "2-digit",
-          day: "2-digit",
-        }).format(new Date(s.finished_at)),
-      );
-      return day >= lo && day < hi;
-    });
-  const current = period(start, end),
-    prior = period(previous, start);
-  const seconds = (rows: typeof history) =>
-    rows.reduce(
-      (n, s) => n + (Number.isFinite(s.elapsed_s) ? s.elapsed_s : 0),
-      0,
-    );
-  const average = (rows: typeof history) => {
-    const scored = rows.filter((s) => s.kind !== "flashcards" && s.pct != null);
-    return scored.length
-      ? scored.reduce((n, s) => n + s.pct!, 0) / scored.length
-      : null;
-  };
-  const a = average(current),
-    b = average(prior);
-  return {
-    minutes: prior.length
-      ? Math.round((seconds(current) - seconds(prior)) / 60)
-      : undefined,
-    score: a != null && b != null ? Math.round(a - b) : undefined,
-  };
-}
+const STUDY_QUOTES = [
+  "A little practice today makes tomorrow clearer.",
+  "One question is a good place to start.",
+  "Make room for the things you do not understand yet.",
+  "Progress comes from coming back.",
+  "Learn the reason, then try again.",
+  "Small steps count. Keep taking them.",
+  "Give your next answer your full attention.",
+] as const;
 
-/** Twenty seconds per card, two minutes per sprint question; minimum one minute. */
-export const homeMinutes = (count: number, kind: "cards" | "questions") =>
-  Math.max(1, Math.ceil(count * (kind === "cards" ? 1 / 3 : 2)));
-export const homeShortDate = (day: string) =>
-  new Intl.DateTimeFormat("en-AU", {
-    timeZone: SYDNEY,
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  })
-    .format(new Date(day))
-    .replace(",", "");
-
-/** Saved sprint size or timer, rather than guessing how many questions remain. */
-export function homeSprintMinutes(
-  config: {
-    time_limit_s?: number | null;
-    time_limit_min?: number;
-    actual_questions?: number;
-    count?: number;
-  },
-  elapsed: number,
-) {
-  const seconds =
-    config.time_limit_s ??
-    (config.time_limit_min ? config.time_limit_min * 60 : null);
-  if (seconds != null) return Math.max(1, Math.ceil((seconds - elapsed) / 60));
-  const count = config.actual_questions ?? config.count;
-  return count != null && count > 0 ? homeMinutes(count, "questions") : null;
-}
-
-/** Daily earned marks on Sydney dates; no comparison without prior marked work. */
-export function homeEarnedMarks(
-  rows: { mark: number | null; marked_at: string | null }[],
-  today: string,
-) {
-  const days = Array.from({ length: 14 }, (_, i) => addDays(today, i - 13));
-  const totals = new Map(days.map((day) => [day, 0]));
-  let prior = false;
-  for (const row of rows) {
-    if (
-      row.mark == null ||
-      !Number.isFinite(row.mark) ||
-      !row.marked_at ||
-      !Number.isFinite(Date.parse(row.marked_at))
-    )
-      continue;
-    const day = sydneyToday(new Date(row.marked_at));
-    if (!totals.has(day)) continue;
-    totals.set(day, totals.get(day)! + row.mark);
-    if (day < days[7]) prior = true;
-  }
-  const daily = days.map((day) => totals.get(day)!);
-  return {
-    values: daily.slice(7),
-    delta: prior
-      ? daily.slice(7).reduce((a, b) => a + b, 0) -
-        daily.slice(0, 7).reduce((a, b) => a + b, 0)
-      : undefined,
-  };
-}
-
-export function homeExamPrompt(today: string) {
-  const days = examDaysLeft(today);
-  const when =
-    days != null && days <= 7
-      ? `${new Intl.DateTimeFormat("en-AU", { timeZone: SYDNEY, weekday: "long" }).format(new Date(HSC_EXAM.startsAt))}'s`
-      : "my";
-  return `What should I study before ${when} exam?`;
+/** Original study prompts, rotating by Sydney calendar date, independent of render time. */
+export function studyQuote(today: string) {
+  const day = Math.floor(Date.parse(`${today}T00:00:00Z`) / 86400000);
+  return STUDY_QUOTES[
+    ((day % STUDY_QUOTES.length) + STUDY_QUOTES.length) % STUDY_QUOTES.length
+  ];
 }

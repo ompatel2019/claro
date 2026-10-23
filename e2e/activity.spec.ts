@@ -22,17 +22,14 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("home streak links to Progress and Activity tile opens history", async ({
+test("home study days and recent sessions link to activity", async ({
   page,
 }) => {
-  await expect(page.getByText(/^Longest \d+ days?$/)).toBeVisible();
+  await expect(page.getByText("Longest streak", { exact: true })).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "View progress and weak topics" }),
-  ).toHaveAttribute("href", "/student/progress");
-  await page
-    .getByRole("region", { name: "Quick start" })
-    .getByRole("link", { name: /^Activity/ })
-    .click();
+    page.getByRole("link", { name: "Open Recent sessions" }),
+  ).toHaveAttribute("href", "/student/activity");
+  await page.getByRole("link", { name: "Open Recent sessions" }).click();
   await expect(page).toHaveURL(/\/student\/activity$/);
 });
 
