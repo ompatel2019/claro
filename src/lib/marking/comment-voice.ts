@@ -56,7 +56,7 @@ const META_SENTENCE = [
   // Only when the subject is the comment itself ("This/It/That (change)"), so
   // advice such as "Do not add a statistic because it will not earn a mark" stays.
   // Explanations ("because …") and "earn a mark" judge the student's work, so they never match.
-  /^(?![^.;]*\b(?:because|since|as)\b)(?:this|that|it)(?: (?:change|tweak|wording|fix|edit)(?: change| tweak)?)? (?:would|will|does|doesn't|won't|is|only)\b[^.;]*\b(?:not|never|without)\b[^.;]*\b(?:add|adding|change|changing|affect|affecting|cost|costing|lift|lifting) (?:a|the|your|any|another|an extra) (?:extra )?marks?\b/i,
+  /^(?![^.;]*\b(?:because|since|as|unless|until)\b)(?:this|that|it)(?: (?:change|tweak|wording|fix|edit)(?: change| tweak)?)? (?:would|will|does|doesn't|won't|is|only)\b[^.;]*\b(?:not|never|without)\b[^.;]*\b(?:add|adding|change|changing|affect|affecting|cost|costing|lift|lifting) (?:a|the|your|any|another|an extra) (?:extra )?marks?\b/i,
   /\bas an ai\b/i,
 ];
 

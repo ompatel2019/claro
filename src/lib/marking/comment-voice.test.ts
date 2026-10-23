@@ -215,6 +215,8 @@ describe("tightenText", () => {
     for (const text of [
       "This will not earn a mark because nominal GDP does not adjust for inflation. Use real GDP instead.",
       "This will not change your mark as the definition is wrong. Fix it.",
+      "Your definition is accurate. This will not lift your mark unless you explain how higher rates reduce borrowing.",
+      "Your definition is accurate. This will not add a mark until you name the transmission mechanism.",
       "Explain why this report includes only nominal GDP. Use real GDP to compare output.",
       "Your definition is accurate. Do not add a statistic because it will not earn another mark.",
       "Your definition is accurate. Repeating it will not earn another mark, so explain how higher rates reduce borrowing.",
