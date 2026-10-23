@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatSampleMaths } from "@/lib/sample-maths";
 import { RichText } from "@/components/rich-text";
 import {
   Card,
@@ -233,7 +234,7 @@ export function SingleResult({
                       Sample answer
                     </summary>
                     <div className="mt-3">
-                      <RichText text={row.sample_answer} />
+                      <RichText text={formatSampleMaths(row.sample_answer)} />
                     </div>
                   </details>
                 )}

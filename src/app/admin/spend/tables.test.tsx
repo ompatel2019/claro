@@ -44,6 +44,7 @@ it("model columns sort in both directions and token columns stay hidden in narro
     />,
   );
   const table = screen.getByRole("table", { name: "By model" });
+  expect(screen.getByText("OpenRouter only")).toBeInTheDocument();
   expect(
     within(table)
       .getAllByRole("columnheader")
@@ -115,6 +116,7 @@ it("task subtotals precede their own sortable tasks, including Other and no-call
     />,
   );
   const table = screen.getByRole("table", { name: "By task" });
+  expect(screen.getByText("OpenRouter only")).toBeInTheDocument();
   expect(screen.getAllByRole("table")).toHaveLength(1);
   const rowLabels = () =>
     within(table)
@@ -224,4 +226,9 @@ it("each empty table gets words instead of a blank table", () => {
     "No student spend in the last 30 days",
   ])
     expect(screen.getByText(title)).toBeInTheDocument();
+  for (const description of [
+    "OpenRouter model calls and token usage in this range will appear here.",
+    "OpenRouter marking, admin and eval calls in this range will appear here.",
+  ])
+    expect(screen.getByText(description)).toBeInTheDocument();
 });

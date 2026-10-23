@@ -4,7 +4,13 @@ import { useState } from "react";
 import { sortRows, type Sorting } from "@/lib/admin";
 import { nextSorting } from "@/app/admin/sort-state";
 import { DataTable, EmptyState } from "@/components/claro";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -25,7 +31,7 @@ export function ModelTable({ rows }: { rows: Spend["byModel"] }) {
     return (
       <EmptyState
         title="No model spend yet"
-        description="Model calls and token usage in this range will appear here."
+        description="OpenRouter model calls and token usage in this range will appear here."
       />
     );
   return (
@@ -34,6 +40,7 @@ export function ModelTable({ rows }: { rows: Spend["byModel"] }) {
         <CardTitle>
           <h2>By model</h2>
         </CardTitle>
+        <CardDescription>OpenRouter only</CardDescription>
       </CardHeader>
       <CardContent>
         <DataTable
@@ -103,7 +110,7 @@ export function TaskTable({ groups }: { groups: Spend["byTask"] }) {
     return (
       <EmptyState
         title="No task spend yet"
-        description="Marking, admin and eval calls in this range will appear here."
+        description="OpenRouter marking, admin and eval calls in this range will appear here."
       />
     );
   return (
@@ -112,6 +119,7 @@ export function TaskTable({ groups }: { groups: Spend["byTask"] }) {
         <CardTitle>
           <h2>By task</h2>
         </CardTitle>
+        <CardDescription>OpenRouter only</CardDescription>
       </CardHeader>
       <CardContent>
         <Table aria-label="By task">

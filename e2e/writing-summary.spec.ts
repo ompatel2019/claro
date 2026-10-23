@@ -61,12 +61,16 @@ test.describe("S13 writing-pattern summaries", () => {
       await page.setViewportSize({ width, height: 900 });
       await signIn(page, fixture.email, fixture.password);
       await page.goto(`/student/activity/${fixture.sessions[0]}`);
-      for (const label of ["Strengths", "Top fixes", "Next steps"])
+      for (const label of ["Strengths", "Fixes"])
         await expect(
           page.getByRole("heading", { name: label, exact: true }).first(),
         ).toBeVisible();
-      for (const line of Object.values(summary).flat())
+      for (const line of [...summary.strengths, ...summary.improvements])
         await expect(page.getByText(line, { exact: true })).toBeVisible();
+      // The next mark lives in each question's score card, not a page-level block.
+      await expect(
+        page.getByText(summary.next_steps[0], { exact: true }),
+      ).toHaveCount(0);
       await expect(
         page
           .getByRole("region", { name: "Comments", exact: true })
@@ -107,10 +111,7 @@ test.describe("S13 writing-pattern summaries", () => {
     await signIn(page, fixture.email, fixture.password);
     await page.goto(`/student/activity/${fixture.sessions[0]}`);
     await expect(
-      page.getByText(summary.next_steps[0], { exact: true }),
-    ).toBeVisible();
-    await expect(
-      page.getByRole("heading", { name: "Top fixes", exact: true }).first(),
+      page.getByText(/No overall strengths or fixes for this sprint/),
     ).toBeVisible();
     await save(null);
     await page.reload();

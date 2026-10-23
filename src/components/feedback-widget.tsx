@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { Close } from "@/components/icons";
+import { Close, PortalIcon } from "@/components/icons";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
 import { FilePicker } from "./ui/file-picker";
@@ -276,7 +276,13 @@ export function FeedbackWidget({
 }
 
 /** "Report a problem with this question": opens the widget as a content error, linked. */
-export function ReportProblem(props: Omit<Preset, "kind">) {
+export function ReportProblem({
+  quiet = false,
+  ...props
+}: Omit<Preset, "kind"> & {
+  /** Short label with an icon, for the results actions row. */
+  quiet?: boolean;
+}) {
   const open = useFeedback();
   return (
     <Button
@@ -284,7 +290,8 @@ export function ReportProblem(props: Omit<Preset, "kind">) {
       size="sm"
       onClick={() => open({ kind: "content", ...props })}
     >
-      Report a problem with this question
+      {quiet && <PortalIcon name="circle-alert" aria-hidden />}
+      {quiet ? "Report a problem" : "Report a problem with this question"}
     </Button>
   );
 }
