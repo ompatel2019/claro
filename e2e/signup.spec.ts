@@ -53,9 +53,11 @@ test.describe("Real sign up", () => {
           .click();
       await expect(welcome).toHaveCount(0, { timeout: 5000 });
     }).toPass({ timeout: 60000 });
-    await expect(page.getByText("No marks yet", { exact: true })).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Quick start", exact: true }),
+      page.getByRole("link", { name: /^Topic Sprint/ }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("region", { name: "Quick start", exact: true }),
     ).toBeVisible();
   });
 });

@@ -160,9 +160,7 @@ for (const [width, height] of [
   [1280, 720],
   [390, 844],
 ]) {
-  test(`Home v2: hero, tiles, study days and study hub at ${width}px`, async ({
-    page,
-  }) => {
+  test(`Home: study actions and study days at ${width}px`, async ({ page }) => {
     await page.clock.setFixedTime(new Date("2026-10-19T01:00:00Z"));
     await page.setViewportSize({ width, height });
     await page.goto("http://claro.test/student");
@@ -172,12 +170,10 @@ for (const [width, height] of [
       await expect(hero.getByText("Term 4 · Week 2")).toBeVisible();
     }
     const quick = page.getByRole("region", { name: "Quick start" });
-    await expect(quick.getByRole("link")).toHaveCount(4);
+    await expect(quick.getByRole("link")).toHaveCount(2);
     for (const [name, href] of [
-      ["Marks earned", "/student/progress"],
-      ["Questions answered", "/student/sprint"],
-      ["Study time", "/student/activity"],
-      ["Cards due", "/student/flashcards"],
+      ["Topic Sprint", "/student/sprint"],
+      ["Flashcards", "/student/flashcards"],
     ])
       await expect(
         quick.getByRole("link", { name: new RegExp(`^${name}`) }),
@@ -189,17 +185,18 @@ for (const [width, height] of [
     );
     await expect(page.getByText("Day streak")).toBeVisible();
     await expect(page.getByText("Today is lit")).toBeVisible();
-    const hub = page.getByRole("region", { name: "Study hub" });
-    await expect(hub.getByRole("listitem")).toHaveCount(4);
-    await expect(
-      hub.getByRole("listitem").first().getByRole("link"),
-    ).toHaveAttribute("href", "/student/sprint?topics=t1");
     await expect(page.getByText("Continue where you left off")).toHaveCount(0);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBe(width);
+    if (width === 1440)
+      expect(
+        await page.evaluate(
+          () => document.scrollingElement!.scrollHeight <= innerHeight,
+        ),
+      ).toBe(true);
     await page.screenshot({
-      path: test.info().outputPath(`home-v2-${width}.png`),
+      path: test.info().outputPath(`home-v3-${width}.png`),
       fullPage: true,
     });
   });

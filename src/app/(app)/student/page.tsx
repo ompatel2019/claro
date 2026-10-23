@@ -1,96 +1,44 @@
-import { cn } from "@/lib/utils";
+import { Suspense } from "react";
+import Link from "next/link";
 import { pageMetadata } from "@/lib/page-metadata";
 import { WelcomeDialog } from "@/components/welcome-dialog";
 import { needsWelcome } from "@/lib/welcome";
-import { Suspense } from "react";
-import Link from "next/link";
-import { Cards, Flame, Sprint } from "@/components/icons";
+import { PortalIcon } from "@/components/icons";
 import { requireProfile } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import { sydneyToday } from "@/lib/flashcards";
 import { addDays, type ActivityDay } from "@/lib/activity";
-import { greeting, longDate, schoolWeek } from "@/lib/home";
-import { loadProgress } from "@/lib/progress-data";
+import { greeting, longDate, schoolWeek, studyQuote } from "@/lib/home";
 import {
-  HomeStats,
-  HomeAverage,
-  HomeTopics,
-  HomePlan,
   HomeRecent,
-  HomeLostMarks,
-  readHomeMarks,
   readHomeSessions,
-  readHomeUnfinishedSprint,
 } from "@/components/student/home/sections";
-import { HomeAsk } from "@/components/student/home/ask-card";
+import { StudyChoice } from "@/components/student/home/study-choice";
 import { ActivityHeatmap } from "@/components/activity-heatmap";
-import { FlashcardStart } from "@/components/flashcard-start";
 import { PageHeader, TermProgress } from "@/components/claro/layout";
 import { Shortcut } from "@/components/shortcut";
 import { TryAgain } from "@/components/try-again";
-import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-
 export const metadata = pageMetadata("Home");
-
-/** Live flashcards due today, or null when the count can't be read. */
-async function dueCount(userId: string) {
-  const db = await createClient();
-  const { count, error } = await db
-    .from("flashcard_progress")
-    .select("flashcard_id,flashcards!inner(id)", { count: "exact", head: true })
-    .eq("flashcards.status", "live")
-    .eq("user_id", userId)
-    .lte("due_on", sydneyToday());
-  return error ? null : (count ?? 0);
-}
-
-function Hero({ today }: { today: string }) {
-  const week = schoolWeek(today);
-  return (
-    <section aria-label="Your study week" className="hidden md:block">
-      {week ? (
-        <TermProgress term={week.term} week={week.week} weeks={week.weeks} />
-      ) : (
-        <span className="text-muted-foreground text-[13px]">
-          NSW school holidays
-        </span>
-      )}
-    </section>
-  );
-}
 
 async function StudyDays({
   today,
-  due,
   activity,
 }: {
   today: string;
-  due: Promise<number | null>;
   activity: Promise<ActivityDay[] | null>;
 }) {
   const db = await createClient();
-  const [days, streaks, dueNow] = await Promise.all([
+  const [days, streaks] = await Promise.all([
     activity,
     db.rpc("activity_streaks").single(),
-    due,
   ]);
   if (days === null) throw new Error("Couldn't load your study days.");
   const streak = streaks.data as {
     current_streak: number;
     longest_streak: number;
   } | null;
-  const action = dueNow ? (
-    <FlashcardStart key="light-up-today" due label="Light up today" />
-  ) : (
-    <Link
-      key="light-up-today"
-      href="/student/sprint"
-      className={buttonVariants()}
-    >
-      <Flame key="icon" /> Light up today
-    </Link>
-  );
+  const action = <StudyChoice />;
   return (
     <ActivityHeatmap
       days={days}
@@ -133,8 +81,6 @@ export default async function Home() {
   }
   const showWelcome = needsWelcome(profile, sessionCount);
   const today = sydneyToday();
-  const due = dueCount(id).catch(() => null);
-  const progress = loadProgress("90", today).catch(() => null);
   const activity = createClient()
     .then(async (db) => {
       const { data, error } = await db.rpc("activity_days", {
@@ -145,10 +91,8 @@ export default async function Home() {
       return (data ?? []) as ActivityDay[];
     })
     .catch(() => null);
-  const marks = readHomeMarks(id, today);
   const sessions = readHomeSessions(id);
-  const unfinished = readHomeUnfinishedSprint(id);
-  const dueNow = await due;
+  const week = schoolWeek(today);
   return (
     <div className="min-w-0 space-y-5" data-testid="student-home">
       {showWelcome && <WelcomeDialog profile={profile} />}
@@ -156,74 +100,80 @@ export default async function Home() {
       <PageHeader
         eyebrow={longDate()}
         title={`${greeting()}${first ? `, ${first}` : ""}`}
-        actions={
-          <>
-            <Hero today={today} />
-            <Link
-              href="/student/flashcards"
-              className={cn(buttonVariants({ variant: "outline" }))}
-            >
-              <Cards aria-hidden />
-              Review {dueNow ?? ""} cards
-            </Link>
-            <Link href="/student/sprint" className={buttonVariants()}>
-              <Sprint aria-hidden />
-              Start sprint
-            </Link>
-          </>
-        }
       />
-      <Suspense fallback={<Card aria-hidden className="h-40 animate-pulse" />}>
-        <HomeStats
-          progress={progress}
-          marks={marks}
-          due={due}
-          today={today}
-          activity={activity.then((days) => days ?? [])}
-        />
-      </Suspense>
-      <div className="grid items-stretch gap-5 xl:grid-cols-[minmax(0,2.06fr)_minmax(0,1fr)]">
-        <Suspense
-          fallback={<Card aria-hidden className="h-96 animate-pulse" />}
+      <Card
+        className="gap-3 p-5 md:flex-row md:items-center md:justify-between"
+        aria-label="Your study week"
+      >
+        <section aria-label="Your study week">
+          {week ? (
+            <TermProgress
+              term={week.term}
+              week={week.week}
+              weeks={week.weeks}
+            />
+          ) : (
+            <p className="text-sm font-medium">NSW school holidays</p>
+          )}
+        </section>
+        <p className="text-muted-foreground text-sm">{studyQuote(today)}</p>
+      </Card>
+      <div className="grid min-w-0 grid-cols-1 items-start gap-5 md:grid-cols-2">
+        <section
+          aria-label="Quick start"
+          className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2"
         >
-          <HomeAverage progress={progress} today={today} />
-        </Suspense>
-        <Suspense
-          fallback={<Card aria-hidden className="h-96 animate-pulse" />}
-        >
-          <HomePlan
-            progress={progress}
-            sessions={sessions}
-            unfinished={unfinished}
-            due={due}
-            today={today}
-          />
-        </Suspense>
-      </div>
-      <div className="grid items-stretch gap-4 xl:grid-cols-[minmax(0,2.06fr)_minmax(0,1fr)] xl:gap-5">
-        <Suspense
-          fallback={<Card aria-hidden className="h-80 animate-pulse" />}
-        >
-          <HomeTopics progress={progress} />
-        </Suspense>
-        <Suspense
-          fallback={<Card aria-hidden className="h-80 animate-pulse" />}
-        >
-          <SafeStudyDays today={today} due={due} activity={activity} />
-        </Suspense>
-      </div>
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 xl:gap-5">
-        <Suspense
-          fallback={<Card aria-hidden className="h-80 animate-pulse" />}
-        >
-          <HomeLostMarks progress={progress} />
-        </Suspense>
-        <Suspense
-          fallback={<Card aria-hidden className="h-80 animate-pulse" />}
-        >
-          <HomeRecent sessions={sessions} progress={progress} />
-        </Suspense>
-        <HomeAsk today={today} />
+          {[
+            {
+              title: "Topic Sprint",
+              description: "Choose a topic and practise HSC questions.",
+              href: "/student/sprint",
+              icon: "zap" as const,
+              action: "Start a sprint",
+            },
+            {
+              title: "Flashcards",
+              description: "Build recall, one concept at a time.",
+              href: "/student/flashcards",
+              icon: "copy" as const,
+              action: "Choose your cards",
+            },
+          ].map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className="bg-card shadow-card hover:bg-accent focus-visible:outline-ring flex min-h-44 flex-col items-start gap-3 rounded-2xl border p-5 focus-visible:outline-2 focus-visible:outline-offset-2"
+            >
+              <span className="text-brand">
+                <PortalIcon name={item.icon} />
+              </span>
+              <div>
+                <h2 className="text-xl font-semibold">{item.title}</h2>
+                <p className="text-muted-foreground mt-1 text-sm">
+                  {item.description}
+                </p>
+              </div>
+              <span className="mt-auto flex items-center gap-2 text-sm font-semibold">
+                {item.action}
+                <PortalIcon name="arrow-right" className="size-4" />
+              </span>
+            </Link>
+          ))}
+        </section>
+        <div className="min-w-0 md:col-start-2 md:row-span-2 md:row-start-1">
+          <Suspense
+            fallback={<Card aria-hidden className="h-80 animate-pulse" />}
+          >
+            <SafeStudyDays today={today} activity={activity} />
+          </Suspense>
+        </div>
+        <div className="min-w-0 md:col-start-1">
+          <Suspense
+            fallback={<Card aria-hidden className="h-80 animate-pulse" />}
+          >
+            <HomeRecent sessions={sessions} />
+          </Suspense>
+        </div>
       </div>
     </div>
   );

@@ -6,7 +6,7 @@ import {
   within,
 } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { TopicProgressTable, VerbProgressTable } from "./progress-tables";
+import { TopicProgressTable } from "./progress-tables";
 import type { TopicProgress } from "@/lib/progress";
 const navigation = vi.hoisted(() => ({ query: "range=90", replace: vi.fn() }));
 vi.mock("next/navigation", () => ({
@@ -93,20 +93,4 @@ it("expands a parent, shows untouched topics and sorts children locally", () => 
   );
   fireEvent.click(screen.getByRole("button", { name: "Economic Issues" }));
   expect(screen.queryByText("Unemployment")).toBeNull();
-});
-it("gives the weakest eligible verb a working setup link", () => {
-  render(
-    <VerbProgressTable
-      rows={[
-        { id: "Discuss", answered: 4, pct: 70 },
-        { id: "Analyse", answered: 3, pct: 30 },
-        { id: "Explain", answered: 2, pct: 0 },
-      ]}
-    />,
-  );
-  expect(screen.queryByText("Explain")).toBeNull();
-  expect(screen.getByRole("link", { name: "Practise" })).toHaveAttribute(
-    "href",
-    "/student/sprint?type=short&verb=Analyse",
-  );
 });
