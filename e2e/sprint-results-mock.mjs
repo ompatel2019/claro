@@ -47,6 +47,14 @@ const row = (position, mark, type, bands = criteria) => ({
   feedback: {
     comments: [
       {
+        kind: "strength",
+        quote: "prices",
+        start: 17,
+        tag: "Knowledge",
+        body: "You identify the effect on prices.",
+        next_mark: null,
+      },
+      {
         kind: "fix",
         quote: "Demand",
         start: 0,
@@ -109,6 +117,7 @@ createServer(async (request, response) => {
   const phase = timed ? phaseOf(id) : null;
   const finishing = id?.endsWith("0006") || (timed && phase !== "finished");
   const single = id?.endsWith("0002") || id?.endsWith("0003");
+  // 0009 supplies a complete rubric for the partial-mark comparison view.
   const selected = single
     ? [id.endsWith("0002") ? rows[2] : rows[1]]
     : timed
@@ -119,7 +128,9 @@ createServer(async (request, response) => {
         ? [rows[0], { ...rows[2], status: "marking", mark: null }]
         : id?.endsWith("0005")
           ? [rows[0], rows[1], { ...rows[2], status: "marking", mark: null }]
-          : rows;
+          : id?.endsWith("0009")
+            ? rows.map((r) => (r.position === 2 ? { ...r, criteria } : r))
+            : rows;
   let data = [];
   if (url.pathname === "/auth/v1/user") data = user;
   else if (url.pathname === "/rest/v1/profiles")
@@ -159,8 +170,8 @@ createServer(async (request, response) => {
         id.endsWith("0004") || id.endsWith("0005")
           ? null
           : {
-              strengths: ["Stored strength."],
-              top_fixes: ["Stored fix."],
+              strengths: ["At Q3, you identify the effect on prices."],
+              top_fixes: ["At Q2, explain the link to supply."],
               next_steps: ["Practise explaining the mechanism."],
             },
     };
@@ -175,4 +186,4 @@ createServer(async (request, response) => {
       question: r,
     }));
   response.end(request.method === "HEAD" ? undefined : JSON.stringify(data));
-}).listen(54328, "127.0.0.1");
+}).listen(Number(process.env.MOCK_PORT ?? 54328), "127.0.0.1");

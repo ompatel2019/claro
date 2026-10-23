@@ -135,7 +135,7 @@ it.each([
     for (const label of ["Strengths", "Top fixes", "Next steps"])
       expect(screen.getByRole("heading", { name: label })).toBeVisible();
     expect(screen.getByRole("heading", { name: "Top fixes" })).toHaveClass(
-      "text-warning-text",
+      "text-destructive",
     );
     for (const line of Object.values(summary).flat())
       expect(screen.getByText(line)).toBeVisible();
@@ -224,4 +224,35 @@ it("keeps the supplied next step available while a summary is pending", () => {
     "/student/sprint?sub=topic",
   );
   expect(screen.getByRole("status")).toBeVisible();
+});
+
+it("keeps question jump links and semantic strength/fix icons in the summary", () => {
+  render(
+    <OverallFeedback
+      pending={false}
+      summary={{
+        strengths: ["At Q3, define inflation."],
+        top_fixes: ["At Q2, explain supply."],
+      }}
+    />,
+  );
+  expect(screen.getByRole("link", { name: "Q3" })).toHaveAttribute(
+    "href",
+    "#q-3",
+  );
+  expect(screen.getByRole("link", { name: "Q2" })).toHaveAttribute(
+    "href",
+    "#q-2",
+  );
+  for (const [name, colour] of [
+    ["Strengths", "success"],
+    ["Top fixes", "destructive"],
+  ]) {
+    const heading = screen.getByRole("heading", { name });
+    expect(heading).toHaveClass(`text-${colour}`);
+    expect(heading.querySelector("svg")).toBeTruthy();
+    expect(heading.closest("section")?.querySelector("li svg")).toHaveClass(
+      `text-${colour}`,
+    );
+  }
 });

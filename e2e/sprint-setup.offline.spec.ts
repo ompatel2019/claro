@@ -92,6 +92,33 @@ for (const [width, height] of [
     );
     await expect(page.getByText("Paper years", { exact: true })).toHaveCount(0);
     await capture("setup-initial");
+    const bar = page
+      .getByRole("button", { name: "Start sprint" })
+      .locator("xpath=ancestor::div[contains(@class,'fixed')][1]");
+    expect(
+      await bar.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const style = getComputedStyle(el);
+        return {
+          left: r.left,
+          right: r.right,
+          bottom: r.bottom,
+          radius: parseFloat(style.borderTopLeftRadius),
+          shadow: style.boxShadow,
+        };
+      }),
+    ).toEqual({
+      left: 0,
+      right: width,
+      bottom: height,
+      radius: 0,
+      shadow: "none",
+    });
+    await page.screenshot({
+      path: process.env.SPRINT_SETUP_SHOTS
+        ? `${process.env.SPRINT_SETUP_SHOTS}/bar-${width}.png`
+        : test.info().outputPath(`bar-${width}.png`),
+    });
     await page
       .getByRole("button", { name: "Economic Issues", exact: true })
       .click();

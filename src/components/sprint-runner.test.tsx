@@ -346,7 +346,7 @@ it("renders full written comments and an outline inline with one mark request", 
   const feedback = await screen.findByRole("region", {
     name: "Checked answer feedback",
   });
-  expect(within(feedback).getByText("2 / 4")).toBeVisible();
+  expect(within(feedback).getByLabelText("Your mark: 2/4")).toBeVisible();
   expect(
     within(feedback).getByText("What gets you the next mark"),
   ).toBeVisible();
@@ -384,7 +384,7 @@ it("shows the model answer from a written check, and no guidelines or review not
   const feedback = await screen.findByRole("region", {
     name: "Checked answer feedback",
   });
-  expect(within(feedback).getByText("Model answer")).toBeVisible();
+  expect(within(feedback).getByText("Sample answer")).toBeVisible();
   expect(
     within(feedback).getByText("Synthetic model answer."),
   ).toBeInTheDocument();
@@ -408,7 +408,7 @@ it("a resumed written check keeps its model answer", () => {
   ]);
   expect(
     screen.getByRole("region", { name: "Checked answer feedback" }),
-  ).toHaveTextContent("Model answer");
+  ).toHaveTextContent("Sample answer");
 });
 it("resumed written marks render existing feedback without marking again", () => {
   const a = {
@@ -421,7 +421,7 @@ it("resumed written marks render existing feedback without marking again", () =>
   show([a]);
   expect(
     screen.getByRole("region", { name: "Checked answer feedback" }),
-  ).toHaveTextContent("4 / 4");
+  ).toHaveTextContent("4/4");
   expect(mocks.fetch).not.toHaveBeenCalled();
 });
 it("a failed written check retains the answer and offers retry", async () => {

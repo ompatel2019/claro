@@ -137,7 +137,7 @@ it("A, C and the arrows set the mark and the band follows", () => {
   key("c");
   expect(mark).toHaveValue(5);
   band("Band: 5–6 marks");
-  expect(screen.getByText("5 / 6")).toBeTruthy();
+  expect(screen.getByLabelText("Your mark: 5/6")).toBeTruthy();
   key("a");
   expect(mark).toHaveValue(3);
   key("ArrowUp");

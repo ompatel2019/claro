@@ -143,7 +143,8 @@ for (const width of [400, 1280]) {
 // Iteration 2 lane B: local read-only results coverage.
 test.describe("Local results feedback", () => {
   test.skip(
-    ({ baseURL }) => baseURL !== "http://localhost:3104",
+    ({ baseURL }) =>
+      baseURL !== `http://localhost:${process.env.RESULTS_APP_PORT ?? 3104}`,
     "Run with e2e/sprint-results.config.ts (local fixtures only)",
   );
   const sessionId = (n: number) => `22222222-2222-4222-8222-22222222000${n}`;
@@ -174,7 +175,7 @@ test.describe("Local results feedback", () => {
               user: { id: "11111111-1111-4111-8111-111111111111" },
             }),
           ).toString("base64url"),
-        url: "http://localhost:3104",
+        url: `http://localhost:${process.env.RESULTS_APP_PORT ?? 3104}`,
       },
     ]);
     await page.route("**/api/**", (route) => {
@@ -195,7 +196,9 @@ test.describe("Local results feedback", () => {
     await expect(page.getByRole("progressbar")).toBeVisible();
   });
   const control = (what: "reset" | "finish", n: number) =>
-    fetch(`http://127.0.0.1:54328/__${what}/${sessionId(n)}`);
+    fetch(
+      `http://127.0.0.1:${process.env.MOCK_PORT ?? 54328}/__${what}/${sessionId(n)}`,
+    );
   test("in-progress results fill in by themselves once all answers are marked and the session finishes", async ({
     page,
   }) => {
@@ -252,6 +255,9 @@ test.describe("Local results feedback", () => {
         next.getByRole("link", { name: "Review cards", exact: true }),
       ).toHaveAttribute("href", "/student/flashcards?topic=inflation");
       const headings = await page.getByRole("heading").allTextContents();
+      expect(headings.indexOf("Your answer, marked")).toBeLessThan(
+        headings.indexOf("Your next step"),
+      );
       expect(headings.indexOf("Your next step")).toBeLessThan(
         headings.indexOf("Strengths"),
       );
@@ -266,7 +272,9 @@ test.describe("Local results feedback", () => {
       await expect(
         page.getByText("Aggregate advice stays visible.", { exact: true }),
       ).toBeVisible();
-      await page.getByText("Marking guidelines", { exact: true }).click();
+      await expect(
+        page.getByRole("heading", { name: "Marking criteria" }),
+      ).toBeVisible();
       await expect(page.getByText(/guidelines are incomplete/)).toBeVisible();
       await expect(page.locator("#q-2 table")).toHaveCount(0);
       await expect(
@@ -278,6 +286,25 @@ test.describe("Local results feedback", () => {
         page.getByText("How to reach full marks", { exact: true }),
       ).toHaveCount(0);
       await expect(page.locator("#q-3 table")).toHaveCount(1);
+      const criteria = page.getByRole("region", { name: "Marking criteria" });
+      const sample = page.getByRole("region", { name: "Sample answer" });
+      await expect(criteria).toBeVisible();
+      await expect(sample).toBeVisible();
+      await expect(sample.locator("p").first()).toHaveText(
+        "Higher demand increases prices when supply is constrained.",
+      );
+      expect(await sample.evaluate((el) => el.closest("details"))).toBeNull();
+      const reviewHeadings = await page
+        .locator("#q-3")
+        .getByRole("heading")
+        .allTextContents();
+      expect(reviewHeadings.indexOf("Marking criteria")).toBeLessThan(
+        reviewHeadings.indexOf("Your answer, marked"),
+      );
+      expect(reviewHeadings.indexOf("Your answer, marked")).toBeLessThan(
+        reviewHeadings.indexOf("Sample answer"),
+      );
+
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,
@@ -289,6 +316,41 @@ test.describe("Local results feedback", () => {
       });
     });
   }
+  test("partial-mark comparison keeps criteria, semantic notes and sample visible", async ({
+    page,
+  }) => {
+    await page.goto(`/student/sprint/${sessionId(9)}/results`);
+    await page.getByRole("button", { name: /^Question 2,/ }).click();
+    const review = page.locator("#q-2");
+    await expect(review.getByRole("table")).toBeVisible();
+    await expect(
+      review.getByLabel("Your mark: 3/5", { exact: true }),
+    ).toBeVisible();
+    await expect(review.getByRole("button", { name: /^Fix 1,/ })).toHaveClass(
+      /decoration-destructive/,
+    );
+    await expect(
+      review.getByRole("button", { name: /^Strength 2,/ }),
+    ).toHaveClass(/decoration-success/);
+    await expect(
+      review.getByRole("region", { name: "Sample answer" }),
+    ).toBeVisible();
+    await expect(
+      review
+        .locator("[data-card]")
+        .filter({ hasText: "Explain the link to supply." }),
+    ).toContainText("Your next mark: Stored per-comment advice.");
+    await page.getByRole("link", { name: "Q3", exact: true }).click();
+    await expect(page.locator("#q-3")).toBeInViewport();
+    await page.getByRole("button", { name: /^Question 2,/ }).click();
+    await expect(page.locator("#q-2")).toBeVisible();
+    await expect(page).toHaveURL(/#q-3$/);
+    await page.getByRole("link", { name: "Q3", exact: true }).click();
+    await expect(page.locator("#q-3")).toBeInViewport();
+    await expect(
+      page.getByRole("button", { name: /^Question 3,/ }),
+    ).toHaveAttribute("aria-current", "true");
+  });
   test("single-answer results show full marks and actionable partial-mark feedback", async ({
     page,
   }) => {

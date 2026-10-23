@@ -613,6 +613,17 @@
     stroke-dashoffset: 1;
     animation: pen-draw 900ms cubic-bezier(0.65, 0.05, 0.3, 1) 300ms forwards;
   }
+  /* Marking screen: ticks and a margin note drawn on a loop. */
+  .pen-mark path {
+    stroke-dasharray: 1;
+    animation: pen-mark 3.6s cubic-bezier(0.65, 0, 0.35, 1) infinite;
+  }
+  .pen-mark path:nth-child(2) {
+    animation-delay: 0.3s;
+  }
+  .pen-mark path:nth-child(3) {
+    animation-delay: 0.6s;
+  }
 
   /* Marked answer, written on a ruled answer-booklet page. */
   .booklet {
@@ -670,6 +681,21 @@
     stroke-dashoffset: 0;
   }
 }
+@keyframes pen-mark {
+  0% {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  25%,
+  80% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0;
+  }
+}
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -725,6 +751,11 @@
   }
   .pen-draw path {
     stroke-dashoffset: 0;
+  }
+  .pen-mark path {
+    animation: none;
+    stroke-dashoffset: 0;
+    opacity: 1;
   }
 }
 

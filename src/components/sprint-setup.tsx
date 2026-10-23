@@ -190,7 +190,7 @@ export function SprintSetup({
     : [];
 
   return (
-    <div className="grid items-start gap-5 pb-8 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <div className="grid items-start gap-5 pb-[calc(2rem+env(safe-area-inset-bottom))] xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
       {prefilled && (
         <p
           className="text-muted-foreground text-sm xl:col-span-2"
@@ -900,37 +900,6 @@ export function SprintSetup({
               className="h-1.5"
             />
           </div>
-          <Button
-            className="text-muted-foreground order-last -mt-4 h-8 w-full text-xs"
-            type="button"
-            variant="ghost"
-            onClick={() => {
-              setC(DEFAULTS);
-            }}
-          >
-            Reset
-          </Button>
-          <Button
-            className="h-11 w-full"
-            type="submit"
-            disabled={
-              invalidSize ||
-              pending ||
-              matching === 0 ||
-              (c.timed &&
-                (!validPace(c.short_min_per_mark) ||
-                  !validPace(c.mcq_min_per_q)))
-            }
-          >
-            <PortalIcon name="zap" className="size-4" />
-            {pending
-              ? "Building…"
-              : shortfall
-                ? c.mode === "mixed"
-                  ? "Start with available questions"
-                  : `Start with ${available} ${unit}`
-                : "Start sprint"}
-          </Button>
         </div>
         {(shortfall || mixedShortfall || state.error) && (
           <div className="px-4 pb-3 text-sm">
@@ -956,6 +925,49 @@ export function SprintSetup({
             )}
           </div>
         )}
+        <div className="bg-card fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]">
+          <div className="mx-auto flex max-w-[calc(1400px-4rem)] flex-wrap items-center justify-end gap-x-3 gap-y-2">
+            <p className="text-muted-foreground mr-auto min-w-0 truncate text-[13px] tabular-nums">
+              <span className="text-foreground font-semibold">
+                {c.target} {unit}
+              </span>
+              <span className="max-sm:hidden">
+                {c.timed && ` · ${minutes} min`} · {n(matching)} match
+              </span>
+            </p>
+            <Button
+              className="text-muted-foreground"
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setC(DEFAULTS);
+              }}
+            >
+              Reset
+            </Button>
+            <Button
+              className="h-11"
+              type="submit"
+              disabled={
+                invalidSize ||
+                pending ||
+                matching === 0 ||
+                (c.timed &&
+                  (!validPace(c.short_min_per_mark) ||
+                    !validPace(c.mcq_min_per_q)))
+              }
+            >
+              <PortalIcon name="zap" className="size-4" />
+              {pending
+                ? "Building…"
+                : shortfall
+                  ? c.mode === "mixed"
+                    ? "Start with available questions"
+                    : `Start with ${available} ${unit}`
+                  : "Start sprint"}
+            </Button>
+          </div>
+        </div>
       </form>
 
       {matching === 0 && (

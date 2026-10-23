@@ -169,7 +169,14 @@ export function CommentCard({
       {...props}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="bg-brand-soft text-brand flex size-6 items-center justify-center rounded-full text-[11px] font-semibold tabular-nums">
+        <span
+          className={cn(
+            "flex size-6 items-center justify-center rounded-full text-xs font-semibold tabular-nums",
+            strength
+              ? "bg-success-soft text-success"
+              : "bg-destructive-soft text-destructive",
+          )}
+        >
           {n}
         </span>
         <span
@@ -180,7 +187,13 @@ export function CommentCard({
               : "border-destructive/25 text-destructive",
           )}
         >
-          <Icon aria-hidden className="size-4" />
+          <Icon
+            aria-hidden
+            className={cn(
+              "size-4",
+              strength ? "text-success" : "text-destructive",
+            )}
+          />
           {strength ? "Strength" : "Fix"}
         </span>
         {c.tag && <Badge variant="outline">{c.tag}</Badge>}
@@ -226,7 +239,15 @@ export function CommentCard({
           </Button>
         </fieldset>
       ) : (
-        <p className="mt-1.5">{c.body}</p>
+        <>
+          <p className="mt-1.5">{c.body}</p>
+          {c.kind === "fix" && c.next_mark?.trim() && (
+            <p className="mt-1.5">
+              <span className="font-semibold">Your next mark: </span>
+              {c.next_mark}
+            </p>
+          )}
+        </>
       )}
     </div>
   );
