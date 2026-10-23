@@ -262,7 +262,7 @@ it("retains checkbox filters and drops stale day inputs before changing range", 
   expect(new FormData(select.form!).get("flagged")).toBe("1");
 });
 
-it("shows the supplied exam countdown only for students and keeps one Ask Claro button", () => {
+it("shows the supplied exam countdown only for students without a global chat launcher", () => {
   const { rerender } = render(
     <AppShell kind="student" name="Test Student" defaultOpen examDays={7}>
       Content
@@ -270,7 +270,7 @@ it("shows the supplied exam countdown only for students and keeps one Ask Claro 
   );
   expect(screen.getByText("HSC Economics exam")).toBeVisible();
   expect(screen.getByText("7", { exact: true })).toBeVisible();
-  expect(screen.getAllByRole("button", { name: "Ask Claro" })).toHaveLength(1);
+  expect(screen.queryByRole("button", { name: "Ask Claro" })).toBeNull();
   rerender(
     <AppShell kind="student" name="Test Student" defaultOpen examDays={null}>
       Content
@@ -283,10 +283,15 @@ it("shows the supplied exam countdown only for students and keeps one Ask Claro 
     </AppShell>,
   );
   expect(screen.queryByText("HSC Economics exam")).toBeNull();
+  expect(screen.queryByRole("button", { name: "Feedback" })).toBeNull();
+  expect(screen.getByRole("link", { name: "Inbox" })).toHaveAttribute(
+    "href",
+    "/admin/feedback",
+  );
   expect(screen.queryByRole("button", { name: "Ask Claro" })).toBeNull();
 });
 
-it("opens the existing feedback dialog from both account menus without a feedback FAB", async () => {
+it("opens the existing feedback dialog from the main nav and both account menus", async () => {
   render(
     <FeedbackWidget userId="student">
       <AppShell kind="student" name="Test Student" defaultOpen>
@@ -294,7 +299,17 @@ it("opens the existing feedback dialog from both account menus without a feedbac
       </AppShell>
     </FeedbackWidget>,
   );
-  expect(screen.queryByRole("button", { name: "Feedback" })).toBeNull();
+  const feedback = screen.getByRole("button", { name: "Feedback" });
+  expect(feedback.closest("nav")).toHaveAttribute(
+    "aria-label",
+    "Main navigation",
+  );
+  expect(screen.queryByRole("link", { name: "Feedback" })).toBeNull();
+  fireEvent.click(feedback);
+  expect(
+    await screen.findByRole("dialog", { name: "Send feedback" }),
+  ).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
   for (const trigger of ["User menu", "Account menu"]) {
     fireEvent.click(screen.getByRole("button", { name: trigger }));
     fireEvent.click(await screen.findByRole("menuitem", { name: "Feedback" }));
