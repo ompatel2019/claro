@@ -55,6 +55,9 @@ export async function prepareScan(file: File): Promise<Blob> {
     bitmap.close();
     throw new ScanError(SCAN_ERRORS.failed);
   }
+  // JPEG has no alpha: flatten transparent PNG/WebP onto white, not black.
+  context.fillStyle = "#fff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
   context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
   bitmap.close();
   const blob = await new Promise<Blob | null>((resolve) =>

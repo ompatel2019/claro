@@ -184,3 +184,14 @@ it("reports busy to the parent while scanning", () => {
   );
   expect(onBusy).toHaveBeenLastCalledWith(false);
 });
+
+it("times a cooldown from when it arrives, not from mount", async () => {
+  vi.useFakeTimers();
+  const { rerender } = render(<Box />);
+  await act(async () => vi.advanceTimersByTime(10 * 60_000));
+  hook.retryAt = Date.now() + 60_000;
+  rerender(<Box />);
+  expect(screen.getByRole("button", { name: /Scan/ })).toBeDisabled();
+  await act(async () => vi.advanceTimersByTime(60_001));
+  expect(screen.getByRole("button", { name: /Scan/ })).toBeEnabled();
+});

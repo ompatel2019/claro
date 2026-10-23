@@ -26,6 +26,8 @@ beforeEach(() => {
     vi.fn(async () => ({ width: 4032, height: 3024, close: vi.fn() })),
   );
   vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue({
+    fillRect: (_x: number, _y: number, w: number, h: number) =>
+      drawn.push(-w, -h),
     drawImage: (_b: unknown, _x: number, _y: number, w: number, h: number) =>
       drawn.push(w, h),
   } as never);
@@ -41,7 +43,8 @@ afterEach(() => {
 
 it("shrinks to a 2048 px long edge as JPEG", async () => {
   const blob = await prepareScan(photo());
-  expect(drawn).toEqual([2048, 1536]);
+  // White fill first so transparent PNG/WebP doesn't turn black in JPEG.
+  expect(drawn).toEqual([-2048, -1536, 2048, 1536]);
   expect(blob.type).toBe("image/jpeg");
   expect(HTMLCanvasElement.prototype.toBlob).toHaveBeenCalledWith(
     expect.any(Function),

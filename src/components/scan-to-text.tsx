@@ -51,7 +51,10 @@ export function ScanToText({
   useEffect(() => () => finish.current?.(), []);
   useEffect(() => {
     if (retryAt <= now) return;
-    const timer = setTimeout(() => setNow(Date.now()), retryAt - now);
+    const timer = setTimeout(
+      () => setNow(Date.now()),
+      Math.max(0, retryAt - Date.now()),
+    );
     return () => clearTimeout(timer);
   }, [retryAt, now]);
 
