@@ -212,11 +212,11 @@ export function MarkedAnswerDoc({
       const el = body.current?.querySelector<HTMLElement>(
         `[data-card="${id}"]`,
       );
-      const card = el?.getBoundingClientRect();
+      const top = restingTop(el);
       const floor = -(el?.parentElement?.offsetTop ?? 0);
-      setShift((now) =>
-        isWide() && phrase && card
-          ? columnShift(phrase.top, card.top, now, floor)
+      setShift(
+        isWide() && phrase && top !== null
+          ? columnShift(phrase.top, top, 0, floor)
           : 0,
       );
     }
@@ -230,13 +230,23 @@ export function MarkedAnswerDoc({
     setFocused(next);
   }
 
+  /**
+   * A comment's top with no shift: the column's (untransformed) top plus its offset in the list.
+   * Never measured through the transform, so a shift still in transition can't skew it.
+   */
+  function restingTop(el: HTMLElement | null | undefined) {
+    const view = el?.closest(".cma-cols")?.getBoundingClientRect();
+    return view ? view.top + (el!.parentElement?.offsetTop ?? 0) : null;
+  }
   /** Keyboard focus on a comment slid out of the clipped column brings it back into view. */
   function revealCard(el: HTMLElement) {
     const view = el.closest(".cma-cols")?.getBoundingClientRect();
-    const card = el.getBoundingClientRect();
-    if (!view || card.top >= view.top) return;
+    const top = restingTop(el);
+    if (!view || top === null || el.getBoundingClientRect().top >= view.top)
+      return;
+    // Lift the comment to the top of the column window.
     const floor = -(el.parentElement?.offsetTop ?? 0);
-    setShift((now) => columnShift(view.top, card.top, now, floor));
+    setShift(columnShift(view.top, top, 0, floor));
   }
 
   useHighlightSync(

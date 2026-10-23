@@ -547,16 +547,18 @@ describe("comment column", () => {
     const rect = (top: number) =>
       ({ top, bottom: top + 80, left: 0, right: 0 }) as DOMRect;
     list.getBoundingClientRect = () => rect(100);
-    card(11).getBoundingClientRect = () => rect(40);
-    fireEvent.focus(card(11));
-    expect(list.querySelector("ol")).toHaveStyle({
-      transform: "translateY(60px)",
-    });
-    // Already in view: nothing moves.
-    card(22).getBoundingClientRect = () => rect(300);
+    // The second comment sits 90px down the list and has slid above the window.
+    Object.defineProperty(card(22).parentElement!, "offsetTop", { value: 90 });
+    card(22).getBoundingClientRect = () => rect(40);
     fireEvent.focus(card(22));
     expect(list.querySelector("ol")).toHaveStyle({
-      transform: "translateY(60px)",
+      transform: "translateY(-90px)",
+    });
+    // Already in view: nothing moves.
+    card(11).getBoundingClientRect = () => rect(300);
+    fireEvent.focus(card(11));
+    expect(list.querySelector("ol")).toHaveStyle({
+      transform: "translateY(-90px)",
     });
   });
 });
