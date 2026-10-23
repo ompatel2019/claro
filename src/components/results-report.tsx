@@ -137,7 +137,11 @@ export function ResultsAnswers({
         views={views}
         mcGrid={mcGrid}
         items={rows.map((r) => {
-          const state = markingState(r);
+          // MC marking stores a null choice without a "No answer" note.
+          const state =
+            r.type === "mcq" && r.choice_index == null
+              ? "not_answered"
+              : markingState(r);
           return {
             position: r.position,
             type: TYPE_LABEL[r.type],

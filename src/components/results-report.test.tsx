@@ -267,7 +267,7 @@ it("keeps unanswered MC rows distinct from incorrect answers in sprint tiles and
     max_marks: 1,
     mark: 0,
     status: "marked",
-    feedback: choice_index === null ? { note: "No answer" } : null,
+    feedback: null,
     choice_index,
     correct_index: 1,
     options: ["One", "Two"],
