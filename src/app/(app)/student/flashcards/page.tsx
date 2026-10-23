@@ -1,3 +1,4 @@
+import { ImportCards } from "@/components/student/flashcards/import-cards";
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
@@ -147,6 +148,7 @@ export default async function Flashcards({
               <PortalIcon name="layers" />
               My cards ({mine})
             </Link>
+            <ImportCards topics={topics} />
             <NewCard topics={topics} variant="outline" />
           </>
         }

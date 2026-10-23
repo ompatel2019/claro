@@ -26,6 +26,7 @@ import { criteriaCoverMarks } from "@/lib/marking/own-criteria";
 import { highlightSegments } from "@/lib/practice";
 import { ScoreRing } from "./claro/data-display";
 import { cn } from "@/lib/utils";
+import { RichText } from "./rich-text";
 import { RetryAnswer } from "./retry-answer";
 import { StatusPill, statePill } from "./status-pill";
 import { Badge } from "./ui/badge";
@@ -562,7 +563,7 @@ export function AnnotatedFeedback({
                 <p
                   role="img"
                   aria-label={`Your mark: ${markLabel(row).replaceAll(" ", "")}`}
-                  className="text-4xl leading-tight font-bold tabular-nums"
+                  className="num-display text-4xl leading-tight font-bold"
                 >
                   {markLabel(row).split(" / ")[0]}
                   <span className="text-muted-foreground text-lg font-medium">
@@ -824,9 +825,10 @@ export function AnnotatedFeedback({
                 )}
               >
                 <h2 className="text-lg font-semibold">Sample answer</h2>
-                <p className="max-w-prose text-base leading-relaxed whitespace-pre-wrap">
-                  {formatSampleMaths(row.sample_answer)}
-                </p>
+                <RichText
+                  className="max-w-prose text-base leading-relaxed"
+                  text={formatSampleMaths(row.sample_answer)}
+                />
                 <p className="text-muted-foreground text-[13px]">
                   One strong answer. Other answers can earn the same marks.
                 </p>

@@ -354,7 +354,7 @@ export async function HomeWeek({
         </p>
       ) : (
         <p className="mt-2 flex items-baseline gap-2">
-          <strong className="text-xl leading-6 font-[650] tracking-[-0.01em] tabular-nums">
+          <strong className="num-display text-xl leading-6 font-[650]">
             {week.filter((d) => d.done).length} of {WEEKLY_PRACTICE_GOAL}
           </strong>
           <span className="text-muted-foreground text-[13px]">

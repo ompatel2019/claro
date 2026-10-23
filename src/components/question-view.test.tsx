@@ -70,3 +70,39 @@ it("keeps empty admin preview placeholders and post-finish marking guidance", ()
   expect(screen.getByText("A strong answer.")).toBeVisible();
   expect(screen.getByText("Why the key is correct.")).toBeVisible();
 });
+
+it.each([true, false])(
+  "joins wrapped stems in the shared preview (student=%s)",
+  (student) => {
+    const question = {
+      stem: "Explain a market-\nbased policy used by\ngovernment.",
+      marks: 3,
+      source: "HSC",
+      stimulus: null,
+    };
+    render(
+      student ? (
+        <QuestionView question={question} />
+      ) : (
+        <QuestionView {...question} />
+      ),
+    );
+    expect(
+      screen.getByText("Explain a market-based policy used by government.")
+        .textContent,
+    ).toBe("Explain a market-based policy used by government.");
+  },
+);
+
+it("joins wrapped model answers without losing paragraph breaks", () => {
+  render(
+    <QuestionKey
+      sample={
+        "A market-based policy\nchanges incentives.\n\nIt can reduce\npollution."
+      }
+    />,
+  );
+  expect(screen.getByText(/A market-based policy/).textContent).toBe(
+    "A market-based policy changes incentives.\n\nIt can reduce pollution.",
+  );
+});

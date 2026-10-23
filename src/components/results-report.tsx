@@ -18,6 +18,7 @@ import { PortalIcon } from "./icons";
 import { QuestionView } from "./question-view";
 import { Badge } from "./claro/controls";
 import { AnnotatedFeedback } from "./annotated-feedback";
+import { RichText } from "./rich-text";
 import { AI_NOTE } from "./annotated-feedback/ai-note";
 import { ReportProblem } from "./feedback-widget";
 import { QuestionMark } from "./question-mark";
@@ -138,9 +139,10 @@ export function ResultsAnswers({
                     className="text-muted-foreground size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none"
                   />
                 </summary>
-                <p className="text-ink-2 mt-1 max-w-prose text-[15px] leading-relaxed whitespace-pre-wrap">
-                  {formatSampleMaths(sample)}
-                </p>
+                <RichText
+                  className="text-ink-2 mt-1 max-w-prose text-[15px] leading-relaxed"
+                  text={formatSampleMaths(sample)}
+                />
               </details>
             )}
           </CardContent>

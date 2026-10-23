@@ -264,3 +264,16 @@ it.each(["new", "due", "known", "learning"])(
       ]);
   },
 );
+
+it("rejects invalid import sides and kind before inserting any cards", async () => {
+  for (const invalid of [
+    { ...card, back: "" },
+    { ...card, kind: "invalid" as typeof card.kind },
+    { ...card, front: "a".repeat(201) },
+  ]) {
+    expect((await importMyCards([card, invalid])).error).toBe(
+      "Check the front, back, kind and topic.",
+    );
+  }
+  expect(state.queries.some((query) => query.op === "insert")).toBe(false);
+});

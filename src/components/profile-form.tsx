@@ -248,16 +248,13 @@ export function ProfileForm({
               </p>
             )}
           </div>
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              value={email}
-              readOnly
-              type="email"
-              autoComplete="email"
-            />
-          </div>
+          <dl className="grid gap-2">
+            <dt className="text-sm font-medium">Email</dt>
+            <dd className="text-sm break-all">{email}</dd>
+            <dd className="text-muted-foreground text-[13px]">
+              Contact support to change your email
+            </dd>
+          </dl>
           {state.error && (
             <p
               id="details-error"

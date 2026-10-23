@@ -30,7 +30,6 @@ import { EmptyState } from "./empty-state";
 import { Badge } from "./claro/controls";
 import { Meter } from "./claro/data-display";
 import { Button } from "./ui/button";
-import { Card, CardContent } from "./ui/card";
 import {
   Collapsible,
   CollapsibleContent,
@@ -215,11 +214,11 @@ export function SprintSetup({
           </button>
         </p>
       )}
-      <Card className="gap-0 py-0">
-        <div className="border-b px-5 py-5 sm:px-6">
+      <div className="space-y-5">
+        <div>
           <h2 className="text-xl font-[650] tracking-tight">Build your own</h2>
         </div>
-        <CardContent className="divide-y px-0">
+        <div className="space-y-5">
           <div>
             <Section
               title="Topics"
@@ -488,7 +487,7 @@ export function SprintSetup({
               )}
             </Section>
           </div>
-          <div className="divide-y">
+          <div className="space-y-5">
             {(c.history === "prefer_new" || c.history === "any") && (
               <Section title="Question history">
                 <label className="flex items-center gap-2 text-sm">
@@ -503,7 +502,7 @@ export function SprintSetup({
               </Section>
             )}
 
-            <div className="px-5 py-5 sm:px-6">
+            <div>
               <h2 className="mb-4 text-sm font-semibold">Timer and feedback</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div role="region" aria-label="Timer">
@@ -590,7 +589,7 @@ export function SprintSetup({
                 <div
                   role="region"
                   aria-label="Feedback"
-                  className="grid content-start gap-2 rounded-xl border p-3.5"
+                  className="grid content-start gap-2"
                 >
                   <h3 className="text-sm font-medium">How you practise</h3>
                   <RadioGroup
@@ -656,7 +655,7 @@ export function SprintSetup({
                 </div>
               </div>
             </div>
-            <Collapsible className="px-5 py-5 sm:px-6">
+            <Collapsible>
               <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-semibold">
                 <span>
                   Advanced
@@ -783,8 +782,8 @@ export function SprintSetup({
               </CollapsibleContent>
             </Collapsible>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
       <form
         ref={form}
@@ -823,7 +822,7 @@ export function SprintSetup({
               ) : (
                 <>
                   <p
-                    className="text-4xl leading-none font-bold tracking-tight tabular-nums"
+                    className="num-display text-4xl leading-none font-bold"
                     aria-live="polite"
                   >
                     {c.target}
@@ -833,7 +832,7 @@ export function SprintSetup({
               )}
             </div>
             <div>
-              <p className="text-4xl leading-none font-bold tracking-tight tabular-nums">
+              <p className="num-display text-4xl leading-none font-bold">
                 {c.timed ? minutes : "—"}
               </p>
               <p className="text-muted-foreground mt-2 text-xs">

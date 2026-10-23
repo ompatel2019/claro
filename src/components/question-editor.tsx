@@ -49,6 +49,7 @@ import {
   CardTitle,
 } from "./ui/card";
 import { Input } from "./ui/input";
+import { FilePicker } from "./ui/file-picker";
 import { TopicSelect } from "./topic-select";
 import { FormSelect } from "./ui/form-select";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
@@ -495,9 +496,10 @@ export function QuestionEditor({
                 onChange={(e) => set("stimulus", e.target.value || null)}
               />
             </Field>
-            <Field label="Insert image" hint="JPEG, PNG or WebP, up to 10 MB.">
-              <Input
-                type="file"
+            <div className="grid gap-1.5">
+              <FilePicker
+                label="Insert image"
+                aria-describedby="question-image-hint"
                 accept="image/jpeg,image/png,image/webp"
                 disabled={uploading}
                 onChange={(e) => {
@@ -506,7 +508,13 @@ export function QuestionEditor({
                   if (file) void insertImage(file);
                 }}
               />
-            </Field>
+              <p
+                id="question-image-hint"
+                className="text-muted-foreground text-[13px]"
+              >
+                JPEG, PNG or WebP, up to 10 MB.
+              </p>
+            </div>
           </CardContent>
         </Card>
         {mc ? (
@@ -1170,25 +1178,25 @@ function Stats({
       <dl className="grid grid-cols-2 gap-3">
         <div>
           <dt className="text-muted-foreground text-xs">Attempts</dt>
-          <dd className="text-xl font-semibold tabular-nums">
+          <dd className="num-display text-xl font-semibold">
             {stats.attempts}
           </dd>
         </div>
         <div>
           <dt className="text-muted-foreground text-xs">Average</dt>
-          <dd className="text-xl font-semibold tabular-nums">
+          <dd className="num-display text-xl font-semibold">
             {stats.avg == null ? "No marks yet" : `${stats.avg}%`}
           </dd>
         </div>
         <div>
           <dt className="text-muted-foreground text-xs">Check disagreements</dt>
-          <dd className="text-xl font-semibold tabular-nums">
+          <dd className="num-display text-xl font-semibold">
             {stats.disagreements}
           </dd>
         </div>
         <div>
           <dt className="text-muted-foreground text-xs">Open reports</dt>
-          <dd className="text-xl font-semibold tabular-nums">
+          <dd className="num-display text-xl font-semibold">
             {stats.reportCount}
           </dd>
         </div>

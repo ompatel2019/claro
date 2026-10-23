@@ -66,16 +66,14 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-it("offers an outline camera button that opens the photo picker", () => {
+it("offers a labelled camera picker", () => {
   render(<Box />);
-  const button = screen.getByRole("button", { name: "Scan written answer" });
-  expect(button).toHaveAttribute("data-variant", "outline");
-  expect(button.querySelector('[data-icon="camera"]')).not.toBeNull();
-  const input = document.querySelector<HTMLInputElement>('input[type="file"]')!;
+  const input = screen.getByLabelText("Scan written answer");
+  expect(
+    input.closest("label")?.querySelector('[data-icon="camera"]'),
+  ).not.toBeNull();
   expect(input).toHaveAttribute("capture", "environment");
-  const click = vi.spyOn(input, "click");
-  fireEvent.click(button);
-  expect(click).toHaveBeenCalled();
+  expect(input).toHaveClass("sr-only");
 });
 
 it("fills an empty box at once under reduced motion, then shows the [?] hint", async () => {
@@ -94,7 +92,7 @@ it("types the answer out progressively", async () => {
   render(<Box />);
   await choose();
   expect(screen.getByRole("status")).toHaveTextContent("Typing your answer…");
-  expect(screen.getByRole("button", { name: /Scan/ })).toBeDisabled();
+  expect(screen.getByLabelText("Scan written answer")).toBeDisabled();
   await act(async () => vi.advanceTimersByTime(300));
   expect(box().value.length).toBeGreaterThan(0);
   expect(box().value.length).toBeLessThan(scanned.text.length);
@@ -143,7 +141,7 @@ it("leaves the box alone when the scan fails", async () => {
 it("announces loading and errors accessibly", () => {
   Object.assign(hook, { state: "reading" });
   const { rerender } = render(<Box />);
-  const button = screen.getByRole("button", { name: /Scan/ });
+  const button = screen.getByLabelText("Scan written answer");
   expect(button).toBeDisabled();
   expect(button).toHaveAttribute("aria-busy", "true");
   expect(screen.getByRole("status")).toHaveTextContent(
@@ -154,21 +152,21 @@ it("announces loading and errors accessibly", () => {
   expect(screen.getByRole("alert")).toHaveTextContent(
     "Couldn't read your photo.",
   );
-  expect(screen.getByRole("button", { name: /Scan/ })).toBeEnabled();
+  expect(screen.getByLabelText("Scan written answer")).toBeEnabled();
 });
 
 it("stays disabled until Retry-After passes", async () => {
   vi.useFakeTimers();
   hook.retryAt = Date.now() + 60_000;
   render(<Box />);
-  expect(screen.getByRole("button", { name: /Scan/ })).toBeDisabled();
+  expect(screen.getByLabelText("Scan written answer")).toBeDisabled();
   await act(async () => vi.advanceTimersByTime(60_001));
-  expect(screen.getByRole("button", { name: /Scan/ })).toBeEnabled();
+  expect(screen.getByLabelText("Scan written answer")).toBeEnabled();
 });
 
 it("respects the disabled prop", () => {
   render(<ScanToText attemptId="a1" value="" onText={() => {}} disabled />);
-  expect(screen.getByRole("button", { name: /Scan/ })).toBeDisabled();
+  expect(screen.getByLabelText("Scan written answer")).toBeDisabled();
 });
 
 it("reports busy to the parent while scanning", () => {
@@ -191,7 +189,7 @@ it("times a cooldown from when it arrives, not from mount", async () => {
   await act(async () => vi.advanceTimersByTime(10 * 60_000));
   hook.retryAt = Date.now() + 60_000;
   rerender(<Box />);
-  expect(screen.getByRole("button", { name: /Scan/ })).toBeDisabled();
+  expect(screen.getByLabelText("Scan written answer")).toBeDisabled();
   await act(async () => vi.advanceTimersByTime(60_001));
-  expect(screen.getByRole("button", { name: /Scan/ })).toBeEnabled();
+  expect(screen.getByLabelText("Scan written answer")).toBeEnabled();
 });

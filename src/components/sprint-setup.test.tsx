@@ -54,11 +54,10 @@ it("keeps the live summary after the builder with warnings and controls", async 
   });
   render(<SprintSetup topics={topics} params={{ type: "short" }} />);
   const form = start().closest("form")!;
-  const card = screen
-    .getByRole("region", { name: "Question type" })
-    .closest('[data-slot="card"]')!;
-  expect(card.parentElement).toBe(form.parentElement);
-  expect(card.nextElementSibling).toBe(form);
+  const builder = screen.getByRole("heading", { name: "Build your own" })
+    .parentElement!.parentElement!;
+  expect(builder.parentElement).toBe(form.parentElement);
+  expect(builder.nextElementSibling).toBe(form);
   await waitFor(() =>
     expect(screen.getByRole("alert")).toHaveTextContent("Only 10 marks match"),
   );
@@ -127,10 +126,9 @@ it("empty pools keep the summary after the builder, block start and provide a wi
   await waitFor(() =>
     expect(screen.getByText("No questions match")).toBeVisible(),
   );
-  const card = screen
-    .getByRole("region", { name: "Question type" })
-    .closest('[data-slot="card"]')!;
-  expect(card.nextElementSibling).toBe(start().closest("form"));
+  const builder = screen.getByRole("heading", { name: "Build your own" })
+    .parentElement!.parentElement!;
+  expect(builder.nextElementSibling).toBe(start().closest("form"));
   expect(start()).toBeDisabled();
   fireEvent.click(
     screen.getByRole("button", { name: "Include seen questions (+10)" }),

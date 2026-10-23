@@ -1,9 +1,10 @@
 "use client";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { usePathname } from "next/navigation";
-import { ImagePlus, Close, PortalIcon } from "@/components/icons";
+import { Close, PortalIcon } from "@/components/icons";
 import { toast } from "sonner";
 import { Button } from "./ui/button";
+import { FilePicker } from "./ui/file-picker";
 import {
   Dialog,
   DialogContent,
@@ -214,21 +215,18 @@ export function FeedbackWidget({
                 add(e.dataTransfer.files);
               }}
             >
-              <label className="text-muted-foreground flex cursor-pointer items-center gap-2 text-sm">
-                <ImagePlus aria-hidden className="size-4" />
-                Add screenshots (paste, drop or pick; up to 5)
-                <input
-                  type="file"
-                  multiple
-                  accept={TYPES.join(",")}
-                  className="sr-only"
-                  aria-label="Add screenshots"
-                  onChange={(e) => {
-                    add(e.target.files ?? []);
-                    e.target.value = "";
-                  }}
-                />
-              </label>
+              <FilePicker
+                label="Add screenshots"
+                multiple
+                accept={TYPES.join(",")}
+                onChange={(e) => {
+                  add(e.target.files ?? []);
+                  e.target.value = "";
+                }}
+              />
+              <p className="text-muted-foreground text-sm">
+                Paste, drop or pick up to 5 screenshots.
+              </p>
               {files.length > 0 && (
                 <ul className="flex flex-wrap gap-2">
                   {files.map((f, i) => (

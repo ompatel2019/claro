@@ -260,7 +260,7 @@ function StatValue({
   return (
     <p className="text-ink flex flex-wrap items-baseline gap-x-1.5 tabular-nums">
       <span>
-        <span className="text-[28px] leading-none font-semibold tracking-tight">
+        <span className="num-display text-[28px] leading-none font-bold">
           {value}
         </span>
         {flush && (

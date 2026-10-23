@@ -26,13 +26,10 @@ test.describe("Student profile (read only)", () => {
       await expect(
         page.getByRole("heading", { level: 2, name, exact: true }),
       ).toBeVisible();
-    await expect(page.getByLabel("Email", { exact: true })).toHaveAttribute(
-      "readonly",
-      "",
-    );
-    await expect(page.getByLabel("Email", { exact: true })).toHaveValue(
-      process.env.STUDENT_EMAIL!,
-    );
+    await expect(
+      page.getByText(process.env.STUDENT_EMAIL!, { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("textbox", { name: "Email" })).toHaveCount(0);
     await expect(page.getByLabel("Full name", { exact: true })).toHaveAttribute(
       "maxlength",
       "80",

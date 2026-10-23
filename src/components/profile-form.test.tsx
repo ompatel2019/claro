@@ -88,3 +88,11 @@ it("keeps details and the draft after a failed request", async () => {
     "Unsaved name",
   );
 });
+it("shows the email as read-only text with a support note", () => {
+  mount();
+  expect(screen.getByText("own@example.com").tagName).toBe("DD");
+  expect(screen.queryByRole("textbox", { name: "Email" })).toBeNull();
+  expect(
+    screen.getByText("Contact support to change your email"),
+  ).toBeInTheDocument();
+});
