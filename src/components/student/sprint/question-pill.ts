@@ -22,7 +22,7 @@ export function questionPillState({
       flagged &&
         "after:absolute after:-top-0.5 after:-right-0.5 after:size-2 after:rounded-full after:bg-[var(--pill-flag)] after:outline-2 after:outline-background",
     ),
-    label: `${answered ? "answered" : "not answered"}${flagged ? ", flagged" : ""}${active ? ", current" : ""}`,
+    label: `${answered ? "Answered" : "Not answered"}${flagged ? ", Flagged" : ""}`,
     "aria-current": active ? ("step" as const) : undefined,
   };
 }

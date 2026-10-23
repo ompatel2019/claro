@@ -561,7 +561,7 @@ export function SprintRunner({
                       data-q
                       disabled={busy}
                       aria-current={pill["aria-current"]}
-                      aria-label={`Question ${i + 1}, ${pill.label}${row.status === "marked" ? `, ${row.mark}/${row.max_marks} marks` : ""}`}
+                      aria-label={`Question ${i + 1}: ${pill.label}${row.status === "marked" ? `, ${row.mark}/${row.max_marks} marks` : ""}`}
                       onClick={() => go(i)}
                       className={cn(
                         "focus-visible:outline-ring size-9 text-sm font-medium tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2",
@@ -623,7 +623,7 @@ export function SprintRunner({
             <button
               key={row.id}
               type="button"
-              aria-label={`Question ${i + 1}, ${pill.label}`}
+              aria-label={`Question ${i + 1}${row.flagged ? ", flagged" : ""}${answered(row) ? ", answered" : ", not answered"}`}
               aria-current={pill["aria-current"]}
               disabled={busy}
               onClick={() => go(i)}

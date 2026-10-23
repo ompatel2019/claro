@@ -206,7 +206,7 @@ it("flags from the fixed footer and updates the question booklet", async () => {
   expect(
     within(
       screen.getByRole("navigation", { name: "Question booklet" }),
-    ).getByRole("button", { name: "Question 1, answered, flagged, current" }),
+    ).getByRole("button", { name: "Question 1: Answered, Flagged" }),
   ).toBeVisible();
   expect(mocks.update).toHaveBeenCalledWith({ flagged: true });
   fireEvent.click(flag);
@@ -596,12 +596,12 @@ it("saves before background marking, keeps a resumed mark editable and hides fai
   expect(
     within(
       screen.getByRole("navigation", { name: "Question booklet" }),
-    ).getByRole("button", { name: /^Question 1,/ }),
+    ).getByRole("button", { name: /^Question 1:/ }),
   ).not.toHaveAccessibleName(/marks/);
   fireEvent.click(
     within(
       screen.getByRole("navigation", { name: "Question booklet" }),
-    ).getByRole("button", { name: /^Question 2,/ }),
+    ).getByRole("button", { name: /^Question 2:/ }),
   );
   await waitFor(() =>
     expect(mocks.fetch).toHaveBeenCalledWith(
@@ -620,7 +620,7 @@ it("saves before background marking, keeps a resumed mark editable and hides fai
   fireEvent.click(
     within(
       screen.getByRole("navigation", { name: "Question booklet" }),
-    ).getByRole("button", { name: /^Question 1,/ }),
+    ).getByRole("button", { name: /^Question 1:/ }),
   );
   expect(
     await screen.findByRole("textbox", { name: "Your answer" }),
@@ -909,7 +909,7 @@ it("scans a written answer into the typed box and saves it as answer_text", asyn
   fireEvent.click(
     within(
       screen.getByRole("navigation", { name: "Question booklet" }),
-    ).getByRole("button", { name: /^Question 2,/ }),
+    ).getByRole("button", { name: /^Question 2:/ }),
   );
   await waitFor(() =>
     expect(mocks.fetch).toHaveBeenCalledWith(
@@ -968,7 +968,7 @@ it("keeps long-sprint progress targets usable and preserves answered and flagged
   const nav = screen.getByRole("navigation", { name: "Question progress" });
   const buttons = within(nav).getAllByRole("button");
   expect(buttons).toHaveLength(55);
-  expect(buttons[54]).toHaveAccessibleName("Question 55, answered, flagged");
+  expect(buttons[54]).toHaveAccessibleName("Question 55, flagged, answered");
   expect(buttons[54]).toHaveClass("h-8", "min-w-8");
   expect(buttons[54].firstElementChild).toHaveClass(
     "bg-brand",
@@ -976,7 +976,7 @@ it("keeps long-sprint progress targets usable and preserves answered and flagged
   );
   const booklet = screen.getByRole("navigation", { name: "Question booklet" });
   const bookletPill = within(booklet).getByRole("button", {
-    name: "Question 55, answered, flagged",
+    name: "Question 55: Answered, Flagged",
   });
   expect(bookletPill).toHaveClass("bg-brand", "after:bg-[var(--pill-flag)]");
   expect(buttons[54]).toHaveClass("focus-visible:outline-2");
@@ -996,9 +996,7 @@ it("keeps long-sprint progress targets usable and preserves answered and flagged
   await waitFor(() =>
     expect(buttons[54]).toHaveAttribute("aria-current", "step"),
   );
-  expect(buttons[54]).toHaveAccessibleName(
-    "Question 55, answered, flagged, current",
-  );
+  expect(buttons[54]).toHaveAccessibleName("Question 55, flagged, answered");
   expect(bookletPill).toHaveClass(
     "bg-brand",
     "scale-110",
@@ -1023,7 +1021,7 @@ it.each(
   expect(pill.className).not.toMatch(/ring-/);
   expect(pill["aria-current"]).toBe(active ? "step" : undefined);
   expect(pill.label).toBe(
-    `${answered ? "answered" : "not answered"}${flagged ? ", flagged" : ""}${active ? ", current" : ""}`,
+    `${answered ? "Answered" : "Not answered"}${flagged ? ", Flagged" : ""}`,
   );
 });
 
