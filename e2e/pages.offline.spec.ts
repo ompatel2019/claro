@@ -296,7 +296,7 @@ test("A2: Topic selection changes Subtopic choices and clears an old child", asy
   );
 });
 
-test("Progress: mobile topic table scrolls within the page", async ({
+test("Progress: mobile topic rows and sprint actions stay within the page", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -304,6 +304,36 @@ test("Progress: mobile topic table scrolls within the page", async ({
   await expect(
     page.getByRole("heading", { name: "Marks by topic", exact: true }),
   ).toBeVisible();
+  await expect(page.getByRole("heading", { level: 2 }).first()).toHaveText(
+    "Practice average",
+  );
+  const topics = page.getByRole("table", {
+    name: "Marks by topic",
+    exact: true,
+  });
+  await expect(topics.getByText("Focus", { exact: true })).toBeVisible();
+  await topics
+    .getByRole("button", { name: "The Global Economy", exact: true })
+    .click();
+  await expect(
+    topics.getByRole("link", { name: "Sprint on Trade", exact: true }),
+  ).toHaveAttribute("href", "/student/sprint?topics=t1&sub=trade");
+  const days = page
+    .getByRole("group", {
+      name: "Practice days over the last eight weeks",
+    })
+    .getByRole("link");
+  expect(await days.count()).toBeGreaterThan(0);
+  for (const day of await days.all()) {
+    const box = await day.boundingBox();
+    expect(box!.width).toBeGreaterThanOrEqual(24);
+    expect(box!.height).toBeGreaterThanOrEqual(24);
+  }
+  await days.last().focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Tab");
+  await expect(days.last()).toBeFocused();
+  await expect(days.last()).toHaveCSS("outline-width", "2px");
   const overflow = await page.evaluate(() =>
     [...document.querySelectorAll("body *")]
       .filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1)

@@ -9,6 +9,9 @@ import { PageHeader } from "@/components/claro/layout";
 import { ProgressControls } from "@/components/progress-controls";
 import { TopicProgressTable } from "@/components/progress-tables";
 import { ProgressChart } from "@/components/student/progress/charts";
+import { PracticeDays } from "@/components/student/progress/practice-days";
+import { Meter } from "@/components/claro/data-display";
+import { buttonVariants } from "@/components/ui/button";
 import { HomeLostMarks } from "@/components/student/home/sections";
 
 function Section({
@@ -28,7 +31,7 @@ function Section({
       className="bg-card shadow-card relative min-w-0 gap-0 overflow-hidden rounded-2xl border py-0"
     >
       <div className="px-5 pt-5 pb-4">
-        <h2 className="text-sm font-semibold">{title}</h2>
+        <h2 className="text-lg leading-6 font-semibold">{title}</h2>
         {caption && (
           <p className="text-muted-foreground mt-1 text-[13px]">{caption}</p>
         )}
@@ -105,15 +108,43 @@ export default async function Progress({
   ] as const;
   return (
     <div
-      className="min-w-0 space-y-5"
+      className="progress-page min-w-0 space-y-6"
       data-testid="progress-page"
       data-range={range}
     >
       <PageHeader
         title="Progress"
-        description="Your practice, and where to improve next."
+        eyebrow="From your marked answers"
         actions={<ProgressControls range={range} />}
       />
+      <Section
+        title="Practice average"
+        caption={`${answered ? `${pct}% across ${answered} marked answers` : "No marked answers yet"} · Your target is ${PRACTICE_TARGET}%`}
+      >
+        <ProgressChart history={history}>
+          <details className="text-muted-foreground mt-2 text-xs">
+            <summary className="cursor-pointer">Filter score history</summary>
+            <div className="mt-3">
+              <ProgressControls range={range} filters />
+            </div>
+          </details>
+        </ProgressChart>
+        {answered === 0 && (
+          <Link
+            href="/student/sprint"
+            className={buttonVariants({ className: "mt-4" })}
+          >
+            Start a sprint
+          </Link>
+        )}
+      </Section>
+      <Section
+        title="Marks by topic"
+        caption="Share of marks earned, weakest first. Open a topic for its dot points."
+        flush
+      >
+        <TopicProgressTable rows={d.topics} />
+      </Section>
       <Section
         title="Your practice"
         caption={
@@ -124,7 +155,7 @@ export default async function Progress({
               : `In the last ${range} days`
         }
       >
-        <dl className="grid grid-cols-2 gap-5 md:grid-cols-4">
+        <dl className="grid grid-cols-2 gap-5 xl:grid-cols-4">
           {stats.map(([label, value]) => (
             <div key={label}>
               <dt className="text-muted-foreground text-sm">{label}</dt>
@@ -145,27 +176,74 @@ export default async function Progress({
           count is for today.
         </p>
       </Section>
-      <Section
-        title="Practice average"
-        caption={`${answered ? `${pct}% across ${answered} marked answers` : "No marked answers yet"} · Your target is ${PRACTICE_TARGET}%`}
-      >
-        <ProgressChart history={history}>
-          <details className="text-muted-foreground mt-2 text-xs">
-            <summary className="cursor-pointer">Filter score history</summary>
-            <div className="mt-3">
-              <ProgressControls range={range} filters />
-            </div>
-          </details>
-        </ProgressChart>
-      </Section>
-      <Section
-        title="Marks by topic"
-        caption="Open a topic to see its dot points"
-        flush
-      >
-        <TopicProgressTable rows={d.topics} />
-      </Section>
-      <HomeLostMarks progress={Promise.resolve(d)} />
+      <div className="grid items-start gap-6 xl:grid-cols-[7fr_5fr]">
+        <div className="progress-loss">
+          <HomeLostMarks
+            progress={Promise.resolve(d)}
+            caption="Marks dropped in this range, by dot point. Practise a dot point to improve it."
+          />
+        </div>
+        <div className="min-w-0 space-y-6">
+          <Section
+            title="By question type"
+            caption="Share of marks earned in this range"
+          >
+            <ul className="divide-y">
+              {(
+                [
+                  ["mcq", "Multiple choice"],
+                  ["short", "Short answer"],
+                  ["extended", "Extended response"],
+                ] as const
+              ).map(([id, label]) => {
+                const row = d.types.find((r) => r.id === id);
+                return (
+                  <li key={id} className="py-3 first:pt-0 last:pb-0">
+                    <div className="flex items-baseline justify-between gap-3 text-sm">
+                      <span className="font-semibold">{label}</span>
+                      <span className="tabular-nums">
+                        {row?.pct == null
+                          ? "Not started"
+                          : `${Math.round(row.pct)}%`}
+                      </span>
+                    </div>
+                    {row?.pct != null && (
+                      <Meter
+                        value={row.pct}
+                        label={`${label} average`}
+                        className="mt-2"
+                      />
+                    )}
+                    <div className="mt-2 flex items-center justify-between gap-3">
+                      <span className="text-muted-foreground text-xs tabular-nums">
+                        {row?.answered ?? 0} answered
+                      </span>
+                      {id !== "extended" && (
+                        <Link
+                          href={`/student/sprint?type=${id}`}
+                          className={buttonVariants({
+                            variant: "ghost",
+                            size: "sm",
+                          })}
+                        >
+                          Practise<span className="sr-only"> {label}</span>
+                        </Link>
+                      )}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </Section>
+          <Section title="Practice days" caption="Small sessions add up">
+            <PracticeDays
+              days={days}
+              today={today}
+              from={rangeFrom(range, today)}
+            />
+          </Section>
+        </div>
+      </div>
     </div>
   );
 }

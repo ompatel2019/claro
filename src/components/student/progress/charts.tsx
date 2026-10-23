@@ -3,10 +3,14 @@
 import { useState, useEffect, useRef } from "react";
 import { PortalIcon } from "@/components/icons";
 import { addDays, type ActivityDay } from "@/lib/activity";
-import { type HistoryScore, reportHref, weeklyScores } from "@/lib/progress";
+import {
+  type HistoryScore,
+  PRACTICE_TARGET,
+  reportHref,
+  weeklyScores,
+} from "@/lib/progress";
 import { dateLabel } from "@/lib/practice";
 import Link from "next/link";
-import { WeeklyAverageTrend } from "@/components/score-trend";
 import { sessionTitle } from "@/lib/session-summary";
 
 export { weeklyScores } from "@/lib/progress";
@@ -56,10 +60,10 @@ export function ProgressChart({
     : 100;
   const width = measured ?? (volume ? 300 : 620),
     height = volume ? 220 : 264;
-  const left = 32,
-    right = width - 30,
+  const left = 36,
+    right = width - 44,
     bottom = height - 26,
-    top = 14;
+    top = 28;
   const points = values.map((v, i) => ({
     x:
       left +
@@ -69,13 +73,51 @@ export function ProgressChart({
   const last = points.at(-1);
   return (
     <div ref={container}>
-      <button
-        aria-label={table ? "Show chart" : "Show chart data"}
-        onClick={() => setTable(!table)}
-        className="text-muted-foreground absolute top-5 right-5 rounded p-1"
-      >
-        <PortalIcon name="table" size={16} />
-      </button>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+        {!volume && values.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-4">
+            <span className="relative inline-block px-3 py-1 text-3xl font-bold tabular-nums">
+              {Math.round(values.at(-1)!.value)}%
+              <svg
+                className="pen pen-draw absolute -inset-x-1 -inset-y-2 h-[calc(100%+16px)] w-[calc(100%+8px)]"
+                viewBox="0 0 160 112"
+                preserveAspectRatio="none"
+                aria-hidden="true"
+              >
+                <path
+                  d="M135.7 20.4C108.1 3.8 67.2 5.7 35.1 19.2C8.9 30.5 1.7 62.4 21.4 85.1C43.1 111.6 92.7 108.4 124.3 94.2C153.1 81.1 158.6 53.6 147.1 30.2C139.7 16.5 127.6 11.1 114.2 10.3"
+                  pathLength="1"
+                  fill="none"
+                  strokeWidth="2.6"
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+            </span>
+            <span className="text-muted-foreground text-xs">
+              Latest weekly average
+              <br />
+              Week of {dateLabel(values.at(-1)!.day, true)}
+            </span>
+          </div>
+        ) : (
+          <span className="text-muted-foreground text-sm">
+            {volume ? "Weekly questions" : "Your weekly marked sessions"}
+          </span>
+        )}
+        <button
+          aria-label={table ? "Show chart" : "Show chart data"}
+          aria-pressed={table}
+          onClick={() => setTable(!table)}
+          className="text-ink-2 flex items-center gap-2 rounded-full border px-3 py-2 text-xs font-semibold"
+        >
+          <PortalIcon
+            name={table ? "chart-line" : "table"}
+            size={20}
+            strokeWidth={1.5}
+          />
+          {table ? "Chart" : "Table"}
+        </button>
+      </div>
       {table ? (
         <div className="max-h-[264px] overflow-auto">
           <table className="w-full text-xs">
@@ -114,11 +156,6 @@ export function ProgressChart({
             </ul>
           )}
         </div>
-      ) : !volume && values.length ? (
-        <WeeklyAverageTrend
-          points={values.map((v) => ({ day: v.day, pct: v.value }))}
-          height={264}
-        />
       ) : (
         <svg
           role="img"
@@ -138,8 +175,8 @@ export function ProgressChart({
                   x2={right}
                   y1={bottom - (bottom - top) * n}
                   y2={bottom - (bottom - top) * n}
-                  stroke="var(--border)"
-                  strokeOpacity=".6"
+                  stroke="var(--chart-grid)"
+                  strokeWidth="1"
                 />
                 <text
                   x={left - 10}
@@ -153,6 +190,56 @@ export function ProgressChart({
                 </text>
               </g>
             ))}
+          {!volume && (
+            <>
+              <line
+                x1={left}
+                x2={right}
+                y1={bottom - ((bottom - top) * PRACTICE_TARGET) / 100}
+                y2={bottom - ((bottom - top) * PRACTICE_TARGET) / 100}
+                stroke="var(--muted-foreground)"
+                strokeDasharray="4 4"
+              />
+              <text
+                x={right}
+                y={bottom - ((bottom - top) * PRACTICE_TARGET) / 100 - 8}
+                textAnchor="end"
+                fontSize="11"
+                fill="var(--muted-foreground)"
+              >
+                Target {PRACTICE_TARGET}%
+              </text>
+              {points.length > 0 && (
+                <>
+                  <path
+                    d={points
+                      .map((p, i) => `${i ? "L" : "M"}${p.x},${p.y}`)
+                      .join(" ")}
+                    fill="none"
+                    stroke="var(--chart-1)"
+                    strokeWidth="2.25"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {points.map((p, i) => (
+                    <circle
+                      key={values[i].day}
+                      cx={p.x}
+                      cy={p.y}
+                      r={i === points.length - 1 ? 5 : 3}
+                      fill={
+                        i === points.length - 1
+                          ? "var(--brand)"
+                          : "var(--chart-1)"
+                      }
+                      stroke="var(--card)"
+                      strokeWidth="2"
+                    />
+                  ))}
+                </>
+              )}
+            </>
+          )}
           {volume &&
             points.map((p, i) => (
               <rect
@@ -169,9 +256,9 @@ export function ProgressChart({
             ))}
           {last && (
             <text
-              x={volume ? last.x : last.x + 10}
-              y={last.y - 8}
-              textAnchor={volume ? "middle" : "start"}
+              x={last.x}
+              y={last.y + (last.y < top + 20 ? 22 : -12)}
+              textAnchor="middle"
               fontSize="10"
               fontWeight="600"
               fill="var(--foreground)"
@@ -197,9 +284,7 @@ export function ProgressChart({
                 fontSize="10"
                 fill="var(--muted-foreground)"
               >
-                {v === values.at(-1)
-                  ? "Now"
-                  : dateLabel(v.day, true).replace(/^\w+ /, "")}
+                {dateLabel(v.day, true).replace(/^\w+ /, "")}
               </text>
             ))}
           {!values.length && (

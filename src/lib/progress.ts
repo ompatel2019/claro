@@ -117,3 +117,13 @@ export function weeklyScores(
       value: values.reduce((a, b) => a + b, 0) / values.length,
     }));
 }
+
+/** Scored topics first, weakest first; unstarted topics retain syllabus order. */
+export function weakestTopics(rows: TopicProgress[]) {
+  return [...rows].sort(
+    (a, b) =>
+      (a.pct ?? Infinity) - (b.pct ?? Infinity) ||
+      a.sort - b.sort ||
+      a.id.localeCompare(b.id),
+  );
+}
