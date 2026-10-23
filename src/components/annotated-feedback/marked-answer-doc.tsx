@@ -67,10 +67,16 @@ export function commentFocus(ids: number[], focused: number | null) {
 
 /**
  * Column shift (px, for translateY) that lines the focused comment's top up with its phrase.
- * `cardTop` is measured with the current shift applied. Never above the column's start.
+ * `cardTop` is measured with the current shift applied; `floor` stops the focused comment rising
+ * above the top of the column (comments before it slide out of the clipped column instead).
  */
-export function columnShift(phraseTop: number, cardTop: number, shift: number) {
-  return Math.max(0, Math.round(shift + phraseTop - cardTop));
+export function columnShift(
+  phraseTop: number,
+  cardTop: number,
+  shift: number,
+  floor: number,
+) {
+  return Math.max(floor, Math.round(shift + phraseTop - cardTop));
 }
 
 type Box = { left: number; right: number; top: number; bottom: number };
@@ -194,23 +200,34 @@ export function MarkedAnswerDoc({
   }
 
   /** Column mode: focus a comment (from its highlight) or toggle it (from the comment itself). */
-  function focusComment(id: number, from: "text" | "card", move = false) {
+  function focusComment(
+    id: number,
+    from: "text" | "card" | "mark",
+    move = false,
+  ) {
     // From the text: the page stays put and the column slides so the comment sits level with
     // its phrase. From the comment: nothing moves; its phrase lights up.
     if (from === "text") {
       const phrase = highlights(id)[0]?.getBoundingClientRect();
-      const card = body.current
-        ?.querySelector(`[data-card="${id}"]`)
-        ?.getBoundingClientRect();
+      const el = body.current?.querySelector<HTMLElement>(
+        `[data-card="${id}"]`,
+      );
+      const card = el?.getBoundingClientRect();
+      const floor = -(el?.parentElement?.offsetTop ?? 0);
       setShift((now) =>
-        isWide() && phrase && card ? columnShift(phrase.top, card.top, now) : 0,
+        isWide() && phrase && card
+          ? columnShift(phrase.top, card.top, now, floor)
+          : 0,
       );
     }
     if (move)
       body.current
         ?.querySelector<HTMLElement>(`[data-card="${id}"]`)
         ?.focus({ preventScroll: true });
-    setFocused((now) => (from === "card" && now === id ? null : id));
+    const next = from === "card" && focused === id ? null : id;
+    // Nothing focused: the column settles back to its start.
+    if (next === null) setShift(0);
+    setFocused(next);
   }
 
   useHighlightSync(
@@ -252,7 +269,10 @@ export function MarkedAnswerDoc({
             const card = b!
               .querySelector(`[data-card="${c.id}"]`)
               ?.getBoundingClientRect();
-            if (!rects.length || !card) return [];
+            const view = b!.querySelector(".cma-cols")?.getBoundingClientRect();
+            // Comments slid (even partly) out of the clipped column get no line.
+            if (!rects.length || !card || (view && card.top < view.top))
+              return [];
             const last = rects.reduce((a, r) => (r.bottom > a.bottom ? r : a));
             return [connectorPath(c.id, last, card, o, edge, c.id === focused)];
           })
@@ -503,20 +523,22 @@ export function MarkedAnswerDoc({
                     <li
                       className="is-next"
                       data-selected={
-                        linked && linked.id === selectedId ? "true" : undefined
+                        linked && linked.id === activeId ? "true" : undefined
                       }
                     >
                       {linked ? (
                         <button
                           type="button"
                           className="cma-crit-row"
-                          aria-pressed={linked.id === selectedId}
+                          aria-pressed={linked.id === activeId}
                           onClick={() =>
-                            go(linked.id, {
-                              reveal: true,
-                              showMark: true,
-                              focus: true,
-                            })
+                            column
+                              ? focusComment(linked.id, "mark", true)
+                              : go(linked.id, {
+                                  reveal: true,
+                                  showMark: true,
+                                  focus: true,
+                                })
                           }
                         >
                           <NextMark text={score.next} />
@@ -536,11 +558,12 @@ export function MarkedAnswerDoc({
             <section
               className="cma-cols"
               aria-label="Comments"
-              style={shift ? { paddingBottom: shift } : undefined}
+              style={shift > 0 ? { paddingBottom: shift } : undefined}
               onKeyDown={(e) => {
                 if (e.key !== "Escape" || focused === null) return;
                 e.preventDefault();
                 setFocused(null);
+                setShift(0);
               }}
             >
               <ol

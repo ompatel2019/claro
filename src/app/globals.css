@@ -2492,6 +2492,7 @@ body:has(.sprint-focus)
   margin-top: 16px;
 }
 .cma .cma-cols ol {
+  position: relative;
   display: grid;
   gap: 10px;
 }
@@ -2533,8 +2534,12 @@ body:has(.sprint-focus)
   opacity: 0.85;
 }
 @container cma (min-width: 800px) {
+  /* The column is a window: comments before a focused one slide up out of it, never over the
+     marks card. */
   .cma .cma-rail > .cma-cols {
     margin-top: 12px;
+    overflow: clip;
+    overflow-clip-margin: 6px;
   }
   .cma .cma-rail > .cma-cols:first-child {
     margin-top: 0;

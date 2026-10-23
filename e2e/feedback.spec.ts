@@ -95,7 +95,7 @@ test.describe("annotated written feedback", () => {
     results = `/student/activity/${id}`;
   });
 
-  test("highlights and comment slider link both ways on wide screens", async ({
+  test("highlights and the comment column link both ways on wide screens", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1700, height: 1000 });
@@ -103,12 +103,19 @@ test.describe("annotated written feedback", () => {
     await page.goto(results);
     const score = page.getByRole("complementary", { name: "Your mark: 2/4" });
     await expect(score).toContainText("2/4 marks");
-    await expect(score.getByText("Marked", { exact: true })).toBeVisible();
-    const slider = page.getByRole("region", { name: "Comments", exact: true });
-    const fixSlide = slider.getByRole("group", { name: "Comment 1 of 3" });
-    await expect(fixSlide).toContainText(
+    // Sprint results: no "Marked" chip on the marks card.
+    await expect(score.getByText("Marked", { exact: true })).toHaveCount(0);
+    const column = page.getByRole("region", { name: "Comments", exact: true });
+    const card = (id: number) => column.locator(`[data-card="${id}"]`);
+    // Every comment at once, no slider.
+    await expect(column.locator("[data-card]")).toHaveCount(3);
+    await expect(
+      column.getByRole("button", { name: "Next comment" }),
+    ).toHaveCount(0);
+    await expect(card(0)).toContainText(
       "Your next mark: Quote the latest CPI rate.",
     );
+    await expect(card(2).getByText("Overall", { exact: true })).toBeVisible();
     const fix = page.getByRole("button", {
       name: "Fix 1, Evidence: Give a CPI figure.",
     });
@@ -119,51 +126,41 @@ test.describe("annotated written feedback", () => {
       "Inflation rose because demand grew faster than supply.",
       "Wages lagg[?] behind prices.",
     ]);
-    await fix.press("Enter");
-    await expect(fixSlide).toBeFocused();
-    await expect(fix).toHaveAttribute("data-selected", "true");
     await expect(
       page.getByTitle("Hard to read. Not counted against you."),
     ).toHaveText("lagg[?]");
-    // The slider sits to the right of the answer and connects to its highlight.
+    // The column sits to the right of the answer, joined by connector lines.
     const [h, c] = await Promise.all([
       fix.boundingBox(),
-      fixSlide.boundingBox(),
+      card(0).boundingBox(),
     ]);
     expect(c!.x).toBeGreaterThan(h!.x + h!.width);
-    await expect(page.locator("svg.cma-link")).toBeVisible();
-    const previous = slider.getByRole("button", { name: "Previous comment" });
-    const next = slider.getByRole("button", { name: "Next comment" });
-    await expect(previous).toHaveAttribute("aria-disabled", "true");
-    await next.click();
+    await expect(page.locator("svg.cma-lines")).toBeVisible();
+    // Keyboard: Enter on a highlight focuses its comment, dims the rest, no scroll.
+    const y = await page.evaluate(() => window.scrollY);
+    await fix.press("Enter");
+    await expect(card(0)).toBeFocused();
+    await expect(card(0)).toHaveAttribute("aria-pressed", "true");
+    await expect(card(1)).toHaveAttribute("data-dim", "true");
+    await expect(fix).toHaveAttribute("data-selected", "true");
+    expect(await page.evaluate(() => window.scrollY)).toBe(y);
+    // Selecting a comment lights its phrase.
+    await card(1).click();
     const strength = page.getByRole("button", { name: /^Strength 2/ });
     await expect(strength).toHaveClass(/cma-hl--earned/);
     await expect(strength).toHaveAttribute("data-selected", "true");
     await expect(fix).not.toHaveAttribute("data-selected", "true");
-    await expect(slider.locator('[data-card="0"]')).toHaveAttribute(
-      "aria-hidden",
-      "true",
-    );
-    await expect(slider.locator('[data-card="0"]')).toHaveAttribute(
-      "inert",
-      "",
-    );
-    await expect(slider.getByRole("group")).toHaveCount(1);
-    await next.click();
-    const overall = slider.getByRole("group", { name: "Comment 3 of 3" });
-    await expect(overall.getByText("Overall", { exact: true })).toBeVisible();
-    await expect(overall).toContainText("End with a one-line judgement.");
-    await expect(next).toHaveAttribute("aria-disabled", "true");
+    await expect(card(0)).toHaveAttribute("data-dim", "true");
     await score
       .getByRole("button", {
         name: "Your next mark: Quote the latest CPI rate.",
       })
       .click();
-    await expect(fixSlide).toBeFocused();
+    await expect(card(0)).toBeFocused();
     await expect(fix).toHaveAttribute("data-selected", "true");
   });
 
-  test("tapping a highlight shows its comment in the slider on phones", async ({
+  test("on phones the comments stack under the answer and a highlight focuses its comment", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 390, height: 844 });
@@ -172,12 +169,17 @@ test.describe("annotated written feedback", () => {
     await page.goto(results);
     const strength = page.getByRole("button", { name: /^Strength 2/ });
     await strength.click();
-    const slider = page.getByRole("region", { name: "Comments", exact: true });
-    await expect(
-      slider.getByRole("group", { name: "Comment 2 of 3" }),
-    ).toContainText("Correct cause of demand-pull inflation.");
+    const column = page.getByRole("region", { name: "Comments", exact: true });
+    const card = column.locator('[data-card="1"]');
+    await expect(card).toContainText("Correct cause of demand-pull inflation.");
+    await expect(card).toHaveAttribute("aria-pressed", "true");
     await expect(strength).toHaveAttribute("data-selected", "true");
-    await expect(slider).toBeInViewport();
+    const [s, c] = await Promise.all([
+      strength.boundingBox(),
+      card.boundingBox(),
+    ]);
+    expect(c!.y).toBeGreaterThan(s!.y);
+    await expect(page.locator("svg.cma-lines")).toBeHidden();
   });
 
   test("report a problem with this question sends linked feedback", async ({

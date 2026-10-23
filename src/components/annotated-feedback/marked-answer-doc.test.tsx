@@ -462,11 +462,13 @@ describe("comment column", () => {
     ]);
   });
 
-  it("shifts the column so the comment sits level with its phrase, never above its start", () => {
-    expect(columnShift(400, 250, 0)).toBe(150);
+  it("shifts the column so the comment sits level with its phrase, never above the column top", () => {
+    expect(columnShift(400, 250, 0, -200)).toBe(150);
     // Measured with a shift already applied.
-    expect(columnShift(400, 380, 130)).toBe(150);
-    expect(columnShift(100, 250, 0)).toBe(0);
+    expect(columnShift(400, 380, 130, -200)).toBe(150);
+    // Up, but the focused comment never rises above the column's top.
+    expect(columnShift(100, 250, 0, -200)).toBe(-150);
+    expect(columnShift(100, 500, 0, -200)).toBe(-200);
   });
 
   it("draws a connector from the page edge to the comment, with a tail under the phrase when focused", () => {
