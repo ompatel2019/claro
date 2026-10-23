@@ -17,7 +17,7 @@ export function questionPillState({
         ? TRACKER_STATE.answered
         : active
           ? TRACKER_STATE.active
-          : TRACKER_STATE.notAnswered,
+          : TRACKER_STATE.unanswered,
       active && "z-10 scale-110",
       flagged &&
         "after:absolute after:-top-0.5 after:-right-0.5 after:size-2 after:rounded-full after:bg-[var(--pill-flag)] after:outline-2 after:outline-background",

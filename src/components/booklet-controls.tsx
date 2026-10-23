@@ -12,7 +12,7 @@ export function BookletFilter({
 }) {
   return (
     <ToggleGroup
-      className="w-full max-w-full flex-wrap [&>*]:flex-1"
+      className="w-full max-w-full flex-wrap [&>*]:flex-auto [&>*]:px-2"
       aria-label="Show questions"
       size="sm"
       variant="default"
