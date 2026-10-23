@@ -119,7 +119,7 @@ function spendClient(options: { fail?: string; count?: number } = {}) {
                 usd: "0.01",
                 created_at: "2026-10-09T02:30:00Z",
                 user_id: "fake-student-a",
-                model: "Model A",
+                model: "anthropic/model-a",
                 task: "mark_written",
                 input_tokens: 10,
                 cached_tokens: 2,

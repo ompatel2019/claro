@@ -48,7 +48,7 @@ it("renders KPIs and mark-value bands, labelled budget markers, empty sections a
   );
   expect(
     screen.getByText(
-      "1 Oct 2026 to 9 Oct 2026 (Sydney, through now) · 0 calls",
+      "1 Oct 2026 to 9 Oct 2026 (Sydney, through now) · 0 OpenRouter calls",
     ),
   ).toBeInTheDocument();
   expect(
@@ -57,6 +57,8 @@ it("renders KPIs and mark-value bands, labelled budget markers, empty sections a
   expect(screen.getByText("$0.00 of $100")).toBeInTheDocument();
   expect(screen.getAllByText("No tracked costs")).toHaveLength(6);
   for (const text of [
+    "OpenRouter · Sydney day",
+    "OpenRouter · Sydney calendar month",
     "80% · Evals blocked",
     "90% · All AI stops",
     "100% · Cap",
@@ -100,7 +102,7 @@ it("shows stacked spend, calls, written average and over-limit student links, cl
   render(await SpendPage({ searchParams: Promise.resolve({ range: "30" }) }));
   expect(loadSpend).toHaveBeenCalledWith("30");
   expect(
-    screen.getByText(/\(Sydney, through now\) · 2 calls$/),
+    screen.getByText(/\(Sydney, through now\) · 2 OpenRouter calls$/),
   ).toBeInTheDocument();
   expect(screen.getByRole("progressbar")).toHaveAttribute(
     "aria-valuenow",
@@ -128,7 +130,7 @@ it("reflects historical inclusive custom dates and defaults invalid ranges", asy
   expect(loadSpend).toHaveBeenCalledWith(range);
   expect(
     screen.getByText(
-      "1 Sept 2026 to 30 Sept 2026 (Sydney, inclusive) · 0 calls",
+      "1 Sept 2026 to 30 Sept 2026 (Sydney, inclusive) · 0 OpenRouter calls",
     ),
   ).toBeInTheDocument();
   cleanup();
