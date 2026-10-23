@@ -1631,8 +1631,16 @@ html[data-theme-motion="instant"] .theme-toggle:active {
 }
 @media (max-width: 767px) {
   .ac-row {
-    gap: 12px;
+    grid-template-columns: 40px minmax(0, 1fr) auto;
+    gap: 10px 12px;
     padding: 12px 16px;
+  }
+  .ac-row > a:not(.ac-cover) {
+    grid-column: 2 / -1;
+    justify-self: start;
+  }
+  .ac-go {
+    display: none;
   }
   .ac-day {
     padding-inline: 16px;
