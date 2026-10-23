@@ -23,6 +23,10 @@ export type MarkedScore = {
 type Intent = { reveal?: boolean; showMark?: boolean; focus?: boolean };
 type Piece = { text: string; start: number; comments: number[] };
 
+/** The kit's AI line: once per marked answer, or once per results page. */
+export const AI_NOTE =
+  "Claro’s feedback is AI-assisted and criteria-based. AI can make mistakes, so use it alongside your teacher’s guidance; your teacher has the final say.";
+
 const LINE_BREAKS = /((?:\r\n|\r|\n)+)/;
 const calm = () =>
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -62,6 +66,8 @@ export function MarkedAnswerDoc({
   comments,
   score,
   note,
+  flush = false,
+  aiNote = true,
 }: {
   /** Display text: line breaks become paragraphs. */
   text: string;
@@ -69,8 +75,13 @@ export function MarkedAnswerDoc({
   /** The score card; omit when the host page already shows the mark. */
   score?: MarkedScore;
   note?: string;
+  /** Sit inside the host's card: no sheet or page box of its own. */
+  flush?: boolean;
+  /** Show the AI line; off when the host page shows it once for many answers. */
+  aiNote?: boolean;
 }) {
   const body = useRef<HTMLDivElement>(null);
+  const rail = useRef<HTMLDivElement>(null);
   const page = useRef<HTMLDivElement>(null);
   const doc = useRef<HTMLDivElement>(null);
   const slider = useRef<HTMLElement>(null);
@@ -152,7 +163,28 @@ export function MarkedAnswerDoc({
       );
       if (view.current && slide)
         view.current.style.height = `${slide.offsetHeight}px`;
+      stick();
       draw(slide);
+    }
+    // Wide, long answers: the column sticks with the slider at the top (score card
+    // scrolled away above it), but only while the slider fits the screen.
+    function stick() {
+      const root = b!.parentElement!;
+      const r = rail.current;
+      let on = false;
+      if (isWide() && r && slider.current) {
+        const top =
+          parseFloat(
+            getComputedStyle(root).getPropertyValue("--cma-sticky-top"),
+          ) || 16;
+        const box = r.getBoundingClientRect();
+        const lead = slider.current.getBoundingClientRect().top - box.top;
+        on = box.height - lead + top + 16 <= window.innerHeight;
+        if (on)
+          r.style.setProperty("--cma-rail-top", `${Math.round(top - lead)}px`);
+      }
+      if (on) root.dataset.sticky = "";
+      else delete root.dataset.sticky;
     }
     function draw(slide: HTMLElement | null | undefined) {
       const svg = link.current;
@@ -231,7 +263,7 @@ export function MarkedAnswerDoc({
   const linkTone = selected ? `is-${tone(selected)}` : undefined;
 
   return (
-    <div className="cma">
+    <div className={cn("cma", flush && "cma--flush")}>
       <div ref={body} className="cma-body">
         <div ref={page} className="cma-page">
           <div className="cma-answer">
@@ -289,7 +321,7 @@ export function MarkedAnswerDoc({
             </div>
           </div>
         </div>
-        <div className="cma-rail">
+        <div ref={rail} className="cma-rail">
           {score && (
             <aside className="cma-score" aria-label={score.label}>
               <div className="cma-score-hd">
@@ -508,11 +540,7 @@ export function MarkedAnswerDoc({
               </p>
             </section>
           )}
-          <p className="cma-foot">
-            Claro’s feedback is AI-assisted and criteria-based. AI can make
-            mistakes, so use it alongside your teacher’s guidance; your teacher
-            has the final say.
-          </p>
+          {aiNote && <p className="cma-foot">{AI_NOTE}</p>}
         </div>
         <svg ref={link} className="cma-link" aria-hidden>
           <path className={linkTone} />

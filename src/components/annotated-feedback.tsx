@@ -73,6 +73,8 @@ export function AnnotatedFeedback({
   singleResult = false,
   keepLineBreaks = false,
   answerOnly = false,
+  aiNote = true,
+  flush = false,
 }: {
   row: ReviewRow;
   photos?: string[];
@@ -86,6 +88,10 @@ export function AnnotatedFeedback({
   keepLineBreaks?: boolean;
   /** Render only the marked answer (heading, filter, highlights, comments); the host page owns score, criteria, next steps and references. */
   answerOnly?: boolean;
+  /** The AI line under the marked answer; results pages show it once instead. */
+  aiNote?: boolean;
+  /** Draw the marked answer inside the host's card, with no frame of its own. */
+  flush?: boolean;
 }) {
   const nextCommentId = useRef(
     Math.min(0, ...(edit?.comments.map((c) => c.id) ?? [])) - 1,
@@ -643,6 +649,8 @@ export function AnnotatedFeedback({
               keepLineBreaks || !row.transcript ? text : displayAnswer(text)
             }
             comments={comments}
+            flush={flush}
+            aiNote={aiNote}
             note={
               photos.length > 0
                 ? "Highlights show on the typed copy of your photo."

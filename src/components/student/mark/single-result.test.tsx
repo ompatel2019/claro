@@ -222,3 +222,20 @@ it("anchors to the transcript before the typed answer", () => {
   );
   expect(screen.queryByText("Something else.")).not.toBeInTheDocument();
 });
+
+it("renders the marked answer flush inside the page's own card, once with the AI line", () => {
+  const { container } = render(
+    <SingleResult
+      row={row}
+      sessionId="session"
+      when="2026-10-19T00:00:00Z"
+      topic=""
+    />,
+  );
+  const doc = container.querySelector(".cma")!;
+  expect(doc).toHaveClass("cma--flush");
+  expect(doc.closest('[data-slot="card"]')).toHaveTextContent(
+    "Your answer, marked",
+  );
+  expect(screen.getAllByText(/AI-assisted and criteria-based/)).toHaveLength(1);
+});

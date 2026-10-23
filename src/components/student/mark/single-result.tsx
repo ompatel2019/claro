@@ -206,11 +206,13 @@ export function SingleResult({
             </Link>
           </div>
         </Card>
-        <Card className="md:col-span-2 xl:col-span-3">
+        {/* Visible overflow keeps the answer's comment column sticky. */}
+        <Card className="overflow-visible md:col-span-2 xl:col-span-3">
           <CardContent>
             <AnnotatedFeedback
               row={row}
               answerOnly
+              flush
               keepLineBreaks
               readOnly
               showReferences={false}

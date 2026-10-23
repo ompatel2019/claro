@@ -1308,7 +1308,7 @@ html[data-theme-motion="instant"] .theme-toggle:active {
 }
 .home-state-destructive {
   background: var(--destructive-soft);
-  color: var(--destructive);
+  color: var(--cma-missed-text);
 }
 .home-week {
   display: flex;
@@ -1610,7 +1610,7 @@ body:has(.sprint-focus)
 .ma-note-error {
   border-color: transparent;
   background: var(--destructive-soft);
-  color: var(--destructive);
+  color: var(--cma-missed-text);
 }
 @media (max-width: 767px) {
   .ma-field {
@@ -1890,6 +1890,8 @@ body:has(.sprint-focus)
 
   --cma-earned: var(--success-soft);
   --cma-missed: var(--destructive-soft);
+  /* "Fix"/"Missed" text: the app's error red, lifted to the kit's error text in dark (AA). */
+  --cma-missed-text: var(--destructive);
 
   --cma-earned-on: color-mix(in srgb, var(--success) 22%, var(--success-soft));
   --cma-missed-on: color-mix(
@@ -1899,6 +1901,7 @@ body:has(.sprint-focus)
   );
 }
 .dark .cma {
+  --cma-missed-text: #ff8a80;
   --cma-earned: color-mix(in srgb, var(--success) 18%, var(--success-soft));
   --cma-missed: color-mix(
     in srgb,
@@ -2018,7 +2021,14 @@ body:has(.sprint-focus)
 }
 .cma .cma-key-missed {
   background: var(--cma-missed);
-  color: var(--destructive);
+  color: var(--cma-missed-text);
+}
+/* Dark: the key sits on the kit's flat soft tones so its small text stays AA. */
+.dark .cma .cma-key-earned {
+  background: var(--success-soft);
+}
+.dark .cma .cma-key-missed {
+  background: var(--destructive-soft);
 }
 .cma .cma-hint {
   margin-top: 4px;
@@ -2125,7 +2135,7 @@ body:has(.sprint-focus)
 }
 .cma .cma-crit-missed .ic,
 .cma .cma-crit-missed .cma-crit-s {
-  color: var(--destructive);
+  color: var(--cma-missed-text);
 }
 .cma .cma-crit-s {
   font-size: 13px;
@@ -2211,7 +2221,7 @@ body:has(.sprint-focus)
 }
 .cma .cma-slide--missed {
   --cma-tone: var(--cma-missed);
-  --cma-tone-ink: var(--destructive);
+  --cma-tone-ink: var(--cma-missed-text);
 }
 .cma .cma-band {
   display: flex;
@@ -2332,9 +2342,9 @@ body:has(.sprint-focus)
   line-height: 18px;
   color: var(--muted-foreground);
 }
-/* The next-mark row whose comment is on show goes a shade deeper, like its highlight. */
+/* The next-mark row whose comment is on show: a bar at its edge, not a colour change. */
 .cma .cma-crit .is-next[data-selected] .cma-crit-row {
-  background: color-mix(in srgb, var(--brand) 12%, var(--brand-soft));
+  box-shadow: inset 2px 0 0 var(--brand-text);
 }
 .cma .cma-crit .is-next .ic {
   width: 14px;
@@ -2383,7 +2393,12 @@ body:has(.sprint-focus)
   }
   .cma .cma-rail {
     display: block;
-    align-self: stretch;
+  }
+  /* Long answers: the column sticks, score card scrolled away above the slider,
+     only when it fits the screen (the component sets data-sticky and --cma-rail-top). */
+  .cma[data-sticky] .cma-rail {
+    position: sticky;
+    top: var(--cma-rail-top, 16px);
   }
   .cma .cma-answer {
     margin-top: 0;
@@ -2394,8 +2409,6 @@ body:has(.sprint-focus)
   }
   .cma .cma-slider {
     margin-top: 12px;
-    position: sticky;
-    top: var(--cma-sticky-top, 16px);
   }
   .cma .cma-link {
     display: block;
@@ -2437,4 +2450,12 @@ body:has(.sprint-focus)
   .cma .cma-rail > .cma-slider:first-child {
     margin-top: 0;
   }
+}
+/* Flush: inside a host card (Mark my answer), no sheet or page box of its own. */
+.cma.cma--flush .cma-body,
+.cma.cma--flush .cma-page {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
 }

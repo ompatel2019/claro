@@ -422,3 +422,22 @@ describe("MarkedAnswerDoc", () => {
     expect(error).not.toHaveBeenCalled();
   });
 });
+
+describe("variants", () => {
+  it("is boxed with the AI line by default", () => {
+    const { container } = render(
+      <MarkedAnswerDoc text={text} comments={comments} score={score} />,
+    );
+    expect(container.firstElementChild).not.toHaveClass("cma--flush");
+    expect(screen.getByText(/AI-assisted and criteria-based/)).toBeVisible();
+  });
+  it("sits flush in a host card and can leave the AI line to the page", () => {
+    const { container } = render(
+      <MarkedAnswerDoc text={text} comments={comments} flush aiNote={false} />,
+    );
+    expect(container.firstElementChild).toHaveClass("cma", "cma--flush");
+    expect(
+      screen.queryByText(/AI-assisted and criteria-based/),
+    ).not.toBeInTheDocument();
+  });
+});
