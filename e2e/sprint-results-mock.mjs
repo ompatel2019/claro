@@ -129,7 +129,19 @@ createServer(async (request, response) => {
         : id?.endsWith("0005")
           ? [rows[0], rows[1], { ...rows[2], status: "marking", mark: null }]
           : id?.endsWith("0009")
-            ? rows.map((r) => (r.position === 2 ? { ...r, criteria } : r))
+            ? rows.map((r) =>
+                r.position === 2
+                  ? {
+                      ...r,
+                      criteria,
+                      feedback: {
+                        ...r.feedback,
+                        earned: ["Identifies price pressure."],
+                        missing_points: ["Explains the supply constraint."],
+                      },
+                    }
+                  : r,
+              )
             : rows;
   let data = [];
   if (url.pathname === "/auth/v1/user") data = user;
