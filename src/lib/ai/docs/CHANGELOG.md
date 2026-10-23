@@ -1,5 +1,9 @@
 # Engine changelog
 
+## 23 Oct 2026: Airo 5.2 (comment prompt tweak; results pending)
+
+S22: full-grading comments follow tutor-style rules taken from Karan's A1 critiques: correct for the question, usually one short sentence, naming the exact fix; statistics only when the question or guideline requires them; keep needed definitions; flag waffle, wrong ideas and over-length short answers; verb-specific advice; syllabus content only. Check and reconcile prompts are unchanged, but comments share the first-pass call, so first-pass marks can shift. Unit-tested only: no paid eval or benchmark run. See [AIRO-5-2](/admin/marking/engine?tab=docs&doc=AIRO-5-2).
+
 ## 19 Oct 2026: Airo 5.1 (prompt tweak; unit-tested only)
 
 Written summaries cite question numbers, use a plain human voice and give concrete next actions tied to a question or topic. MC answers are not supplied and the summary makes no MC performance claims. Analysis comments and answer outlines request judgement or conclusions only when the question asks for them; outline bullets name concrete additions answering the question as asked. `next_mark` generation is unchanged. S13 leniency: both grading modes require accurate, complete descriptor-relevant parts for each mark, withholding the top mark for flawed key sentences in short 2-3 mark answers; unit-tested only, effect unmeasured.

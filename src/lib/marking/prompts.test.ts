@@ -32,7 +32,7 @@ const q: MarkableQuestion = {
 };
 
 it.each([false, true])(
-  "matches the literal Airo 5.1 full baseline and derived check variant (check=%s)",
+  "matches the literal Airo 5.2 full baseline and derived check variant (check=%s)",
   (check) => {
     // Literal full-prompt baseline; check mode derives from the same shared prefix.
     const expected = baselineMessages.map((message) => ({ ...message }));
@@ -256,6 +256,35 @@ it("guards judgement advice and makes outline bullets concrete in full feedback 
   expect(gradeMessages(q, "Answer", true)[0].content).not.toContain(
     "In Analysis comments and better_answer_outline",
   );
+});
+
+it("asks for tutor-style, question-accurate comments in full feedback only (Airo 5.2)", () => {
+  const system = gradeMessages(q, "Answer")[0].content as string;
+  const tail = system.split("Return the full JSON")[1];
+  const rules = [
+    "Comment like an experienced HSC tutor writing margin notes against this guideline",
+    "every comment must be correct for this question, and each body is usually one short sentence",
+    "Name the exact fix: the missing term, the cause-and-effect step to add or the contrast to draw",
+    "When a sentence is wrong, say so plainly and give the correct idea",
+    "Flag an opening that only restates the question, waffle or content that does not answer the question as a fix",
+    "Ask for statistics or data only when the question or guideline requires them; otherwise never suggest a statistic in comments, next_mark, missing_points or better_answer_outline",
+    "Never tell the student to remove a definition the question needs",
+    "When a 2-4 mark answer already covers what its marks need, say it is long enough rather than asking for more content",
+    "Keep advice within the HSC Economics syllabus",
+    'distinguish needs an explicit contrast (e.g. "whereas" or "in contrast"), discuss needs points for and against, and assess or evaluate need a judgement, so say where it belongs',
+  ];
+  for (const rule of rules) expect(tail).toContain(rule);
+  const check = gradeMessages(q, "Answer", true)[0].content as string;
+  const reconcile = reconcileMessages(
+    q,
+    "Answer",
+    { band_selected: "Describes policies", mark: 10, justification: "A" },
+    { band_selected: "Describes policies", mark: 12, justification: "B" },
+  )[0].content as string;
+  for (const rule of rules) {
+    expect(check).not.toContain(rule);
+    expect(reconcile).not.toContain(rule);
+  }
 });
 
 it("keeps injection text inside answer delimiters without changing the system prompt", () => {
