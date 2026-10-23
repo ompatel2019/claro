@@ -50,7 +50,7 @@ function capitalise(s: string) {
 
 /** Whole sentences that only describe the feedback itself, never the student's work. */
 const META_SENTENCE = [
-  /\bthis (summary|feedback|report|comment|review)\b.*\b(covers?|is based|only|focus(es)?|looks at|includes?)\b/i,
+  /^this (summary|feedback|comment|review)\b.*\b(covers?|is based|only|focus(es)?|looks at|includes?)\b/i,
   /\b(multiple[- ]choice|MCQs?|MC)\b(?=[^.]*\b(answers?|questions?|responses?|items?)\b)[^.]*\b(not|weren't|were not|aren't|are not)\b[^.]*\b(supplied|provided|included|available|assessed|shown|given)\b/i,
   /^already at full marks[.!]?$/i,
   // Only when the subject is the comment itself ("This/It/That (change)"), so
@@ -190,7 +190,9 @@ function stripOpeners(sentence: string): string {
  * "…, so explain the mechanism.").
  */
 function dropMetaClauses(sentence: string): string[] {
-  const clauses = sentence.split(/;\s*|,\s*(?:so|but|instead|then)\s+/u);
+  const clauses = sentence.split(
+    /;\s*|:\s+|\s+[—–-]\s+|,\s*(?:so|but|instead|then)\s+/u,
+  );
   if (clauses.length < 2) return isMetaSentence(sentence) ? [] : [sentence];
   const kept = clauses.filter((clause) => !isMetaSentence(clause.trim()));
   if (kept.length === clauses.length) return [sentence];
