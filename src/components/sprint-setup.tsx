@@ -880,7 +880,7 @@ export function SprintSetup({
           </div>
         )}
         <div className="bg-card fixed inset-x-0 bottom-0 z-20 border-t px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]">
-          <div className="mx-auto flex max-w-[calc(1400px-4rem)] items-center gap-3">
+          <div className="mx-auto flex max-w-[calc(1400px-4rem)] flex-wrap items-center justify-end gap-x-3 gap-y-2">
             <p className="text-muted-foreground mr-auto min-w-0 truncate text-[13px] tabular-nums">
               <span className="text-foreground font-semibold">
                 {c.target} {unit}
