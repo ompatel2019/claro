@@ -617,7 +617,7 @@ export function AnnotatedFeedback({
             )}
           </div>
         )}
-        {(filterBar || (photos.length > 0 && text)) && (
+        {((filterBar && !docView) || (photos.length > 0 && text)) && (
           <div className="flex flex-wrap items-center justify-between gap-2">
             {view === "typed" && !docView && filterBar}
             {photos.length > 0 && text && (
