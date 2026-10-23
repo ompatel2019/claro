@@ -128,7 +128,11 @@ for (const width of [360, 1280]) {
       await toggle(page).click();
       await page.reload();
       await expectDarkPaint(page, true);
-      await page.getByRole("button", { name: "Account menu" }).click();
+      await page
+        .getByRole("button", {
+          name: width < 768 ? "Account menu" : "User menu",
+        })
+        .click();
       await page.getByRole("menuitem", { name: "Use system theme" }).click();
       await expect(toggle(page)).toHaveAttribute("aria-pressed", "false");
       await page.emulateMedia({ colorScheme: "dark" });

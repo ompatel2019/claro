@@ -7,44 +7,31 @@ test.describe("Student home", () => {
     await signIn(page);
   });
 
-  test("greeting, hero, study actions and study days", async ({ page }) => {
+  test("greeting, next step, feedback and weekly practice", async ({
+    page,
+  }) => {
     await expect(
       page.getByRole("heading", {
         level: 1,
         name: /^Good (morning|afternoon|evening)/,
       }),
     ).toBeVisible();
+    const next = page.locator(".home-next");
     await expect(
-      page.getByRole("region", { name: "Your study week" }),
-    ).toBeVisible();
-    const quick = page.getByRole("region", { name: "Quick start" });
-    for (const [name, href] of [
-      ["Topic Sprint", "/student/sprint"],
-      ["Flashcards", "/student/flashcards"],
-    ]) {
-      await expect(
-        quick.getByRole("link", { name: new RegExp(`^${name}`) }),
-      ).toHaveAttribute("href", href);
-    }
+      next.getByRole("link", { name: /^Start sprint/ }),
+    ).toHaveAttribute("href", /^\/student\/sprint/);
     await expect(
-      page.getByRole("heading", { name: "Study days" }),
+      next.getByRole("link", { name: "Flashcards" }),
+    ).toHaveAttribute("href", "/student/flashcards");
+    await expect(
+      page.getByRole("heading", { name: "Recent feedback" }),
     ).toBeVisible();
-    await expect(page.getByText("Day streak")).toBeVisible();
-    await expect(page.getByText("Continue where you left off")).toHaveCount(0);
-    for (const name of [
-      "Marks earned",
-      "Questions answered",
-      "Study time",
-      "Cards due",
-      "Practice average",
-      "Today's plan",
-      "Topics",
-      "Where your marks go",
-      "Ask Claro",
-    ])
-      await expect(
-        page.getByRole("heading", { name, exact: true }),
-      ).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "This week" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("list", { name: "Practice days this week" }),
+    ).toBeVisible();
   });
 
   test("S starts a sprint and / redirects home", async ({ page }) => {

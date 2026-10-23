@@ -41,14 +41,8 @@ it("keeps only icons that are used, and no stock icon library", () => {
   ).toBe("");
 });
 
-it("uses the same glyph contract for all Home tiles and the streak", () => {
-  const set = [
-    icons.Sprint,
-    icons.Cards,
-    icons.Pen,
-    icons.History,
-    icons.Flame,
-  ];
+it("uses the same glyph contract for student navigation", () => {
+  const set = [icons.Sprint, icons.Cards, icons.Pen, icons.History];
   const { container } = render(
     <>
       {set.map((Glyph, index) => (
@@ -56,7 +50,7 @@ it("uses the same glyph contract for all Home tiles and the streak", () => {
       ))}
     </>,
   );
-  expect(container.querySelectorAll("svg")).toHaveLength(5);
+  expect(container.querySelectorAll("svg")).toHaveLength(4);
   for (const svg of container.querySelectorAll("svg")) {
     expect(svg).toHaveAttribute("width", "32");
     expect(svg).toHaveAttribute("height", "32");
@@ -83,6 +77,10 @@ it("covers the supported portal glyph vocabulary", () => {
     "circle-alert",
     "circle-check",
     "circle-dot",
+    "circle-half",
+    "chevron-down",
+    "more",
+    "x",
     "clock",
     "copy",
     "corner-down-left",

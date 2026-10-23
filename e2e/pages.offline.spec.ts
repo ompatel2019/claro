@@ -158,37 +158,48 @@ test("S1: feedback trigger opens the shared dialog", async ({ page }) => {
 for (const [width, height] of [
   [1440, 900],
   [1280, 720],
+  [768, 900],
+  [1024, 900],
   [390, 844],
 ]) {
-  test(`Home: study actions and study days at ${width}px`, async ({ page }) => {
+  test(`Home: next step, recent feedback and this week at ${width}px`, async ({
+    page,
+  }) => {
     await page.clock.setFixedTime(new Date("2026-10-19T01:00:00Z"));
     await page.setViewportSize({ width, height });
     await page.goto("http://claro.test/student");
-    // STEP2 template hero: TermProgress pill (md+), not the old Week heading card.
-    if (width >= 768) {
-      const hero = page.getByRole("region", { name: "Your study week" });
-      await expect(hero.getByText("Term 4 · Week 2")).toBeVisible();
-    }
-    const quick = page.getByRole("region", { name: "Quick start" });
-    await expect(quick.getByRole("link")).toHaveCount(2);
-    for (const [name, href] of [
-      ["Topic Sprint", "/student/sprint"],
-      ["Flashcards", "/student/flashcards"],
-    ])
-      await expect(
-        quick.getByRole("link", { name: new RegExp(`^${name}`) }),
-      ).toHaveAttribute("href", href);
-    await expect(page.getByTestId("activity-heatmap")).toBeVisible();
-    await expect(page.locator('[aria-current="date"]')).toHaveAttribute(
-      "data-day",
-      "2026-10-19",
+    await expect(page.getByText(/Term 4, week 2/)).toBeVisible();
+    const next = page.locator(".home-next");
+    await expect(
+      next.getByRole("link", { name: /Start sprint/ }),
+    ).toHaveAttribute("href", /^\/student\/sprint/);
+    await expect(
+      next.getByRole("link", { name: "Flashcards" }),
+    ).toHaveAttribute("href", "/student/flashcards");
+    await expect(
+      page.getByRole("heading", { name: "Recent feedback" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("heading", { name: "This week" }),
+    ).toBeVisible();
+    await expect(page.getByLabel("Mon: practised")).toHaveAttribute(
+      "aria-current",
+      "date",
     );
-    await expect(page.getByText("Day streak")).toBeVisible();
-    await expect(page.getByText("Today is lit")).toBeVisible();
-    await expect(page.getByText("Continue where you left off")).toHaveCount(0);
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBe(width);
+    const recent = await page.locator(".home-card").first().boundingBox();
+    const week = await page.locator(".home-week").boundingBox();
+    if (width === 768 || width === 1024) {
+      expect(week!.y).toBeGreaterThanOrEqual(recent!.y + recent!.height);
+    }
+    const weekdays = page.getByRole("list", {
+      name: "Practice days this week",
+    });
+    expect(
+      await weekdays.evaluate((el) => el.scrollWidth <= el.clientWidth),
+    ).toBe(true);
     if (width === 1440)
       expect(
         await page.evaluate(

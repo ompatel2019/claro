@@ -5,23 +5,25 @@ import { sydneyToday } from "../src/lib/flashcards";
 test.describe("Student Home quick launches", () => {
   test.skip(!adminClient(), "Needs Supabase test credentials");
   for (const width of [360, 1366]) {
-    test(`two actions fit the width with empty and unfinished history at ${width}px`, async ({
+    test(`next step actions fit the width with empty and unfinished history at ${width}px`, async ({
       page,
       historyStudent,
     }) => {
       await page.setViewportSize({ width, height: 768 });
-      const launches = page.getByRole("region", { name: "Quick start" });
+      const launches = page.locator(".home-next");
       const checkLaunches = async () => {
         await expect(launches).toBeVisible();
         await expect(launches.getByRole("link")).toHaveCount(2);
         for (const [name, href] of [
-          ["Topic Sprint", "/student/sprint"],
+          ["Start sprint", "/student/sprint"],
           ["Flashcards", "/student/flashcards"],
         ])
           await expect(
             launches.getByRole("link", { name: new RegExp(`^${name}`) }),
           ).toHaveAttribute("href", href);
-        await expect(page.getByText("Day streak")).toBeVisible();
+        await expect(
+          page.getByRole("heading", { name: "This week" }),
+        ).toBeVisible();
         await expect
           .poll(() =>
             page.evaluate(
@@ -59,7 +61,7 @@ test.describe("Student Home quick launches", () => {
       await expect(page.getByText("Continue where you left off")).toHaveCount(
         0,
       );
-      await expect(page.getByText("Today is lit")).toBeVisible();
+      await expect(page.locator(".home-week .done")).toBeVisible();
       await launches.getByRole("link", { name: /^Flashcards/ }).click();
       await expect(page).toHaveURL(/\/student\/flashcards$/);
     });

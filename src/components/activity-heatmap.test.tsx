@@ -1,4 +1,3 @@
-import Link from "next/link";
 import {
   act,
   cleanup,
@@ -173,29 +172,5 @@ it("keeps every year day reachable in compact views and preserves custom links",
   expect(screen.getByRole("link", { name: /^Thu 8 Oct 2026/ })).toHaveAttribute(
     "tabindex",
     "0",
-  );
-});
-
-it("renders the home study days presentation", () => {
-  render(
-    <ActivityHeatmap
-      days={days}
-      today="2026-10-08"
-      current={2}
-      longest={5}
-      home={{
-        action: <Link href="/student/sprint">Study</Link>,
-      }}
-    />,
-  );
-  expect(screen.getByRole("heading", { name: "Study days" })).toBeVisible();
-  expect(
-    screen.getByText("Every square is a day. A little practice lights it up."),
-  ).toBeVisible();
-  expect(screen.getByText("Today is lit")).toBeVisible();
-  expect(screen.queryByRole("link", { name: "Study" })).toBeNull();
-  expect(screen.getByRole("link", { name: /^Thu 8 Oct 2026/ })).toHaveAttribute(
-    "aria-current",
-    "date",
   );
 });

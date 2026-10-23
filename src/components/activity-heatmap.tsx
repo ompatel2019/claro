@@ -10,9 +10,7 @@ import {
   SHADE_LABELS,
   type ActivityDay,
 } from "@/lib/activity";
-import { Flame, PortalIcon } from "@/components/icons";
 import { plural } from "@/lib/practice";
-import { cn } from "@/lib/utils";
 import {
   Card,
   CardContent,
@@ -33,7 +31,6 @@ export function ActivityHeatmap({
   link = "/student/activity?date=",
   error,
   errorContent,
-  home,
 }: {
   days: ActivityDay[];
   today: string;
@@ -43,10 +40,8 @@ export function ActivityHeatmap({
   link?: string;
   error?: boolean;
   errorContent?: React.ReactNode;
-  /** Home's "Your study days" card: big streak numbers, today marker and a call to action. */
-  home?: { action: React.ReactNode };
 }) {
-  const cell = home ? 22 : CELL;
+  const cell = CELL;
   const allWeeks = heatmapWeeks(today);
   const [weekCount, setWeekCount] = useState(53);
   const [offset, setOffset] = useState(0);
@@ -126,77 +121,16 @@ export function ActivityHeatmap({
       ? "Answer a question or review a flashcard to start your streak."
       : null;
   return (
-    <Card data-component="StudyDays" className={cn(home && "h-full")}>
-      {!home && (
-        <CardHeader>
-          <CardTitle>Study days</CardTitle>
-          <CardDescription>
-            Daily questions and flashcards over the last year
-          </CardDescription>
-        </CardHeader>
-      )}
-      <CardContent className={cn("space-y-3", home && "flex h-full flex-col")}>
-        {home ? (
-          <div className="space-y-3">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <h2 className="text-lg font-semibold">Study days</h2>
-                <p className="text-muted-foreground mt-1 text-[13px]">
-                  Every square is a day. A little practice lights it up.
-                </p>
-              </div>
-              <div className="flex items-center gap-1">
-                <button
-                  type="button"
-                  aria-label="Earlier weeks"
-                  disabled={end === weekCount}
-                  onClick={() =>
-                    setOffset(Math.min(53 - weekCount, offset + weekCount))
-                  }
-                  className="hover:bg-accent grid size-7 place-items-center rounded-full disabled:opacity-30"
-                >
-                  <PortalIcon name="chevron-left" className="size-4" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Later weeks"
-                  disabled={end === allWeeks.length}
-                  onClick={() => setOffset(Math.max(0, offset - weekCount))}
-                  className="hover:bg-accent grid size-7 place-items-center rounded-full disabled:opacity-30"
-                >
-                  <PortalIcon name="chevron-right" className="size-4" />
-                </button>
-              </div>
-            </div>
-            {!error && (
-              <dl className="grid grid-cols-3 gap-3 pt-1 pb-2">
-                {(
-                  [
-                    [current, "Day streak"],
-                    [longest, "Longest streak"],
-                    [active, "Days studied"],
-                  ] as const
-                ).map(([value, label]) => (
-                  <div key={label} className="flex flex-col-reverse">
-                    <dt className="text-foreground mt-1.5 text-xs">{label}</dt>
-                    <dd className="flex items-center gap-1 text-3xl leading-tight font-bold tabular-nums">
-                      {value}
-                      {label === "Day streak" && (
-                        <Flame aria-hidden className="text-brand size-4" />
-                      )}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            )}
-            {caption && (
-              <p className="text-muted-foreground text-xs">{caption}</p>
-            )}
-          </div>
-        ) : (
-          <h2 className="sr-only">Activity</h2>
-        )}
-        {!error && !home && (
+    <Card data-component="StudyDays">
+      <CardHeader>
+        <CardTitle>Study days</CardTitle>
+        <CardDescription>
+          Daily questions and flashcards over the last year
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <h2 className="sr-only">Activity</h2>
+        {!error && (
           <p className="text-sm">
             Current streak <strong>{plural(current, "day")}</strong> · Longest{" "}
             <strong>{plural(longest, "day")}</strong> ·{" "}
@@ -279,8 +213,7 @@ export function ActivityHeatmap({
                       }}
                       onBlur={() => setTip(null)}
                       onMouseEnter={() => setTip(day)}
-                      aria-current={home && day === today ? "date" : undefined}
-                      className="focus-visible:outline-primary aria-[current=date]:ring-foreground aria-[current=date]:ring-offset-card rounded-[3px] focus-visible:outline-2 aria-[current=date]:ring-1 aria-[current=date]:ring-offset-1"
+                      className="focus-visible:outline-primary rounded-[3px] focus-visible:outline-2"
                       style={{
                         width: cell - 3,
                         height: cell - 3,
@@ -304,7 +237,7 @@ export function ActivityHeatmap({
             </div>
           </div>
         )}
-        {!error && !home && weekCount < allWeeks.length && (
+        {!error && weekCount < allWeeks.length && (
           <div className="flex justify-between gap-2 text-xs">
             <button
               type="button"
@@ -326,13 +259,8 @@ export function ActivityHeatmap({
             </button>
           </div>
         )}
-        <div
-          className={cn(
-            "text-muted-foreground flex flex-col-reverse items-start gap-2 text-xs sm:flex-row sm:items-center sm:justify-between",
-            home && "flex-row flex-wrap items-center justify-between",
-          )}
-        >
-          {!home && <span>{caption}</span>}
+        <div className="text-muted-foreground flex flex-col-reverse items-start gap-2 text-xs sm:flex-row sm:items-center sm:justify-between">
+          <span>{caption}</span>
           <span className="flex items-center gap-1" aria-hidden>
             Less
             {HEAT.map((color) => (
@@ -344,19 +272,6 @@ export function ActivityHeatmap({
             ))}
             More
           </span>
-          {home &&
-          (byDay.get(today)?.questions ?? 0) + (byDay.get(today)?.cards ?? 0) >
-            0 ? (
-            <span className="flex items-center gap-1.5 text-xs">
-              <PortalIcon
-                name="circle-check"
-                className="text-success size-3.5"
-              />
-              Today is lit
-            </span>
-          ) : (
-            home?.action
-          )}
         </div>
       </CardContent>
     </Card>

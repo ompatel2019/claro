@@ -211,24 +211,6 @@ export const Microphone = icon(
   </>,
 );
 
-export const Sun = icon(
-  "sun",
-  <>
-    <circle cx="12" cy="12" r="4" />
-    <path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M5 19l1.5-1.5M17.5 6.5 19 5" />
-  </>,
-);
-export const Moon = icon(
-  "moon",
-  <path d="M20.5 14A9 9 0 0 1 10 3.5 9 9 0 1 0 20.5 14Z" />,
-);
-
-// Home streak, drawn with the same 24px stroke set as the four launch tiles.
-export const Flame = icon(
-  "flame",
-  <path d="M13 2.5c1 4-3 5-3 8 0 1.5 1 2.5 2 3 0-2 1-3 2-4 2 2 4.5 4.5 4.5 7A6.5 6.5 0 0 1 5.5 16c0-4 3-6 3-9 1 1 1.5 2 1.5 3 0-3 3-4 3-7.5Z" />,
-);
-
 // Template glyph vocabulary, redrawn in Claro’s 24px stroke style.
 const portalPaths = {
   "arrow-down-right": "M5 5l14 14M9 19h10V9",
@@ -249,9 +231,13 @@ const portalPaths = {
   "circle-check": "M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0m-14 0 3 3 7-7",
   "circle-dot":
     "M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0m-7 0a2 2 0 1 0-4 0 2 2 0 0 0 4 0",
+  "circle-half": "M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0M12 3v18",
+  x: "m6 6 12 12M18 6 6 18",
   clock: "M21 12a9 9 0 1 0-18 0 9 9 0 0 0 18 0M12 7v5l3 2",
   copy: "M8 8h13v13H8ZM16 4V3H3v13h1",
   "corner-down-left": "M20 4v9H4m5-5-5 5 5 5",
+  more: "M5 12h.01M12 12h.01M19 12h.01",
+  "chevron-down": "m5 9 7 7 7-7",
   ellipsis: "M5 12h.01M12 12h.01M19 12h.01",
   flag: "M5 21V3h14l-3 5 3 5H5",
   "graduation-cap": "m2 9 10-5 10 5-10 5Zm4 3v5q6 5 12 0v-5m4-3v8",

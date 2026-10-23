@@ -12,7 +12,13 @@ import {
 import { Kbd } from "./layout";
 
 export type CommandRoute = { label: string; href: string; icon: Icon };
-export function CommandPalette({ routes }: { routes: CommandRoute[] }) {
+export function CommandPalette({
+  routes,
+  student = false,
+}: {
+  routes: CommandRoute[];
+  student?: boolean;
+}) {
   const [open, setOpen] = useState(false),
     [query, setQuery] = useState(""),
     [index, setIndex] = useState(0);
@@ -46,13 +52,28 @@ export function CommandPalette({ routes }: { routes: CommandRoute[] }) {
           setIndex(0);
           setOpen(true);
         }}
-        className="text-muted-foreground sm:bg-card flex size-8 min-w-0 shrink-0 items-center justify-center gap-2 rounded-full text-[13px] sm:ml-2 sm:h-9 sm:w-[380px] sm:justify-start sm:border sm:px-3 sm:shadow-xs"
+        className={
+          student
+            ? "text-muted-foreground md:bg-card flex size-10 min-w-0 shrink-0 items-center justify-center gap-2.5 rounded-full text-sm md:h-10 md:w-full md:max-w-[420px] md:shrink md:justify-start md:border md:px-3.5"
+            : "text-muted-foreground sm:bg-card flex size-8 min-w-0 shrink-0 items-center justify-center gap-2 rounded-full text-[13px] sm:ml-2 sm:h-9 sm:w-[380px] sm:justify-start sm:border sm:px-3 sm:shadow-xs"
+        }
       >
-        <PortalIcon name="search" className="size-4 shrink-0" />
-        <span className="hidden flex-1 truncate text-left sm:block">
+        <PortalIcon
+          size={20}
+          strokeWidth={student ? 1.5 : 1.75}
+          name="search"
+          className="size-4 shrink-0"
+        />
+        <span
+          className={`hidden flex-1 truncate text-left ${student ? "md:block" : "sm:block"}`}
+        >
           Search questions, topics and cards
         </span>
-        <span className="hidden gap-0.5 sm:flex">
+        <span
+          className={
+            student ? "hidden gap-1 md:flex" : "hidden gap-0.5 sm:flex"
+          }
+        >
           <Kbd>⌘</Kbd>
           <Kbd>K</Kbd>
         </span>
@@ -70,6 +91,8 @@ export function CommandPalette({ routes }: { routes: CommandRoute[] }) {
           </DialogDescription>
           <div className="flex items-center gap-2 border-b px-4">
             <PortalIcon
+              size={20}
+              strokeWidth={student ? 1.5 : 1.75}
               name="search"
               className="text-muted-foreground size-4"
             />
@@ -130,6 +153,8 @@ export function CommandPalette({ routes }: { routes: CommandRoute[] }) {
                   <span className="flex-1">{r.label}</span>
                   {i === selected && (
                     <PortalIcon
+                      size={20}
+                      strokeWidth={student ? 1.5 : 1.75}
                       name="corner-down-left"
                       className="text-muted-foreground size-3.5"
                     />

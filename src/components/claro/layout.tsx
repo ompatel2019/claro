@@ -17,7 +17,7 @@ export function PageHeader({
 }: {
   title: string;
   description?: string;
-  eyebrow?: string;
+  eyebrow?: ReactNode;
   actions?: ReactNode;
 }) {
   return (
@@ -85,57 +85,23 @@ export function TopBar({
     </header>
   );
 }
-export function TermProgress({
-  term,
-  week,
-  weeks = 10,
-}: {
-  term: number;
-  week: number;
-  weeks?: number;
-}) {
-  return (
-    <div
-      data-component="TermProgress"
-      className="bg-card flex h-9 items-center gap-3 rounded-full border px-3.5 text-[13px] font-medium shadow-xs"
-      title={`Term ${term}, week ${week} of ${weeks}`}
-    >
-      <span>
-        Term {term} · Week {week}
-      </span>
-      <span className="flex gap-[3px]" aria-hidden>
-        {Array.from({ length: weeks }, (_, i) => (
-          <span
-            key={i}
-            className={cn(
-              "h-1.5 rounded-full",
-              i + 1 < week
-                ? "bg-foreground/35 w-1.5"
-                : i + 1 === week
-                  ? "bg-brand w-4"
-                  : "bg-foreground/12 w-1.5",
-            )}
-          />
-        ))}
-      </span>
-    </div>
-  );
-}
 export function SubjectSwitcher() {
   return (
     <div
       data-component="SubjectSwitcher"
-      className="bg-card mx-3 flex items-center gap-3 rounded-xl border p-2 shadow-xs"
+      className="bg-card mx-4 flex items-center gap-2.5 rounded-2xl border px-3 py-2.5"
     >
-      <span className="bg-primary text-primary-foreground grid size-8 shrink-0 place-items-center rounded-lg">
-        <PortalIcon name="graduation-cap" size={18} />
+      <span className="text-muted-foreground grid shrink-0 place-items-center">
+        <PortalIcon size={20} strokeWidth={1.5} name="book-open" />
       </span>
-      <span className="grid flex-1 text-[13px]">
+      <span className="grid flex-1 text-sm">
         <span className="font-semibold">Economics</span>
         <span className="text-muted-foreground text-xs">HSC · Year 12</span>
       </span>
       <PortalIcon
-        name="chevrons-up-down"
+        size={20}
+        strokeWidth={1.5}
+        name="chevron-down"
         className="text-muted-foreground mr-0.5 size-4"
       />
     </div>
@@ -153,26 +119,19 @@ export function ExamCountdown({
   return (
     <div
       data-component="ExamCountdown"
-      className="bg-navy relative overflow-hidden rounded-2xl p-4 text-white ring-1 ring-white/5"
+      className="bg-navy-deep relative overflow-hidden rounded-2xl border border-white/5 px-4 py-3.5 text-white"
     >
-      <svg
-        className="pointer-events-none absolute inset-y-0 right-0 h-full w-[72px]"
-        viewBox="0 0 72 100"
-        preserveAspectRatio="none"
-        aria-hidden
-      >
-        <polygon points="30,0 44,0 24,100 10,100" fill="#f54f1b" />
-        <polygon points="52,0 72,0 72,100 32,100" fill="#d63c0e" />
-      </svg>
       <div className="relative">
-        <p className="text-xs font-medium text-white/65">{name}</p>
+        <p className="text-xs leading-4 font-semibold text-white/78">{name}</p>
         <p className="mt-1.5 flex items-baseline gap-1.5">
-          <span className="text-[30px] leading-none font-bold tracking-[-0.03em] tabular-nums">
+          <span className="text-[28px] leading-8 font-bold tracking-[-0.02em] tabular-nums">
             {days}
           </span>
-          <span className="text-[13px] text-white/80">days to go</span>
+          <span className="text-sm font-semibold text-white/86">
+            days to go
+          </span>
         </p>
-        <p className="mt-1.5 text-xs text-white/55">{when}</p>
+        <p className="mt-1 text-xs leading-4 text-white/78">{when}</p>
       </div>
     </div>
   );

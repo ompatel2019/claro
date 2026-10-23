@@ -75,8 +75,8 @@ it("labels calculator and feedback separately from flagging", () => {
   ).toBeVisible();
   const trigger = screen
     .getAllByRole("button", { name: "Send feedback" })
-    .find((button) => button.textContent === "Feedback")!;
-  expect(trigger).toHaveTextContent("Feedback");
+    .find((button) => button.textContent === "Send feedback")!;
+  expect(trigger).toHaveTextContent("Send feedback");
   expect(trigger.querySelector('[data-icon="message-circle"]')).toBeTruthy();
   fireEvent.click(trigger);
   expect(feedback).toHaveBeenCalledOnce();

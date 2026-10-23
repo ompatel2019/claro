@@ -5,7 +5,7 @@ vi.mock("@/app/(auth)/actions", () => ({ signOut: vi.fn() }));
 vi.mock("@/components/feedback-widget", () => ({
   useFeedback: () => () => {},
 }));
-import { activeItem, nav } from "./app-shell";
+import { activeItem, nav, MobileTabs } from "./app-shell";
 
 const pages = import.meta.glob("../app/**/page.tsx", {
   eager: true,
@@ -34,7 +34,7 @@ it("keeps the default student activity navigation", () => {
   expect(activeItem("student", "/student/mark")?.label).toBe("Mark my answer");
 });
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, fireEvent } from "@testing-library/react";
 import { afterEach } from "vitest";
 import { ActiveNav, ActiveNavProvider, useActiveNav } from "./claro/active-nav";
 afterEach(cleanup);
@@ -58,4 +58,70 @@ it("scopes a page override to its route and clears it on unmount", () => {
   expect(screen.getByRole("status")).toHaveTextContent("Activity");
   rerender(view(false));
   expect(screen.getByRole("status")).toHaveTextContent("Activity");
+});
+
+const mobile = vi.hoisted(() => ({ setOpenMobile: vi.fn() }));
+vi.mock("@/components/ui/sidebar", async (original) => ({
+  ...(await original<typeof import("@/components/ui/sidebar")>()),
+  useSidebar: () => ({
+    setOpenMobile: mobile.setOpenMobile,
+    openMobile: false,
+  }),
+}));
+it("keeps the four phone destinations and opens the existing drawer from More", () => {
+  render(<MobileTabs activeHref="/student/activity" />);
+  expect(
+    screen.getAllByRole("link").map((a) => a.getAttribute("href")),
+  ).toEqual([
+    "/student",
+    "/student/sprint",
+    "/student/progress",
+    "/student/activity",
+  ]);
+  expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "More navigation" }));
+  expect(mobile.setOpenMobile).toHaveBeenCalledWith(true);
+});
+
+it.each([
+  "/student",
+  "/student/sprint",
+  "/student/progress",
+  "/student/activity",
+  "/student/activity/synthetic-result",
+  "/student/flashcards",
+  "/student/mark",
+  "/student/profile",
+])("marks the correct phone tab for %s", (path) => {
+  render(<MobileTabs activeHref={activeItem("student", path)?.href ?? path} />);
+  const tabs = screen.getByRole("navigation", { name: "Phone navigation" });
+  expect(
+    Array.from(tabs.querySelectorAll("a")).map((a) => [
+      a.textContent,
+      a.getAttribute("href"),
+    ]),
+  ).toEqual([
+    ["Home", "/student"],
+    ["Sprint", "/student/sprint"],
+    ["Progress", "/student/progress"],
+    ["Feedback", "/student/activity"],
+  ]);
+  const current = tabs.querySelector('[aria-current="page"]')!;
+  expect(current.textContent).toBe(
+    path.includes("activity")
+      ? "Feedback"
+      : path.includes("flashcards") ||
+          path.includes("mark") ||
+          path.includes("profile")
+        ? "More"
+        : path === "/student"
+          ? "Home"
+          : path.includes("sprint")
+            ? "Sprint"
+            : "Progress",
+  );
+  expect(current.querySelector(".nav-pen")).not.toBeNull();
 });

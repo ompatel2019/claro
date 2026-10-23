@@ -1,3 +1,5 @@
+import { addDays, type ActivityDay } from "./activity";
+import type { ProgressData, TopicProgress } from "./progress";
 import { timer } from "./practice";
 
 const SYDNEY = "Australia/Sydney";
@@ -86,20 +88,57 @@ export function schoolWeek(today: string) {
     ) + 1;
   return { term: index + 1, week: week(today), weeks: week(end) };
 }
-const STUDY_QUOTES = [
-  "A little practice today makes tomorrow clearer.",
-  "One question is a good place to start.",
-  "Make room for the things you do not understand yet.",
-  "Progress comes from coming back.",
-  "Learn the reason, then try again.",
-  "Small steps count. Keep taking them.",
-  "Give your next answer your full attention.",
-] as const;
 
-/** Original study prompts, rotating by Sydney calendar date, independent of render time. */
-export function studyQuote(today: string) {
-  const day = Math.floor(Date.parse(`${today}T00:00:00Z`) / 86400000);
-  return STUDY_QUOTES[
-    ((day % STUDY_QUOTES.length) + STUDY_QUOTES.length) % STUDY_QUOTES.length
-  ];
+export const WEEKLY_PRACTICE_GOAL = 5;
+export const NEXT_STEP_MIN_ANSWERS = 3;
+
+/** Prefer a supported broad topic; use a dot point if only it has enough marks. */
+export function nextStepTopic(data: ProgressData | null): TopicProgress | null {
+  const eligible = (data?.topics ?? []).filter(
+    (t) =>
+      t.answered >= NEXT_STEP_MIN_ANSWERS &&
+      t.possible > 0 &&
+      Number.isFinite(t.earned) &&
+      Number.isFinite(t.possible),
+  );
+  const parents = eligible.filter((t) => !t.parent_id);
+  return (
+    (parents.length ? parents : eligible).sort(
+      (a, b) =>
+        a.earned / a.possible - b.earned / b.possible ||
+        a.sort - b.sort ||
+        a.id.localeCompare(b.id),
+    )[0] ?? null
+  );
+}
+
+/** activity_days already uses Sydney calendar dates. Never count future rows. */
+export function practiceWeek(today: string, activity: ActivityDay[]) {
+  const monday = addDays(
+    today,
+    -((new Date(`${today}T00:00:00Z`).getUTCDay() + 6) % 7),
+  );
+  const done = new Set(
+    activity
+      .filter((d) => d.day <= today && d.questions + d.cards > 0)
+      .map((d) => d.day),
+  );
+  return Array.from({ length: 7 }, (_, i) => {
+    const day = addDays(monday, i);
+    return {
+      day,
+      label: ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][i],
+      done: done.has(day),
+      today: day === today,
+    };
+  });
+}
+
+/** As on Progress: marked-answer totals, never flashcard recall. */
+export function practiceAverage(data: ProgressData | null) {
+  const parents = (data?.topics ?? []).filter((t) => !t.parent_id);
+  const possible = parents.reduce((n, t) => n + t.possible, 0);
+  return possible > 0
+    ? Math.round((100 * parents.reduce((n, t) => n + t.earned, 0)) / possible)
+    : null;
 }

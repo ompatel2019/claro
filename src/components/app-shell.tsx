@@ -1,7 +1,11 @@
 "use client";
 import { ActiveNavProvider, useActiveNav } from "@/components/claro/active-nav";
 import { CommandPalette } from "@/components/claro/command-palette";
-import { ExamCountdown, TopBar } from "@/components/claro/layout";
+import {
+  ExamCountdown,
+  SubjectSwitcher,
+  TopBar,
+} from "@/components/claro/layout";
 import { ThemeToggle, setTheme } from "./theme-toggle";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -129,7 +133,8 @@ export function activeItem(kind: keyof typeof nav, path: string) {
   );
 }
 
-const navButtonClassName =
+const navButtonClassName = "shell-nav-button";
+const adminNavButtonClassName =
   "data-active:before:bg-brand h-9 overflow-visible rounded-xl font-medium data-active:font-semibold data-active:before:absolute data-active:before:-left-3 data-active:before:h-5 data-active:before:w-[3px] data-active:before:rounded-r";
 
 const studentIcons: Record<
@@ -190,14 +195,20 @@ function AppShellContent({
     ...(kind === "admin" ? nav.admin.flatMap((g) => g.items) : []),
   ];
   return (
-    <SidebarProvider defaultOpen={defaultOpen}>
+    <SidebarProvider
+      defaultOpen={defaultOpen}
+      className={kind === "student" ? "student-frame" : undefined}
+    >
       <a
         className="sr-only z-50 focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
         href="#main"
       >
         Skip to content
       </a>
-      <Sidebar collapsible="icon">
+      <Sidebar
+        collapsible="icon"
+        className={kind === "student" ? "student-sidebar" : undefined}
+      >
         <SidebarHeader className="h-16 flex-row items-center justify-between gap-2 pr-3 pl-5 group-data-[collapsible=icon]:h-auto group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:gap-3 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:pt-4 group-data-[collapsible=icon]:pb-2">
           <Link
             href={home}
@@ -206,8 +217,13 @@ function AppShellContent({
           >
             {kind === "student" ? <ShellLogo /> : <Logo collapsible />}
           </Link>
-          <SidebarHeaderToggle />
+          {kind === "admin" && <SidebarHeaderToggle />}
         </SidebarHeader>
+        {kind === "student" && (
+          <div className="my-3 group-data-[collapsible=icon]:hidden">
+            <SubjectSwitcher />
+          </div>
+        )}
         <SidebarContent className="pt-3 pb-2">
           <nav
             aria-label={
@@ -216,7 +232,9 @@ function AppShellContent({
           >
             {nav[kind].map((group) => (
               <SidebarGroup key={group.label} className="mb-2">
-                <SidebarGroupLabel className="mt-0">
+                <SidebarGroupLabel
+                  className={kind === "student" ? "sr-only" : "mt-0"}
+                >
                   {group.label}
                 </SidebarGroupLabel>
                 <SidebarMenu className="gap-0.5">
@@ -226,7 +244,11 @@ function AppShellContent({
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
-                          className={navButtonClassName}
+                          className={
+                            kind === "student"
+                              ? navButtonClassName
+                              : adminNavButtonClassName
+                          }
                           isActive={isActive}
                           tooltip={item.label}
                           render={
@@ -238,11 +260,22 @@ function AppShellContent({
                           }
                         >
                           {kind === "student" ? (
-                            <PortalIcon name={studentIcons[item.label]} />
+                            <PortalIcon
+                              size={20}
+                              strokeWidth={1.5}
+                              name={studentIcons[item.label]}
+                            />
                           ) : (
                             <item.icon strokeWidth={1.75} />
                           )}
-                          <span>{item.label}</span>
+                          <span
+                            className={
+                              kind === "student" ? "nav-label" : undefined
+                            }
+                          >
+                            {item.label}
+                            {kind === "student" && isActive && <NavUnderline />}
+                          </span>
                         </SidebarMenuButton>
                         {!!badge && (
                           <SidebarMenuBadge
@@ -260,7 +293,13 @@ function AppShellContent({
             {kind === "student" && <FeedbackNavItem />}
           </nav>
         </SidebarContent>
-        <SidebarFooter className="border-sidebar-border gap-2 border-t px-3 pt-3 pb-4">
+        <SidebarFooter
+          className={
+            kind === "student"
+              ? "gap-3 px-4 pt-3 pb-4"
+              : "border-sidebar-border gap-2 border-t px-3 pt-3 pb-4"
+          }
+        >
           {kind === "student" && examDays !== null && (
             <div className="group-data-[collapsible=icon]:hidden">
               <ExamCountdown
@@ -294,7 +333,13 @@ function AppShellContent({
                 render={<Link href="/student/profile" aria-label="Profile" />}
               >
                 <Avatar className="after:border-0">
-                  <AvatarFallback className="bg-brand-soft text-brand-text text-xs font-medium">
+                  <AvatarFallback
+                    className={
+                      kind === "student"
+                        ? "bg-primary text-primary-foreground text-xs font-semibold"
+                        : "bg-brand-soft text-brand-text text-xs font-medium"
+                    }
+                  >
                     {initials(name)}
                   </AvatarFallback>
                 </Avatar>
@@ -312,19 +357,31 @@ function AppShellContent({
                   aria-label="User menu"
                   className="text-muted-foreground hover:bg-muted grid size-7 shrink-0 place-items-center rounded-full group-data-[collapsible=icon]:hidden"
                 >
-                  <span aria-hidden className="text-lg leading-none">
-                    ⋯
-                  </span>
+                  {kind === "student" ? (
+                    <PortalIcon size={20} strokeWidth={1.5} name="more" />
+                  ) : (
+                    <span aria-hidden className="text-lg leading-none">
+                      ⋯
+                    </span>
+                  )}
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" align="end" className="w-48">
                   <DropdownMenuItem render={<Link href="/student/profile" />}>
-                    <User />
+                    {kind === "student" ? (
+                      <PortalIcon size={20} name="user" strokeWidth={1.5} />
+                    ) : (
+                      <User />
+                    )}
                     Profile
                   </DropdownMenuItem>
                   {kind === "student" && (
                     <DropdownMenuItem onClick={() => feedback()}>
-                      <Message />
-                      Feedback
+                      <PortalIcon
+                        size={20}
+                        name="message-circle"
+                        strokeWidth={1.5}
+                      />
+                      Send feedback
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem
@@ -336,13 +393,24 @@ function AppShellContent({
                       )
                     }
                   >
-                    <PortalIcon name="moon" />
+                    <PortalIcon
+                      size={kind === "student" ? 20 : undefined}
+                      strokeWidth={kind === "student" ? 1.5 : undefined}
+                      name="moon"
+                    />
                     Toggle theme
                   </DropdownMenuItem>
+                  {kind === "student" && (
+                    <DropdownMenuItem onClick={() => setTheme("system")}>
+                      Use system theme
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem
                     onClick={() => signOutForm.current?.requestSubmit()}
                   >
-                    <SignOut />
+                    <SignOut
+                      strokeWidth={kind === "student" ? 1.5 : undefined}
+                    />
                     Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -353,8 +421,20 @@ function AppShellContent({
       </Sidebar>
       {/* Collapsing hands the rail's freed width to the content column. */}
       <SidebarInset className="min-w-0 md:peer-data-[state=collapsed]:[--shell-reclaim:calc(var(--sidebar-width)-var(--sidebar-width-icon))]">
-        <TopBar>
-          <SidebarTrigger className="max-sm:size-9 md:hidden" />
+        <TopBar
+          className={
+            kind === "student"
+              ? "bg-background h-16 gap-3 backdrop-blur-none md:px-10"
+              : undefined
+          }
+        >
+          {kind === "admin" ? (
+            <SidebarTrigger className="max-sm:size-9 md:hidden" />
+          ) : (
+            <div className="hidden md:block">
+              <SidebarHeaderToggle />
+            </div>
+          )}
           <Link
             href={home}
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
@@ -362,27 +442,37 @@ function AppShellContent({
           >
             {kind === "student" ? <ShellLogo mobile /> : <Logo height={22} />}
           </Link>
-          <CommandPalette routes={commands} />
+          <CommandPalette routes={commands} student={kind === "student"} />
           <div className="flex shrink-0 items-center gap-1 sm:ml-auto">
-            <span className="relative grid place-items-center [&_button>svg]:hidden">
+            {kind === "student" ? (
               <ThemeToggle />
-              <PortalIcon
-                name="moon"
-                className="pointer-events-none absolute size-4 dark:hidden"
-              />
-              <PortalIcon
-                name="sun"
-                className="pointer-events-none absolute hidden size-4 dark:block"
-              />
-            </span>
+            ) : (
+              <span className="relative grid place-items-center [&_button>svg]:hidden">
+                <ThemeToggle />
+                <PortalIcon
+                  name="moon"
+                  className="pointer-events-none absolute size-4 dark:hidden"
+                />
+                <PortalIcon
+                  name="sun"
+                  className="pointer-events-none absolute hidden size-4 dark:block"
+                />
+              </span>
+            )}
             <form ref={signOutForm} action={signOut} className="hidden" />
             <DropdownMenu>
               <DropdownMenuTrigger
-                className={`ml-auto rounded-full ${kind === "student" ? "max-lg:ml-0" : ""}`}
+                className={`ml-auto rounded-full ${kind === "student" ? "shell-account-menu md:hidden" : ""}`}
                 aria-label="Account menu"
               >
                 <Avatar className="size-8 after:border-0">
-                  <AvatarFallback className="bg-brand-soft text-brand-text text-xs font-medium">
+                  <AvatarFallback
+                    className={
+                      kind === "student"
+                        ? "bg-primary text-primary-foreground text-xs font-semibold"
+                        : "bg-brand-soft text-brand-text text-xs font-medium"
+                    }
+                  >
                     {initials(name)}
                   </AvatarFallback>
                 </Avatar>
@@ -390,21 +480,29 @@ function AppShellContent({
               <DropdownMenuContent align="end" className="w-44">
                 {kind === "student" && (
                   <DropdownMenuItem onClick={() => feedback()}>
-                    <Message />
-                    Feedback
+                    <PortalIcon
+                      size={20}
+                      name="message-circle"
+                      strokeWidth={1.5}
+                    />
+                    Send feedback
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem onClick={() => setTheme("system")}>
                   Use system theme
                 </DropdownMenuItem>
                 <DropdownMenuItem render={<Link href="/student/profile" />}>
-                  <User />
+                  {kind === "student" ? (
+                    <PortalIcon size={20} name="user" strokeWidth={1.5} />
+                  ) : (
+                    <User />
+                  )}
                   Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => signOutForm.current?.requestSubmit()}
                 >
-                  <SignOut />
+                  <SignOut strokeWidth={kind === "student" ? 1.5 : undefined} />
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -415,13 +513,16 @@ function AppShellContent({
           id="main"
           className={
             kind === "student"
-              ? "mx-auto w-full max-w-[calc(1400px+var(--shell-reclaim,0px))] min-w-0 flex-1 px-4 pt-6 pb-24 transition-[max-width] duration-200 ease-linear sm:px-8 sm:pt-8"
+              ? "mx-auto w-full max-w-[1088px] min-w-0 flex-1 px-4 pt-6 pb-[calc(96px+env(safe-area-inset-bottom))] md:px-10 md:pb-10"
               : "mx-auto w-full max-w-[calc(1464px+var(--shell-reclaim,0px))] min-w-0 flex-1 px-4 py-6 transition-[max-width] duration-200 ease-linear sm:px-8 sm:py-8"
           }
         >
           {children}
         </div>
       </SidebarInset>
+      {kind === "student" && (
+        <MobileTabs activeHref={activeItem("student", path)?.href ?? path} />
+      )}
     </SidebarProvider>
   );
 }
@@ -436,14 +537,14 @@ function FeedbackNavItem() {
           <SidebarMenuButton
             type="button"
             className={navButtonClassName}
-            tooltip="Feedback"
+            tooltip="Send feedback"
             onClick={() => {
               if (isMobile) setOpenMobile(false);
               feedback();
             }}
           >
-            <PortalIcon name="message-circle" />
-            <span>Feedback</span>
+            <PortalIcon size={20} strokeWidth={1.5} name="message-circle" />
+            <span>Send feedback</span>
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -476,7 +577,7 @@ function SidebarHeaderToggle() {
   );
 }
 
-/** Reuse the approved wordmark without the marketing tile in the portal chrome. */
+/** Approved logo lockup, with the icon alone in the collapsed rail. */
 function ShellLogo({ mobile = false }: { mobile?: boolean }) {
   return (
     <span role="img" aria-label="Claro" className="inline-flex shrink-0">
@@ -489,20 +590,82 @@ function ShellLogo({ mobile = false }: { mobile?: boolean }) {
         className="hidden shrink-0 group-data-[collapsible=icon]:block"
       />
       <img
-        src="/logos/claro-wordmark-on-light.svg"
+        src="/logos/claro-logo-primary-on-light.svg"
         alt=""
-        width={mobile ? 64 : 70}
-        height={(mobile ? 64 : 70) * (99.9 / 317.96)}
+        width={mobile ? 96 : 110}
+        height={(mobile ? 96 : 110) * (135.8 / 489.61)}
         className="group-data-[collapsible=icon]:hidden dark:hidden"
       />
       <img
-        src="/logos/claro-wordmark-on-dark.svg"
+        src="/logos/claro-logo-primary-on-dark.svg"
         alt=""
-        width={mobile ? 64 : 70}
-        height={(mobile ? 64 : 70) * (99.9 / 317.96)}
+        width={mobile ? 96 : 110}
+        height={(mobile ? 96 : 110) * (135.8 / 489.61)}
         className="hidden group-data-[collapsible=icon]:hidden dark:block"
       />
       {/* eslint-enable @next/next/no-img-element */}
     </span>
+  );
+}
+
+function NavUnderline() {
+  return (
+    <svg
+      className="nav-pen pen"
+      viewBox="0 0 240 14"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M3 9.5C42 5.2 90 10.8 138 7.2S212 9.6 237 6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="3"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+export function MobileTabs({ activeHref }: { activeHref?: string }) {
+  const { setOpenMobile, openMobile } = useSidebar();
+  const items = ["Home", "Topic Sprint", "Progress", "Activity"].map((label) =>
+    nav.student.flatMap((g) => g.items).find((i) => i.label === label)!,
+  );
+  const moreActive = !!activeHref && !items.some((i) => i.href === activeHref);
+  return (
+    <nav className="student-tabbar" aria-label="Phone navigation">
+      {items.map((item) => (
+        <Link
+          key={item.href}
+          href={item.href}
+          aria-current={activeHref === item.href ? "page" : undefined}
+        >
+          <PortalIcon
+            size={20}
+            strokeWidth={1.5}
+            name={studentIcons[item.label]}
+          />
+          <span className="nav-label">
+            {item.label === "Topic Sprint"
+              ? "Sprint"
+              : item.label === "Activity"
+                ? "Feedback"
+                : item.label}
+            {activeHref === item.href && <NavUnderline />}
+          </span>
+        </Link>
+      ))}
+      <button
+        type="button"
+        aria-label="More navigation"
+        aria-current={moreActive ? "page" : undefined}
+        aria-expanded={openMobile}
+        onClick={() => setOpenMobile(true)}
+      >
+        <PortalIcon size={20} strokeWidth={1.5} name="more" />
+        <span className="nav-label">More{moreActive && <NavUnderline />}</span>
+      </button>
+    </nav>
   );
 }
