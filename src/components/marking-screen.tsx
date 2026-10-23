@@ -1,4 +1,3 @@
-import styles from "./marking-screen.module.css";
 import { Logo } from "./logo";
 
 /** Shared blocking presentation while a marking submission is pending. */
@@ -37,7 +36,7 @@ export function MarkingScreen({ single = false }: { single?: boolean }) {
             strokeLinecap="round"
           />
           <g
-            className={`stroke-brand ${styles.pen}`}
+            className="pen-mark stroke-brand"
             strokeWidth="3"
             strokeLinecap="round"
             strokeLinejoin="round"
