@@ -79,7 +79,7 @@ test.describe("Student practice", () => {
     await page.getByRole("button", { name: /^Sprints ·/ }).click();
     await expect(page).toHaveURL(/kind=sprint/);
     await page
-      .locator(`a[href="/student/sprint/${finishedId}/results"]`)
+      .locator(`a[href="/student/activity/${finishedId}"]`)
       .first()
       .click();
     await expect(

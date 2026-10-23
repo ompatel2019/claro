@@ -1,4 +1,3 @@
-import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { PortalIcon } from "@/components/icons";
 import { redirect } from "next/navigation";
@@ -42,14 +41,8 @@ const avg = (xs: (number | null)[]) => {
   return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null;
 };
 
-export const metadata = pageMetadata("Sprint results");
-
-export default async function Results({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = await params;
+/** Sprint results, rendered by /student/activity/[id]. loadSprint re-checks the owner and kind. */
+export async function SprintResults({ id }: { id: string }) {
   const { session: s, profile, attempts } = await loadSprint(id);
   if (!s.finished_at) {
     if (!markingInFlight(attempts, s.config.feedback))

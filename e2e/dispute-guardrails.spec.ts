@@ -21,7 +21,7 @@ test.describe("student marking disputes", () => {
     }) => {
       await page.setViewportSize({ width, height: 900 });
       await signIn(page, fixture.email, fixture.password);
-      await page.goto(`/student/sprint/${fixture.sessions[0]}/results`);
+      await page.goto(`/student/activity/${fixture.sessions[0]}`);
       await page
         .getByRole("button", { name: "Question this mark", exact: true })
         .click();
@@ -160,7 +160,7 @@ test.describe("student marking disputes", () => {
     page,
   }) => {
     await signIn(page, fixture.email, fixture.password);
-    await page.goto(`/student/sprint/${fixture.sessions[0]}/results`);
+    await page.goto(`/student/activity/${fixture.sessions[0]}`);
     await page
       .getByRole("button", { name: "Question this mark", exact: true })
       .click();

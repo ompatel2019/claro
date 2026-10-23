@@ -92,7 +92,7 @@ test.describe("annotated written feedback", () => {
       null,
       null,
     ]);
-    results = `/student/sprint/${id}/results`;
+    results = `/student/activity/${id}`;
   });
 
   test("highlights and comment slider link both ways on wide screens", async ({

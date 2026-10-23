@@ -9,7 +9,7 @@ export function FinishSprint({ id }: { id: string }) {
   const pending = useRef(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const results = `/student/sprint/${id}/results`;
+  const results = `/student/activity/${id}`;
   async function finish() {
     if (pending.current) return;
     pending.current = true;

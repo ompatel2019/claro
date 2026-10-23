@@ -175,7 +175,9 @@ export async function finish(page: Page) {
   await page
     .getByRole("button", { name: "Finish and mark", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/results$/, { timeout: 90000 });
+  await expect(page).toHaveURL(/\/student\/activity\/[^/]+$/, {
+    timeout: 90000,
+  });
 }
 
 /** The E2E student's auth id (by STUDENT_EMAIL). */

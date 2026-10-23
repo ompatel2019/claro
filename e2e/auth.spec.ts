@@ -33,6 +33,7 @@ test("student routes stay protected when signed out", async ({ page }) => {
     "/student/activity",
     "/student/profile",
     "/student/sprint/00000000-0000-0000-0000-000000000000/results",
+    "/student/activity/00000000-0000-0000-0000-000000000000",
   ]) {
     await page.goto(route);
     await expect(page).toHaveURL(/\/sign-in(\?|$)/);

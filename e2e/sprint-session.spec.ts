@@ -183,6 +183,6 @@ test.describe("Sprint session", () => {
 
   test("old /practice session links redirect", async ({ page }) => {
     await page.goto(`/practice/${ids[0]}`);
-    await expect(page).toHaveURL(/\/student\/sprint\/[^/]+(\/results)?$/);
+    await expect(page).toHaveURL(/\/student\/(?:sprint|activity)\/[^/]+$/);
   });
 });
