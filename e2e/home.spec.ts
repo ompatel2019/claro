@@ -7,9 +7,7 @@ test.describe("Student home", () => {
     await signIn(page);
   });
 
-  test("greeting, hero, four tiles, study days and study hub", async ({
-    page,
-  }) => {
+  test("greeting, hero, study actions and study days", async ({ page }) => {
     await expect(
       page.getByRole("heading", {
         level: 1,
@@ -21,10 +19,8 @@ test.describe("Student home", () => {
     ).toBeVisible();
     const quick = page.getByRole("region", { name: "Quick start" });
     for (const [name, href] of [
-      ["Marks earned", "/student/progress"],
-      ["Questions answered", "/student/sprint"],
-      ["Study time", "/student/activity"],
-      ["Cards due", "/student/flashcards"],
+      ["Topic Sprint", "/student/sprint"],
+      ["Flashcards", "/student/flashcards"],
     ]) {
       await expect(
         quick.getByRole("link", { name: new RegExp(`^${name}`) }),
@@ -34,11 +30,18 @@ test.describe("Student home", () => {
       page.getByRole("heading", { name: "Study days" }),
     ).toBeVisible();
     await expect(page.getByText("Day streak")).toBeVisible();
-    await expect(
-      page.getByRole("region", { name: "Study hub" }).getByRole("listitem"),
-    ).toHaveCount(4);
     await expect(page.getByText("Continue where you left off")).toHaveCount(0);
-    for (const name of ["Score trend", "Recent activity", "Weak topics"])
+    for (const name of [
+      "Marks earned",
+      "Questions answered",
+      "Study time",
+      "Cards due",
+      "Practice average",
+      "Today's plan",
+      "Topics",
+      "Where your marks go",
+      "Ask Claro",
+    ])
       await expect(
         page.getByRole("heading", { name, exact: true }),
       ).toHaveCount(0);

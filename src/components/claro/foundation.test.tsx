@@ -9,7 +9,6 @@ import {
 import { afterEach, expect, it, vi } from "vitest";
 import { Dashboard, Target } from "@/components/icons";
 import { CommandPalette } from "./command-palette";
-import { AskClaro } from "./ask-claro";
 import { Meter, ScoreRing, Sparkline } from "./data-display";
 const push = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push }) }));
@@ -60,24 +59,6 @@ it("shows a useful empty search result", async () => {
   render(<CommandPalette routes={[]} />);
   fireEvent.click(screen.getByRole("button", { name: /Search pages/ }));
   expect(await screen.findByText(/No pages match/)).toBeVisible();
-});
-it("replies locally to suggestions and custom messages", async () => {
-  const fetchSpy = vi.spyOn(globalThis, "fetch");
-  render(<AskClaro />);
-  fireEvent.click(screen.getByRole("button", { name: "Ask Claro" }));
-  fireEvent.click(
-    await screen.findByRole("button", { name: /Explain the J-curve/ }),
-  );
-  expect(screen.getByRole("log")).toHaveTextContent(
-    "A depreciation can initially worsen the trade balance",
-  );
-  fireEvent.change(screen.getByRole("textbox", { name: "Message Claro" }), {
-    target: { value: "Help me study" },
-  });
-  fireEvent.click(screen.getByRole("button", { name: "Send" }));
-  expect(screen.getByRole("log")).toHaveTextContent("Try breaking the concept");
-  expect(fetchSpy).not.toHaveBeenCalled();
-  fetchSpy.mockRestore();
 });
 it("clamps meters and renders empty data without invalid SVG coordinates", () => {
   const { container } = render(

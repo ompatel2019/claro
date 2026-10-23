@@ -64,101 +64,18 @@ it("finds the NSW term, Monday week boundaries and term length", () => {
   expect(schoolWeek("2027-04-09")).toEqual({ term: 1, week: 10, weeks: 10 });
   expect(schoolWeek("2026-12-18")).toBeNull();
   expect(schoolWeek("2027-04-10")).toBeNull();
+  expect(schoolWeek("2027-10-11")).toEqual({ term: 4, week: 1, weeks: 10 });
+  expect(schoolWeek("2027-12-17")).toEqual({ term: 4, week: 10, weeks: 10 });
+  expect(schoolWeek("2027-12-18")).toBeNull();
   expect(schoolWeek("2028-02-01")).toBeNull();
 });
-import { homeUnits, homeWeeks, homeComparison, homeMinutes } from "./home";
-import type { HistoryScore, TopicProgress } from "./progress";
-const historyRow = (
-  finished_at: string,
-  pct: number | null,
-  elapsed_s = 60,
-  kind = "sprint",
-): HistoryScore => ({
-  id: finished_at,
-  kind,
-  config: {},
-  finished_at,
-  pct,
-  elapsed_s,
-  by_type: {},
-});
-it("uses Sydney Mondays, excludes card recall, and averages only observed marked scores", () => {
-  expect(
-    homeWeeks([
-      historyRow("2026-10-18T14:00:00Z", 60),
-      historyRow("2026-10-20T00:00:00Z", 80),
-      historyRow("2026-10-20T01:00:00Z", 100, 60, "flashcards"),
-      historyRow("invalid", 100),
-      historyRow("2026-10-12T00:00:00Z", null),
-    ]),
-  ).toEqual([{ day: "2026-10-19", pct: 70 }]);
-});
-it("compares exact seven-day Sydney periods and omits missing prior comparisons", () => {
-  const rows = [
-    historyRow("2026-10-12T13:00:00Z", 50, 120),
-    historyRow("2026-10-19T13:00:00Z", 70, 300),
-    historyRow("2026-10-20T14:00:00Z", 100, 1000),
-  ];
-  expect(homeComparison(rows, "2026-10-20")).toEqual({ minutes: 3, score: 20 });
-  expect(homeComparison(rows.slice(1), "2026-10-20")).toEqual({
-    minutes: undefined,
-    score: undefined,
-  });
-});
-it("orders parent units without counting their dot points and uses documented estimates", () => {
-  const topics = [
-    { id: "second", parent_id: null, sort: 2 },
-    { id: "leaf", parent_id: "second", sort: 0 },
-    { id: "first", parent_id: null, sort: 1 },
-  ] as TopicProgress[];
-  expect(homeUnits(topics).map((t) => t.id)).toEqual(["first", "second"]);
-  expect(homeMinutes(43, "cards")).toBe(15);
-  expect(homeMinutes(3, "questions")).toBe(6);
-});
-
-import { homeSprintMinutes } from "./home";
-it("uses saved sprint sizing or timer and hides unknown estimates", () => {
-  expect(homeSprintMinutes({ actual_questions: 8 }, 0)).toBe(16);
-  expect(homeSprintMinutes({ time_limit_s: 600 }, 180)).toBe(7);
-  expect(homeSprintMinutes({}, 30)).toBeNull();
-});
-
-import { homeEarnedMarks, homeExamPrompt } from "./home";
-it("sums earned marks by Sydney day, compares seven against seven, and ignores invalid/outside rows", () => {
-  const rows = [
-    { marked_at: "2026-10-05T13:00:00Z", mark: 4 }, // first Sydney day
-    { marked_at: "2026-10-11T13:00:00Z", mark: 3 }, // last prior day
-    { marked_at: "2026-10-12T13:00:00Z", mark: 8 }, // first current day
-    { marked_at: "2026-10-19T12:59:59Z", mark: 2 }, // today
-    { marked_at: "2026-10-19T13:00:00Z", mark: 100 }, // tomorrow
-    { marked_at: "2026-10-05T12:59:59Z", mark: 100 }, // before range
-    { marked_at: "invalid", mark: 100 },
-    { marked_at: null, mark: 100 },
-    { marked_at: "2026-10-19T00:00:00Z", mark: null },
-  ];
-  expect(homeEarnedMarks(rows, "2026-10-19")).toEqual({
-    values: [8, 0, 0, 0, 0, 0, 2],
-    delta: 3,
-  });
-  expect(homeEarnedMarks(rows.slice(2), "2026-10-19").delta).toBeUndefined();
-  expect(
-    homeEarnedMarks(
-      [{ marked_at: "2026-10-12T00:00:00Z", mark: 0 }],
-      "2026-10-19",
-    ).delta,
-  ).toBe(0);
-});
-it("uses the real Sydney exam weekday only within seven days, including exam day", () => {
-  expect(homeExamPrompt("2026-10-19")).toBe(
-    "What should I study before my exam?",
-  );
-  expect(homeExamPrompt("2026-10-20")).toBe(
-    "What should I study before Tuesday's exam?",
-  );
-  expect(homeExamPrompt("2026-10-27")).toBe(
-    "What should I study before Tuesday's exam?",
-  );
-  expect(homeExamPrompt("2026-10-28")).toBe(
-    "What should I study before my exam?",
-  );
+import { studyQuote } from "./home";
+import { sydneyToday } from "./flashcards";
+it("rotates original study quotes deterministically by Sydney day", () => {
+  const today = sydneyToday(new Date("2026-10-18T13:00:00Z"));
+  expect(today).toBe("2026-10-19");
+  expect(studyQuote(today)).toBe(studyQuote("2026-10-19"));
+  expect(studyQuote(today)).not.toBe(studyQuote("2026-10-20"));
+  expect(studyQuote(today)).toBe(studyQuote("2026-10-26"));
+  expect(schoolWeek(today)).toEqual({ term: 4, week: 2, weeks: 10 });
 });

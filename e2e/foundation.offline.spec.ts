@@ -5,15 +5,14 @@ let bundle: string, css: string;
 test.beforeAll(async () => {
   css = await offlineCss();
   bundle = await offlineBundle(
-    `import React from 'react';import {createRoot} from 'react-dom/client';import {AppShell} from './src/components/app-shell';import {Kit} from './src/components/claro/kit';import {Toaster} from 'sonner';createRoot(document.getElementById('root')).render(<AppShell kind={location.search.includes('admin')?'admin':'student'} name="Claro Test Student" defaultOpen={true}><Kit/><Toaster/></AppShell>);`,
+    `import React from 'react';import {createRoot} from 'react-dom/client';import {AppShell} from './src/components/app-shell';import {Kit} from './src/components/claro/kit';import {Toaster} from 'sonner';import {FeedbackWidget} from './src/components/feedback-widget';createRoot(document.getElementById('root')).render(<FeedbackWidget userId="offline-student"><AppShell kind={location.search.includes('admin')?'admin':'student'} name="Claro Test Student" defaultOpen={true}><Kit/><Toaster/></AppShell></FeedbackWidget>);`,
     [
       {
         name: "offline-shell",
         setup(builder) {
           builder.onResolve(
             {
-              filter:
-                /^(next\/(link|navigation)|@\/app\/\(auth\)\/actions|@\/components\/feedback-widget)$/,
+              filter: /^(next\/(link|navigation)|@\/app\/\(auth\)\/actions)$/,
             },
             ({ path }) => ({ path, namespace: "mock" }),
           );
@@ -23,9 +22,7 @@ test.beforeAll(async () => {
                 ? `import React from 'react';export default function Link({href,prefetch,...props}){return <a href={href} {...props}/>}`
                 : path === "next/navigation"
                   ? `export const usePathname=()=>location.pathname;export const useRouter=()=>({push:url=>{history.pushState({},'',url);window.dispatchEvent(new Event('navigated'));}});`
-                  : path.includes("actions")
-                    ? `export const signOut=()=>{};`
-                    : `export const useFeedback=()=>()=>{};`,
+                  : `export const signOut=()=>{};`,
             loader: "tsx",
             resolveDir: process.cwd(),
           }));
@@ -64,7 +61,7 @@ test.beforeEach(async ({ page }) => {
   });
 });
 for (const width of [1440, 390])
-  test(`foundation at ${width}px: shell, tokens, search, chat and dark mode`, async ({
+  test(`foundation at ${width}px: shell, tokens, search, feedback and dark mode`, async ({
     page,
   }) => {
     await page.setViewportSize({ width, height: 1000 });
@@ -105,17 +102,32 @@ for (const width of [1440, 390])
     await search.fill("Progress");
     await page.keyboard.press("Enter");
     await expect(page).toHaveURL(/\/student\/progress$/);
-    await page.getByRole("button", { name: "Ask Claro", exact: true }).click();
-    await page.getByRole("button", { name: /Explain the J-curve/ }).click();
-    await expect(page.getByRole("log")).toContainText(
-      "A depreciation can initially worsen",
-    );
-    await page.getByRole("textbox", { name: "Message Claro" }).fill("hello");
-    await page.getByRole("button", { name: "Send", exact: true }).click();
-    await expect(page.getByRole("log")).toContainText(
-      "Try breaking the concept",
-    );
+    await expect(
+      page.getByRole("button", { name: "Ask Claro", exact: true }),
+    ).toHaveCount(0);
+    await page.keyboard.press("Control+k");
+    await page
+      .getByRole("combobox", { name: "Search pages" })
+      .fill("Ask Claro");
+    await expect(page.getByRole("option")).toHaveCount(0);
     await page.keyboard.press("Escape");
+    if (width === 390)
+      await page.getByRole("button", { name: "Toggle Sidebar" }).click();
+    await page
+      .getByRole("navigation", { name: "Main navigation" })
+      .getByRole("button", { name: "Feedback", exact: true })
+      .click();
+    await expect(
+      page.getByRole("dialog", { name: "Send feedback" }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("textbox", { name: "Message", exact: true }),
+    ).toBeEditable();
+    await page.getByRole("button", { name: "Cancel", exact: true }).click();
+    if (width === 390)
+      await expect(
+        page.getByRole("navigation", { name: "Main navigation" }),
+      ).not.toBeVisible();
     await page.getByRole("button", { name: "Dark mode" }).click();
     await expect(page.locator("html")).toHaveClass(/dark/);
     expect(

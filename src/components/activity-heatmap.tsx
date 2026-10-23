@@ -46,7 +46,7 @@ export function ActivityHeatmap({
   /** Home's "Your study days" card: big streak numbers, today marker and a call to action. */
   home?: { action: React.ReactNode };
 }) {
-  const cell = home ? 18 : CELL;
+  const cell = home ? 22 : CELL;
   const allWeeks = heatmapWeeks(today);
   const [weekCount, setWeekCount] = useState(53);
   const [offset, setOffset] = useState(0);
@@ -140,9 +140,9 @@ export function ActivityHeatmap({
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h2 className="text-[15px] font-semibold">Study days</h2>
+                <h2 className="text-lg font-semibold">Study days</h2>
                 <p className="text-muted-foreground mt-1 text-[13px]">
-                  Consistency is the cheat code.
+                  Every square is a day. A little practice lights it up.
                 </p>
               </div>
               <div className="flex items-center gap-1">
@@ -178,15 +178,8 @@ export function ActivityHeatmap({
                   ] as const
                 ).map(([value, label]) => (
                   <div key={label} className="flex flex-col-reverse">
-                    <dt className="text-muted-foreground mt-1.5 text-xs">
-                      {label}
-                    </dt>
-                    <dd
-                      className={cn(
-                        "text-2xl leading-tight font-bold tabular-nums",
-                        "flex items-center gap-1 text-[22px]",
-                      )}
-                    >
+                    <dt className="text-foreground mt-1.5 text-xs">{label}</dt>
+                    <dd className="flex items-center gap-1 text-3xl leading-tight font-bold tabular-nums">
                       {value}
                       {label === "Day streak" && (
                         <Flame aria-hidden className="text-brand size-4" />

@@ -1,97 +1,31 @@
 import { test, expect } from "./fixtures/weak-topic-student";
 import { adminClient } from "./helpers";
 
-function weakCard(page: import("@playwright/test").Page) {
-  return page
-    .getByRole("heading", {
-      name: "Weak spots",
-      exact: true,
-    })
-    .locator('xpath=ancestor::*[@data-slot="card"]');
-}
-
-test.describe("S17/S2 topic history", () => {
+test.describe("Student progress summaries", () => {
   test.skip(!adminClient(), "Needs Supabase test credentials");
   for (const width of [360, 1280]) {
-    test(`history boundaries and breakdown layout at ${width}px`, async ({
+    test(`progress keeps practice and topic results together at ${width}px`, async ({
       page,
       historyStudent,
     }) => {
       await page.setViewportSize({ width, height: 850 });
-      const checkProgress = async (copy: RegExp | null, unlocked: boolean) => {
-        await page.goto("/student/progress?range=all");
-        const card = weakCard(page);
-        await expect(card).toBeVisible();
-        if (copy) await expect(card.getByText(copy)).toBeVisible();
-        const practice = card.getByRole("link", {
-          name: "Retry questions",
-          exact: true,
-        });
-        await expect(practice).toHaveCount(unlocked ? 1 : 0);
-        if (unlocked)
-          await expect(practice).toHaveAttribute(
-            "href",
-            `/student/sprint?topics=t3&sub=t3-inflation&history=mistakes`,
-          );
-        const headings = page.getByRole("heading", { level: 2 });
-        await expect(headings.first()).toHaveText("Practice average");
-        await expect(
-          page.getByText("By directive verb", { exact: true }),
-        ).toBeVisible();
-        await expect(page.getByTestId("activity-heatmap")).toHaveCount(0);
-        await expect(
-          page.getByRole("heading", {
-            name: "Questions answered",
-            exact: true,
-          }),
-        ).toHaveCount(1);
-        await expect
-          .poll(() =>
-            page.evaluate(
-              () =>
-                document.documentElement.scrollWidth <=
-                document.documentElement.clientWidth,
-            ),
-          )
-          .toBe(true);
-      };
-      await checkProgress(
-        /Unlock after 3 marked answers across 2 sessions/,
-        false,
-      );
       await historyStudent.addAnswers(2);
-      await checkProgress(/Answer 1 more question in Inflation/, false);
-      // Three answers from the same session still require a second session.
-      const db = adminClient()!;
-      const { data: session, error } = await db
-        .from("sessions")
-        .select("id")
-        .eq("user_id", historyStudent.userId)
-        .single();
-      if (error) throw error;
-      const { error: insertError } = await db.from("attempts").insert({
-        user_id: historyStudent.userId,
-        session_id: session.id,
-        position: 3,
-        answer_text: "Synthetic boundary answer",
-        status: "marked",
-        mark: 1,
-        max_marks: 5,
-        marked_at: new Date().toISOString(),
-      });
-      if (insertError) throw insertError;
-      await checkProgress(/Practise in one more session to unlock/, false);
-      await historyStudent.addAnswers(1);
-      await checkProgress(null, true);
-      await weakCard(page)
-        .getByRole("link", { name: "Retry questions", exact: true })
-        .click();
-      await expect(page).toHaveURL(
-        /\/student\/sprint\?topics=t3&sub=t3-inflation&history=mistakes/,
-      );
+      await page.goto("/student/progress?range=all");
+      await expect(page.getByRole("heading", { level: 2 })).toHaveText([
+        "Your practice",
+        "Practice average",
+        "Marks by topic",
+        "Where your marks go",
+      ]);
       await expect(
-        page.getByRole("heading", { level: 1, name: "Topic Sprint" }),
+        page.getByText("Questions answered", { exact: true }),
       ).toBeVisible();
+      await expect(page.getByTestId("activity-heatmap")).toHaveCount(0);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
     });
     test(`history load failures recover with Try again at ${width}px`, async ({
       page,
@@ -125,12 +59,12 @@ test.describe("S17/S2 topic history", () => {
         if (repairError) throw repairError;
         await card.getByRole("button", { name: "Try again" }).click();
         await expect(
-          card.getByText(/Practise in one more session to unlock/),
+          card.getByRole("heading", { name: "Your practice", exact: true }),
         ).toBeVisible();
         await expect(card.getByRole("alert")).toHaveCount(0);
       }
     });
-    test(`60% boundary, invalid range and lost session at ${width}px`, async ({
+    test(`invalid range and expired login at ${width}px`, async ({
       page,
       historyStudent,
     }) => {
@@ -140,14 +74,8 @@ test.describe("S17/S2 topic history", () => {
       for (const path of ["/student/progress?range=invalid"]) {
         await page.goto(path);
         await expect(
-          weakCard(page).getByText("No weak spots in this range"),
+          page.getByRole("heading", { name: "Marks by topic", exact: true }),
         ).toBeVisible();
-        await expect(
-          weakCard(page).getByRole("link", {
-            name: "Retry questions",
-            exact: true,
-          }),
-        ).toHaveCount(0);
         await expect(page.getByTestId("progress-page")).toHaveAttribute(
           "data-range",
           "90",

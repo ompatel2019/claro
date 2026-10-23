@@ -1,5 +1,4 @@
 import { expect, it } from "vitest";
-import { homeWeeks } from "./home";
 import { weeklyScores, type HistoryScore } from "./progress";
 
 const row = (
@@ -16,7 +15,7 @@ const row = (
   by_type: {},
 });
 
-it("keeps both callers' sorted Monday averages across Sydney DST transitions", () => {
+it("keeps sorted Monday averages across Sydney DST transitions", () => {
   const history = [
     row("2026-10-04T13:00:00Z", 90), // Monday after spring transition
     row("2026-04-05T14:00:00Z", 80), // Monday after autumn transition
@@ -32,12 +31,6 @@ it("keeps both callers' sorted Monday averages across Sydney DST transitions", (
       row("2026-10-05T00:00:00Z", pct),
     ),
   ];
-  expect(homeWeeks(history)).toEqual([
-    { day: "2026-03-30", pct: 40 },
-    { day: "2026-04-06", pct: 80 },
-    { day: "2026-09-28", pct: 40 },
-    { day: "2026-10-05", pct: 90 },
-  ]);
   expect(weeklyScores(history)).toEqual([
     { day: "2026-03-30", value: 40 },
     { day: "2026-04-06", value: 80 },
@@ -48,7 +41,6 @@ it("keeps both callers' sorted Monday averages across Sydney DST transitions", (
     { day: "2026-09-28", value: 40 },
   ]);
   expect(weeklyScores(history, "2026-10-05", "2026-10-04")).toEqual([]);
-  expect(homeWeeks([])).toEqual([]);
   expect(weeklyScores([])).toEqual([]);
 });
 
@@ -58,9 +50,9 @@ it("keeps fractional and unclamped scores with no invented empty weeks", () => {
     row("2026-12-27T13:00:00Z", -1),
     row("2027-01-01T00:00:00Z", 2),
   ];
-  expect(homeWeeks(history)).toEqual([
-    { day: "2026-12-28", pct: 0.5 },
-    { day: "2027-01-04", pct: 101 },
+  expect(weeklyScores(history)).toEqual([
+    { day: "2026-12-28", value: 0.5 },
+    { day: "2027-01-04", value: 101 },
   ]);
   expect(weeklyScores(history, null, "2027-01-01")).toEqual([
     { day: "2026-12-28", value: 0.5 },

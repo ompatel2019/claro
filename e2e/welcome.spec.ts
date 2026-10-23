@@ -140,7 +140,7 @@ test.describe("First sign-in welcome", () => {
     await expect(
       page.getByRole("region", { name: "Quick start", exact: true }),
     ).toBeVisible();
-    await expect(page.getByText("0 due", { exact: true })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^Flashcards/ })).toBeVisible();
     const { data, error } = await db
       .from("profiles")
       .select("full_name,year_level,school")
