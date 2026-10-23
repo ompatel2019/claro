@@ -18,6 +18,7 @@ describe("isMetaLine", () => {
     "You supplied two relevant examples in Q5.",
     "Q6 covers multiple-choice style recall well.",
     "In Q2, units were not included.",
+    "The summary in Q1 covers both causes of inflation accurately.",
     "In Q2, your answer makes no claim about the effect on employment.",
     "Your multiple-choice answers were accurate.",
     "The feedback on Q3 identifies a tariff-revenue point as inaccurate.",

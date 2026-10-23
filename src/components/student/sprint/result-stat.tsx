@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import { DeltaPill, ScoreRing } from "@/components/claro/data-display";
 
 /** Results metrics use only the session tallies and the caller's historical average. */
@@ -9,21 +10,23 @@ export function ResultStat({
   comparison,
   neutral = false,
   score,
+  className,
 }: {
   label: ReactNode;
   value: ReactNode;
   comparison: string | null;
   neutral?: boolean;
   score?: { mark: number; max: number };
+  className?: string;
 }) {
   const match = comparison?.match(/^([+−])(\d+)(.*?) vs your average$/);
   return (
     <Card
-      className={
-        score
-          ? "col-span-full h-full min-h-0 justify-center px-5 sm:min-h-36 lg:col-span-1"
-          : "h-full min-h-0 justify-center px-3 sm:px-5"
-      }
+      className={cn(
+        "h-full min-h-0 justify-center",
+        score ? "col-span-full px-5 sm:min-h-36" : "px-3 sm:px-5",
+        className,
+      )}
     >
       <div className="flex items-center gap-4">
         {score && (

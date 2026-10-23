@@ -38,11 +38,11 @@ const when = (d: string) =>
       month: "short",
     })
     .replace(/^(\w{3}),/, "$1");
-// Score spans the phone row; from lg every stat card gets an equal column.
-const STAT_COLS: Record<number, string> = {
-  1: "grid-cols-1 lg:grid-cols-2",
-  2: "grid-cols-2 lg:grid-cols-3",
-  3: "grid-cols-3 lg:grid-cols-4",
+// Score spans its own row until there is room for every stat card in one equal row.
+const STAT_GRID: Record<number, { grid: string; score: string }> = {
+  1: { grid: "grid-cols-1 lg:grid-cols-2", score: "lg:col-span-1" },
+  2: { grid: "grid-cols-2 xl:grid-cols-3", score: "xl:col-span-1" },
+  3: { grid: "grid-cols-3 2xl:grid-cols-4", score: "2xl:col-span-1" },
 };
 const avg = (xs: (number | null)[]) => {
   const v = xs.filter((x): x is number => x != null);
@@ -147,6 +147,8 @@ export async function SprintResults({ id }: { id: string }) {
     ? s.config.subtopics
     : s.config.topics;
 
+  const statGrid =
+    STAT_GRID[1 + Number(k.mcCount > 0) + Number(k.writtenCount > 0)];
   return (
     <div className="space-y-5">
       <Link
@@ -182,12 +184,7 @@ export async function SprintResults({ id }: { id: string }) {
         }
       />
       <MarkingProgress {...progress} />
-      <div
-        className={cn(
-          "grid gap-3 xl:gap-4",
-          STAT_COLS[1 + Number(k.mcCount > 0) + Number(k.writtenCount > 0)],
-        )}
-      >
+      <div className={cn("grid gap-3 xl:gap-4", statGrid.grid)}>
         <ResultStat
           label={
             <span className="flex items-center gap-2">
@@ -196,6 +193,7 @@ export async function SprintResults({ id }: { id: string }) {
           }
           value={`${provisional ? "≈ " : ""}${scorePct == null ? "–" : `${Math.round(scorePct)}%`}`}
           score={{ mark: k.score.mark, max: total }}
+          className={statGrid.score}
           comparison={delta(scorePct, scoreAvg, " pts")}
         />
         <ResultStat

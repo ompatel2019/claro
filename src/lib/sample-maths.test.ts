@@ -26,6 +26,7 @@ it.each([
   "Period 2020 - 2021 saw growth.",
   "ratio a/b = c",
   "https://example.com/?calc=2*3=6",
+  "See /resources?calc=2*3=6 for more",
   "See www.example.com/a#840/105=8 for more",
 ])("leaves %j alone", (input) => {
   expect(formatSampleMaths(input)).toBe(input);

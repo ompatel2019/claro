@@ -23,7 +23,8 @@ function tidy(expr: string) {
     .replace(/\s+-\s+/g, " − ");
 }
 
-const URL_SPAN = /(\b(?:https?:\/\/|www\.)\S+)/i;
+// Absolute URLs, www. links and relative paths ("/resources?calc=2*3=6").
+const URL_SPAN = /(\b(?:https?:\/\/|www\.)\S+|(?<!\S)\/\S+)/i;
 
 export function formatSampleMaths(text: string) {
   // Odd indexes are URL spans, which are never rewritten.
