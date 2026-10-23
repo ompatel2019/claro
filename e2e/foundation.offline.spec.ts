@@ -179,6 +179,7 @@ test("phone feedback and secondary-route tabs stay distinct", async ({
   for (const path of [
     "/student",
     "/student/activity",
+    "/student/activity?status=finished",
     "/student/activity/synthetic-result",
     "/student/flashcards",
     "/student/mark",
@@ -194,13 +195,13 @@ test("phone feedback and secondary-route tabs stay distinct", async ({
     ]);
     await expect(tabs.getByRole("link", { name: "Feedback" })).toHaveAttribute(
       "href",
-      "/student/activity",
+      "/student/activity?status=finished",
     );
     const current = tabs.locator('[aria-current="page"]');
     await expect(current).toHaveText(
       path === "/student"
         ? "Home"
-        : path.includes("activity")
+        : path.includes("activity/") || path.endsWith("status=finished")
           ? "Feedback"
           : "More",
     );

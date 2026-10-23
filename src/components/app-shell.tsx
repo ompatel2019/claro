@@ -8,8 +8,8 @@ import {
 } from "@/components/claro/layout";
 import { ThemeToggle, setTheme } from "./theme-toggle";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useRef } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
+import { Suspense, useRef } from "react";
 import {
   History,
   Cards,
@@ -521,7 +521,11 @@ function AppShellContent({
         </div>
       </SidebarInset>
       {kind === "student" && (
-        <MobileTabs activeHref={activeItem("student", path)?.href ?? path} />
+        <Suspense
+          fallback={<MobileTabs activeHref={studentTab(override ?? path)} />}
+        >
+          <StudentTabs path={override ?? path} />
+        </Suspense>
       )}
     </SidebarProvider>
   );
@@ -627,11 +631,39 @@ function NavUnderline() {
   );
 }
 
+const FEEDBACK_TAB = "/student/activity?status=finished";
+
+/** Phone tab for a route: Activity lives under More; marked results and the finished view are Feedback. */
+export function studentTab(path: string, status?: string | null) {
+  if (path === "/student/activity")
+    return status === "finished" ? FEEDBACK_TAB : path;
+  if (path.startsWith("/student/activity/")) return FEEDBACK_TAB;
+  return activeItem("student", path)?.href ?? path;
+}
+
+function StudentTabs({ path }: { path: string }) {
+  return (
+    <MobileTabs
+      activeHref={studentTab(path, useSearchParams().get("status"))}
+    />
+  );
+}
+
 export function MobileTabs({ activeHref }: { activeHref?: string }) {
   const { setOpenMobile, openMobile } = useSidebar();
-  const items = ["Home", "Topic Sprint", "Progress", "Activity"].map((label) =>
-    nav.student.flatMap((g) => g.items).find((i) => i.label === label)!,
-  );
+  const items = [
+    ...["Home", "Topic Sprint", "Progress"].map((label) => {
+      const item = nav.student
+        .flatMap((g) => g.items)
+        .find((i) => i.label === label)!;
+      return {
+        label: label === "Topic Sprint" ? "Sprint" : label,
+        href: item.href,
+        icon: studentIcons[label],
+      };
+    }),
+    { label: "Feedback", href: FEEDBACK_TAB, icon: "list-checks" as const },
+  ];
   const moreActive = !!activeHref && !items.some((i) => i.href === activeHref);
   return (
     <nav className="student-tabbar" aria-label="Phone navigation">
@@ -641,17 +673,9 @@ export function MobileTabs({ activeHref }: { activeHref?: string }) {
           href={item.href}
           aria-current={activeHref === item.href ? "page" : undefined}
         >
-          <PortalIcon
-            size={20}
-            strokeWidth={1.5}
-            name={studentIcons[item.label]}
-          />
+          <PortalIcon size={20} strokeWidth={1.5} name={item.icon} />
           <span className="nav-label">
-            {item.label === "Topic Sprint"
-              ? "Sprint"
-              : item.label === "Activity"
-                ? "Feedback"
-                : item.label}
+            {item.label}
             {activeHref === item.href && <NavUnderline />}
           </span>
         </Link>

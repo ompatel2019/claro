@@ -101,7 +101,7 @@ test.describe("App shell", () => {
     ]);
     await expect(tabs.getByRole("link", { name: "Feedback" })).toHaveAttribute(
       "href",
-      "/student/activity",
+      "/student/activity?status=finished",
     );
     await expect(page).toHaveURL(/\/student\/sprint$/);
   });
