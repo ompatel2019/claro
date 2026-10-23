@@ -46,4 +46,7 @@ it("keeps year beside search and moves secondary filters into the mobile sheet",
   expect(screen.getAllByRole("combobox", { name: "Year" })).toHaveLength(2);
   expect(screen.getByRole("button", { name: "Filters" })).toBeVisible();
   expect(screen.getByRole("table", { name: "Students" })).toBeVisible();
+  expect(
+    screen.queryByRole("columnheader", { name: "Blocked" }),
+  ).not.toBeInTheDocument();
 });

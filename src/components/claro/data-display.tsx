@@ -116,7 +116,7 @@ export function StatCard({
       <CardHeader>
         <CardDescription className="self-center">{title}</CardDescription>
         {icon && (
-          <span className="bg-muted text-muted-foreground col-start-2 row-start-1 grid size-8 place-items-center rounded-lg">
+          <span className="bg-muted text-muted-foreground col-start-2 row-start-1 grid size-8 place-items-center rounded-[12px]">
             {icon}
           </span>
         )}
@@ -125,9 +125,9 @@ export function StatCard({
         <div className="flex items-end justify-between gap-3">
           <p
             className={cn(
-              "text-[30px] leading-none font-bold tracking-[-0.035em] tabular-nums",
+              "text-2xl leading-none font-bold tracking-tight tabular-nums sm:text-[28px]",
               empty &&
-                "text-muted-foreground text-sm leading-6 font-normal tracking-normal",
+                "text-muted-foreground text-sm leading-6 font-normal tracking-normal sm:text-sm",
             )}
           >
             {value}

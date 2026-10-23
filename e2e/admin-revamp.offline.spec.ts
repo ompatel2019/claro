@@ -352,6 +352,25 @@ async function shoot(
     await sessions.getByRole("combobox").click();
     await page.getByRole("option").last().click();
   }
+  if (route.path === "/admin/content/questions") {
+    const table = page.getByRole("table", { name: "Questions", exact: true });
+    await expect(
+      table.getByRole("columnheader", { name: "ID", exact: true }),
+    ).toHaveCount(0);
+    const source = table.locator(
+      `a[href="/admin/content/questions/${QUESTION_ID}"]`,
+    );
+    await source.focus();
+    await expect(source).toBeFocused();
+    await expect(source).toBeVisible();
+  }
+  if (route.path === "/admin/students" && width !== 390) {
+    await expect(
+      page
+        .getByRole("table", { name: "Students", exact: true })
+        .getByRole("columnheader", { name: "Blocked", exact: true }),
+    ).toHaveCount(0);
+  }
   if (route.path === "/admin/students" && width === 390) {
     const students = page.getByRole("list", { name: "Students", exact: true });
     await expect(students).toBeVisible();

@@ -27,7 +27,6 @@ import {
   type Icon,
 } from "@/components/icons";
 import { signOut } from "@/app/(auth)/actions";
-import { Logo } from "@/components/logo";
 import { useFeedback } from "@/components/feedback-widget";
 import { HSC_EXAM } from "@/lib/hsc-exam";
 import { PortalIcon } from "@/components/icons";
@@ -137,10 +136,8 @@ export function activeItem(kind: keyof typeof nav, path: string) {
 }
 
 const navButtonClassName = "shell-nav-button";
-const adminNavButtonClassName =
-  "data-active:before:bg-brand h-9 overflow-visible rounded-xl font-medium data-active:font-semibold data-active:before:absolute data-active:before:-left-3 data-active:before:h-5 data-active:before:w-[3px] data-active:before:rounded-r";
 
-const studentIcons: Record<
+const navIcons: Record<
   string,
   React.ComponentProps<typeof PortalIcon>["name"]
 > = {
@@ -150,6 +147,14 @@ const studentIcons: Record<
   "Mark my answer": "pen-line",
   Activity: "history",
   Progress: "target",
+  Dashboard: "layout-grid",
+  "All students": "users",
+  Questions: "file-question",
+  "Review queue": "pen-line",
+  Accuracy: "target",
+  Engine: "book-open",
+  Inbox: "inbox",
+  "AI spend": "tag",
 };
 
 const initials = (name: string | null) =>
@@ -198,29 +203,22 @@ function AppShellContent({
     ...(kind === "admin" ? nav.admin.flatMap((g) => g.items) : []),
   ];
   return (
-    <SidebarProvider
-      defaultOpen={defaultOpen}
-      className={kind === "student" ? "student-frame" : undefined}
-    >
+    <SidebarProvider defaultOpen={defaultOpen} className="shell-frame">
       <a
         className="sr-only z-50 focus:not-sr-only focus:fixed focus:top-2 focus:left-2"
         href="#main"
       >
         Skip to content
       </a>
-      <Sidebar
-        collapsible="icon"
-        className={kind === "student" ? "student-sidebar" : undefined}
-      >
+      <Sidebar collapsible="icon" className="shell-sidebar">
         <SidebarHeader className="h-16 flex-row items-center justify-between gap-2 pr-3 pl-5 group-data-[collapsible=icon]:h-auto group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:justify-start group-data-[collapsible=icon]:gap-3 group-data-[collapsible=icon]:px-0 group-data-[collapsible=icon]:pt-4 group-data-[collapsible=icon]:pb-2">
           <Link
             href={home}
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
             className="ring-sidebar-ring flex justify-start rounded-md outline-hidden group-data-[collapsible=icon]:justify-center focus-visible:ring-2"
           >
-            {kind === "student" ? <ShellLogo /> : <Logo collapsible />}
+            <ShellLogo />
           </Link>
-          {kind === "admin" && <SidebarHeaderToggle />}
         </SidebarHeader>
         {kind === "student" && (
           <div className="my-3 group-data-[collapsible=icon]:hidden">
@@ -236,11 +234,7 @@ function AppShellContent({
             {nav[kind].map((group) => (
               <SidebarGroup key={group.label} className="mb-2">
                 {group.label && (
-                  <SidebarGroupLabel
-                    className={
-                      kind === "student" ? "mt-0 tracking-[0.01em]" : "mt-0"
-                    }
-                  >
+                  <SidebarGroupLabel className="mt-0 tracking-[0.01em]">
                     {group.label}
                   </SidebarGroupLabel>
                 )}
@@ -251,11 +245,7 @@ function AppShellContent({
                     return (
                       <SidebarMenuItem key={item.href}>
                         <SidebarMenuButton
-                          className={
-                            kind === "student"
-                              ? navButtonClassName
-                              : adminNavButtonClassName
-                          }
+                          className={navButtonClassName}
                           isActive={isActive}
                           tooltip={item.label}
                           render={
@@ -266,22 +256,14 @@ function AppShellContent({
                             />
                           }
                         >
-                          {kind === "student" ? (
-                            <PortalIcon
-                              size={20}
-                              strokeWidth={1.5}
-                              name={studentIcons[item.label]}
-                            />
-                          ) : (
-                            <item.icon strokeWidth={1.75} />
-                          )}
-                          <span
-                            className={
-                              kind === "student" ? "nav-label" : undefined
-                            }
-                          >
+                          <PortalIcon
+                            size={20}
+                            strokeWidth={1.5}
+                            name={navIcons[item.label]}
+                          />
+                          <span className="nav-label">
                             {item.label}
-                            {kind === "student" && isActive && <NavUnderline />}
+                            {isActive && <NavUnderline />}
                           </span>
                         </SidebarMenuButton>
                         {!!badge && (
@@ -300,13 +282,7 @@ function AppShellContent({
             {kind === "student" && <FeedbackNavItem />}
           </nav>
         </SidebarContent>
-        <SidebarFooter
-          className={
-            kind === "student"
-              ? "gap-3 px-4 pt-3 pb-4"
-              : "border-sidebar-border gap-2 border-t px-3 pt-3 pb-4"
-          }
-        >
+        <SidebarFooter className="gap-3 px-4 pt-3 pb-4">
           {kind === "student" && examDays !== null && (
             <div className="group-data-[collapsible=icon]:hidden">
               <ExamCountdown
@@ -320,12 +296,17 @@ function AppShellContent({
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
+                  className={navButtonClassName}
                   tooltip="Open student app"
                   render={
                     <Link href="/student" aria-label="Open student app" />
                   }
                 >
-                  <Sprint />
+                  <PortalIcon
+                    size={20}
+                    strokeWidth={1.5}
+                    name="arrow-up-right"
+                  />
                   <span>Open student app</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -340,13 +321,7 @@ function AppShellContent({
                 render={<Link href="/student/profile" aria-label="Profile" />}
               >
                 <Avatar className="after:border-0">
-                  <AvatarFallback
-                    className={
-                      kind === "student"
-                        ? "bg-primary text-primary-foreground text-xs font-semibold"
-                        : "bg-brand-soft text-brand-text text-xs font-medium"
-                    }
-                  >
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                     {initials(name)}
                   </AvatarFallback>
                 </Avatar>
@@ -364,21 +339,11 @@ function AppShellContent({
                   aria-label="User menu"
                   className="text-muted-foreground hover:bg-muted grid size-7 shrink-0 place-items-center rounded-full group-data-[collapsible=icon]:hidden"
                 >
-                  {kind === "student" ? (
-                    <PortalIcon size={20} strokeWidth={1.5} name="more" />
-                  ) : (
-                    <span aria-hidden className="text-lg leading-none">
-                      ⋯
-                    </span>
-                  )}
+                  <PortalIcon size={20} strokeWidth={1.5} name="more" />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent side="top" align="end" className="w-48">
                   <DropdownMenuItem render={<Link href="/student/profile" />}>
-                    {kind === "student" ? (
-                      <PortalIcon size={20} name="user" strokeWidth={1.5} />
-                    ) : (
-                      <User />
-                    )}
+                    <PortalIcon size={20} name="user" strokeWidth={1.5} />
                     Profile
                   </DropdownMenuItem>
                   {kind === "student" && (
@@ -400,24 +365,16 @@ function AppShellContent({
                       )
                     }
                   >
-                    <PortalIcon
-                      size={kind === "student" ? 20 : undefined}
-                      strokeWidth={kind === "student" ? 1.5 : undefined}
-                      name="moon"
-                    />
+                    <PortalIcon size={20} strokeWidth={1.5} name="moon" />
                     Toggle theme
                   </DropdownMenuItem>
-                  {kind === "student" && (
-                    <DropdownMenuItem onClick={() => setTheme("system")}>
-                      Use system theme
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem onClick={() => setTheme("system")}>
+                    Use system theme
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => signOutForm.current?.requestSubmit()}
                   >
-                    <SignOut
-                      strokeWidth={kind === "student" ? 1.5 : undefined}
-                    />
+                    <SignOut strokeWidth={1.5} />
                     Sign out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -428,58 +385,31 @@ function AppShellContent({
       </Sidebar>
       {/* Collapsing hands the rail's freed width to the content column. */}
       <SidebarInset className="min-w-0 md:peer-data-[state=collapsed]:[--shell-reclaim:calc(var(--sidebar-width)-var(--sidebar-width-icon))]">
-        <TopBar
-          className={
-            kind === "student"
-              ? "bg-background h-16 gap-3 backdrop-blur-none md:px-10"
-              : undefined
-          }
-        >
-          {kind === "admin" ? (
+        <TopBar className="bg-background h-16 gap-3 backdrop-blur-none md:px-10">
+          {kind === "admin" && (
             <SidebarTrigger className="max-sm:size-9 md:hidden" />
-          ) : (
-            <div className="hidden md:block">
-              <SidebarHeaderToggle />
-            </div>
           )}
+          <div className="hidden md:block">
+            <SidebarHeaderToggle />
+          </div>
           <Link
             href={home}
             aria-label={kind === "admin" ? "Claro admin" : "Claro home"}
             className="mr-auto md:hidden"
           >
-            {kind === "student" ? <ShellLogo mobile /> : <Logo height={22} />}
+            <ShellLogo mobile />
           </Link>
-          <CommandPalette routes={commands} student={kind === "student"} />
+          <CommandPalette routes={commands} />
           <div className="flex shrink-0 items-center gap-1 sm:ml-auto">
-            {kind === "student" ? (
-              <ThemeToggle />
-            ) : (
-              <span className="relative grid place-items-center [&_button>svg]:hidden">
-                <ThemeToggle />
-                <PortalIcon
-                  name="moon"
-                  className="pointer-events-none absolute size-4 dark:hidden"
-                />
-                <PortalIcon
-                  name="sun"
-                  className="pointer-events-none absolute hidden size-4 dark:block"
-                />
-              </span>
-            )}
+            <ThemeToggle />
             <form ref={signOutForm} action={signOut} className="hidden" />
             <DropdownMenu>
               <DropdownMenuTrigger
-                className={`ml-auto rounded-full ${kind === "student" ? "shell-account-menu md:hidden" : ""}`}
+                className="shell-account-menu ml-auto rounded-full md:hidden"
                 aria-label="Account menu"
               >
                 <Avatar className="size-8 after:border-0">
-                  <AvatarFallback
-                    className={
-                      kind === "student"
-                        ? "bg-primary text-primary-foreground text-xs font-semibold"
-                        : "bg-brand-soft text-brand-text text-xs font-medium"
-                    }
-                  >
+                  <AvatarFallback className="bg-primary text-primary-foreground text-xs font-semibold">
                     {initials(name)}
                   </AvatarFallback>
                 </Avatar>
@@ -499,17 +429,13 @@ function AppShellContent({
                   Use system theme
                 </DropdownMenuItem>
                 <DropdownMenuItem render={<Link href="/student/profile" />}>
-                  {kind === "student" ? (
-                    <PortalIcon size={20} name="user" strokeWidth={1.5} />
-                  ) : (
-                    <User />
-                  )}
+                  <PortalIcon size={20} name="user" strokeWidth={1.5} />
                   Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => signOutForm.current?.requestSubmit()}
                 >
-                  <SignOut strokeWidth={kind === "student" ? 1.5 : undefined} />
+                  <SignOut strokeWidth={1.5} />
                   Sign out
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -521,7 +447,7 @@ function AppShellContent({
           className={
             kind === "student"
               ? "mx-auto w-full max-w-[1088px] min-w-0 flex-1 px-4 pt-6 pb-[calc(96px+env(safe-area-inset-bottom))] md:px-10 md:pb-10"
-              : "mx-auto w-full max-w-[calc(1464px+var(--shell-reclaim,0px))] min-w-0 flex-1 px-4 py-6 transition-[max-width] duration-200 ease-linear sm:px-8 sm:py-8"
+              : "mx-auto w-full max-w-[calc(1464px+var(--shell-reclaim,0px))] min-w-0 flex-1 px-4 pt-6 pb-10 transition-[max-width] duration-200 ease-linear md:px-10"
           }
         >
           {children}
@@ -666,7 +592,7 @@ export function MobileTabs({ activeHref }: { activeHref?: string }) {
       return {
         label: label === "Topic Sprint" ? "Sprint" : label,
         href: item.href,
-        icon: studentIcons[label],
+        icon: navIcons[label],
       };
     }),
     { label: "Feedback", href: FEEDBACK_TAB, icon: "list-checks" as const },

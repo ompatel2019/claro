@@ -4,6 +4,14 @@ import Link from "next/link";
 import { AnnotatedFeedback } from "@/components/annotated-feedback";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import type { ReviewRow } from "@/lib/feedback";
 import { compareDetails } from "./compare-actions";
 import type { CompareData, CompareDetails, CompareRow } from "./compare";
@@ -284,18 +292,15 @@ export function CompareView({ data }: { data: CompareData }) {
         ))}
       </ul>
       <Card className="hidden gap-0 py-0 md:flex">
-        <table
-          className="w-full table-fixed text-sm"
-          aria-label="Compared items"
-        >
+        <Table className="table-fixed" aria-label="Compared items">
           <colgroup>
             <col style={{ width: "40%" }} />
             {[20, 16, 16, 8].map((width, index) => (
               <col key={index} style={{ width: `${width}%` }} />
             ))}
           </colgroup>
-          <thead className="bg-surface text-muted-foreground text-xs tracking-[0.04em] uppercase">
-            <tr>
+          <TableHeader>
+            <TableRow>
               {[
                 "Question",
                 "Karan’s mark",
@@ -303,38 +308,37 @@ export function CompareView({ data }: { data: CompareData }) {
                 "Run B (Δ)",
                 "✓/✗",
               ].map((title) => (
-                <th
-                  key={title}
-                  className="h-10 p-3 text-left font-medium whitespace-normal"
-                >
+                <TableHead key={title} className="whitespace-normal">
                   {title}
-                </th>
+                </TableHead>
               ))}
-            </tr>
-          </thead>
-          <tbody>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
             {rows.map((row) => (
               <Fragment key={row.key}>
-                <tr className="hover:bg-surface border-t border-dashed [&>td]:p-3 [&>td]:align-top [&>td]:wrap-anywhere">
-                  <td>{question(row)}</td>
-                  <td>{expected(row)}</td>
-                  <td>
+                <TableRow className="[&>td]:py-3 [&>td]:align-top [&>td]:wrap-anywhere [&>td]:whitespace-normal">
+                  <TableCell>{question(row)}</TableCell>
+                  <TableCell>{expected(row)}</TableCell>
+                  <TableCell>
                     <Mark result={row.a} />
-                  </td>
-                  <td>
+                  </TableCell>
+                  <TableCell>
                     <Mark result={row.b} />
-                  </td>
-                  <td>{agreement(row)}</td>
-                </tr>
+                  </TableCell>
+                  <TableCell>{agreement(row)}</TableCell>
+                </TableRow>
                 {expanded.has(row.key) && (
-                  <tr>
-                    <td colSpan={5}>{detailPanel(row)}</td>
-                  </tr>
+                  <TableRow>
+                    <TableCell colSpan={5} className="whitespace-normal">
+                      {detailPanel(row)}
+                    </TableCell>
+                  </TableRow>
                 )}
               </Fragment>
             ))}
-          </tbody>
-        </table>
+          </TableBody>
+        </Table>
       </Card>
     </div>
   );

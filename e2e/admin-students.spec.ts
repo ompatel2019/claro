@@ -35,7 +35,6 @@ test.describe("Admin students list", () => {
       "Streak",
       "Open disputes",
       "AI cost (all providers)",
-      "Blocked",
     ])
       await expect(
         table.getByRole("button", { name: header, exact: true }),
