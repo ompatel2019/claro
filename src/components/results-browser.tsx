@@ -162,7 +162,7 @@ export function ResultsBrowser({
           {Array.from({ length: Math.ceil(mcGrid.length / 5) }, (_, group) => (
             <Table
               className={cn(
-                "[&_td]:px-1 [&_th]:px-1",
+                "table-hairline [&_td]:px-1 [&_th]:px-1",
                 sprintLayout &&
                   "[&_th]:tracking-normal [&_th]:normal-case [&_tr]:border-solid",
               )}
@@ -297,7 +297,7 @@ export function ResultsBrowser({
         </div>
       </div>
       {table ? (
-        <Table aria-label="Questions">
+        <Table aria-label="Questions" className="table-hairline">
           <TableHeader>
             <TableRow>
               {["#", "Type", "Topic", "Source", "Mark", "Status"].map((h) => (
@@ -436,7 +436,7 @@ function SprintAnswers({
           <div className="bg-card shadow-card overflow-hidden rounded-xl border">
             <Table
               aria-label="Questions"
-              className="[&_td]:border-foreground/70 [&_th]:border-foreground/70 border-collapse [&_tbody_tr:last-child>td]:border-b-0 [&_td]:border [&_th]:border [&_tr:first-child>*]:border-t-0 [&_tr>*:first-child]:border-l-0 [&_tr>*:last-child]:border-r-0"
+              className="table-hairline [&_tbody_tr:last-child>td]:border-b-0 [&_tr:first-child>*]:border-t-0 [&_tr>*:first-child]:border-l-0 [&_tr>*:last-child]:border-r-0"
             >
               <TableHeader>
                 <TableRow>
