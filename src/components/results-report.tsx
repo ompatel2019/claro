@@ -87,64 +87,72 @@ export function ResultsAnswers({
   }
   const sprintView = (r: ReviewRow) => {
     const sample = r.type !== "mcq" && r.sample_answer;
+    const header = (
+      <div className="space-y-3">
+        <p className="flex flex-wrap items-center gap-1.5">
+          <Badge variant="secondary">Question {r.position}</Badge>
+          <Badge variant="secondary">
+            {r.marks} {r.marks === 1 ? "mark" : "marks"}
+          </Badge>
+          {r.topic_id && <Badge variant="secondary">{name(r.topic_id)}</Badge>}
+          {r.type === "mcq" && scored(r) && (
+            <span className="text-ink ml-1 text-sm font-semibold tabular-nums">
+              {markLabel(r)}
+            </span>
+          )}
+        </p>
+        <div className="[&>div>div:first-child]:text-[17px]">
+          <QuestionView question={r} showMetadata={readOnly} />
+        </div>
+      </div>
+    );
+    const full = sample && (
+      <details className="group border-t pt-3">
+        <summary className="flex h-9 w-fit cursor-pointer list-none items-center gap-1.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
+          Full-marks answer
+          <PortalIcon
+            name="chevron-down"
+            aria-hidden
+            className="text-muted-foreground size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none"
+          />
+        </summary>
+        <RichText
+          className="text-ink-2 mt-1 max-w-prose text-[15px] leading-relaxed"
+          text={formatSampleMaths(sample)}
+        />
+      </details>
+    );
+    if (r.type !== "mcq")
+      // Written: the marked answer draws the question card (header, marks, answer) and its
+      // comments sit beside it on the canvas, so no host card here.
+      return (
+        <div
+          key={r.attempt_id}
+          id={`q-${r.position}`}
+          className="scroll-mt-20 [--cma-sticky-top:72px]"
+        >
+          <AnnotatedFeedback
+            readOnly={readOnly}
+            aiNote={false}
+            bare
+            commentColumn
+            showReferences={false}
+            row={r}
+            photos={(r.image_paths ?? []).flatMap((p) => photos.get(p) ?? [])}
+            lead={header}
+            tail={full || undefined}
+          />
+        </div>
+      );
     return (
       <div key={r.attempt_id} className="space-y-4">
         <Card
           id={`q-${r.position}`}
           className="scroll-mt-20 overflow-visible [--cma-sticky-top:72px]"
         >
-          <CardHeader className="space-y-3">
-            <p className="flex flex-wrap items-center gap-1.5">
-              <Badge variant="secondary">Question {r.position}</Badge>
-              <Badge variant="secondary">
-                {r.marks} {r.marks === 1 ? "mark" : "marks"}
-              </Badge>
-              {r.topic_id && (
-                <Badge variant="secondary">{name(r.topic_id)}</Badge>
-              )}
-              {r.type === "mcq" && scored(r) && (
-                <span className="text-ink ml-1 text-sm font-semibold tabular-nums">
-                  {markLabel(r)}
-                </span>
-              )}
-            </p>
-            <div className="[&>div>div:first-child]:text-[17px]">
-              <QuestionView question={r} showMetadata={readOnly} />
-            </div>
-          </CardHeader>
+          <CardHeader className="space-y-3">{header}</CardHeader>
           <CardContent className="space-y-4">
-            {r.type === "mcq" ? (
-              <McReview row={r} />
-            ) : (
-              <AnnotatedFeedback
-                readOnly={readOnly}
-                aiNote={false}
-                flush
-                bare
-                commentColumn
-                showReferences={false}
-                row={r}
-                photos={(r.image_paths ?? []).flatMap(
-                  (p) => photos.get(p) ?? [],
-                )}
-              />
-            )}
-            {sample && (
-              <details className="group border-t pt-3">
-                <summary className="flex h-9 w-fit cursor-pointer list-none items-center gap-1.5 text-sm font-semibold [&::-webkit-details-marker]:hidden">
-                  Full-marks answer
-                  <PortalIcon
-                    name="chevron-down"
-                    aria-hidden
-                    className="text-muted-foreground size-4 transition-transform group-open:rotate-180 motion-reduce:transition-none"
-                  />
-                </summary>
-                <RichText
-                  className="text-ink-2 mt-1 max-w-prose text-[15px] leading-relaxed"
-                  text={formatSampleMaths(sample)}
-                />
-              </details>
-            )}
+            <McReview row={r} />
           </CardContent>
         </Card>
       </div>
@@ -388,7 +396,12 @@ export function OverallFeedback({
                   <PortalIcon
                     name={icon}
                     aria-hidden
-                    className="text-brand-text size-4"
+                    className={cn(
+                      "size-4",
+                      label === "Strengths"
+                        ? "text-success-text"
+                        : "text-brand-text",
+                    )}
                   />
                   {label}
                 </h3>
