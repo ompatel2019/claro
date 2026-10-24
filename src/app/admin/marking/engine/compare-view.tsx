@@ -15,6 +15,7 @@ import {
 import type { ReviewRow } from "@/lib/feedback";
 import { compareDetails } from "./compare-actions";
 import type { CompareData, CompareDetails, CompareRow } from "./compare";
+import { HAIRLINE_TABLE } from "../accuracy/table-style";
 
 const percent = (value: number | null) =>
   value == null ? "—" : `${(value * 100).toFixed(1)}%`;
@@ -207,7 +208,7 @@ export function CompareView({ data }: { data: CompareData }) {
     <div className="min-w-0 space-y-6" data-testid="compare-region">
       <Link
         className={buttonVariants({ variant: "outline", size: "sm" })}
-        href="/admin/marking/engine?tab=runs"
+        href="/admin/marking/accuracy?tab=runs"
       >
         Back to runs
       </Link>
@@ -291,7 +292,9 @@ export function CompareView({ data }: { data: CompareData }) {
           </li>
         ))}
       </ul>
-      <Card className="hidden gap-0 py-0 md:flex">
+      <Card
+        className={`hidden gap-0 overflow-hidden py-0 md:flex ${HAIRLINE_TABLE}`}
+      >
         <Table className="table-fixed" aria-label="Compared items">
           <colgroup>
             <col style={{ width: "40%" }} />

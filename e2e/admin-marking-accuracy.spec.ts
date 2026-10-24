@@ -6,13 +6,7 @@ const noOverflow = (page: Page) =>
   page.evaluate(
     () => document.scrollingElement!.scrollWidth <= window.innerWidth + 1,
   );
-const kpis = [
-  "Check agreement",
-  "Settled by second pass",
-  "Sent to review",
-  "Override rate",
-  "Admin-verified accuracy",
-];
+const kpis = ["Override rate", "Admin-verified accuracy"];
 /** These sections render either a heading or an EmptyState title paragraph. */
 async function expectSectionOrEmpty(
   page: Page,
@@ -39,8 +33,20 @@ test.describe("admin marking accuracy", () => {
     await signInAdmin(page);
     await page.goto("/admin/marking/accuracy");
     await expect(
-      page.getByRole("heading", { level: 1, name: "Marking accuracy" }),
+      page.getByRole("heading", { level: 1, name: "Marking quality" }),
     ).toBeVisible({ timeout: 30000 });
+    const tabs = page.getByRole("navigation", { name: "Marking quality" });
+    for (const [name, href] of [
+      ["Live checks", "/admin/marking/accuracy"],
+      ["Eval runs", "/admin/marking/accuracy?tab=runs"],
+      ["How marking works", "/admin/marking/accuracy?tab=docs"],
+    ])
+      await expect(
+        tabs.getByRole("link", { name, exact: true }),
+      ).toHaveAttribute("href", href);
+    await expect(
+      tabs.getByRole("link", { name: "Live checks" }),
+    ).toHaveAttribute("aria-current", "page");
     await expect(page).not.toHaveURL(/range=/);
     await expect(page.getByRole("combobox", { name: "Date range" })).toHaveText(
       /30 days/,
@@ -56,12 +62,12 @@ test.describe("admin marking accuracy", () => {
           .locator('[data-slot="card"] > dl')
           .getByText(label, { exact: true }),
       ).toBeVisible();
-    // Five KPI cards; every value is a percentage or a word, never a dash.
-    const values = page.locator("dl > dd:first-of-type");
-    await expect(values).toHaveCount(5);
+    // Two KPI cards; every value is a percentage or a word, never a dash.
+    const values = page.locator('[data-slot="card"] > dl > dd:first-of-type');
+    await expect(values).toHaveCount(2);
     for (const value of await values.allTextContents())
       expect(value).toMatch(
-        /^(\d+\.\d%|No (checked answers|comparable reviews|admin-verified answers) yet)$/,
+        /^(\d+\.\d%|No (comparable reviews|admin-verified answers) yet)$/,
       );
     // Weekly chart headings remain visible even when their content is empty.
     for (const heading of [
@@ -153,8 +159,8 @@ test.describe("admin marking accuracy", () => {
       })
       .toBeLessThanOrEqual(1);
     await expect(
-      page.getByRole("link", { name: "Open Engine" }),
-    ).toHaveAttribute("href", "/admin/marking/engine");
+      page.getByRole("link", { name: "Open eval runs" }),
+    ).toHaveAttribute("href", "/admin/marking/accuracy?tab=runs");
     await expect(
       page
         .getByRole("navigation", { name: "Admin navigation" })
@@ -164,36 +170,36 @@ test.describe("admin marking accuracy", () => {
     expect(await page.locator("#main").innerText()).not.toMatch(/@/);
   });
 
-  test("agreement explanation works on hover, keyboard and touch", async ({
+  test("dispute explanation works on click, keyboard and touch", async ({
     page,
     browser,
   }) => {
     await signInAdmin(page);
     await page.goto("/admin/marking/accuracy");
-    const trigger = page.getByRole("button", { name: "About check agreement" });
-    const tooltip = page.getByRole("tooltip");
-    // Retry pointer entry until the client has hydrated.
+    const trigger = page.getByRole("button", {
+      name: "How disputes are counted",
+    });
+    const popover = page.locator('[data-slot="popover-content"]');
+    await expect(popover).not.toBeVisible();
+    // Retry the first open until the client has hydrated.
     await expect(async () => {
-      await page.mouse.move(0, 0);
-      await trigger.hover();
-      await expect(tooltip).toContainText("Agreed ÷ checked written answers", {
+      await trigger.click();
+      await expect(popover).toContainText("disputes from blocked students", {
         timeout: 2000,
       });
     }).toPass({ timeout: 20000 });
-    await expect(tooltip).toContainText("not human-verified accuracy");
-    await expect(tooltip).toContainText(
-      "student disputes can change that status",
-    );
-    await page.mouse.move(0, 0);
-    await trigger.focus();
-    await expect(tooltip).toBeVisible();
+    await expect(popover).toContainText("repeat disputers");
+    await expect(popover).toContainText(/\d+ disputes excluded\./);
     await page.keyboard.press("Escape");
-    await expect(tooltip).not.toBeVisible();
+    await expect(popover).not.toBeVisible();
     await expect(trigger).toBeFocused();
+    await page.keyboard.press("Enter");
+    await expect(popover).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(popover).not.toBeVisible();
     await expect(
       page.getByText(/Student disputes are excluded; this review sample/),
     ).toBeVisible();
-    await expect(page.getByText(/\d+ disputes excluded\./)).toBeVisible();
     const touchContext = await browser.newContext({
       hasTouch: true,
       viewport: { width: 390, height: 844 },
@@ -204,9 +210,11 @@ test.describe("admin marking accuracy", () => {
       await touchPage.goto("/admin/marking/accuracy");
       await expect(async () => {
         await touchPage
-          .getByRole("button", { name: "About check agreement" })
+          .getByRole("button", { name: "How disputes are counted" })
           .tap();
-        await expect(touchPage.getByRole("tooltip")).toBeVisible({
+        await expect(
+          touchPage.locator('[data-slot="popover-content"]'),
+        ).toBeVisible({
           timeout: 2000,
         });
       }).toPass({ timeout: 20000 });
@@ -243,12 +251,19 @@ test.describe("admin marking accuracy", () => {
         const match = text.match(/(\d+) of (\d+) comparable staff-initiated/)!;
         return { agreed: Number(match[1]), total: Number(match[2]) };
       };
-      const exclusions = async () =>
-        Number(
+      const exclusions = async () => {
+        const count = page.getByText(/\d+ disputes excluded\./);
+        if (!(await count.isVisible()))
+          await page
+            .getByRole("button", { name: "How disputes are counted" })
+            .click();
+        await expect(count).toBeVisible();
+        return Number(
           (await page.getByText(/\d+ disputes excluded\./).innerText()).match(
             /(\d+) disputes excluded/,
           )![1],
         );
+      };
       const before = await sample();
       const excludedBefore = await exclusions();
       const stamp = new Date().toISOString();
@@ -349,7 +364,7 @@ test.describe("admin marking accuracy", () => {
     await signInAdmin(page);
     await page.goto("/admin/marking/accuracy");
     await expect(
-      page.getByRole("heading", { level: 1, name: "Marking accuracy" }),
+      page.getByRole("heading", { level: 1, name: "Marking quality" }),
     ).toBeVisible({ timeout: 30000 });
     for (const label of kpis) {
       const card = page
@@ -360,7 +375,7 @@ test.describe("admin marking accuracy", () => {
       await expect(card).toBeVisible();
     }
     await page
-      .getByRole("link", { name: "Open Engine" })
+      .getByRole("link", { name: "Open eval runs" })
       .scrollIntoViewIfNeeded();
     for (const width of [390, 400]) {
       await page.setViewportSize({ width, height: 844 });

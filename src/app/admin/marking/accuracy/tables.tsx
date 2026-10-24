@@ -10,6 +10,7 @@ import {
 import { DataTable, EmptyState } from "@/components/claro";
 import type { Breakdown, computeAccuracy } from "./data";
 import { meanDelta, percentage, percentLabel } from "./helpers";
+import { HAIRLINE_TABLE } from "./table-style";
 
 export { percentLabel } from "./helpers";
 
@@ -30,7 +31,7 @@ export function BreakdownTable({
       />
     );
   return (
-    <Card className="min-w-0">
+    <Card className={`min-w-0 ${HAIRLINE_TABLE}`}>
       <CardHeader>
         <CardTitle>
           <h2>{title}</h2>
@@ -95,7 +96,7 @@ export function DisagreedQuestions({
       />
     );
   return (
-    <Card className="min-w-0">
+    <Card className={`min-w-0 ${HAIRLINE_TABLE}`}>
       <CardHeader>
         <CardTitle>
           <h2>Most disagreed questions</h2>

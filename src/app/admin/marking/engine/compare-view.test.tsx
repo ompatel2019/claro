@@ -69,7 +69,7 @@ it("filters differing rows in the table and cards; lazily expands feedback and c
   expect(within(cards).getAllByRole("listitem")).toHaveLength(2);
   expect(screen.getByRole("link", { name: "Back to runs" })).toHaveAttribute(
     "href",
-    "/admin/marking/engine?tab=runs",
+    "/admin/marking/accuracy?tab=runs",
   );
 });
 it("offers retry after detail read failure and omits absent notes", async () => {

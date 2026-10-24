@@ -266,3 +266,52 @@ it("renders the admin and student side panels with the same sidebar component", 
   expect(admin.footer).toEqual(["Open student app", "Profile"]);
   expect(student.footer).toEqual(["Profile"]);
 });
+
+it("marks the active nav item with the pen underline, not a filled tint (admin and student)", async () => {
+  const { readFileSync } = await import("node:fs");
+  const css = readFileSync("src/app/globals.css", "utf8");
+  const rules = [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map(
+    ([, selector, body]) => ({ selector: selector.trim(), body }),
+  );
+  const expanded = rules.filter(
+    (r) =>
+      r.selector.includes(".shell-sidebar") &&
+      !r.selector.includes('[data-collapsible="icon"]'),
+  );
+  const active = expanded.filter((r) =>
+    /\.shell-nav-button\[data-active\]\s*$/.test(r.selector),
+  );
+  expect(active.length).toBeGreaterThan(0);
+  for (const r of active) {
+    expect(r.body).not.toMatch(/surface-selected|brand-soft|sidebar-accent/);
+    expect(r.body).toMatch(/background:\s*transparent/);
+  }
+  // Nothing hides the pen in the expanded sidebar; only the icon rail does.
+  for (const r of expanded.filter((r) => r.selector.includes("nav-pen")))
+    expect(r.body).not.toMatch(/display:\s*none/);
+  // And both panels render it on the active item, with no tint utility class.
+  window.matchMedia = () =>
+    ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }) as unknown as MediaQueryList;
+  for (const [kind, path] of [
+    ["student", "/student"],
+    ["admin", "/admin/students"],
+  ] as const) {
+    route.path = path;
+    const { container, unmount } = render(
+      <AppShell kind={kind} name="Test" defaultOpen>
+        Content
+      </AppShell>,
+    );
+    const current = container.querySelector<HTMLElement>(
+      '.shell-sidebar nav a[aria-current="page"]',
+    )!;
+    expect(current.querySelector(".nav-label > .nav-pen")).not.toBeNull();
+    expect(current.className).not.toMatch(/\bbg-(brand|selected|accent)/);
+    unmount();
+  }
+  route.path = "/student";
+});

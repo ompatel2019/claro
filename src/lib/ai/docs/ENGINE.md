@@ -79,8 +79,8 @@ Strengths and Top fixes use a five-criterion writing rubric and actual marked wr
 
 `npx tsx --conditions=react-server --env-file=.env.local scripts/eval/run.mts [--dry-run] [--limit=N | --items=i,j] [--label=x]`
 
-- Runs A1's 20 answers with Karan's marks and critiques. Headline numbers exclude fm-1 (its answer duplicates fm-5) and ei-4 (3.5 is an invented midpoint), which are reported separately. It also runs our 10-answer Claro check.
-- **Held-out set**: the 196 `marking_examples` rows with `split = 'test'` on the `a1-m*` mock questions (up to 6 whole-mark answers per question spread across marks, fixed seed in `split.ts`). Reported as its own section with the same mark metrics. It has no judge, because there is no Karan critique for these answers. These questions were never used to tune the prompt.
+- Runs A1's 20 answers with the tutor's marks and critiques. Headline numbers exclude fm-1 (its answer duplicates fm-5) and ei-4 (3.5 is an invented midpoint), which are reported separately. It also runs our 10-answer Claro check.
+- **Held-out set**: the 196 `marking_examples` rows with `split = 'test'` on the `a1-m*` mock questions (up to 6 whole-mark answers per question spread across marks, fixed seed in `split.ts`). Reported as its own section with the same mark metrics. It has no judge, because there is no tutor critique for these answers. These questions were never used to tune the prompt.
 - Items run 6 at a time; `--limit=N` applies per section.
 - For small targeted runs, `--items=i,j` selects 0-based positions in the full array: A1, then Held-out, then Claro. It cannot be combined with `--limit`. The `ai_usage` task index `eval:<stamp>:<n>` is the position in the selected list, not the full-array index.
 - Feedback is judged by a pinned **gpt-6-astra** (low thinking), separate from the marker so runs stay comparable. The judge reports Pros kept and Cons fixed, the way A1's judge does.
@@ -98,9 +98,9 @@ rates. Single-pass and historical rows without the flag are outside those groups
 
 ## A1 backlog calibration (A5)
 
-The **Eval runs** tab shows the latest full held-out mock-backlog run, independently of the 20-answer Karan benchmark and newer partial runs. It reports the number of successfully scored scripts, exact human marks and **human-mark agreement** (same guideline band, plus within one mark for questions worth six or more). Failed and excluded scripts are omitted. This compares the engine to A1 human marks; blind-check agreement compares two AI passes. Student disputes change neither backlog metric. Offline reports now include human-mark agreement explicitly as well.
+The **Eval runs** tab shows the latest full held-out mock-backlog run, independently of the 20-answer tutor benchmark and newer partial runs. It reports the number of successfully scored scripts, exact human marks and **human-mark agreement** (same guideline band, plus within one mark for questions worth six or more). Failed and excluded scripts are omitted. This compares the engine to A1 human marks; blind-check agreement compares two AI passes. Student disputes change neither backlog metric. Offline reports now include human-mark agreement explicitly as well.
 
-A1 remains read-only. The existing anonymising SELECT is `/workspace/claro/a1-export/export.sql`; its private snapshot is never committed. The bank in `a1-mock-questions.json` contains 41 mock questions, separate from `a1-questions.json` / `a1-eval-set.json` (Karan's benchmark). Do not add benchmark answers to calibration exemplars.
+A1 remains read-only. The existing anonymising SELECT is `/workspace/claro/a1-export/export.sql`; its private snapshot is never committed. The bank in `a1-mock-questions.json` contains 41 mock questions, separate from `a1-questions.json` / `a1-eval-set.json` (the tutor benchmark). Do not add benchmark answers to calibration exemplars.
 
 Validate a new anonymised export without credentials or database access:
 
