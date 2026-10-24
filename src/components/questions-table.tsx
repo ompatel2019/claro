@@ -319,7 +319,7 @@ export function QuestionsTable({
               </DialogHeader>
               <ul className="grid max-h-80 gap-2 overflow-y-auto text-sm">
                 {dialog.failures.map((f) => (
-                  <li key={f.id} className="bg-muted rounded-xl border p-3">
+                  <li key={f.id} className="rounded-xl border p-3">
                     <Link
                       prefetch={false}
                       className="font-medium underline"

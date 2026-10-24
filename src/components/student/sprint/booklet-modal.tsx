@@ -99,7 +99,7 @@ export function BookletModal({
                 data-state={state}
                 className={cn(
                   "relative flex gap-4 px-6 py-4 transition-colors",
-                  current ? "bg-brand-soft/40" : "hover:bg-muted/50",
+                  current ? "bg-selected" : "hover:bg-accent",
                 )}
               >
                 <span

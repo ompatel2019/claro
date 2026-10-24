@@ -172,7 +172,7 @@ async function Dashboard() {
                 <li key={href + text}>
                   <Link
                     href={href}
-                    className="hover:bg-surface -mx-2 flex items-center gap-3 rounded-lg px-3 py-4 text-sm"
+                    className="hover:bg-accent -mx-2 flex items-center gap-3 rounded-lg px-3 py-4 text-sm"
                   >
                     <Badge variant="warning">
                       <Alert className="size-3" />

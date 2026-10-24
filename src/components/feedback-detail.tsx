@@ -128,7 +128,7 @@ export function FeedbackDetail({
               >
                 {/* eslint-disable-next-line @next/next/no-img-element -- Signed private screenshots are not image-optimiser inputs. */}
                 <img src={url} alt="" className="size-full object-cover" />
-                <span className="bg-card/90 absolute right-2 bottom-2 rounded-full px-2 py-0.5 text-xs font-medium">
+                <span className="bg-card absolute right-2 bottom-2 rounded-full px-2 py-0.5 text-xs font-medium">
                   {i + 1}
                 </span>
               </button>
