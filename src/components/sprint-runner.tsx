@@ -101,7 +101,7 @@ export function SprintRunner({
 
   // Re-render when a background mark settles, so the marking screen's counts stay live.
   const [, setMarkTick] = useState(0);
-  // Set once the student leaves the marking screen: Finish must not pull them back.
+  // Set when the runner unmounts (a link, Back): Finish must not pull the student back.
   const left = useRef(false);
   useEffect(() => {
     // Any route change away (links, Back) unmounts the runner: count it as leaving.
@@ -592,9 +592,6 @@ export function SprintRunner({
           markedNow(attempts, background.marked(), answerVersion),
         )}
         title={title}
-        onLeave={() => {
-          left.current = true;
-        }}
       />
     );
   const go = (i: number) => void act(() => change(i));

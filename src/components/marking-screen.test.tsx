@@ -157,28 +157,3 @@ it("keeps the generic screen when a sprint has no answers", () => {
   expect(screen.queryByRole("progressbar")).toBeNull();
   expect(screen.queryByRole("list")).toBeNull();
 });
-
-it("tells the runner when the student leaves", () => {
-  const onLeave = vi.fn();
-  render(
-    <MarkingScreen
-      onLeave={onLeave}
-      sheet={{
-        marked: 0,
-        total: 1,
-        rows: [
-          {
-            key: "a",
-            label: "Q1",
-            detail: "Written answer · 4 marks",
-            marked: 0,
-            total: 1,
-          },
-        ],
-      }}
-    />,
-  );
-  fireEvent.click(screen.getByRole("link", { name: "Go to Activity" }));
-  fireEvent.click(screen.getByRole("link", { name: "Back to Home" }));
-  expect(onLeave).toHaveBeenCalledTimes(2);
-});
