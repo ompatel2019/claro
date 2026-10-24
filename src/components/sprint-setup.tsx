@@ -214,109 +214,117 @@ export function SprintSetup({
           </button>
         </p>
       )}
-      <div className="space-y-5">
+      <div className="space-y-6">
         <div>
           <h2 className="text-xl font-[650] tracking-tight">Build your own</h2>
         </div>
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div>
             <Section
               title="Topics"
               hint="Choose up to two topics, or practise the whole course."
             >
-              <div className="grid items-start gap-3 sm:grid-cols-2">
-                {[{ id: "all", name: "All topics" }, ...parents].map((t) => {
-                  const on =
-                    t.id === "all"
-                      ? c.topics.length === 0
-                      : c.topics.includes(t.id);
-                  const subs = topics.filter((sub) => sub.parent_id === t.id);
-                  return (
-                    <div
-                      key={t.id}
-                      className={cn(
-                        "bg-card rounded-2xl border p-3",
-                        on && "border-primary bg-selected ring-primary ring-1",
-                      )}
-                    >
-                      <button
-                        type="button"
-                        aria-label={t.name}
-                        aria-pressed={on}
-                        onClick={() => {
-                          if (t.id === "all") {
-                            set({ topics: [], subtopics: [] });
-                            setLimitHit(false);
-                          } else toggleTopic(t.id);
-                        }}
-                        className="focus-visible:outline-ring flex min-h-14 w-full items-start gap-3 rounded-2xl text-left text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
+              <div className="bg-card overflow-hidden rounded-2xl border">
+                <div className="text-muted-foreground hidden justify-end border-b px-4 py-2 text-xs sm:flex">
+                  Your average
+                </div>
+                <ul className="divide-y" aria-label="Topics">
+                  {[{ id: "all", name: "All topics" }, ...parents].map((t) => {
+                    const on =
+                      t.id === "all"
+                        ? c.topics.length === 0
+                        : c.topics.includes(t.id);
+                    const subs = topics.filter((sub) => sub.parent_id === t.id);
+                    return (
+                      <li
+                        key={t.id}
+                        className={cn("px-4 py-3", on && "bg-selected")}
                       >
-                        <span
-                          aria-hidden
-                          className={cn(
-                            "border-input mt-0.5 grid size-5 shrink-0 place-items-center rounded border",
-                            on &&
-                              "bg-primary border-primary text-primary-foreground",
-                          )}
+                        <button
+                          type="button"
+                          aria-label={t.name}
+                          aria-pressed={on}
+                          onClick={() => {
+                            if (t.id === "all") {
+                              set({ topics: [], subtopics: [] });
+                              setLimitHit(false);
+                            } else toggleTopic(t.id);
+                          }}
+                          className="focus-visible:outline-ring flex w-full items-start gap-3 rounded-lg text-left text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2"
                         >
-                          {on && <PortalIcon name="check" className="size-4" />}
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          {t.name}
-                          <span className="text-muted-foreground mt-1 block text-xs font-normal">
-                            {n(
-                              t.id === "all"
-                                ? pool?.questions
-                                : pool?.topics[t.id],
-                            )}{" "}
-                            questions available
+                          <span
+                            aria-hidden
+                            className={cn(
+                              "border-input mt-0.5 grid size-5 shrink-0 place-items-center rounded border",
+                              on &&
+                                "bg-primary border-primary text-primary-foreground",
+                            )}
+                          >
+                            {on && (
+                              <PortalIcon name="check" className="size-4" />
+                            )}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            {t.name}
+                            <span className="text-muted-foreground mt-1 block text-xs font-normal">
+                              {n(
+                                t.id === "all"
+                                  ? pool?.questions
+                                  : pool?.topics[t.id],
+                              )}{" "}
+                              questions available
+                            </span>
                           </span>
                           {t.id !== "all" && (
-                            <span className="text-muted-foreground mt-1 block text-xs font-normal tabular-nums">
-                              {mastery[t.id] == null
-                                ? "Not practised"
-                                : `${Math.round(mastery[t.id]!)}% mastery`}
-                            </span>
+                            <TopicAverage pct={mastery[t.id]} />
                           )}
-                        </span>
-                      </button>
-                      {on && subs.length > 0 && (
-                        <div className="mt-3 space-y-2 border-t pt-3">
-                          <h3 className="sr-only">{t.name} subtopics</h3>
-                          <p className="text-muted-foreground text-xs">
-                            Optional: narrow your practice. No selection uses
-                            all subtopics.
-                          </p>
-                          <div
-                            className="flex flex-wrap gap-2"
-                            role="group"
-                            aria-label={`${t.name} subtopics`}
-                          >
-                            {subs.map((sub) => (
-                              <Chip
-                                key={sub.id}
-                                on={c.subtopics.includes(sub.id)}
-                                disabled={
-                                  !!pool && (pool.subtopics[sub.id] ?? 0) === 0
-                                }
-                                onClick={() =>
-                                  set({
-                                    subtopics: toggle(c.subtopics, sub.id),
-                                  })
-                                }
-                              >
-                                {sub.name}{" "}
-                                <span className="tabular-nums opacity-65">
-                                  {n(pool?.subtopics[sub.id])}
-                                </span>
-                              </Chip>
-                            ))}
+                        </button>
+                        {on && subs.length > 0 && (
+                          <div className="mt-3 space-y-2 pl-8">
+                            <h3 className="sr-only">{t.name} subtopics</h3>
+                            <p className="text-muted-foreground text-xs">
+                              Optional: narrow your practice. No selection uses
+                              all subtopics.
+                            </p>
+                            <div
+                              className="flex flex-wrap gap-2"
+                              role="group"
+                              aria-label={`${t.name} subtopics`}
+                            >
+                              {subs.map((sub) => (
+                                <Chip
+                                  key={sub.id}
+                                  on={c.subtopics.includes(sub.id)}
+                                  disabled={
+                                    !!pool &&
+                                    (pool.subtopics[sub.id] ?? 0) === 0
+                                  }
+                                  onClick={() =>
+                                    set({
+                                      subtopics: toggle(c.subtopics, sub.id),
+                                    })
+                                  }
+                                >
+                                  {sub.name}{" "}
+                                  <span
+                                    className={cn(
+                                      "tabular-nums",
+                                      // Selected chips use Orange Text at full strength for AA contrast.
+                                      !c.subtopics.includes(sub.id) &&
+                                        "opacity-65",
+                                    )}
+                                  >
+                                    {n(pool?.subtopics[sub.id])}
+                                  </span>
+                                </Chip>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                        )}
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
               {limitHit && (
                 <p role="status" className="text-muted-foreground text-xs">
@@ -487,7 +495,7 @@ export function SprintSetup({
               )}
             </Section>
           </div>
-          <div className="space-y-5">
+          <div className="space-y-6">
             {(c.history === "prefer_new" || c.history === "any") && (
               <Section title="Question history">
                 <label className="flex items-center gap-2 text-sm">
@@ -662,7 +670,7 @@ export function SprintSetup({
                 </span>
                 <ChevronDown className="size-4" />
               </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-5 pt-4">
+              <CollapsibleContent className="space-y-6 pt-4">
                 {c.mode === "short" || c.mode === "mixed" ? (
                   <Section
                     title="Difficulty (by marks)"
@@ -1018,5 +1026,31 @@ export function SprintSetup({
         />
       )}
     </div>
+  );
+}
+
+/** A topic's real practice average, or "Not practised". */
+export function TopicAverage({ pct }: { pct: number | null | undefined }) {
+  if (pct == null)
+    return (
+      <span className="text-muted-foreground shrink-0 self-center text-xs font-normal">
+        Not practised
+      </span>
+    );
+  const value = Math.round(Math.max(0, Math.min(100, pct)));
+  return (
+    <span className="flex shrink-0 items-center gap-3 self-center text-xs">
+      <span
+        aria-hidden
+        className="bg-foreground/10 hidden h-1.5 w-24 overflow-hidden rounded-full sm:block"
+      >
+        <span
+          className="bg-foreground block h-full rounded-full"
+          style={{ width: `${value}%` }}
+        />
+      </span>
+      <span className="w-9 text-right font-semibold">{value}%</span>
+      <span className="sr-only">average</span>
+    </span>
   );
 }
