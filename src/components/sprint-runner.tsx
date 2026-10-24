@@ -727,7 +727,7 @@ export function SprintRunner({
                   className={cn(
                     "has-[:focus-visible]:ring-ring bg-card border-input has-[:focus-visible]:outline-ring flex cursor-pointer items-center gap-3.5 rounded-2xl border px-4 py-4 text-base leading-6 transition-colors has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2",
                     a.choice_index === i
-                      ? "border-primary bg-accent"
+                      ? "border-primary bg-selected"
                       : "hover:bg-muted",
                     answerKey === i && "border-success bg-success-soft",
                     answerKey != null &&

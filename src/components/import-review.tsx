@@ -191,13 +191,13 @@ export function ImportReview({
               </CardAction>
             </CardHeader>
             <CardContent className="grid gap-4 md:grid-cols-2">
-              <div className="bg-muted/55 rounded-xl border p-4">
+              <div className="rounded-xl border p-4">
                 <p className="text-muted-foreground mb-1 text-xs font-medium">
                   Imported draft
                 </p>
                 <Diff parts={d.left} />
               </div>
-              <div className="bg-muted/55 rounded-xl border p-4">
+              <div className="rounded-xl border p-4">
                 <p className="text-muted-foreground mb-1 text-xs font-medium">
                   Closest match
                 </p>

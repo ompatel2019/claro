@@ -566,7 +566,7 @@ it("preserves keyboard activation on focused controls and focuses ratings after 
     );
   expect(
     screen.getByRole("heading", { name: "Model answer" }).parentElement,
-  ).toHaveClass("bg-muted", "border");
+  ).toHaveClass("bg-card", "border");
   const space = new KeyboardEvent("keydown", {
     key: " ",
     bubbles: true,

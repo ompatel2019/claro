@@ -127,7 +127,7 @@ export function NewRun({ data }: { data: Data }) {
       >
         <DialogContent
           showCloseButton={!busy}
-          className="bg-background max-h-[90dvh] max-w-full overflow-y-auto rounded-none sm:max-w-sm sm:rounded-lg"
+          className="max-h-[90dvh] max-w-full overflow-y-auto rounded-none sm:max-w-sm sm:rounded-lg"
         >
           <DialogHeader>
             <DialogTitle>New run</DialogTitle>
@@ -140,7 +140,7 @@ export function NewRun({ data }: { data: Data }) {
             <div
               role="status"
               aria-live="polite"
-              className="bg-muted/60 space-y-3 rounded-xl p-4"
+              className="space-y-3 rounded-xl border p-4"
             >
               <p className="font-medium">
                 {run.done} / {ITEM_COUNT} · {run.status}
@@ -230,7 +230,7 @@ export function NewRun({ data }: { data: Data }) {
                 </RadioGroup>
               </fieldset>
               {estimate && (
-                <div className="bg-muted/60 space-y-1 rounded-xl p-4">
+                <div className="space-y-1 rounded-xl border p-4">
                   <p className="font-medium">
                     Estimated cost: ${estimate.total.toFixed(4)} ({ITEM_COUNT} ×
                     ${estimate.average.toFixed(4)} per answer).
@@ -264,7 +264,7 @@ export function NewRun({ data }: { data: Data }) {
               )}
             </>
           )}
-          <DialogFooter className="bg-background sticky -bottom-5 z-10 -mx-5 -mb-5">
+          <DialogFooter className="bg-popover sticky -bottom-5 z-10 -mx-5 -mb-5">
             {busy ? (
               <Button
                 variant="outline"

@@ -194,44 +194,44 @@ exports[`preserves quick starts weak / ready 1`] = `"4699:1cd243ed12724669e1cda8
 
 exports[`preserves quick starts weak / ready 2`] = `"1936:5eb21e2d37a298c9d7b0a33e2f688b37d1df6cb25d76e06c9e06858f14cd3ff0"`;
 
-exports[`preserves sprint mcq / custom 1`] = `"22606:d0dc383057eec1a8efae3816ee239428f6b11afff98efdd2bbfc73e38ec07ed9"`;
+exports[`preserves sprint mcq / custom 1`] = `"22649:c4cd4b8f014a73d8a96c855d56231b9d9bebf15c05d0ee6799c9cdf6c0907551"`;
 
-exports[`preserves sprint mcq / empty 1`] = `"24396:574449c30c03339c4d13ae688946699c2bad14f6183bae836f8801e336d33742"`;
+exports[`preserves sprint mcq / empty 1`] = `"24385:edf96af403ca615abfc2a2e189c6bb4ad8792036b5a721d45598a34d5613d504"`;
 
-exports[`preserves sprint mcq / error 1`] = `"25000:5c6ff863ec26a5be82be40086270df17c95b3e74befcee2237a592bd39da267e"`;
+exports[`preserves sprint mcq / error 1`] = `"25009:32da7eb823e3f6efdc2d761d7a3385d7cbc2087b8a390f989172cf25a3a719ab"`;
 
-exports[`preserves sprint mcq / loading 1`] = `"24645:73a10e9ba089161ee56e5f165d5e2110c3583fcc8ba866a16cf0189220d8266a"`;
+exports[`preserves sprint mcq / loading 1`] = `"24654:9dedb291b8f3f6021efac643a0235af907bba20f1e0f14d36fad4d46fb2d7d70"`;
 
-exports[`preserves sprint mcq / pending 1`] = `"24668:b446c54c494690c308b7b3f40dce376a83c165356b73354606715a8d617a7368"`;
+exports[`preserves sprint mcq / pending 1`] = `"24677:e8f582c12681641db1101d3325d7ed188fc73010ea1fa19296505fbe68b72c5a"`;
 
-exports[`preserves sprint mcq / populated 1`] = `"24640:aa380c0d21976cb88d058fe35fa33527eeca52f1d341dadf8b3889ee347fe040"`;
+exports[`preserves sprint mcq / populated 1`] = `"24649:197205d87e4e9b16af941a9937359931fcbde299a95a6dcf3f80dbfdcc34eaad"`;
 
-exports[`preserves sprint mcq / shortfall 1`] = `"25100:3ae4d89920a0e630cc5d8e25b2ad641efab44ce1fb7f46f0828d0cefc371a1f9"`;
+exports[`preserves sprint mcq / shortfall 1`] = `"25109:ff4fbcb57a98b710a5964409eb8786f7b30bff7736823ac41be769b07c4f8869"`;
 
-exports[`preserves sprint mixed / custom 1`] = `"26682:92e111532e9ef257f87b6da455f27e29140a168585d99a09918a61d91393b151"`;
+exports[`preserves sprint mixed / custom 1`] = `"26708:75226f244d0d4ac0678a11712e3da6670665fe4c903bc3b66929fe7db88f970b"`;
 
-exports[`preserves sprint mixed / empty 1`] = `"28979:d8bbfc98e32b47a429a2c317db38858a0bef3003f565bfe15712ae045010d83c"`;
+exports[`preserves sprint mixed / empty 1`] = `"28951:eaaf9f7a0b97d3a4486781039ba8fec93200636661d0f4287faa96ed58a4ac44"`;
 
-exports[`preserves sprint mixed / error 1`] = `"29076:9b0b5cb7e2f96a5ddde9e925ab44a6bca19f2f43792a068a9b13febe7ea84756"`;
+exports[`preserves sprint mixed / error 1`] = `"29068:c0a0b49779a2bce343ec4cda9ea27a921f0b5f99e362fa69f3ef63aacdcf18df"`;
 
-exports[`preserves sprint mixed / loading 1`] = `"28201:e2410dbff9419c7844af0f81b6ca52e295f246a43297b804b40b75475c31d04a"`;
+exports[`preserves sprint mixed / loading 1`] = `"28193:b1e685c4d55d1ec90d03e5290069116a573f11ab147f2195217f565a67f66f77"`;
 
-exports[`preserves sprint mixed / pending 1`] = `"28744:a92a3a2c49f30086d8ee53e8d97d5e77745686486d71927bda482f9a2b3b275d"`;
+exports[`preserves sprint mixed / pending 1`] = `"28736:3e8687a10512591e0487deb768b32148e7c66046b173ef74a2028ed5a8d59040"`;
 
-exports[`preserves sprint mixed / populated 1`] = `"28716:4058872c9b334b314ec460f2c1d67389473ca2479b84edc36348d8160ab700d7"`;
+exports[`preserves sprint mixed / populated 1`] = `"28708:a1f347235d8ab0e69ebeeb0fd8515453ad51af8033a87f841ce275b11e957f93"`;
 
-exports[`preserves sprint mixed / shortfall 1`] = `"29240:eb8106bdc1e6db06e7ed6200e050783f399e674057dbd7d4c132dadd24e01c55"`;
+exports[`preserves sprint mixed / shortfall 1`] = `"29232:4dad3683aa398d232003ffc1296f1ca0c27b7c720b6da36fbe3c514b55ed552e"`;
 
-exports[`preserves sprint short / custom 1`] = `"27603:92ea17fc34c36ea12f85ffe6801e5510b9cf5da0926d3be6242986189a6b0591"`;
+exports[`preserves sprint short / custom 1`] = `"27646:4e88d8714fec6ccb346d86df2e0dd55b334ec93547f857aa75e09550c68630ac"`;
 
-exports[`preserves sprint short / empty 1`] = `"29393:147661ac1d0a65f7a228b5c4c1804958fcb67ddd6a0fb3b7d432d2b2a636d3fe"`;
+exports[`preserves sprint short / empty 1`] = `"29382:1b642886769afe8fca8f7637876f37b113cbb7ab02539715284692c6b940ec56"`;
 
-exports[`preserves sprint short / error 1`] = `"29997:ad0a7463c62b34aec7b0f2f6de7f5fec1267292791df5cffe7728608031b5819"`;
+exports[`preserves sprint short / error 1`] = `"30006:e8612c87bf3cc5b4afd68a0ced048fa232b0c6530bcf8809ef241a406559c311"`;
 
-exports[`preserves sprint short / loading 1`] = `"29122:585d33679412821d5f626c262028d88c8a0aea112a6aa8832625375b353cb2e4"`;
+exports[`preserves sprint short / loading 1`] = `"29131:a347c46a23a353f9888a66be314107ef6b352ad03f844c67af62966be98ca8cf"`;
 
-exports[`preserves sprint short / pending 1`] = `"29665:635264fe06486e335e5f789efa1d10ba49a6e23abbfe931d127ea465efec0b66"`;
+exports[`preserves sprint short / pending 1`] = `"29674:ead9137f714e67e36e9edd1c0f2f02c606ea3cbae5663856aa410fe0b97d8221"`;
 
-exports[`preserves sprint short / populated 1`] = `"29637:19f3ae171021fff8311724485296fbf080fce970f715123ded727f578d37afd3"`;
+exports[`preserves sprint short / populated 1`] = `"29646:a4613f1f37cdf927759f01efc6b39545e8e88af8e1ac6676fb5f9348a05f35ff"`;
 
-exports[`preserves sprint short / shortfall 1`] = `"30085:329b994bf6e326bb74f3691c4665285e05cf9b0de2eee3ad62145104418923f1"`;
+exports[`preserves sprint short / shortfall 1`] = `"30094:ed9dfb89d66ebd46c113315581bf273169148d6bca7c8e79a8b9bbd396b17950"`;

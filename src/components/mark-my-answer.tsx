@@ -817,7 +817,7 @@ export function MarkMyAnswer({
           </div>
           <div className="space-y-3">
             {question && (
-              <div className="bg-muted rounded-xl px-3.5 py-3">
+              <div className="border-l-2 py-0.5 pl-3.5">
                 <p className="text-muted-foreground text-xs">Answering</p>
                 <RichText
                   className="mt-0.5 text-sm leading-snug font-medium"

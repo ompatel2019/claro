@@ -235,8 +235,8 @@ export function SprintSetup({
                     <div
                       key={t.id}
                       className={cn(
-                        "rounded-2xl border p-3",
-                        on && "border-primary ring-primary ring-1",
+                        "bg-card rounded-2xl border p-3",
+                        on && "border-primary bg-selected ring-primary ring-1",
                       )}
                     >
                       <button
@@ -344,8 +344,8 @@ export function SprintSetup({
                     className={cn(
                       "relative flex flex-col items-start justify-start gap-1 rounded-lg border p-4 text-left transition-colors",
                       c.mode === id
-                        ? "border-primary bg-muted ring-primary ring-1"
-                        : "hover:bg-muted",
+                        ? "border-primary bg-selected ring-primary ring-1"
+                        : "bg-card hover:bg-accent",
                     )}
                   >
                     <span
@@ -506,7 +506,7 @@ export function SprintSetup({
               <h2 className="mb-4 text-sm font-semibold">Timer and feedback</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div role="region" aria-label="Timer">
-                  <label className="flex items-start gap-3 rounded-xl border p-3.5 text-[13px]">
+                  <label className="bg-card flex items-start gap-3 rounded-xl border p-3.5 text-[13px]">
                     <Switch
                       checked={c.timed}
                       onCheckedChange={(timed) =>
@@ -624,7 +624,9 @@ export function SprintSetup({
                         key={value}
                         className={cn(
                           "has-[:focus-visible]:ring-ring flex cursor-pointer items-start gap-3 rounded-xl border p-3 text-sm has-[:focus-visible]:ring-2",
-                          c.feedback === value && "border-primary bg-muted",
+                          c.feedback === value
+                            ? "border-primary bg-selected"
+                            : "bg-card",
                         )}
                       >
                         <RadioGroupItem
@@ -900,7 +902,7 @@ export function SprintSetup({
                 ))}
             </div>
           </div>
-          <div className="bg-muted min-w-0 space-y-2 rounded-xl p-3.5 text-[13px]">
+          <div className="min-w-0 space-y-2 border-t pt-3.5 text-[13px]">
             <p className="sr-only">{summary(c, names)}</p>
             <div
               className="flex items-baseline justify-between gap-3"
@@ -955,7 +957,7 @@ export function SprintSetup({
             )}
           </div>
         )}
-        <div className="sprint-setup-dock bg-card fixed inset-x-0 bottom-0 z-30 border-t px-4 py-3 sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]">
+        <div className="sprint-setup-dock bg-canvas fixed inset-x-0 bottom-0 z-30 border-t px-4 py-3 sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]">
           <div className="mx-auto flex max-w-[calc(1400px-4rem)] flex-wrap items-center justify-end gap-x-3 gap-y-2">
             <p className="text-muted-foreground mr-auto min-w-0 truncate text-[13px] tabular-nums">
               <span className="text-foreground font-semibold">

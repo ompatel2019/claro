@@ -96,7 +96,10 @@ export function ActivityBrowser({
   return (
     <div className="min-w-0">
       {!online && (
-        <p role="status" className="bg-muted mb-3 rounded-lg px-3 py-2 text-sm">
+        <p
+          role="status"
+          className="bg-card mb-3 rounded-lg border px-3 py-2 text-sm"
+        >
           You&apos;re offline. We&apos;ll save when you&apos;re back.
         </p>
       )}
