@@ -286,8 +286,13 @@ it("keeps count failures at the route error boundary", async () => {
   expect(mocks.rpc).not.toHaveBeenCalled();
 });
 
-it("counts sprints being marked and refreshes while one is listed", async () => {
-  render(await resolve(await Activity({ searchParams: Promise.resolve({}) })));
+const browserKey = (tree: React.ReactElement<{ children: React.ReactNode }>) =>
+  ([tree.props.children].flat(2) as React.ReactElement[]).find(
+    (child) => child?.type === mocks.browser,
+  )?.key;
+it("counts sprints being marked, refreshes while one is listed, and remounts when it is done", async () => {
+  const done = await Activity({ searchParams: Promise.resolve({}) });
+  render(await resolve(done));
   expect(mocks.or).toHaveBeenCalledWith(
     "finished_at.not.is.null,and(kind.eq.sprint,finish_requested_at.not.is.null)",
   );
@@ -298,6 +303,10 @@ it("counts sprints being marked and refreshes while one is listed", async () => 
     error: null,
   });
   responses();
-  render(await resolve(await Activity({ searchParams: Promise.resolve({}) })));
+  const marked = await Activity({ searchParams: Promise.resolve({}) });
+  render(await resolve(marked));
   expect(mocks.refresh).toHaveBeenCalled();
+  // ActivityBrowser caches rows, so the finished row needs a fresh mount.
+  expect(browserKey(marked)).toContain('"marking":["s"]');
+  expect(browserKey(done)).toContain('"marking":[]');
 });
