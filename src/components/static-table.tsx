@@ -18,6 +18,7 @@ export function StaticTable({
   columns,
   rows,
   pager,
+  paramPrefix,
 }: {
   label: string;
   columns: {
@@ -28,6 +29,7 @@ export function StaticTable({
   }[];
   rows: StaticRow[];
   pager?: Pager;
+  paramPrefix?: string;
 }) {
   const [open, setOpen] = useState<Set<string>>(new Set());
   const toggle = (id: string) =>
@@ -67,6 +69,7 @@ export function StaticTable({
       label={label}
       rows={rows}
       pager={pager}
+      paramPrefix={paramPrefix}
       columns={cols}
       renderDetail={(r) =>
         r.children?.length && open.has(r.id) ? (

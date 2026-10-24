@@ -241,7 +241,7 @@ it.each([
   ).toHaveTextContent(new RegExp(`^Page 1 of 1 · ${total} ${noun}$`));
 });
 
-it("student details preserve hidden metrics without triggering row navigation", () => {
+it("students table has no expanders or tick boxes and the row opens the student", () => {
   nav.router.mockReturnValue({ push: nav.push });
   nav.path.mockReturnValue("/admin/students");
   nav.search.mockReturnValue(new URLSearchParams());
@@ -269,22 +269,9 @@ it("student details preserve hidden metrics without triggering row navigation", 
       pager={{ page: 1, pages: 1, total: 1, sort: { id: "last", dir: "desc" } }}
     />,
   );
-  fireEvent.click(screen.getByText("More details"));
-  expect(nav.push).not.toHaveBeenCalled();
-  const details = container.querySelector('[data-slot="collapsible"]')!;
-  const fields = Object.fromEntries(
-    Array.from(details.querySelectorAll("dl > div"), (field) => [
-      field.querySelector("dt")!.textContent,
-      field.querySelector("dd")!.textContent,
-    ]),
-  );
-  expect(fields).toMatchObject({
-    Email: "ada@example.com",
-    School: "School",
-    "Sessions total": "0",
-    "Questions answered": "0",
-    "AI cost (all providers)": "$1.23",
-  });
-  fireEvent.click(screen.getAllByRole("row")[1].querySelectorAll("td")[6]);
+  expect(screen.queryByText("More details")).not.toBeInTheDocument();
+  expect(container.querySelector('[data-slot="collapsible"]')).toBeNull();
+  expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+  fireEvent.click(screen.getAllByRole("row")[1].querySelectorAll("td")[5]);
   expect(nav.push).toHaveBeenCalledWith("/admin/students/ada");
 });

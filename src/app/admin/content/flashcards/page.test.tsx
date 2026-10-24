@@ -30,58 +30,61 @@ beforeEach(() => {
   mocks.filters.mockReturnValue(null);
   mocks.topics.mockResolvedValue([]);
   mocks.counts.mockResolvedValue({ own: 1, live: 1101, draft: 0, retired: 2 });
-  mocks.list.mockResolvedValue({ rows: [], status: "draft" });
+  mocks.list.mockResolvedValue({
+    rows: [],
+    status: "draft",
+    counts: { live: 0, draft: 0, retired: 0 },
+  });
 });
 afterEach(cleanup);
 
-it("shows whole-bank counts on every tab even with list filters", async () => {
+it("takes tab counts from the filtered list, not the whole bank", async () => {
+  mocks.list.mockResolvedValue({
+    rows: [],
+    status: "draft",
+    counts: { live: 2, draft: 0, retired: 1 },
+  });
   render(
     await FlashcardsPage({
       searchParams: Promise.resolve({ status: "draft", q: "inflation" }),
     }),
   );
-  expect(screen.getByRole("link", { name: "Live (1101)" })).toHaveAttribute(
+  expect(mocks.list).toHaveBeenCalledWith({ status: "draft", q: "inflation" });
+  // Switching tabs keeps the filters the counts were taken with.
+  expect(screen.getByRole("link", { name: "Live (2)" })).toHaveAttribute(
     "href",
-    "/admin/content/flashcards?status=live",
+    "/admin/content/flashcards?q=inflation&status=live",
   );
   expect(screen.getByRole("link", { name: "Draft (0)" })).toHaveAttribute(
     "aria-current",
     "page",
   );
-  expect(screen.getByRole("link", { name: "Retired (2)" })).toBeVisible();
+  expect(screen.getByRole("link", { name: "Retired (1)" })).toBeVisible();
+  expect(screen.queryByRole("link", { name: /1101/ })).not.toBeInTheDocument();
   expect(
     screen.getByText("Students have made 1 card of their own."),
   ).toBeVisible();
+  expect(screen.getByText("No cards match")).toBeVisible();
 });
 
-it("renders the empty state and remaining counts when individual counts are unavailable", async () => {
+it("renders the empty state when the student card count is unavailable", async () => {
   mocks.counts.mockResolvedValue({
     own: null,
-    live: 1101,
+    live: null,
     draft: null,
-    retired: 0,
+    retired: null,
   });
   render(
     await FlashcardsPage({
       searchParams: Promise.resolve({ status: "draft" }),
     }),
   );
-  expect(
-    screen.getByRole("link", { name: "Draft (count unavailable)" }),
-  ).toBeVisible();
-  expect(screen.getByRole("link", { name: "Live (1101)" })).toBeVisible();
-  expect(screen.getByRole("link", { name: "Retired (0)" })).toBeVisible();
+  expect(screen.getByRole("link", { name: "Draft (0)" })).toBeVisible();
   expect(screen.getByText("Student card count unavailable.")).toBeVisible();
   expect(screen.getByText("No draft cards")).toBeVisible();
 });
 
-it("keeps populated cards and pagination when a status count fails", async () => {
-  mocks.counts.mockResolvedValue({
-    own: 1,
-    live: 1101,
-    draft: null,
-    retired: 0,
-  });
+it("passes populated cards and pagination to the table", async () => {
   const rows = [{ id: "card-1", front: "Inflation" }];
   const pager = {
     page: 2,
@@ -89,7 +92,12 @@ it("keeps populated cards and pagination when a status count fails", async () =>
     total: 45,
     sort: { id: "updated", dir: "desc" },
   };
-  mocks.list.mockResolvedValue({ rows, pager, status: "draft" });
+  mocks.list.mockResolvedValue({
+    rows,
+    pager,
+    status: "draft",
+    counts: { live: 0, draft: 45, retired: 0 },
+  });
   render(
     await FlashcardsPage({
       searchParams: Promise.resolve({ status: "draft", page: "2" }),
@@ -100,9 +108,10 @@ it("keeps populated cards and pagination when a status count fails", async () =>
     undefined,
   );
   expect(screen.queryByText("No draft cards")).not.toBeInTheDocument();
-  expect(
-    screen.getByRole("link", { name: "Draft (count unavailable)" }),
-  ).toHaveAttribute("aria-current", "page");
+  expect(screen.getByRole("link", { name: "Draft (45)" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
 });
 
 it("separates parents from dependent subtopics and clears stale selections", async () => {
