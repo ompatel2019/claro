@@ -1,12 +1,21 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 const push = vi.fn();
+const replace = vi.fn();
+const refresh = vi.fn();
+const polled = vi.hoisted(() => [] as { ids: string[]; onDone: () => void }[]);
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push }),
+  useRouter: () => ({ push, replace, refresh }),
   usePathname: () => "/student/activity",
 }));
 vi.mock("next/form", () => ({
   default: (props: React.ComponentProps<"form">) => <form {...props} />,
+}));
+vi.mock("./student/activity/marking-refresh", () => ({
+  MarkingRefresh: (props: { ids: string[]; onDone: () => void }) => {
+    polled.push(props);
+    return null;
+  },
 }));
 import { ActivityBrowser } from "./activity-browser";
 import {
@@ -19,6 +28,7 @@ import ActivityLoading from "@/app/(app)/student/activity/loading";
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  polled.length = 0;
 });
 const filters = parseActivityFilters({}, "2026-10-09");
 const row: ActivityRow = {
@@ -333,7 +343,7 @@ it("shows actual card ratings and uses the latest rating for each card", () => {
     "1/2",
   );
 });
-it("a refresh flips a Marking row to its score and keeps rows loaded from earlier pages", () => {
+it("polls sprints being marked across loaded pages and reloads page 1 when one is done", () => {
   const marking: ActivityRow = {
     ...row,
     status: "Marking",
@@ -348,22 +358,26 @@ it("a refresh flips a Marking row to its score and keeps rows loaded from earlie
     <ActivityBrowser {...props} data={{ ...data, rows: [marking] }} />,
   );
   expect(item()).toHaveTextContent("Marking");
-  // Load more appends page 2 without the sprint being marked.
-  view.rerender(
-    <ActivityBrowser {...props} data={{ ...data, page: 2, rows: [older] }} />,
-  );
-  expect(item()).toHaveTextContent("Marking");
-  // Same page refreshed after marking finished: the row updates in place.
-  view.rerender(
-    <ActivityBrowser {...props} data={{ ...data, page: 2, rows: [older] }} />,
-  );
-  view.rerender(
-    <ActivityBrowser
-      {...props}
-      data={{ ...data, page: 2, rows: [{ ...row, id: "s" }, older] }}
-    />,
-  );
+  expect(polled.at(-1)!.ids).toEqual(["s"]);
+  polled.at(-1)!.onDone();
+  expect(refresh).toHaveBeenCalledOnce();
+  // Page 1 refreshed after marking finished: its rows are replaced as they are now.
+  view.rerender(<ActivityBrowser {...props} data={{ ...data, rows: [row] }} />);
   expect(item()).not.toHaveTextContent("Marking");
   expect(item()).toHaveTextContent("75%");
-  expect(screen.getByRole("link", { name: "Older sprint" })).toBeVisible();
+  cleanup();
+  polled.length = 0;
+  // Load more keeps polling a page-1 sprint, and its finish goes back to page 1.
+  const more = render(
+    <ActivityBrowser {...props} data={{ ...data, rows: [marking] }} />,
+  );
+  more.rerender(
+    <ActivityBrowser {...props} data={{ ...data, page: 2, rows: [older] }} />,
+  );
+  expect(polled.at(-1)!.ids).toEqual(["s"]);
+  polled.at(-1)!.onDone();
+  expect(replace).toHaveBeenCalledWith("/student/activity");
+  more.rerender(<ActivityBrowser {...props} data={{ ...data, rows: [row] }} />);
+  expect(item()).toHaveTextContent("75%");
+  expect(screen.queryByRole("link", { name: "Older sprint" })).toBeNull();
 });

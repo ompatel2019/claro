@@ -1,19 +1,37 @@
 "use client";
-import { useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useRef } from "react";
 
 import { MAX_WAIT_MS, SLOW_REFRESH_MS } from "@/components/marking-progress";
+import { createClient } from "@/utils/supabase/client";
 
-/** While a sprint is being marked, re-renders Activity so its row flips to the score. */
-export function MarkingRefresh() {
-  const router = useRouter();
+/** While sprints are being marked, checks (own rows, RLS) for one finishing, then calls onDone. */
+export function MarkingRefresh({
+  ids,
+  onDone,
+}: {
+  ids: string[];
+  onDone: () => void;
+}) {
+  const done = useRef(onDone);
   useEffect(() => {
-    const poll = setInterval(() => router.refresh(), SLOW_REFRESH_MS);
-    const stop = setTimeout(() => clearInterval(poll), MAX_WAIT_MS);
-    return () => {
+    done.current = onDone;
+  });
+  const key = ids.join(",");
+  useEffect(() => {
+    const db = createClient();
+    const start = Date.now();
+    const poll = setInterval(async () => {
+      if (Date.now() - start > MAX_WAIT_MS) return clearInterval(poll);
+      const { data } = await db
+        .from("sessions")
+        .select("id")
+        .in("id", key.split(","))
+        .not("finished_at", "is", null);
+      if (!data?.length) return;
       clearInterval(poll);
-      clearTimeout(stop);
-    };
-  }, [router]);
+      done.current();
+    }, SLOW_REFRESH_MS);
+    return () => clearInterval(poll);
+  }, [key]);
   return null;
 }

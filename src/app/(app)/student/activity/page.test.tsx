@@ -13,7 +13,6 @@ const mocks = vi.hoisted(() => ({
   rpc: vi.fn(),
   browser: vi.fn(),
   or: vi.fn(),
-  refresh: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth", () => ({
@@ -23,12 +22,6 @@ vi.mock("@/utils/supabase/server", () => ({
   createClient: async () => ({ from: mocks.from, rpc: mocks.rpc }),
 }));
 vi.mock("@/lib/flashcards", () => ({ sydneyToday: () => "2026-10-09" }));
-vi.mock("@/components/student/activity/marking-refresh", () => ({
-  MarkingRefresh: () => {
-    mocks.refresh();
-    return null;
-  },
-}));
 vi.mock("@/components/activity-browser", () => ({
   ActivityBrowser: mocks.browser,
 }));
@@ -286,20 +279,9 @@ it("keeps count failures at the route error boundary", async () => {
   expect(mocks.rpc).not.toHaveBeenCalled();
 });
 
-it("counts sprints being marked and refreshes while one is listed", async () => {
-  const done = await Activity({ searchParams: Promise.resolve({}) });
-  render(await resolve(done));
+it("counts sprints being marked alongside finished sessions", async () => {
+  render(await resolve(await Activity({ searchParams: Promise.resolve({}) })));
   expect(mocks.or).toHaveBeenCalledWith(
     "finished_at.not.is.null,and(kind.eq.sprint,finish_requested_at.not.is.null)",
   );
-  expect(mocks.refresh).not.toHaveBeenCalled();
-  const marking = { ...row, status: "Marking", pct: null, finished_at: null };
-  mocks.rpc.mockResolvedValue({
-    data: { ...data, rows: [marking] },
-    error: null,
-  });
-  responses();
-  const marked = await Activity({ searchParams: Promise.resolve({}) });
-  render(await resolve(marked));
-  expect(mocks.refresh).toHaveBeenCalled();
 });

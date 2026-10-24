@@ -13,7 +13,6 @@ import { sydneyToday } from "@/lib/flashcards";
 import { type Topic } from "@/lib/practice";
 import { PageHeader } from "@/components/claro/layout";
 import { ActivityBrowser } from "@/components/activity-browser";
-import { MarkingRefresh } from "@/components/student/activity/marking-refresh";
 import { buttonVariants } from "@/components/ui/button";
 export const metadata = pageMetadata("Activity");
 
@@ -99,9 +98,6 @@ export default async function Activity({
           </Link>
         }
       />
-      {rows.some((r) => r.status === "Marking" && !r.finished_at) && (
-        <MarkingRefresh />
-      )}
       <ActivityBrowser
         key={JSON.stringify({ ...filters, page: undefined })}
         filters={filters}
