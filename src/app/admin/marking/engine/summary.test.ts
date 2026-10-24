@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  costLabel,
   durationLabel,
   runDateLabel,
   summariseRun,
@@ -130,5 +131,39 @@ describe("offline run summaries", () => {
     expect(durationLabel(59.6)).toBe("1m 0s");
     expect(durationLabel(65)).toBe("1m 5s");
     expect(durationLabel(3665)).toBe("1h 1m 5s");
+  });
+});
+describe("eval run cost and duration", () => {
+  it("shows costs to the cent", () => {
+    expect(costLabel(0.072)).toBe("$0.07");
+    expect(costLabel(1.236)).toBe("$1.24");
+    expect(costLabel(0.001)).toBe("<$0.01");
+    expect(costLabel(0)).toBe("$0.00");
+    expect(costLabel(NaN)).toBe("$0.00");
+  });
+  it("uses elapsed web time, else summed marking time, so real runs never read 0s", () => {
+    const web = run([{ ...item(1, 1), seconds: 40 }]);
+    web.meta.startedAt = "2026-10-09T03:00:00Z";
+    web.meta.finishedAt = "2026-10-09T03:02:05Z";
+    expect(summariseRun(web)).toMatchObject({
+      seconds: 125,
+      elapsed: true,
+      web: true,
+    });
+    delete web.meta.finishedAt;
+    expect(summariseRun(web)).toMatchObject({
+      seconds: 40,
+      elapsed: false,
+      web: true,
+    });
+    web.meta.updatedAt = web.meta.startedAt;
+    expect(summariseRun(web)).toMatchObject({
+      seconds: 40,
+      elapsed: false,
+      web: true,
+    });
+    web.meta.updatedAt = "not a date";
+    expect(summariseRun(web).seconds).toBe(40);
+    expect(durationLabel(summariseRun(web).seconds)).toBe("40s");
   });
 });

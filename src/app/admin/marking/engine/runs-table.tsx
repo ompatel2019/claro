@@ -20,7 +20,12 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { durationLabel, runDateLabel, type RunSummary } from "./summary";
+import {
+  costLabel,
+  durationLabel,
+  runDateLabel,
+  type RunSummary,
+} from "./summary";
 import { HAIRLINE_TABLE } from "../accuracy/table-style";
 
 const numberLabel = (value: number | null, percent = false) =>
@@ -135,7 +140,7 @@ const columns: Column<RunSummary>[] = [
     className: "text-right tabular-nums px-1 whitespace-normal wrap-anywhere",
     header: "Cost",
     sort: (r) => r.cost,
-    cell: (r) => `$${r.cost.toFixed(4)}`,
+    cell: (r) => costLabel(r.cost),
   },
   {
     id: "duration",
@@ -144,10 +149,12 @@ const columns: Column<RunSummary>[] = [
     sort: (r) => r.seconds,
     cell: (r) => (
       <span
-        title={r.web ? "elapsed duration" : "Marking time: summed per answer"}
+        title={
+          r.elapsed ? "elapsed duration" : "Marking time: summed per answer"
+        }
       >
         {durationLabel(r.seconds)}
-        {!r.web && (
+        {!r.elapsed && (
           <span className="text-muted-foreground block text-[10px]">
             Marking time
           </span>
@@ -157,7 +164,7 @@ const columns: Column<RunSummary>[] = [
   },
   {
     id: "by",
-    className: "px-1 whitespace-normal wrap-anywhere",
+    className: "px-1 whitespace-nowrap",
     header: "By",
     sort: (r) => r.by,
     cell: (r) => r.by,

@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { Pen } from "@/components/icons";
 import { PageHeader } from "@/components/page-header";
+import { Card } from "@/components/ui/card";
 import { FilterBar } from "@/components/filter-bar";
 import { EmptyState } from "@/components/empty-state";
 import { LinkTabs } from "@/components/link-tabs";
@@ -10,6 +10,7 @@ import { addSpotChecks } from "./actions";
 import { loadQueue } from "./data";
 import { reasons } from "./shared";
 import { ReviewNotice } from "./notice";
+import { ReviewHelp } from "./help";
 import { QueueTable } from "./queue-table";
 
 const tabs = ["open", "failed", "resolved"];
@@ -44,7 +45,11 @@ export default async function ReviewQueue({
   return (
     <div className="min-w-0 space-y-6">
       <PageHeader
-        title="Marking review"
+        title={
+          <span className="inline-flex items-center gap-1.5">
+            Marking review <ReviewHelp />
+          </span>
+        }
         description="Check disagreements, student disputes and spot checks. Oldest first."
         actions={
           <form action={addSpotChecks}>
@@ -52,15 +57,6 @@ export default async function ReviewQueue({
           </form>
         }
       />
-      <p className="bg-card text-muted-foreground rounded-xl border p-4 text-sm leading-relaxed">
-        Students select <strong>Question this mark</strong> beside written
-        feedback on their{" "}
-        <Link className="underline" href="/student/activity">
-          finished session results
-        </Link>
-        . Dispute history counts all requests; rejection rates use resolved
-        disputes with unchanged or lowered marks.
-      </p>
       <ReviewNotice message={value("notice")} />
       <LinkTabs
         label="Review queues"
@@ -72,105 +68,111 @@ export default async function ReviewQueue({
           href: `?tab=${value}`,
         }))}
       />
-      <FilterBar
-        customSelect
-        hidden={{ tab }}
-        primary="reason"
-        filters={[
-          ...(tab === "failed"
-            ? []
-            : [
-                {
-                  name: "reason",
-                  label: "Reason",
-                  all: "All reasons",
-                  options: Object.entries(reasons).map(([value, label]) => ({
-                    value,
-                    label,
-                  })),
-                },
-              ]),
-          {
-            name: "type",
-            label: "Type",
-            all: "All types",
-            options: [
-              { value: "short", label: "Short" },
-              { value: "extended", label: "Extended" },
-            ],
-          },
-          {
-            name: "topic",
-            label: "Topic",
-            all: "All topics",
-            options: topics
-              .filter((t) =>
-                rows.some(
-                  (r) =>
-                    r.topic === t.id ||
-                    topics.some(
-                      (sub) => sub.id === r.topic && sub.parent_id === t.id,
+      <Card className="min-w-0 gap-0 overflow-hidden py-0">
+        <div className="border-b px-4 py-3">
+          <FilterBar
+            customSelect
+            hidden={{ tab }}
+            primary="reason"
+            filters={[
+              ...(tab === "failed"
+                ? []
+                : [
+                    {
+                      name: "reason",
+                      label: "Reason",
+                      all: "All reasons",
+                      options: Object.entries(reasons).map(
+                        ([value, label]) => ({
+                          value,
+                          label,
+                        }),
+                      ),
+                    },
+                  ]),
+              {
+                name: "type",
+                label: "Type",
+                all: "All types",
+                options: [
+                  { value: "short", label: "Short" },
+                  { value: "extended", label: "Extended" },
+                ],
+              },
+              {
+                name: "topic",
+                label: "Topic",
+                all: "All topics",
+                options: topics
+                  .filter((t) =>
+                    rows.some(
+                      (r) =>
+                        r.topic === t.id ||
+                        topics.some(
+                          (sub) => sub.id === r.topic && sub.parent_id === t.id,
+                        ),
                     ),
-                ),
-              )
-              .map((t) => ({ value: t.id, label: t.name })),
-          },
-          {
-            name: "marks",
-            label: "Marks",
-            all: "All marks",
-            options: [
-              ...new Set(
-                rows.flatMap((r) => (r.marks == null ? [] : [r.marks])),
-              ),
-            ]
-              .sort((a, b) => a - b)
-              .map((n) => ({
-                value: String(n),
-                label: `${n} ${n === 1 ? "mark" : "marks"}`,
-              })),
-          },
-          {
-            name: "age",
-            label: "Age",
-            all: "Any age",
-            options: [
-              { value: "24h", label: ">24 h" },
-              { value: "3d", label: ">3 days" },
-            ],
-          },
-        ]}
-        values={{
-          reason,
-          type,
-          topic,
-          marks,
-          age,
-        }}
-      />
-      {shown.length ? (
-        <QueueTable rows={shown} failed={tab === "failed"} />
-      ) : (
-        <EmptyState
-          icon={Pen}
-          title={
-            rows.length
-              ? "No matching reviews"
-              : tab === "failed"
-                ? "No failed or unreadable answers"
-                : tab === "resolved"
-                  ? "No recently resolved reviews"
-                  : "No open reviews"
-          }
-          description={
-            rows.length
-              ? "Change the filters to see more answers."
-              : tab === "open"
-                ? "Add spot checks to review recently agreed marks."
-                : "Answers from the last 30 days appear here."
-          }
-        />
-      )}
+                  )
+                  .map((t) => ({ value: t.id, label: t.name })),
+              },
+              {
+                name: "marks",
+                label: "Marks",
+                all: "All marks",
+                options: [
+                  ...new Set(
+                    rows.flatMap((r) => (r.marks == null ? [] : [r.marks])),
+                  ),
+                ]
+                  .sort((a, b) => a - b)
+                  .map((n) => ({
+                    value: String(n),
+                    label: `${n} ${n === 1 ? "mark" : "marks"}`,
+                  })),
+              },
+              {
+                name: "age",
+                label: "Age",
+                all: "Any age",
+                options: [
+                  { value: "24h", label: ">24 h" },
+                  { value: "3d", label: ">3 days" },
+                ],
+              },
+            ]}
+            values={{
+              reason,
+              type,
+              topic,
+              marks,
+              age,
+            }}
+          />
+        </div>
+        {shown.length ? (
+          <QueueTable rows={shown} failed={tab === "failed"} />
+        ) : (
+          <EmptyState
+            icon={Pen}
+            title={
+              rows.length
+                ? "No matching reviews"
+                : tab === "failed"
+                  ? "No failed or unreadable answers"
+                  : tab === "resolved"
+                    ? "No recently resolved reviews"
+                    : "No open reviews"
+            }
+            description={
+              rows.length
+                ? "Change the filters to see more answers."
+                : tab === "open"
+                  ? "Add spot checks to review recently agreed marks."
+                  : "Answers from the last 30 days appear here."
+            }
+          />
+        )}
+      </Card>
     </div>
   );
 }

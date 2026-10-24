@@ -3,14 +3,29 @@ import Link from "next/link";
 import { EmptyState, Meter, PageHeader } from "@/components/claro";
 import { StatCard } from "@/components/claro/data-display";
 import { DailyChart } from "@/components/daily-chart";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { loadSpend } from "@/lib/admin-data";
 import { dateLabel } from "@/lib/practice";
 import { singleParams, sydneyDay } from "@/lib/admin";
 import { parseRange } from "./data";
 import { RangeSelect } from "./range-select";
 import { ModelTable, TaskTable, StudentTable } from "./tables";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { usd, avgUsd } from "./helpers";
+import { hairlineRows } from "@/lib/table-style";
 
 export const metadata = pageMetadata("AI spend");
 
@@ -29,7 +44,13 @@ export default async function SpendPage({
       params.to !== undefined);
   const spend = await loadSpend(range);
   const pct = Math.min(100, (spend.all / spend.cap) * 100);
-  const calls = spend.byModel.reduce((total, model) => total + model.calls, 0);
+  const callsLabel = (n: number) =>
+    `${n.toLocaleString("en-AU")} ${n === 1 ? "call" : "calls"}`;
+  const empty = [
+    !spend.byModel.length && "model",
+    !spend.byTask.some((g) => g.tasks.length) && "task",
+    !spend.topStudents.length && "student",
+  ].filter((v): v is string => !!v);
   const total = spend.perDay.reduce((sum, point) => sum + point.usd, 0);
   const throughNow = spend.window.to === sydneyDay(spend.window.until);
   return (
@@ -52,8 +73,8 @@ export default async function SpendPage({
         {spend.window.from
           ? `${dateLabel(spend.window.from)} to ${dateLabel(spend.window.to)}`
           : "All time"}{" "}
-        (Sydney{throughNow ? ", through now" : ", inclusive"}) · {calls}{" "}
-        OpenRouter calls
+        (Sydney{throughNow ? ", through now" : ", inclusive"}) ·{" "}
+        {spend.calls.toLocaleString("en-AU")} OpenRouter calls
         {rejectedDates && (
           <span> · Those dates aren&apos;t valid, showing this month</span>
         )}
@@ -62,12 +83,12 @@ export default async function SpendPage({
         <StatCard
           title="Today"
           value={usd(spend.today)}
-          description="OpenRouter · Sydney day"
+          description={`${callsLabel(spend.todayCalls)} · Sydney day`}
         />
         <StatCard
           title="This month"
           value={usd(spend.month)}
-          description="OpenRouter · Sydney calendar month"
+          description={`${callsLabel(spend.monthCalls)} · Sydney calendar month`}
         />
         <StatCard
           title="All time"
@@ -109,33 +130,49 @@ export default async function SpendPage({
           }
         />
       </div>
-      <Card>
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle>
-            <h2>Cost by written mark value</h2>
+            <h2>Cost per marked answer</h2>
           </CardTitle>
+          <CardDescription>
+            Marking, checks and transcription, by the question&apos;s marks.
+            Selected range.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <p className="text-muted-foreground text-sm">
-            Selected range. Average per tracked marked answer includes marking,
-            checks and transcription. Historical and batch calls without an
-            answer link remain unallocated: {usd(spend.unattributedWrittenUsd)}.
+        <CardContent>
+          <Table aria-label="Cost per marked answer" className={hairlineRows}>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Question marks</TableHead>
+                <TableHead className="text-right">Answers marked</TableHead>
+                <TableHead className="text-right">Tracked</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Average cost</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {spend.byMarkValue.map((bucket) => (
+                <TableRow key={bucket.label}>
+                  <TableCell>{bucket.label}</TableCell>
+                  <TableCell className="text-right">{bucket.answers}</TableCell>
+                  <TableCell className="text-right">
+                    {bucket.trackedAnswers}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {usd(bucket.usd)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {bucket.average === null ? "—" : avgUsd(bucket.average)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <p className="text-muted-foreground mt-3 text-[13px]">
+            Older and batch calls without a linked answer aren&apos;t counted
+            here: {usd(spend.unattributedWrittenUsd)}.
           </p>
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {spend.byMarkValue.map((bucket) => (
-              <StatCard
-                key={bucket.label}
-                title={bucket.label}
-                empty={bucket.average === null}
-                value={
-                  bucket.average === null
-                    ? "No tracked costs"
-                    : avgUsd(bucket.average)
-                }
-                description={`${bucket.answers} marked · ${bucket.trackedAnswers} tracked · ${usd(bucket.usd)} total`}
-              />
-            ))}
-          </div>
         </CardContent>
       </Card>
       <div className="grid min-w-0 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
@@ -154,7 +191,7 @@ export default async function SpendPage({
         ) : (
           <EmptyState
             title="No spend in this range"
-            description="Daily OpenRouter spend by model will appear after an AI call."
+            description={`Daily spend${empty.length ? ` and the ${empty.join(", ")} breakdowns` : ""} appear${empty.length ? "" : "s"} after an AI call.`}
           />
         )}
         <Card className="min-w-0">
@@ -214,14 +251,17 @@ export default async function SpendPage({
                 ))}
               </ul>
             ) : (
-              <EmptyState
-                title="None right now"
-                description="No student has made more than 150 AI calls in the last hour."
-              />
+              <p className="text-muted-foreground text-sm">No one right now</p>
             )}
           </CardContent>
         </Card>
       </div>
+      {total <= 0 || !empty.length ? null : (
+        <EmptyState
+          title={`No ${empty.join(", ")} spend yet`}
+          description="Breakdowns appear here after an AI call in this range. Students cover the last 30 days."
+        />
+      )}
       <ModelTable rows={spend.byModel} />
       <TaskTable groups={spend.byTask} />
       <StudentTable rows={spend.topStudents} />

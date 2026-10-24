@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { sortRows, type Sorting } from "@/lib/admin";
 import { nextSorting } from "@/app/admin/sort-state";
-import { DataTable, EmptyState } from "@/components/claro";
+import { DataTable } from "@/components/claro";
 import {
   Card,
   CardContent,
@@ -21,19 +21,14 @@ import {
 } from "@/components/ui/table";
 import type { computeSpend } from "./data";
 import { usd, avgUsd } from "./helpers";
+import { hairlineRows } from "@/lib/table-style";
 
 type Spend = ReturnType<typeof computeSpend>;
 const numberClass = "text-right tabular-nums";
 const labelClass = "w-full max-w-0 whitespace-normal wrap-anywhere";
 
 export function ModelTable({ rows }: { rows: Spend["byModel"] }) {
-  if (!rows.length)
-    return (
-      <EmptyState
-        title="No model spend yet"
-        description="OpenRouter model calls and token usage in this range will appear here."
-      />
-    );
+  if (!rows.length) return null;
   return (
     <Card className="@container min-w-0">
       <CardHeader>
@@ -44,6 +39,7 @@ export function ModelTable({ rows }: { rows: Spend["byModel"] }) {
       </CardHeader>
       <CardContent>
         <DataTable
+          tableClassName={hairlineRows}
           label="By model"
           rows={rows.map((r) => ({ ...r, id: r.model }))}
           columns={[
@@ -106,13 +102,7 @@ export function TaskTable({ groups }: { groups: Spend["byTask"] }) {
     },
   ] as const;
   const rows = groups.flatMap((g) => g.tasks);
-  if (!rows.length)
-    return (
-      <EmptyState
-        title="No task spend yet"
-        description="OpenRouter marking, admin and eval calls in this range will appear here."
-      />
-    );
+  if (!rows.length) return null;
   return (
     <Card className="min-w-0">
       <CardHeader>
@@ -122,7 +112,7 @@ export function TaskTable({ groups }: { groups: Spend["byTask"] }) {
         <CardDescription>OpenRouter only</CardDescription>
       </CardHeader>
       <CardContent>
-        <Table aria-label="By task">
+        <Table aria-label="By task" className={hairlineRows}>
           <TableHeader>
             <TableRow>
               {columns.map((column) => (
@@ -156,7 +146,7 @@ export function TaskTable({ groups }: { groups: Spend["byTask"] }) {
                 : g.tasks;
             return (
               <TableBody key={g.name}>
-                <TableRow className="bg-muted/50 font-medium">
+                <TableRow className="font-medium">
                   <TableHead scope="rowgroup" className={labelClass}>
                     <div>{g.name === "Marking" ? "Marking only" : g.name}</div>
                     <div className="text-muted-foreground text-xs font-normal tracking-normal normal-case sm:hidden">
@@ -204,13 +194,7 @@ export function TaskTable({ groups }: { groups: Spend["byTask"] }) {
   );
 }
 export function StudentTable({ rows }: { rows: Spend["topStudents"] }) {
-  if (!rows.length)
-    return (
-      <EmptyState
-        title="No student spend in the last 30 days"
-        description="The ten students with the highest spend will appear here."
-      />
-    );
+  if (!rows.length) return null;
   return (
     <Card className="min-w-0">
       <CardHeader>
@@ -220,6 +204,7 @@ export function StudentTable({ rows }: { rows: Spend["topStudents"] }) {
       </CardHeader>
       <CardContent>
         <DataTable
+          tableClassName={hairlineRows}
           label="Top students, 30 days"
           rows={rows}
           columns={[

@@ -11,6 +11,7 @@ import { createClient } from "@/utils/supabase/server";
 import { loadReview, adjacentReview } from "../data";
 import { ageLabel, reasons } from "../shared";
 import { ReviewNotice } from "../notice";
+import { ReviewHelp } from "../help";
 import { ReviewEditor } from "./review-editor";
 
 export default async function ReviewPage({
@@ -78,12 +79,15 @@ export default async function ReviewPage({
       <PageHeader
         eyebrow="Marking review"
         title={
-          <Link
-            className="underline"
-            href={`/admin/students/${review.user_id}`}
-          >
-            {name}
-          </Link>
+          <span className="inline-flex items-center gap-1.5">
+            <Link
+              className="underline"
+              href={`/admin/students/${review.user_id}`}
+            >
+              {name}
+            </Link>
+            <ReviewHelp />
+          </span>
         }
         description={`${session?.kind ?? "Session"} · ${session ? dateLabel(session.started_at) : ""} · ${row.source} · ${ageLabel(review.created_at)}`}
         actions={

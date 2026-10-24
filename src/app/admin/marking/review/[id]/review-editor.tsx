@@ -5,6 +5,7 @@ import {
   CollapsibleContent,
 } from "@/components/ui/collapsible";
 import { PortalIcon } from "@/components/icons";
+import { Kbd } from "@/components/claro";
 
 import Link from "next/link";
 import { useActionState, useEffect, useRef, useState } from "react";
@@ -248,7 +249,7 @@ export function ReviewEditor({
             className={buttonVariants({ variant: "outline", size: "sm" })}
             href={`/admin/marking/review/${prev}`}
           >
-            Prev (P)
+            Previous
           </Link>
         )}
         {next && (
@@ -256,7 +257,7 @@ export function ReviewEditor({
             className={buttonVariants({ variant: "outline", size: "sm" })}
             href={`/admin/marking/review/${next}`}
           >
-            Next (N)
+            Next
           </Link>
         )}
       </nav>
@@ -299,7 +300,7 @@ export function ReviewEditor({
               disabled={pending || !undoCount}
               onClick={() => undo()}
             >
-              Undo (⌘/Ctrl+Z)
+              Undo
             </Button>
           )}
         </div>
@@ -311,11 +312,12 @@ export function ReviewEditor({
                 <Button
                   type="button"
                   variant="outline"
-                  aria-label="Decrease mark (↓)"
+                  aria-label="Decrease mark"
+                  aria-keyshortcuts="ArrowDown"
                   disabled={mark <= 0}
                   onClick={() => adjust(mark - 1)}
                 >
-                  − (↓)
+                  −
                 </Button>
                 <Input
                   aria-label="Final mark"
@@ -332,11 +334,12 @@ export function ReviewEditor({
                 <Button
                   type="button"
                   variant="outline"
-                  aria-label="Increase mark (↑)"
+                  aria-label="Increase mark"
+                  aria-keyshortcuts="ArrowUp"
                   disabled={mark >= max}
                   onClick={() => adjust(mark + 1)}
                 >
-                  + (↑)
+                  +
                 </Button>
                 <span>/ {max}</span>
               </div>
@@ -357,7 +360,7 @@ export function ReviewEditor({
                     size="sm"
                     onClick={() => adjust(Number(review.ai_mark))}
                   >
-                    Use AI mark ({review.ai_mark}) · A
+                    Use AI mark ({review.ai_mark})
                   </Button>
                 )}
                 {review.check_mark != null && (
@@ -367,7 +370,7 @@ export function ReviewEditor({
                     size="sm"
                     onClick={() => adjust(Number(review.check_mark))}
                   >
-                    Use check mark ({review.check_mark}) · C
+                    Use check mark ({review.check_mark})
                   </Button>
                 )}
               </div>
@@ -484,10 +487,11 @@ export function ReviewEditor({
                 <Button
                   ref={resolve}
                   type="submit"
+                  aria-keyshortcuts="Control+Enter Meta+Enter"
                   className="px-2 text-xs whitespace-normal lg:px-4 lg:text-sm"
                   disabled={pending || guidelinesUnavailable}
                 >
-                  {pending ? "Resolving…" : "Resolve (⌘/Ctrl+Enter)"}
+                  {pending ? "Resolving…" : "Resolve"}
                 </Button>
                 <Button
                   type="submit"
@@ -521,10 +525,27 @@ export function ReviewEditor({
         </p>
       )}
       {!readonly && (
-        <p className="text-muted-foreground text-xs">
-          A / C use model marks · ↑ / ↓ adjust mark · P / N navigate ·
-          ⌘/Ctrl+Enter resolve · ⌘/Ctrl+Z undo comment change · Esc clears
-          selection
+        <p
+          aria-label="Keyboard shortcuts"
+          className="text-muted-foreground hidden items-center gap-x-4 overflow-hidden text-xs whitespace-nowrap lg:flex"
+        >
+          {(
+            [
+              [["A", "C"], "use the AI or check mark"],
+              [["↑", "↓"], "change the mark"],
+              [["P", "N"], "previous, next"],
+              [["⌘/Ctrl", "Enter"], "resolve"],
+              [["⌘/Ctrl", "Z"], "undo"],
+              [["Esc"], "clear selection"],
+            ] as const
+          ).map(([keys, label]) => (
+            <span key={label} className="inline-flex items-center gap-1">
+              {keys.map((key) => (
+                <Kbd key={key}>{key}</Kbd>
+              ))}
+              <span className="ml-0.5">{label}</span>
+            </span>
+          ))}
         </p>
       )}
     </form>

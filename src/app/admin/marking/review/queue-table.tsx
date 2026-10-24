@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DataTable, type Column } from "@/components/data-table";
 import { StatusPill } from "@/components/status-pill";
 import { Badge } from "@/components/ui/badge";
+import { hairlineRows } from "@/lib/table-style";
 import { Button } from "@/components/ui/button";
 import { markManually, retryMarking } from "./actions";
 import type { QueueRow } from "./data";
@@ -175,7 +176,12 @@ export function QueueTable({
       tabIndex={0}
     >
       <div className="min-w-[740px] [&_td]:px-2 [&_th]:w-px [&_th]:px-2 [&_th]:whitespace-normal [&_th:nth-child(4)]:w-auto [&_th:nth-child(9)]:w-1/5">
-        <DataTable columns={columns} rows={rows} label="Marking review queue" />
+        <DataTable
+          columns={columns}
+          rows={rows}
+          label="Marking review queue"
+          tableClassName={hairlineRows}
+        />
       </div>
     </div>
   );

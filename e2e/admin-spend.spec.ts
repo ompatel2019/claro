@@ -47,7 +47,7 @@ async function ready(page: Page, range: Range = "month") {
   await expect(
     page.getByRole("heading", { level: 1, name: "AI spend", exact: true }),
   ).toBeVisible({ timeout: 30000 });
-  await expect(page.locator('[data-slot="card"] > dl')).toHaveCount(9);
+  await expect(page.locator('[data-slot="card"] > dl')).toHaveCount(3);
   await expectWindow(page, range);
 }
 
@@ -83,9 +83,6 @@ test.describe("admin spend", () => {
     expect(values[0]).toMatch(/^\$\d+\.\d{2}$/);
     expect(values[1]).toMatch(/^\$\d+\.\d{2}$/);
     expect(values[2]).toMatch(/^\$\d+\.\d{2} of \$100$/);
-    expect(values[3]).toMatch(
-      /^(<\$0\.0001|\$0\.\d{4}|\$\d+\.\d{2}|No tracked costs)$/,
-    );
     for (const text of [
       "80% · Evals blocked",
       "90% · All AI stops",
@@ -104,15 +101,16 @@ test.describe("admin spend", () => {
     ).toBeVisible();
     if (await page.getByRole("img", { name: /^Spend per day/ }).count())
       await expect(page.getByRole("list", { name: "Models" })).toBeVisible();
-    for (const [table, empty] of [
-      ["By model", "No model spend yet"],
-      ["By task", "No task spend yet"],
-      ["Top students, 30 days", "No student spend in the last 30 days"],
-    ]) {
+    // Empty breakdowns share one empty card instead of a box each.
+    expect(
+      await page.locator('#main [data-slot="empty"]').count(),
+    ).toBeLessThanOrEqual(1);
+    for (const name of ["By model", "By task", "Top students, 30 days"]) {
+      const table = page.getByRole("table", { name, exact: true });
       await expect(
-        page
-          .getByRole("table", { name: table, exact: true })
-          .or(page.getByText(empty, { exact: true })),
+        (await table.count())
+          ? table
+          : page.locator('#main [data-slot="empty"]'),
       ).toBeVisible();
     }
     if (
@@ -143,7 +141,7 @@ test.describe("admin spend", () => {
     await expect(
       rates
         .getByRole("list", { name: "Students over 150 calls" })
-        .or(rates.getByText("None right now", { exact: true })),
+        .or(rates.getByText("No one right now", { exact: true })),
     ).toBeVisible();
     expect(await page.locator("#main").innerText()).not.toContain("@");
     await expect(

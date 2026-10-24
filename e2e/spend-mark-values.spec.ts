@@ -56,9 +56,10 @@ test.describe("spend by written mark value", () => {
       await signInAdmin(page);
       await page.goto("/admin/spend");
       const card = page
-        .getByRole("heading", { name: "Cost by written mark value" })
+        .getByRole("heading", { name: "Cost per marked answer" })
         .locator('xpath=ancestor::*[@data-slot="card"][1]');
-      await expect(card).toContainText("Historical and batch calls");
+      await expect(card).toContainText("without a linked answer");
+      const table = card.getByRole("table", { name: "Cost per marked answer" });
       for (const label of [
         "1–2 marks",
         "3 marks",
@@ -67,12 +68,10 @@ test.describe("spend by written mark value", () => {
         "7–8 marks",
         "9+ marks",
       ]) {
-        const band = card
-          .locator('[data-slot="card"]')
-          .filter({ hasText: label });
-        await expect(band).toContainText(/\d+ marked · [1-9]\d* tracked/);
-        await expect(band.locator("dd").first()).toHaveText(
-          /^(<\$0\.0001|\$\d+\.\d{2,4})$/,
+        const band = table.getByRole("row").filter({ hasText: label });
+        await expect(band.getByRole("cell").nth(2)).toHaveText(/^[1-9]\d*$/);
+        await expect(band.getByRole("cell").last()).toHaveText(
+          /^(<\$0\.001|\$\d+\.\d{3})$/,
         );
       }
       await expect(page.locator("main")).not.toContainText(/NaN|Infinity/);
@@ -85,8 +84,8 @@ test.describe("spend by written mark value", () => {
         "/admin/spend?range=custom&from=2020-01-01&to=2020-01-01",
       );
       await expect(
-        card.getByText("No tracked costs", { exact: true }),
+        card.getByRole("cell", { name: "—", exact: true }),
       ).toHaveCount(6);
-      await expect(card).toContainText("unallocated: $0.00");
+      await expect(card).toContainText("counted here: $0.00");
     });
 });

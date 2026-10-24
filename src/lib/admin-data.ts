@@ -11,6 +11,7 @@ import { sydneyDay } from "@/lib/admin";
 import {
   computeSpend,
   rangeWindow,
+  usageSince,
   type Range,
   type Usage,
   type Student,
@@ -355,13 +356,7 @@ export async function loadSpend(range: Range = "month", now = new Date()) {
   await requireAdmin();
   const db = await createClient();
   const window = rangeWindow(range, now);
-  const recent = rangeWindow("30", now).since!;
-  const since =
-    window.since === null
-      ? null
-      : window.since < recent
-        ? window.since
-        : recent;
+  const since = usageSince(range, now);
   const [dashboard, usage, attempts, students] = await Promise.all([
     loadDashboard(),
     pages<Usage>((from, to) => {
