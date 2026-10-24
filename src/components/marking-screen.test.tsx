@@ -96,3 +96,64 @@ it("shows the shared screen during Mark my answer submission and restores the dr
   expect(answer).toHaveValue("Demand rises faster than supply.");
   localStorage.clear();
 });
+
+it("shows a sprint's answer sheet with real marked counts and a way to leave", () => {
+  render(
+    <MarkingScreen
+      title="Mixed sprint"
+      sheet={{
+        marked: 3,
+        total: 5,
+        rows: [
+          {
+            key: "mcq",
+            label: "Multiple choice · Q1 to Q3",
+            detail: "3 questions",
+            marked: 2,
+            total: 3,
+          },
+          {
+            key: "a",
+            label: "Q4",
+            detail: "Written answer · 4 marks",
+            marked: 1,
+            total: 1,
+          },
+          {
+            key: "b",
+            label: "Q5",
+            detail: "Written answer · 6 marks",
+            marked: 0,
+            total: 1,
+          },
+        ],
+      }}
+    />,
+  );
+  const items = screen.getAllByRole("listitem");
+  expect(items.map((li) => li.textContent)).toEqual([
+    "Multiple choice · Q1 to Q32 of 3 marked3 questions",
+    "Q4MarkedWritten answer · 4 marks",
+    "Q5WaitingWritten answer · 6 marks",
+  ]);
+  const bar = screen.getByRole("progressbar", { name: "Answers marked" });
+  expect(bar).toHaveAttribute("aria-valuenow", "3");
+  expect(bar).toHaveAttribute("aria-valuemax", "5");
+  expect(screen.getByText("3 of 5 marked")).toBeInTheDocument();
+  expect(screen.getByText("In progress · 3 of 5")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Go to Activity" })).toHaveAttribute(
+    "href",
+    "/student/activity",
+  );
+  expect(screen.getByRole("link", { name: "Back to Home" })).toHaveAttribute(
+    "href",
+    "/student",
+  );
+  expect(screen.queryByRole("button", { name: /replay/i })).toBeNull();
+});
+
+it("keeps the generic screen when a sprint has no answers", () => {
+  render(<MarkingScreen sheet={{ rows: [], marked: 0, total: 0 }} />);
+  expect(screen.queryByRole("progressbar")).toBeNull();
+  expect(screen.queryByRole("list")).toBeNull();
+});
