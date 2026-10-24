@@ -18,7 +18,7 @@ insert into public.questions (id, type, topic_id, marks, stem, criteria, source,
   ('c2-self', 'short', 'c2-other', 1, 'Unique self duplicate', '[]', 'Self', 2026, 'draft', null, null),
   ('c2-threshold-live', 'short', 'c2-other', 4, 'Mitochondria cytoplasm ribosome nucleus membrane enzyme protein', '[]', 'Threshold live', 2026, 'live', null, null),
   ('c2-threshold', 'short', 'c2-other', 4, 'Mitochondria cytoplasm ribosome nucleus membrane enzyme peptide', '[]', 'Threshold draft', 2026, 'draft', null, null);
-update public.questions set origin = 'a1', verb = 'Explain', stimulus = 'A stimulus' where id = 'c2-best';
+update public.questions set origin = 'a1', stimulus = 'A stimulus' where id = 'c2-best';
 update public.questions set duplicate_of = 'c2-0-retired', explanation = '  ' where id = 'c2-mcq';
 update public.questions set duplicate_of = 'c2-0-retired', sample_answer = 'Sample', explanation = 'Explanation' where id = 'c2-complete';
 update public.questions set duplicate_of = id where id = 'c2-self';
@@ -118,8 +118,8 @@ begin
     ('{"from":"invalid","to":"99999"}', array['c2-best','c2-complete','c2-mcq']),
     ('{"origin":"a1"}', array['c2-best']),
     ('{"origin":"nesa"}', array['c2-complete','c2-mcq']),
-    ('{"verb":"Explain"}', array['c2-best']),
-    ('{"verb":"Describe"}', array[]::text[]),
+    -- questions.verb is dropped: a stale client's verb filter is ignored.
+    ('{"verb":"Describe"}', array['c2-best','c2-complete','c2-mcq']),
     ('{"marks":"4"}', array['c2-best']),
     ('{"marks":"99"}', array[]::text[]),
     ('{"marks":"100"}', array['c2-best','c2-complete','c2-mcq']),

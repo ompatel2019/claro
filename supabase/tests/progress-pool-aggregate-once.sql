@@ -19,7 +19,7 @@ with bounds as (
     coalesce(q.topic_id, s.config -> 'question' ->> 'topic_id') as topic_id,
     coalesce(q.type, case when s.kind = 'single' then
       case when (s.config -> 'question' ->> 'marks')::int > 8 then 'extended' else 'short' end end) as type,
-    coalesce(q.verb, nullif(s.config -> 'question' ->> 'verb', '')) as verb,
+    nullif(s.config -> 'question' ->> 'verb', '') as verb,
     a.mark, a.max_marks,
     a.marked_at,
     (a.feedback ->> 'note' is distinct from 'No answer' and
@@ -146,8 +146,6 @@ as $$
     'subtopics', (select coalesce(jsonb_object_agg(topic_id, n), '{}') from (select topic_id, count(*) n
       from public.sprint_questions(p_config - 'subtopics') group by 1) x),
     'all_subtopics', (select count(*) from public.sprint_questions(p_config - 'subtopics')),
-    'verbs', (select coalesce(jsonb_object_agg(verb, n), '{}') from (select verb, count(*) n
-      from public.sprint_questions(p_config - 'verbs') where verb is not null group by 1) x),
     'difficulty', (select coalesce(jsonb_object_agg(d, n), '{}') from (select
       case when marks <= 3 then 'foundation' when marks <= 5 then 'standard' else 'challenging' end d, count(*) n
       from public.sprint_questions(p_config - 'difficulty') where type <> 'mcq' group by 1) x),
@@ -179,10 +177,10 @@ insert into public.topics (id, parent_id, name, sort) values
   ('e10-b', 'e10', 'Synthetic E10 B', 99),
   ('e11', null, 'Synthetic second topic', 99),
   ('e11-a', 'e11', 'Synthetic second child', 99);
-insert into public.questions (id, type, topic_id, marks, stem, source, year, origin, verb, status,
+insert into public.questions (id, type, topic_id, marks, stem, source, year, origin, status,
   options, correct_index, criteria)
 select 'e10-' || id, type, topic, marks, 'Synthetic E10 ' || id, 'Synthetic E10 Q' || n,
-  2020 + n % 7, origin, verb, status,
+  2020 + n % 7, origin, status,
   case when type = 'mcq' then array['A','B','C','D'] end,
   case when type = 'mcq' then 0 end, case when type <> 'mcq' then '[]'::jsonb end
 from (values
