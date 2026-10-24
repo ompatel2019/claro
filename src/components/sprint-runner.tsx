@@ -16,6 +16,7 @@ import { createSprintMarkQueue } from "@/lib/sprint-mark-queue";
 import { cn } from "@/lib/utils";
 import { Badge } from "./ui/badge";
 import { Kbd } from "./claro/layout";
+import { useModKey, type ModKey } from "@/lib/platform";
 import { Button } from "./ui/button";
 import {
   Dialog,
@@ -79,6 +80,7 @@ export function SprintRunner({
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [bookletOpen, setBookletOpen] = useState(false);
+  const modKey = useModKey();
   const [answerModes, setAnswerModes] = useState<
     Record<string, "type" | "photo">
   >({});
@@ -473,14 +475,22 @@ export function SprintRunner({
   useEffect(() => {
     checkRef.current = check;
   });
+  const nextRef = useRef(() => {});
   useEffect(() => {
-    if (!checkMode) return;
-    // ⌘Enter checks the current answer, even from the answer box.
+    nextRef.current = () => {
+      if (busy || confirm || bookletOpen) return;
+      if (index < attempts.length - 1) void act(() => change(index + 1));
+      else setConfirm(true);
+    };
+  });
+  useEffect(() => {
+    // ⌘Enter / Ctrl+Enter, even from the answer box: checks the answer in
+    // check mode, otherwise moves on (or asks to finish on the last question).
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-        e.preventDefault();
-        void checkRef.current();
-      }
+      if (!(e.metaKey || e.ctrlKey) || e.key !== "Enter" || e.repeat) return;
+      e.preventDefault();
+      if (checkMode) void checkRef.current();
+      else nextRef.current();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -830,6 +840,7 @@ export function SprintRunner({
               explanation={explanations[a.id]}
               checking={false}
               canCheck={false}
+              modKey={modKey}
               onCheck={() => void check()}
             />
           )}
@@ -845,6 +856,7 @@ export function SprintRunner({
                 checking={checking === a.id}
                 highlight={needsCheck}
                 canCheck={editable && answered(a) && !busy && !checking}
+                modKey={modKey}
                 onCheck={() => void check()}
               />
             )}
@@ -856,8 +868,8 @@ export function SprintRunner({
                 </>
               ) : (
                 <>
-                  <Kbd>Ctrl</Kbd>
-                  <Kbd>↵</Kbd> next question
+                  <Kbd>{modKey}</Kbd>
+                  <Kbd>↵</Kbd> {checkMode ? "check answer" : "next question"}
                 </>
               )}
             </p>
@@ -982,6 +994,7 @@ function CheckResult({
   checking,
   canCheck,
   highlight = false,
+  modKey,
   onCheck,
 }: {
   attempt: Attempt;
@@ -989,6 +1002,7 @@ function CheckResult({
   checking: boolean;
   canCheck: boolean;
   highlight?: boolean;
+  modKey: ModKey;
   onCheck: () => void;
 }) {
   if (a.status === "marked") {
@@ -1044,7 +1058,7 @@ function CheckResult({
       >
         Check answer
       </Button>
-      <span className="text-muted-foreground text-xs">⌘Enter</span>
+      <span className="text-muted-foreground text-xs">{modKey} Enter</span>
     </div>
   );
 }

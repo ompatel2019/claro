@@ -57,6 +57,24 @@ export function Calculator({ onClose }: { onClose: () => void }) {
       Object.assign(el.style, { left: `${saved.x}px`, top: `${saved.y}px` });
     el.focus();
   }, []);
+  const close = useRef(onClose);
+  useEffect(() => {
+    close.current = onClose;
+  });
+  useEffect(() => {
+    // Esc closes from anywhere, unless an open dialog (booklet, shortcuts) owns it.
+    const onKey = (e: KeyboardEvent) => {
+      if (
+        e.key !== "Escape" ||
+        e.defaultPrevented ||
+        document.querySelector('[data-slot="dialog-content"]')
+      )
+        return;
+      close.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   function press(key: string) {
     if (key === "C") return setExpr("");
@@ -85,7 +103,6 @@ export function Calculator({ onClose }: { onClose: () => void }) {
       tabIndex={-1}
       className="bg-card fixed top-20 right-6 z-50 w-[260px] rounded-xl border p-3 shadow-lg outline-none"
       onKeyDown={(e) => {
-        if (e.key === "Escape") return onClose();
         const key = KEY_MAP[e.key] ?? e.key;
         if (
           KEYS.includes(key) &&
@@ -100,6 +117,8 @@ export function Calculator({ onClose }: { onClose: () => void }) {
       <div
         className="mb-2 flex cursor-move items-center justify-between text-sm font-semibold select-none"
         onPointerDown={(e) => {
+          // Capturing a press on the close button would retarget its click to this bar.
+          if ((e.target as Element).closest("button")) return;
           const r = panel.current!.getBoundingClientRect();
           drag.current = { x: e.clientX - r.left, y: e.clientY - r.top };
           e.currentTarget.setPointerCapture(e.pointerId);
@@ -115,6 +134,7 @@ export function Calculator({ onClose }: { onClose: () => void }) {
           });
         }}
         onPointerUp={() => {
+          if (!drag.current) return;
           drag.current = null;
           const r = panel.current!.getBoundingClientRect();
           localStorage.setItem(SPOT, JSON.stringify({ x: r.left, y: r.top }));
