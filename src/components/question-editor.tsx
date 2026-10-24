@@ -24,7 +24,6 @@ import {
   questionSchema,
   TYPE_LABELS,
   validateCriteria,
-  VERBS,
   type Criterion,
   type QuestionInput,
 } from "@/lib/question-bank";
@@ -77,13 +76,8 @@ export function QuestionEditor({
   topics: Topic[];
 }) {
   const router = useRouter();
-  // Stored rows may predate the rules (long stems, unknown verbs): edit them as they are.
-  const [form, setForm] = useState<QuestionInput>({
-    ...loaded.question,
-    verb: VERBS.includes(loaded.question.verb as (typeof VERBS)[number])
-      ? loaded.question.verb
-      : null,
-  });
+  // Stored rows may predate the rules (long stems): edit them as they are.
+  const [form, setForm] = useState<QuestionInput>(loaded.question);
   const [mcExplanation, setMcExplanation] = useState<McqExplanation | null>(
     readMcqExplanation(loaded.question.explanation, true),
   );
@@ -423,19 +417,6 @@ export function QuestionEditor({
                 value={form.marks}
                 disabled={mc || locked}
                 onChange={(e) => set("marks", Number(e.target.value))}
-              />
-            </Field>
-            <Field label="Directive verb" error={errors.verb}>
-              <FormSelect
-                value={form.verb ?? ""}
-                disabled={pending || uploading}
-                onValueChange={(value) =>
-                  set("verb", (value || null) as QuestionInput["verb"])
-                }
-                options={[
-                  { value: "", label: "None" },
-                  ...VERBS.map((value) => ({ value, label: value })),
-                ]}
               />
             </Field>
             <Field

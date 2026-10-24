@@ -52,7 +52,7 @@ it("builds existing report and setup routes including single-answer sessions", (
   );
 });
 
-it("verb practise links override a saved MC setup using main's understood parameters", () => {
+it("legacy verb links still prefill type but no longer filter by directive verb", () => {
   const url = new URL(
     "/student/sprint?type=short&verb=Analyse",
     "https://claro.test",
@@ -62,7 +62,7 @@ it("verb practise links override a saved MC setup using main's understood parame
     restore({ mode: "mcq" }),
   );
   expect(setup?.mode).toBe("short");
-  expect(setup?.verbs).toEqual(["Analyse"]);
+  expect(setup).not.toHaveProperty("verbs");
 });
 
 it("orders scored topics weakest first without mutating data or prioritising unstarted topics", () => {

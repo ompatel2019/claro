@@ -22,7 +22,9 @@ test.describe("Sprint session", () => {
     options: string[],
   ) {
     await page.goto("/student/sprint?type=mcq&sub=t3-inflation&size=5");
-    await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
+    await expect(
+      page.getByTestId("sprint-summary-bar").getByText("Matching"),
+    ).toBeVisible();
     await reviewSprintSetup(page);
     for (const name of options) await page.getByRole("radio", { name }).click();
     await page.getByRole("button", { name: /^Start (sprint|with)/ }).click();

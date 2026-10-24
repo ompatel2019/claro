@@ -60,7 +60,9 @@ test("signing out on one device keeps the student's other sessions", async ({
     // The other device still works, including client-side RPCs.
     await kept.goto("/student/sprint");
     await expect(kept).toHaveURL(/\/student\/sprint$/);
-    await expect(kept.getByText(/^\d+ questions match/)).toBeVisible();
+    await expect(
+      kept.getByTestId("sprint-summary-bar").getByText("Matching"),
+    ).toBeVisible();
     await expect(
       kept.getByText("Couldn't count matching questions."),
     ).toHaveCount(0);

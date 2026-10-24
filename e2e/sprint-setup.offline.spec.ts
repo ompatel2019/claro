@@ -34,7 +34,7 @@ test.beforeAll(async () => {
                   ? `import React from 'react'; export default function Link({href,prefetch,...props}){return <a href={href} {...props}/>}`
                   : path.endsWith("actions")
                     ? "export async function startSprint(){return {error:'Synthetic start disabled'}}"
-                    : `export const createClient=()=>({rpc:async()=>({data:{questions:100,marks:200,mcq_questions:50,short_marks:150,short_questions:50,short_mark_values:{2:10,3:10,4:10,5:10,6:10},any:100,new:80,mistakes:0,flagged:0,topics:{},subtopics:Object.fromEntries(Array.from({length:4},(_,i)=>Array.from({length:3},(_,j)=>['t'+(i+1)+'-'+j,10])).flat()),all_subtopics:100,verbs:{},difficulty:{},trial:false},error:null})});`,
+                    : `export const createClient=()=>({rpc:async()=>({data:{questions:100,marks:200,mcq_questions:50,short_marks:150,short_questions:50,short_mark_values:{2:10,3:10,4:10,5:10,6:10},any:100,new:80,mistakes:0,flagged:0,topics:{},subtopics:Object.fromEntries(Array.from({length:4},(_,i)=>Array.from({length:3},(_,j)=>['t'+(i+1)+'-'+j,10])).flat()),all_subtopics:100},error:null})});`,
               loader: "tsx",
               resolveDir: process.cwd(),
             }),
@@ -83,7 +83,10 @@ for (const [width, height] of [
     };
     await page.goto("http://localhost:3202/student/sprint");
     await page.evaluate(() => document.fonts.ready);
-    await expect(page.getByText("100 questions match")).toBeVisible();
+    const summary = page.getByTestId("sprint-summary-bar");
+    await expect(summary).toContainText("Matching");
+    await expect(summary.locator("dd").nth(2)).toHaveText("100");
+    await expect(page.getByText("Your sprint")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "All topics" }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -184,7 +187,9 @@ for (const [width, height] of [
     await shorts.press("Enter");
     await expect(mc).toHaveValue("12");
     await expect(shorts).toHaveValue("7");
-    await expect(page.getByText("Total: 47 marks.")).toBeVisible();
+    await expect(page.getByTestId("sprint-summary-bar")).toContainText(
+      "Questions19",
+    );
     await capture("setup-mixed");
     const check = page.getByRole("radio", {
       name: "Check as I go",

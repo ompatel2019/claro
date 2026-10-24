@@ -30,7 +30,7 @@ test.describe("Topic Sprint setup", () => {
       const card = page.locator('[data-slot="card"]').filter({
         has: page.getByRole("region", { name: "Question type", exact: true }),
       });
-      await expect(bar.getByText(/^\d+ questions match/)).toBeVisible();
+      await expect(bar.getByText("Matching")).toBeVisible();
       await expect(bar.getByRole("alert")).toContainText(
         /Only \d+ marks match/,
       );
@@ -49,7 +49,7 @@ test.describe("Topic Sprint setup", () => {
     await page.goto("/student/sprint?type=mcq&sub=t4-fiscal&size=5");
     const start = page.getByRole("button", { name: /^Start (sprint|with)/ });
     const bar = page.locator("form").filter({ has: start });
-    await expect(bar.getByText(/^\d+ questions match/)).toBeVisible();
+    await expect(bar.getByText("Matching")).toBeVisible();
     await expect(
       page.locator('button.fixed[aria-label="Feedback"]'),
     ).toBeHidden();
@@ -103,7 +103,6 @@ test.describe("Topic Sprint setup", () => {
     await expect(topic).toBeInViewport({ ratio: 1 });
     await expectNoOverlap(bar, topic);
     await reviewSprintSetup(page);
-    await page.getByRole("button", { name: "Advanced" }).click();
     await page.evaluate(() =>
       window.scrollTo(0, document.documentElement.scrollHeight),
     );
@@ -121,10 +120,8 @@ test.describe("Topic Sprint setup", () => {
     page,
   }) => {
     await page.goto("/student/sprint");
-    const bar = page.locator("form").filter({ hasText: "questions match" });
-    await expect(
-      bar.getByText(/^\d+ questions match · \d+ new$/),
-    ).toBeVisible();
+    const bar = page.getByTestId("sprint-summary-bar");
+    await expect(bar.getByText("Matching")).toBeVisible();
     await page
       .getByRole("button", { name: "Short answer", exact: true })
       .click();
@@ -152,7 +149,6 @@ test.describe("Topic Sprint setup", () => {
       page.getByRole("button", { name: /^Economic Policies/ }),
     ).toHaveAttribute("aria-pressed", "false");
     await reviewSprintSetup(page);
-    await page.getByRole("button", { name: "Advanced" }).click();
     await page.getByText("Adjust exam pace", { exact: true }).click();
     await page.getByLabel("Shorts: minutes per mark").fill("2.25");
     await expect(page.getByText("≈ 68 min")).toBeVisible();
@@ -167,37 +163,6 @@ test.describe("Topic Sprint setup", () => {
     );
   });
 
-  test("Source chips are HSC papers and Practice, and their counts add up", async ({
-    page,
-  }) => {
-    await page.goto("/student/sprint?type=mcq");
-    const match = page.getByText(/^\d+ questions match/).first();
-    const count = async () =>
-      Number((await match.textContent())!.match(/^(\d+)/)![1]);
-    await expect(match).toBeVisible();
-    await reviewSprintSetup(page);
-    await page.getByRole("button", { name: "Advanced" }).click();
-    const source = page.getByRole("group", { name: "Source" });
-    await expect(
-      source.getByRole("button", { name: "HSC papers" }),
-    ).toBeVisible();
-    await expect(
-      source.getByRole("button", { name: "Practice" }),
-    ).toBeVisible();
-    await expect(page.getByText("Trial papers")).toHaveCount(0);
-    const both = await count();
-    await source.getByRole("button", { name: "Practice" }).click();
-    await expect.poll(count).toBeLessThan(both);
-    const hsc = await count();
-    await source.getByRole("button", { name: "Practice" }).click();
-    await source.getByRole("button", { name: "HSC papers" }).click();
-    // Practice only: the pool moves away from the HSC-only count before it is read.
-    await expect.poll(count).not.toBe(hsc);
-    const practice = await count();
-    expect(hsc + practice).toBe(both);
-    await page.getByRole("button", { name: "Reset" }).click();
-  });
-
   test("a prefilled link starts a sized, timed sprint in exam order", async ({
     page,
   }) => {
@@ -207,7 +172,9 @@ test.describe("Topic Sprint setup", () => {
     await expect(
       page.getByRole("spinbutton", { name: "Questions" }),
     ).toHaveValue("5");
-    await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
+    await expect(
+      page.getByTestId("sprint-summary-bar").getByText("Matching"),
+    ).toBeVisible();
     await reviewSprintSetup(page);
     await page.keyboard.press("Control+Enter");
     await expect(page).toHaveURL(/\/student\/sprint\/[^/]+$/);
@@ -238,7 +205,6 @@ test.describe("Topic Sprint setup", () => {
       .click();
     await expect(page.getByText("No questions match")).toHaveCount(0);
     await reviewSprintSetup(page);
-    await page.getByRole("button", { name: "Advanced" }).click();
     await expect(page.getByRole("radio", { name: /^Any/ })).toBeChecked();
   });
 

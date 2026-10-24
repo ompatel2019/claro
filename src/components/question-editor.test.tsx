@@ -35,7 +35,6 @@ const loaded = {
     type: "short",
     topic_id: "child",
     marks: 4,
-    verb: null,
     source: "Synthetic import",
     year: 2026,
     stem: "Imported question",

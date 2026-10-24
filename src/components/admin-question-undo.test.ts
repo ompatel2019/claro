@@ -17,7 +17,6 @@ it("defers undo to the caller's transition and refreshes after it succeeds", asy
       expected: "2026-10-20T00:00:00Z",
       status: "draft" as const,
       topic_id: "topic-1",
-      verb: null,
       duplicate_of: null,
     },
   ];

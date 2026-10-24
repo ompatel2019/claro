@@ -31,7 +31,6 @@ const question = {
   type: "short",
   topic_id: "t3-inflation",
   marks: 4,
-  verb: "Explain",
   source: "2024 HSC Q21(b)",
   year: 2024,
   stem: "Explain one cause of inflation.",
@@ -113,7 +112,6 @@ it("invalidates after guarded undo", async () => {
       expected: question.updated_at,
       status: "draft",
       topic_id: question.topic_id,
-      verb: question.verb,
       duplicate_of: null,
     },
   ]);
@@ -128,7 +126,6 @@ it.each<BulkAction>([
   { kind: "retire" },
   { kind: "delete" },
   { kind: "topic", topic_id: "t3-inflation" },
-  { kind: "verb", verb: "Explain" },
 ])("invalidates bulk $kind writes", async (action) => {
   const results: unknown[] =
     action.kind === "topic" ? [{ id: question.topic_id }] : [];

@@ -173,7 +173,7 @@ test.describe("Admin questions", () => {
       await expect(page).toHaveURL(/sort=source&dir=asc/);
     }).toPass();
     await expect(table.getByRole("row").nth(1)).toContainText(`${tag} Q1(c)`);
-    // Bulk bar appears with a selection; Set verb applies to the rows.
+    // Bulk bar appears with a selection.
     await expect(async () => {
       const select = table.getByRole("checkbox", {
         name: "Select all rows on this page",
@@ -182,25 +182,6 @@ test.describe("Admin questions", () => {
       await select.check();
       await expect(page.getByText("2 selected")).toBeVisible();
     }).toPass();
-    await page.getByRole("button", { name: "Set verb" }).click();
-    await expect(async () => {
-      await page
-        .getByRole("dialog")
-        .getByRole("combobox", { name: "Verb", exact: true })
-        .click();
-      await page.getByRole("option", { name: "Explain", exact: true }).click();
-      await expect(
-        page
-          .getByRole("dialog")
-          .getByRole("combobox", { name: "Verb", exact: true }),
-      ).toContainText("Explain");
-    }).toPass();
-    await page
-      .getByRole("dialog")
-      .getByRole("button", { name: "Set verb" })
-      .click();
-    await expect(page.getByText("2 updated")).toBeVisible();
-    await expect(table.getByRole("row").nth(1)).toContainText("Explain");
     // Import review shows the pair side by side; merging retires the draft.
     await page.goto(`/admin/content/questions?status=review&q=${tag}`);
     const card = page.getByLabel(`Review ${twin}`, { exact: true });

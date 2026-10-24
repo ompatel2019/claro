@@ -146,7 +146,9 @@ export async function start(
   checkEach = false,
 ) {
   await page.goto(`/student/sprint?type=${TYPES[mode]}&sub=t3-inflation`);
-  await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
+  await expect(
+    page.getByTestId("sprint-summary-bar").getByText("Matching"),
+  ).toBeVisible();
   if (checkEach) {
     const each = page.getByRole("radio", {
       name: "Check as I go",

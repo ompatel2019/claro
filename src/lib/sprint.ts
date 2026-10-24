@@ -3,7 +3,6 @@ import { modes, type Mode } from "./practice";
 /** §3.2 Topic Sprint setup: the config sent to sprint_pool / start_sprint. */
 export type History =
   "prefer_new" | "new_only" | "mistakes" | "flagged" | "any";
-export type Difficulty = "foundation" | "standard" | "challenging";
 export type SetupConfig = {
   mode: Mode;
   topics: string[];
@@ -13,9 +12,6 @@ export type SetupConfig = {
   mcq_count: number;
   short_count: number;
   marks_per_short: number | null;
-  difficulty: Difficulty[];
-  verbs: string[];
-  origins: ("nesa" | "a1")[];
   history: History;
   order: "exam";
   timed: boolean;
@@ -41,9 +37,6 @@ export type Pool = {
   topics: Record<string, number>;
   subtopics: Record<string, number>;
   all_subtopics: number;
-  verbs: Record<string, number>;
-  difficulty: Partial<Record<Difficulty, number>>;
-  trial: boolean;
 };
 
 type Size = { min: number; max: number };
@@ -71,9 +64,6 @@ export const DEFAULTS: SetupConfig = {
   mcq_count: 10,
   short_count: 5,
   marks_per_short: null,
-  difficulty: [],
-  verbs: [],
-  origins: [],
   history: "prefer_new",
   order: "exam",
   timed: true,
@@ -92,7 +82,7 @@ const sizeFor = (sizes: Record<string, number>, key: string) =>
     ? Math.min(SIZES[key].max, Math.max(SIZES[key].min, sizes[key]))
     : DEFAULT_SIZE[key];
 
-/** Switching type restores that type's last size (else its default); MC drops written-only filters. */
+/** Switching type restores that type's last size (else its default); MC drops marks per short. */
 export function withMode(c: SetupConfig, mode: Mode): SetupConfig {
   const size_by = mode === "short" ? "marks" : "questions";
   const written = mode === "short" || mode === "mixed";
@@ -105,8 +95,6 @@ export function withMode(c: SetupConfig, mode: Mode): SetupConfig {
     sizes,
     ...mixedSize(sizeFor(sizes, `${mode}:${size_by}`)),
     marks_per_short: written ? c.marks_per_short : null,
-    difficulty: written ? c.difficulty : [],
-    verbs: written ? c.verbs : [],
   };
 }
 export function withSizeBy(c: SetupConfig, size_by: SetupConfig["size_by"]) {
@@ -178,11 +166,6 @@ export function estimateMinutes(c: SetupConfig): number | null {
   return Math.round(base);
 }
 
-/** Count of "More filters" in use, for the collapsed header. */
-export const filtersOn = (c: SetupConfig) =>
-  [c.difficulty.length, c.verbs.length, c.origins.length].filter(Boolean)
-    .length;
-
 const HISTORY: History[] = [
   "prefer_new",
   "new_only",
@@ -193,12 +176,12 @@ const HISTORY: History[] = [
 const list = (v: string | null) =>
   v ? [...new Set(v.split(",").filter(Boolean))] : [];
 
-/** URL prefill (type, topics, sub, history, verb, size) wins over the saved setup. */
+/** URL prefill (type, topics, sub, history, size) wins over the saved setup. */
 export function fromParams(
   p: Record<string, string | undefined>,
   base: SetupConfig,
 ): SetupConfig | null {
-  if (!["type", "topics", "sub", "history", "verb", "size"].some((k) => p[k]))
+  if (!["type", "topics", "sub", "history", "size"].some((k) => p[k]))
     return null;
   let c = { ...base };
   if (p.type && Object.hasOwn(modes, p.type)) c = withMode(c, p.type as Mode);
@@ -216,7 +199,6 @@ export function fromParams(
     };
   }
   if (HISTORY.includes(p.history as History)) c.history = p.history as History;
-  if (p.verb && c.mode !== "mcq") c.verbs = list(p.verb);
   if (p.size && Number.isFinite(Number(p.size)))
     c = withTarget(c, Number(p.size));
   return c;
@@ -253,11 +235,6 @@ export function restore(saved: unknown): SetupConfig {
   ) as SetupConfig;
   values.topics = values.topics.slice(0, 2);
   values.subtopics = values.subtopics.slice(0, 40);
-  values.verbs = values.verbs.slice(0, 20);
-  values.difficulty = values.difficulty.filter((d) =>
-    ["foundation", "standard", "challenging"].includes(d),
-  );
-  values.origins = values.origins.filter((o) => ["nesa", "a1"].includes(o));
   values.history = HISTORY.includes(values.history)
     ? values.history
     : DEFAULTS.history;

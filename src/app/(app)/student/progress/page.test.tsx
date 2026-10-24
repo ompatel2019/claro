@@ -51,7 +51,6 @@ const empty: ProgressData = {
     },
   ],
   types: [],
-  verbs: [],
   history: [],
   mastery: [],
   missed: [],

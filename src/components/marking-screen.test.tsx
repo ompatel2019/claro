@@ -64,7 +64,6 @@ it("shows the shared screen during Mark my answer submission and restores the dr
           topic_id: "t",
           stimulus: null,
           options: null,
-          verb: "explain",
         },
       ]}
       topics={[]}
