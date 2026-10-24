@@ -225,8 +225,11 @@ export function SprintSetup({
               hint="Choose up to two topics, or practise the whole course."
             >
               <div className="bg-card overflow-hidden rounded-2xl border">
-                <div className="text-muted-foreground hidden justify-end border-b px-4 py-2 text-xs sm:flex">
-                  Your average
+                <div
+                  className="text-muted-foreground hidden justify-end border-b px-4 py-2 text-xs sm:flex"
+                  title="Marks you've scored out of marks available on this topic's marked questions, all time"
+                >
+                  Marks scored, all time
                 </div>
                 <ul className="divide-y" aria-label="Topics">
                   {[{ id: "all", name: "All topics" }, ...parents].map((t) => {
@@ -1029,7 +1032,10 @@ export function SprintSetup({
   );
 }
 
-/** A topic's real practice average, or "Not practised". */
+/**
+ * Share of available marks scored on a topic's marked questions, all time
+ * (student_progress pct: 100 x sum(mark) / sum(max_marks)), or "Not practised".
+ */
 export function TopicAverage({ pct }: { pct: number | null | undefined }) {
   if (pct == null)
     return (
@@ -1050,7 +1056,7 @@ export function TopicAverage({ pct }: { pct: number | null | undefined }) {
         />
       </span>
       <span className="w-9 text-right font-semibold">{value}%</span>
-      <span className="sr-only">average</span>
+      <span className="sr-only">of marks scored, all time</span>
     </span>
   );
 }

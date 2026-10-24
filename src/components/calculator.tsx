@@ -40,6 +40,35 @@ const KEY_MAP: Record<string, string> = {
 };
 const SPOT = "claro-calculator-position";
 
+/**
+ * Keeps a saved or dragged spot fully on screen. A spot saved on a wider
+ * window (or dragged past the edge) would otherwise open the panel off-screen,
+ * so the toolbar button looked like it did nothing. Returns null for junk.
+ */
+export function clampSpot(
+  spot: unknown,
+  size: { width: number; height: number },
+  view: { width: number; height: number },
+): { x: number; y: number } | null {
+  if (!spot || typeof spot !== "object") return null;
+  const { x, y } = spot as { x?: unknown; y?: unknown };
+  if (!Number.isFinite(x) || !Number.isFinite(y)) return null;
+  const fit = (v: number, room: number) =>
+    Math.min(Math.max(0, v), Math.max(0, room));
+  return {
+    x: fit(x as number, view.width - size.width),
+    y: fit(y as number, view.height - size.height),
+  };
+}
+
+function readSpot(): unknown {
+  try {
+    return JSON.parse(localStorage.getItem(SPOT) ?? "null");
+  } catch {
+    return null;
+  }
+}
+
 /** §2.2: floating, draggable calculator with a safe parser. Esc closes. */
 export function Calculator({ onClose }: { onClose: () => void }) {
   const [expr, setExpr] = useState("");
@@ -52,9 +81,16 @@ export function Calculator({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     const el = panel.current!;
-    const saved = JSON.parse(localStorage.getItem(SPOT) ?? "null");
-    if (saved)
-      Object.assign(el.style, { left: `${saved.x}px`, top: `${saved.y}px` });
+    const spot = clampSpot(readSpot(), el.getBoundingClientRect(), {
+      width: window.innerWidth,
+      height: window.innerHeight,
+    });
+    if (spot)
+      Object.assign(el.style, {
+        left: `${spot.x}px`,
+        top: `${spot.y}px`,
+        right: "auto",
+      });
     el.focus();
   }, []);
   const close = useRef(onClose);
@@ -126,11 +162,15 @@ export function Calculator({ onClose }: { onClose: () => void }) {
         }}
         onPointerMove={(e) => {
           if (!drag.current) return;
-          const x = Math.max(0, e.clientX - drag.current.x);
-          const y = Math.max(0, e.clientY - drag.current.y);
-          Object.assign(panel.current!.style, {
-            left: `${x}px`,
-            top: `${y}px`,
+          const el = panel.current!;
+          const spot = clampSpot(
+            { x: e.clientX - drag.current.x, y: e.clientY - drag.current.y },
+            el.getBoundingClientRect(),
+            { width: window.innerWidth, height: window.innerHeight },
+          )!;
+          Object.assign(el.style, {
+            left: `${spot.x}px`,
+            top: `${spot.y}px`,
             right: "auto",
           });
         }}

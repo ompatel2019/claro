@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { MarkingScreen } from "./marking-screen";
-import { markedNow, markingSheet } from "@/lib/marking-sheet";
+import { markedNow, markingSheet, withServerStatus } from "@/lib/marking-sheet";
 import { McqExplanationView } from "./mcq-explanation";
 import type { McqExplanation } from "@/lib/mcq-explanation";
 import { QuestionView } from "./question-view";
@@ -128,6 +128,41 @@ export function SprintRunner({
       () => setMarkTick((t) => t + 1),
     ),
   );
+  // While the marking screen is up, read this sprint's statuses from the server
+  // (own rows, RLS): early marks and Finish both mark there, not in this tab.
+  const [serverStatus, setServerStatus] = useState<Map<string, string>>(
+    () => new Map(),
+  );
+  useEffect(() => {
+    if (!finishing) return;
+    let live = true;
+    const poll = async () => {
+      try {
+        const { data } = await db
+          .from("attempts")
+          .select("id,status")
+          .eq("session_id", session.id)
+          .eq("user_id", userId);
+        if (live && data)
+          setServerStatus(
+            new Map(
+              (data as { id: string; status: string }[]).map((r) => [
+                r.id,
+                r.status,
+              ]),
+            ),
+          );
+      } catch {}
+    };
+    void poll();
+    const timer = setInterval(() => void poll(), 2000);
+    return () => {
+      live = false;
+      clearInterval(timer);
+      // A failed Finish reopens the sprint; its edits must not inherit old marks.
+      setServerStatus(new Map());
+    };
+  }, [finishing, db, session.id, userId]);
   const answerVersion = (a: Attempt) =>
     JSON.stringify([a.answer_text, a.transcript, a.image_paths]);
   const backgroundAnswer = (a: Attempt) =>
@@ -589,7 +624,10 @@ export function SprintRunner({
     return (
       <MarkingScreen
         sheet={markingSheet(
-          markedNow(attempts, background.marked(), answerVersion),
+          withServerStatus(
+            markedNow(attempts, background.marked(), answerVersion),
+            serverStatus,
+          ),
         )}
         title={title}
       />

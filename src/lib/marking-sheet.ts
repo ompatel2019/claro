@@ -7,6 +7,8 @@ export type SheetRow = {
   detail: string;
   marked: number;
   total: number;
+  /** A written answer the server has claimed and is marking now. */
+  marking?: boolean;
 };
 export type MarkingSheet = { rows: SheetRow[]; marked: number; total: number };
 
@@ -47,6 +49,7 @@ export function markingSheet(attempts: SheetAttempt[]): MarkingSheet {
       detail: `Written answer · ${plural(a.max_marks ?? a.question.marks, "mark")}`,
       marked: isMarked(a) ? 1 : 0,
       total: 1,
+      ...(a.status === "marking" && { marking: true }),
     });
   }
   return {
@@ -71,4 +74,22 @@ export function markedNow<T extends { id: string; status: string }>(
       ? { ...a, status: "marked" }
       : a,
   );
+}
+
+/**
+ * Overlays the server's own statuses (polled while the marking screen is up), so
+ * answers marked or being marked on the server, by early marking or by Finish,
+ * show as such even when this tab never saw that mark's response.
+ */
+export function withServerStatus<T extends { id: string; status: string }>(
+  attempts: T[],
+  server: Map<string, string>,
+): T[] {
+  return attempts.map((a) => {
+    const status = server.get(a.id);
+    return a.status !== "marked" &&
+      (status === "marked" || status === "marking")
+      ? { ...a, status }
+      : a;
+  });
 }
