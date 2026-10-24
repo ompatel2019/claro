@@ -82,19 +82,24 @@ export function summariseRun(
       (sum, item) => sum + finite(item.usd) + finite(item.judgeUsd),
       0,
     ),
-    seconds: run.meta.startedAt
-      ? Math.max(
-          0,
-          (Date.parse(
-            run.meta.finishedAt ?? run.meta.updatedAt ?? run.meta.startedAt,
-          ) -
-            Date.parse(run.meta.startedAt)) /
-            1000,
-        )
-      : items.reduce((sum, item) => sum + finite(item.seconds), 0),
+    ...runSeconds(run, items),
     web: !!run.meta.startedAt,
     by: run.meta.by ?? "CLI",
   };
+}
+/**
+ * Elapsed wall time for web runs; summed per-answer marking time when a run has
+ * no usable end stamp (CLI runs, or web runs saved before they finished), so a
+ * real run never shows 0s.
+ */
+function runSeconds(run: OfflineEvalRun, items: OfflineEvalRun["items"]) {
+  const marked = items.reduce((sum, item) => sum + finite(item.seconds), 0);
+  const start = Date.parse(run.meta.startedAt ?? "");
+  const end = Date.parse(run.meta.finishedAt ?? run.meta.updatedAt ?? "");
+  const elapsed = (end - start) / 1000;
+  return Number.isFinite(elapsed) && elapsed > 0
+    ? { seconds: elapsed, elapsed: true }
+    : { seconds: marked, elapsed: false };
 }
 export type RunSummary = ReturnType<typeof summariseRun>;
 
@@ -113,6 +118,11 @@ export function runDateLabel(stamp: string) {
         }).format(new Date(stamp))
       : stamp;
   return `${new Intl.DateTimeFormat("en-AU", { day: "numeric", month: "short", year: "numeric", timeZone: "Australia/Sydney" }).format(new Date(`${match[1]}T00:00:00+10:00`))}, ${match[2]}:${match[3]}`;
+}
+/** Run costs to the cent; a run that cost something never reads $0.00. */
+export function costLabel(usd: number) {
+  if (!Number.isFinite(usd) || usd <= 0) return "$0.00";
+  return usd < 0.005 ? "<$0.01" : `$${usd.toFixed(2)}`;
 }
 export function durationLabel(seconds: number) {
   const total = Math.round(seconds);

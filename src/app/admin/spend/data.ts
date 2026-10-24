@@ -60,6 +60,17 @@ export function parseRange(
       : "month";
   return range === "30" || range === "all" ? range : "month";
 }
+/** Earliest usage row the page needs: the range, the fixed 30 days and this month. */
+export function usageSince(range: Range, now = new Date()) {
+  const since = rangeWindow(range, now).since;
+  if (since === null) return null;
+  const today = sydneyDay(now);
+  return [
+    since,
+    sydneyMidnight(shiftDay(today, -29)),
+    sydneyMidnight(`${today.slice(0, 7)}-01`),
+  ].sort()[0];
+}
 /** Presets end at now; a custom end day is inclusive, capped at now. */
 export function rangeWindow(range: Range, now = new Date()) {
   const today = sydneyDay(now);
@@ -121,15 +132,21 @@ export function computeSpend(
 ) {
   const window = rangeWindow(range, now);
   const todayKey = sydneyDay(now);
-  const today = usage.reduce(
-    (sum, row) =>
-      isOpenRouterModel(row.model) &&
-      Date.parse(row.created_at) < now.getTime() &&
-      sydneyDay(row.created_at) === todayKey
-        ? sum + finiteCost(row.usd)
-        : sum,
-    0,
-  );
+  // Calls are counted from the same OpenRouter rows and windows as the cards
+  // they sit under, so a card never shows spend beside "0 calls".
+  const monthSince = Date.parse(sydneyMidnight(`${todayKey.slice(0, 7)}-01`));
+  let today = 0,
+    todayCalls = 0,
+    monthCalls = 0;
+  for (const row of usage) {
+    const at = Date.parse(row.created_at);
+    if (!isOpenRouterModel(row.model) || !(at < now.getTime())) continue;
+    if (at >= monthSince) monthCalls++;
+    if (sydneyDay(row.created_at) === todayKey) {
+      today += finiteCost(row.usd);
+      todayCalls++;
+    }
+  }
   const inRange = (date: string) =>
     (!window.since || Date.parse(date) >= Date.parse(window.since)) &&
     Date.parse(date) < Date.parse(window.until);
@@ -158,12 +175,14 @@ export function computeSpend(
   if (from)
     for (let day = from; day <= window.to; day = shiftDay(day, 1))
       days.set(day, { day, models: {}, usd: 0 });
-  let writtenUsd = 0;
+  let writtenUsd = 0,
+    calls = 0;
   for (const r of rows) {
     const usd = finiteCost(r.usd);
     const name = normaliseTask(r.task);
     if (writtenTasks.includes(name)) writtenUsd += usd;
     if (!isOpenRouterModel(r.model)) continue;
+    calls++;
     const day = days.get(sydneyDay(r.created_at))!;
     day.usd += usd;
     day.models[r.model] = (day.models[r.model] ?? 0) + usd;
@@ -279,6 +298,9 @@ export function computeSpend(
   return {
     window: { ...window, from },
     today,
+    todayCalls,
+    monthCalls,
+    calls,
     month: finiteCost(totals.month),
     all: finiteCost(totals.all),
     byMarkValue,

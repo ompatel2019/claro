@@ -15,6 +15,7 @@ import { FeedbackTable } from "@/components/feedback-table";
 import { FilterBar } from "@/components/filter-bar";
 import { LinkTabs } from "@/components/link-tabs";
 import { PageHeader } from "@/components/page-header";
+import { Card } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 
 const BASE = "/admin/feedback";
@@ -64,61 +65,71 @@ export default async function FeedbackPage({
           },
         ]}
       />
-      <FilterBar
-        customSelect
-        values={f}
-        hidden={{ status: list.status }}
-        primary={[]}
-        filters={[
-          {
-            name: "kind",
-            label: "Kind",
-            all: "Any",
-            chips: true,
-            options: Object.entries(FEEDBACK_KIND).map(([value, label]) => ({
-              value,
-              label,
-            })),
-          },
-          { name: "q", label: "Search", placeholder: "Message or student" },
-          { name: "shots", label: "Has screenshots", checkbox: true },
-          {
-            name: "dates",
-            label: "Date range",
-            dateRange: { from: "from", to: "to", today: sydneyDay(new Date()) },
-          },
-        ]}
-      />
-      {list.rows.length || item ? (
-        <FeedbackTable
-          rows={list.rows}
-          pager={list.pager}
-          status={list.status}
-          item={item}
-          adminId={admin.id}
-          now={new Date().toISOString()}
-        />
-      ) : (
-        <EmptyState
-          icon={filtered ? SearchOff : Message}
-          title={filtered ? "Nothing matches" : `No ${list.status} feedback`}
-          description={
-            filtered
-              ? "Try another search or clear the filters."
-              : "Messages from students land here."
-          }
-          action={
-            filtered ? (
-              <Link
-                href={`${BASE}?status=${list.status}`}
-                className={buttonVariants({ variant: "outline" })}
-              >
-                Clear filters
-              </Link>
-            ) : undefined
-          }
-        />
-      )}
+      <Card className="min-w-0 gap-0 overflow-hidden py-0 [&>nav]:mt-0 [&>nav]:border-t [&>nav]:px-4 [&>nav]:py-3">
+        <div className="border-b px-4 py-3">
+          <FilterBar
+            customSelect
+            values={f}
+            hidden={{ status: list.status }}
+            primary={[]}
+            filters={[
+              {
+                name: "kind",
+                label: "Kind",
+                all: "Any",
+                chips: true,
+                options: Object.entries(FEEDBACK_KIND).map(
+                  ([value, label]) => ({
+                    value,
+                    label,
+                  }),
+                ),
+              },
+              { name: "q", label: "Search", placeholder: "Message or student" },
+              { name: "shots", label: "Has screenshots", checkbox: true },
+              {
+                name: "dates",
+                label: "Date range",
+                dateRange: {
+                  from: "from",
+                  to: "to",
+                  today: sydneyDay(new Date()),
+                },
+              },
+            ]}
+          />
+        </div>
+        {list.rows.length || item ? (
+          <FeedbackTable
+            rows={list.rows}
+            pager={list.pager}
+            status={list.status}
+            item={item}
+            adminId={admin.id}
+            now={new Date().toISOString()}
+          />
+        ) : (
+          <EmptyState
+            icon={filtered ? SearchOff : Message}
+            title={filtered ? "Nothing matches" : `No ${list.status} feedback`}
+            description={
+              filtered
+                ? "Try another search or clear the filters."
+                : "Messages from students land here."
+            }
+            action={
+              filtered ? (
+                <Link
+                  href={`${BASE}?status=${list.status}`}
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  Clear filters
+                </Link>
+              ) : undefined
+            }
+          />
+        )}
+      </Card>
     </div>
   );
 }

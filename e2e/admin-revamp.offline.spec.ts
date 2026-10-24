@@ -287,6 +287,7 @@ const routes: {
     path: "/admin/feedback",
     file: "admin-feedback",
     heading: /Feedback/,
+    dark: true,
   },
   {
     path: "/admin/marking/accuracy",
@@ -301,14 +302,21 @@ const routes: {
   {
     path: "/admin/marking/review",
     file: "admin-review",
+    dark: true,
     heading: /Review|Open/,
   },
   {
     path: `/admin/marking/review/${REVIEW_ID}`,
     file: "admin-review-id",
+    dark: true,
     heading: /Ada Lovelace|Marking review|Back to queue/,
   },
-  { path: "/admin/spend", file: "admin-spend", heading: /AI spend|Spend/i },
+  {
+    path: "/admin/spend",
+    file: "admin-spend",
+    heading: /AI spend|Spend/i,
+    dark: true,
+  },
 ];
 
 async function shoot(

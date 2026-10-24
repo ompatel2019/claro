@@ -53,21 +53,24 @@ it("renders KPIs and mark-value bands, labelled budget markers, empty sections a
   ).toBeInTheDocument();
   expect(
     container.querySelectorAll('[data-component="StatCard"]'),
-  ).toHaveLength(9);
+  ).toHaveLength(3);
   expect(screen.getByText("$0.00 of $100")).toBeInTheDocument();
-  expect(screen.getAllByText("No tracked costs")).toHaveLength(6);
+  const perAnswer = screen.getByRole("table", {
+    name: "Cost per marked answer",
+  });
+  expect(within(perAnswer).getAllByRole("row")).toHaveLength(7);
+  expect(within(perAnswer).getAllByText("—")).toHaveLength(6);
+  // One merged empty card, not one box per section.
+  expect(container.querySelectorAll('[data-slot="empty"]')).toHaveLength(1);
   for (const text of [
-    "OpenRouter · Sydney day",
-    "OpenRouter · Sydney calendar month",
+    "0 calls · Sydney day",
+    "0 calls · Sydney calendar month",
     "80% · Evals blocked",
     "90% · All AI stops",
     "100% · Cap",
     "No spend in this range",
-    "Daily OpenRouter spend by model will appear after an AI call.",
-    "No model spend yet",
-    "No task spend yet",
-    "No student spend in the last 30 days",
-    "None right now",
+    "Daily spend and the model, task, student breakdowns appear after an AI call.",
+    "No one right now",
     "20/min and 200/hour",
     "Admins exempt",
     "20/day per student (Sydney)",
@@ -99,6 +102,7 @@ it("shows stacked spend, calls, written average and over-limit student links, cl
   ];
   data.perDay = [{ day: "2026-10-09", usd: 1, models: { Alpha: 1 } }];
   data.over150 = [{ id: "Student A", name: "Student A", calls: 151 }];
+  data.calls = 2;
   vi.mocked(loadSpend).mockResolvedValue(data);
   render(await SpendPage({ searchParams: Promise.resolve({ range: "30" }) }));
   expect(loadSpend).toHaveBeenCalledWith("30");
@@ -109,7 +113,7 @@ it("shows stacked spend, calls, written average and over-limit student links, cl
     "aria-valuenow",
     "100",
   );
-  expect(screen.getByText("$0.0025")).toBeInTheDocument();
+  expect(screen.getByText("$0.003")).toBeInTheDocument();
   expect(screen.getByRole("img")).toHaveAccessibleName(
     "Spend per day, Sydney dates, stacked by model",
   );

@@ -166,7 +166,7 @@ it("ignores mark and navigation keys while typing, but still undoes and resolves
     .mockImplementation(() => {});
   fireEvent.keyDown(note, { key: "Enter", metaKey: true });
   expect(submit).toHaveBeenCalledWith(
-    screen.getByRole("button", { name: "Resolve (⌘/Ctrl+Enter)" }),
+    screen.getByRole("button", { name: "Resolve" }),
   );
   submit.mockRestore();
   key("n");

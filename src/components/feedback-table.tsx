@@ -1,4 +1,5 @@
 "use client";
+import { hairlineRows } from "@/lib/table-style";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useState, useTransition } from "react";
@@ -10,6 +11,7 @@ import { ago, FEEDBACK_KIND, type Pager } from "@/lib/admin";
 import type { FeedbackRow } from "@/lib/admin-feedback";
 import { FeedbackDetail, type FeedbackDetailRow } from "./feedback-detail";
 import { StatusPill, STATUS_PILL } from "./status-pill";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "./ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "./ui/sheet";
 
@@ -31,7 +33,7 @@ const columns = (
     className: "hidden sm:table-cell",
     header: "Kind",
     sort: true,
-    cell: (r) => kind(r.kind),
+    cell: (r) => <Badge variant="outline">{kind(r.kind)}</Badge>,
   },
   {
     id: "student",
@@ -205,6 +207,7 @@ export function FeedbackTable({
       )}
       <DataTable
         label="Feedback"
+        tableClassName={hairlineRows}
         columns={columns(open, itemHref, new Date(now))}
         rows={rows}
         pager={pager}

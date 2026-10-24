@@ -43,6 +43,8 @@ type Props<T> = {
   renderDetail?: (row: T) => React.ReactNode;
   /** Student-app density: taller rows. */
   student?: boolean;
+  /** Extra classes for the table element (e.g. admin hairline rows). */
+  tableClassName?: string;
   /** Controlled local sorting (e.g. kept in the URL by the caller). */
   sorting?: TableSorting;
   onSortChange?: (sorting: TableSorting) => void;
@@ -127,6 +129,7 @@ function TableView<T extends { id: string }>({
   bulk,
   renderDetail,
   student,
+  tableClassName,
 }: Props<T> & { sorting: Sorting | null; toggle: (id: string) => void }) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const selectable = selectRows || !!bulk;
@@ -144,7 +147,7 @@ function TableView<T extends { id: string }>({
           </Button>
         </div>
       )}
-      <Table aria-label={label}>
+      <Table aria-label={label} className={tableClassName}>
         <TableHeader>
           <TableRow>
             {selectable && (

@@ -3,6 +3,7 @@ import {
   computeSpend,
   parseRange,
   rangeWindow,
+  usageSince,
   type Usage,
   type MarkedAttempt,
 } from "./data";
@@ -489,4 +490,46 @@ it("counts only OpenRouter models in Today, per day, by model and by task, like 
   // Out of scope: written-cost allocation and students stay all-provider.
   expect(result.unattributedWrittenUsd).toBe(5);
   expect(result.topStudents[0]).toMatchObject({ calls: 4, usd: 15 });
+});
+it("counts OpenRouter calls from the same rows and windows as the spend cards", () => {
+  const rows = [
+    usage(),
+    usage({ model: "openai/model-b" }),
+    usage({ created_at: "2026-10-01T02:00:00Z" }),
+    usage({ created_at: "2026-09-29T02:00:00Z" }),
+    usage({ model: "local/model-c" }),
+    usage({ created_at: "2026-10-09T04:00:00Z" }),
+  ];
+  const month = computeSpend(
+    { month: 4, all: 5 },
+    rows,
+    [],
+    students,
+    "month",
+    now,
+  );
+  expect([month.todayCalls, month.monthCalls, month.calls]).toEqual([2, 3, 3]);
+  expect(month.calls).toBe(
+    month.byModel.reduce((total, model) => total + model.calls, 0),
+  );
+  const all = computeSpend(
+    { month: 4, all: 5 },
+    rows,
+    [],
+    students,
+    "all",
+    now,
+  );
+  expect([all.todayCalls, all.monthCalls, all.calls]).toEqual([2, 3, 4]);
+});
+it("fetches usage back to the start of the month on its last day", () => {
+  const last = new Date("2026-10-31T03:00:00Z");
+  expect(usageSince("month", last)).toBe(rangeWindow("month", last).since);
+  expect(usageSince("month", last)! <= rangeWindow("30", last).since!).toBe(
+    true,
+  );
+  expect(usageSince({ from: "2026-10-30", to: "2026-10-31" }, last)).toBe(
+    rangeWindow("month", last).since,
+  );
+  expect(usageSince("all", last)).toBeNull();
 });

@@ -155,7 +155,7 @@ export function CompareView({ data }: { data: CompareData }) {
           <>
             {detail.notes && (
               <section>
-                <h3 className="font-medium">Karan&apos;s feedback notes</h3>
+                <h3 className="font-medium">Tutor feedback notes</h3>
                 <p className="mt-2 whitespace-pre-wrap">{detail.notes}</p>
               </section>
             )}
@@ -243,9 +243,9 @@ export function CompareView({ data }: { data: CompareData }) {
       </p>
       <p className="text-muted-foreground text-xs">
         ✓ means equal marks; ✗ means different marks. — means marks unavailable.
-        Green/red Δ indicates agreement/disagreement with Karan using the saved
-        band and ±1 rule on 6+ marks. Metrics use valid common items, excluding
-        errors and exclusions. Legacy repeated answers are compared by
+        Green/red Δ indicates agreement/disagreement with the tutor using the
+        saved band and ±1 rule on 6+ marks. Metrics use valid common items,
+        excluding errors and exclusions. Legacy repeated answers are compared by
         occurrence; answers are hidden when their identity is ambiguous.
       </p>
       <label className="flex items-center gap-2 text-sm">
@@ -267,7 +267,7 @@ export function CompareView({ data }: { data: CompareData }) {
             {question(row)}
             <dl className="grid grid-cols-2 gap-3">
               <div>
-                <dt>Karan&apos;s mark</dt>
+                <dt>Tutor mark</dt>
                 <dd>{expected(row)}</dd>
               </div>
               <div>
@@ -301,17 +301,13 @@ export function CompareView({ data }: { data: CompareData }) {
           </colgroup>
           <TableHeader>
             <TableRow>
-              {[
-                "Question",
-                "Karan’s mark",
-                "Run A (Δ)",
-                "Run B (Δ)",
-                "✓/✗",
-              ].map((title) => (
-                <TableHead key={title} className="whitespace-normal">
-                  {title}
-                </TableHead>
-              ))}
+              {["Question", "Tutor mark", "Run A (Δ)", "Run B (Δ)", "✓/✗"].map(
+                (title) => (
+                  <TableHead key={title} className="whitespace-normal">
+                    {title}
+                  </TableHead>
+                ),
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>

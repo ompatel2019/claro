@@ -10,15 +10,15 @@ import { ModelTable, TaskTable, StudentTable } from "./tables";
 import { usd, avgUsd } from "./helpers";
 
 afterEach(cleanup);
-it("money has two decimal places, with four for small call averages", () => {
+it("totals have two decimal places; averages one fixed three-place precision", () => {
   expect(usd(0)).toBe("$0.00");
   expect(usd(1.234)).toBe("$1.23");
-  expect(avgUsd(0.00123)).toBe("$0.0012");
-  expect(avgUsd(0)).toBe("$0.0000");
-  expect(avgUsd(0.000001)).toBe("<$0.0001");
-  expect(avgUsd(0.00009999)).toBe("<$0.0001");
-  expect(avgUsd(0.0001)).toBe("$0.0001");
-  expect(avgUsd(0.01)).toBe("$0.01");
+  expect(avgUsd(0.00123)).toBe("$0.001");
+  expect(avgUsd(0)).toBe("$0.000");
+  expect(avgUsd(0.000001)).toBe("<$0.001");
+  expect(avgUsd(0.00099)).toBe("<$0.001");
+  expect(avgUsd(0.001)).toBe("$0.001");
+  expect(avgUsd(0.01)).toBe("$0.010");
 });
 it("model columns sort in both directions and token columns stay hidden in narrow model cards", () => {
   render(
@@ -137,14 +137,14 @@ it("task subtotals precede their own sortable tasks, including Other and no-call
     "other_task",
   ]);
   expect(within(table).getByText("No calls")).toBeInTheDocument();
-  expect(within(table).getAllByText("$0.0020")).toHaveLength(1);
+  expect(within(table).getAllByText("$0.002")).toHaveLength(1);
   for (const [label, details] of [
-    ["Marking only", "Avg per call: $0.07"],
-    ["mark_written", "Avg per call: $0.0020"],
-    ["summary", "Avg per call: $0.10"],
+    ["Marking only", "Avg per call: $0.067"],
+    ["mark_written", "Avg per call: $0.002"],
+    ["summary", "Avg per call: $0.100"],
     ["Admin and evals", "Avg per call: No calls"],
-    ["Other", "Avg per call: $0.10"],
-    ["other_task", "Avg per call: $0.10"],
+    ["Other", "Avg per call: $0.100"],
+    ["other_task", "Avg per call: $0.100"],
   ]) {
     const row = within(table).getByText(label, { exact: true }).closest("tr")!;
     expect(within(row).getByText(details)).toHaveClass(
@@ -211,24 +211,13 @@ it("student names link to detail, with formatted costs and percentages", () => {
     expect(button.closest("th")).toHaveAttribute("aria-sort", "descending");
   }
 });
-it("each empty table gets words instead of a blank table", () => {
-  render(
+it("empty tables render nothing; the page shows one merged empty card", () => {
+  const { container } = render(
     <>
       <ModelTable rows={[]} />
       <TaskTable groups={[]} />
       <StudentTable rows={[]} />
     </>,
   );
-  expect(screen.queryByRole("table")).toBeNull();
-  for (const title of [
-    "No model spend yet",
-    "No task spend yet",
-    "No student spend in the last 30 days",
-  ])
-    expect(screen.getByText(title)).toBeInTheDocument();
-  for (const description of [
-    "OpenRouter model calls and token usage in this range will appear here.",
-    "OpenRouter marking, admin and eval calls in this range will appear here.",
-  ])
-    expect(screen.getByText(description)).toBeInTheDocument();
+  expect(container).toBeEmptyDOMElement();
 });
