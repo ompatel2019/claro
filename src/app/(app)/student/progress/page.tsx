@@ -115,7 +115,7 @@ export default async function Progress({
   const lost = marksLost(d.topics);
   const focus = lost.find((l) => l.weak)?.topic.id;
   const maxLost = lost[0]?.lost ?? 0;
-  const asks = marked ? markerAsks(marked) : null;
+  const asks = marked ? markerAsks(marked.rows) : null;
   const cover = coverage(d.topics);
   const examDays = examDaysLeft(today);
   const dueCount = due.error ? null : (due.count ?? 0);
@@ -237,7 +237,9 @@ export default async function Progress({
           title="What the marker keeps asking for"
           caption={
             asks?.answers
-              ? `From the marker’s fixes on your ${plural(asks.answers, "marked written answer")} ${scope}`
+              ? marked?.complete
+                ? `From the marker’s fixes on your ${plural(asks.answers, "marked written answer")} ${scope}`
+                : `From the marker’s fixes on your latest ${plural(asks.answers, "marked written answer")} ${scope}`
               : "From the marker’s fixes on your written answers"
           }
         >

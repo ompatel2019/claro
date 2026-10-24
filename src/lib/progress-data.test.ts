@@ -4,7 +4,7 @@ const q = vi.hoisted(() => {
   const calls: unknown[][] = [];
   const result = { value: { data: [] as unknown, error: null as unknown } };
   const chain: Record<string, unknown> = {};
-  for (const m of ["select", "eq", "neq", "gt", "not", "order", "limit", "gte"])
+  for (const m of ["select", "eq", "neq", "gt", "not", "order", "range", "gte"])
     chain[m] = (...args: unknown[]) => {
       calls.push([m, ...args]);
       return chain;
@@ -59,9 +59,10 @@ it("reads only the student's own marker comments from finished sessions in range
     ],
     error: null,
   };
-  expect(await loadMarkedComments("me", "2026-10-01")).toEqual([
-    { marked_at: "2026-10-01T15:00:00Z", comments: [{ tag: "Verb" }] },
-  ]);
+  expect(await loadMarkedComments("me", "2026-10-01")).toEqual({
+    complete: true,
+    rows: [{ marked_at: "2026-10-01T15:00:00Z", comments: [{ tag: "Verb" }] }],
+  });
   expect(q.from).toHaveBeenCalledWith("attempts");
   expect(q.calls).toEqual(
     expect.arrayContaining([
@@ -98,4 +99,30 @@ it("reads the student's own finished non-flashcard session marks in range", asyn
   );
   q.result.value = { data: null, error: { message: "denied" } };
   expect(await loadSessionScores("me", null)).toBeNull();
+});
+
+it("pages past PostgREST's row cap and flags a truncated comment read", async () => {
+  q.calls.length = 0;
+  const row = {
+    id: "x",
+    finished_at: "2026-10-02T01:00:00Z",
+    score: 1,
+    max_score: 2,
+    marked_at: "2026-10-02T01:00:00Z",
+    comments: [],
+  };
+  q.result.value = {
+    data: Array.from({ length: 1000 }, () => row),
+    error: null,
+  };
+  // Every page is full, so the session read hits its cap and reports unavailable…
+  expect(await loadSessionScores("me", null)).toBeNull();
+  expect(q.calls.filter((c) => c[0] === "range").slice(0, 2)).toEqual([
+    ["range", 0, 999],
+    ["range", 1000, 1999],
+  ]);
+  // …and the comments read stops at its cap, marked incomplete.
+  const out = await loadMarkedComments("me", null);
+  expect(out?.complete).toBe(false);
+  expect(out?.rows).toHaveLength(5000);
 });

@@ -60,7 +60,7 @@ const empty: ProgressData = {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.load.mockResolvedValue(empty);
-  mocks.marked.mockResolvedValue([]);
+  mocks.marked.mockResolvedValue({ rows: [], complete: true });
   mocks.scores.mockResolvedValue([]);
   mocks.eq.mockReturnValue({
     eq: mocks.eq,
@@ -128,19 +128,22 @@ it("shows each part of the paper against the target, with no band", async () => 
   expect(screen.queryByText(/band/i)).toBeNull();
 });
 it("lists the marker's real tagged fixes and an unavailable state", async () => {
-  mocks.marked.mockResolvedValue([
-    {
-      marked_at: "2026-10-08T00:00:00Z",
-      comments: [
-        {
-          kind: "fix",
-          tag: "Evidence",
-          body: "Use a figure",
-          next_mark: "Quote the 3.8% rate.",
-        },
-      ],
-    },
-  ]);
+  mocks.marked.mockResolvedValue({
+    complete: true,
+    rows: [
+      {
+        marked_at: "2026-10-08T00:00:00Z",
+        comments: [
+          {
+            kind: "fix",
+            tag: "Evidence",
+            body: "Use a figure",
+            next_mark: "Quote the 3.8% rate.",
+          },
+        ],
+      },
+    ],
+  });
   const view = render(
     await resolve(await Progress({ searchParams: Promise.resolve({}) })),
   );
