@@ -135,7 +135,7 @@ const columns: Column<RunSummary>[] = [
     className: "text-right tabular-nums px-1 whitespace-normal wrap-anywhere",
     header: "Cost",
     sort: (r) => r.cost,
-    cell: (r) => `$${r.cost.toFixed(2)}`,
+    cell: (r) => `$${r.cost.toFixed(4)}`,
   },
   {
     id: "duration",
@@ -157,7 +157,7 @@ const columns: Column<RunSummary>[] = [
   },
   {
     id: "by",
-    className: "px-1 whitespace-normal break-words",
+    className: "px-1 whitespace-normal wrap-anywhere",
     header: "By",
     sort: (r) => r.by,
     cell: (r) => r.by,

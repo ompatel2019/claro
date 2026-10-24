@@ -244,8 +244,8 @@ export function CompareView({ data }: { data: CompareData }) {
       </p>
       <p className="text-muted-foreground text-xs">
         ✓ means equal marks; ✗ means different marks. — means marks unavailable.
-        Green/red Δ indicates agreement/disagreement with the tutor mark using
-        the saved band and ±1 rule on 6+ marks. Metrics use valid common items,
+        Green/red Δ indicates agreement/disagreement with the tutor using the
+        saved band and ±1 rule on 6+ marks. Metrics use valid common items,
         excluding errors and exclusions. Legacy repeated answers are compared by
         occurrence; answers are hidden when their identity is ambiguous.
       </p>
