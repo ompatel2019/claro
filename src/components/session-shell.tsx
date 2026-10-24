@@ -24,7 +24,7 @@ function Timer({ seconds }: { seconds: number }) {
       onClick={() => setHidden(!hidden)}
       aria-label={hidden ? "Show timer" : `Time used ${timer(seconds)}`}
       className={cn(
-        "bg-card inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-sans text-[13px] tabular-nums",
+        "bg-card num-ticking inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 font-sans text-[13px]",
         "text-muted-foreground",
       )}
     >

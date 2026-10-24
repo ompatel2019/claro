@@ -262,6 +262,12 @@
     font-size: 14px;
     line-height: 22px;
     text-rendering: optimizeLegibility;
+    /* Claro Sans's tabular 1 sits in a full-width slot (672 vs 363 units),
+       so "15" reads as "1 5". Proportional figures everywhere, including
+       tables; this inherited feature setting beats tabular-nums utilities. */
+    font-feature-settings:
+      "tnum" 0,
+      "pnum" 1;
   }
   ::selection {
     background: color-mix(in srgb, var(--brand) 22%, transparent);
@@ -290,8 +296,13 @@
     font-variant-numeric: tabular-nums;
   }
 }
-/* Big stat numerals (brand portal-number): proportional figures, -2% tracking.
-   Tabular figures stay for tables, timers and small inline counts. */
+/* Ticking timers only: equal-width digits so the clock does not jitter each second. */
+@utility num-ticking {
+  font-feature-settings:
+    "tnum" 1,
+    "pnum" 0;
+}
+/* Big stat numerals (brand portal-number): proportional figures, -2% tracking. */
 @utility num-display {
   font-variant-numeric: proportional-nums;
   letter-spacing: -0.02em;

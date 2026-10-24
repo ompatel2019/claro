@@ -294,7 +294,7 @@ function SprintTimer({
             : `Time used ${timer(seconds)}`
       }
       className={cn(
-        "bg-card mx-1 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[13px] whitespace-nowrap tabular-nums",
+        "bg-card num-ticking mx-1 inline-flex h-8 shrink-0 items-center gap-1.5 rounded-full border px-3 text-[13px] whitespace-nowrap",
         mode === "up" && "text-muted-foreground",
         mode === "down" && seconds <= 300 && "bg-warning-soft text-warning",
         mode === "down" &&
