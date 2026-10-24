@@ -31,6 +31,16 @@ export default async function FlashcardsPage({
   if (!subtopics.some((t) => t.id === f.sub)) delete f.sub;
   const filtered = ["q", "kind", "topic", "sub", "origin"].some((k) => f[k]);
   const parents = topics.filter((t) => !t.parent_id);
+  // Tab counts follow the filters, so switching status keeps them.
+  const tabHref = (status: string) =>
+    `${BASE}?${new URLSearchParams({
+      ...Object.fromEntries(
+        ["q", "kind", "topic", "sub", "origin"].flatMap((k) =>
+          f[k] ? [[k, f[k]!]] : [],
+        ),
+      ),
+      status,
+    })}`;
   return (
     <div className="table-hairline [&_[data-slot=table]]:border-border">
       <PageHeader
@@ -56,19 +66,19 @@ export default async function FlashcardsPage({
               value: "live",
               label: "Live",
               count: list.counts.live,
-              href: `${BASE}?status=live`,
+              href: tabHref("live"),
             },
             {
               value: "draft",
               label: "Draft",
               count: list.counts.draft,
-              href: `${BASE}?status=draft`,
+              href: tabHref("draft"),
             },
             {
               value: "retired",
               label: "Retired",
               count: list.counts.retired,
-              href: `${BASE}?status=retired`,
+              href: tabHref("retired"),
             },
           ]}
         />

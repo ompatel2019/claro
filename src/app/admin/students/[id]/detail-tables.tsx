@@ -176,6 +176,7 @@ export function FeedbackTab({ d, sp }: TableProps) {
   return (
     <ServerTable
       params={sp}
+      paramPrefix="feedback_"
       label="Feedback"
       columns={[
         {

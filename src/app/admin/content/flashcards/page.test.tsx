@@ -50,9 +50,10 @@ it("takes tab counts from the filtered list, not the whole bank", async () => {
     }),
   );
   expect(mocks.list).toHaveBeenCalledWith({ status: "draft", q: "inflation" });
+  // Switching tabs keeps the filters the counts were taken with.
   expect(screen.getByRole("link", { name: "Live (2)" })).toHaveAttribute(
     "href",
-    "/admin/content/flashcards?status=live",
+    "/admin/content/flashcards?q=inflation&status=live",
   );
   expect(screen.getByRole("link", { name: "Draft (0)" })).toHaveAttribute(
     "aria-current",
