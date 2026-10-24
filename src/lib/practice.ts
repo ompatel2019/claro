@@ -94,19 +94,15 @@ export type Attempt = {
     options: string[] | null;
     source: string;
     year: number | null;
-    /** Which paper set the question came from: "nesa" = HSC, otherwise Claro practice. */
-    origin?: string | null;
   };
 };
 export const questionColumns =
-  "id,type,topic_id,marks,stem,stimulus,options,source,year,origin";
-/**
- * The paper pill on a sprint question, e.g. "2013 Practice" or "2019 HSC".
- * Built from the paper's year and origin only, never the free-text source.
- */
-export function paperLabel(q: { year: number | null; origin?: string | null }) {
-  if (!q.year) return null;
-  return `${q.year} ${q.origin === "nesa" ? "HSC" : "Practice"}`;
+  "id,type,topic_id,marks,stem,stimulus,options,source,year";
+/** The paper pill on a sprint question, e.g. "2013 Practice": year (once) + source. */
+export function paperLabel(q: { year: number | null; source: string }) {
+  const year =
+    q.year && !q.source.includes(String(q.year)) ? String(q.year) : "";
+  return [year, q.source].filter(Boolean).join(" ") || null;
 }
 export function answered(
   a: Pick<Attempt, "choice_index" | "transcript" | "answer_text">,

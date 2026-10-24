@@ -741,20 +741,13 @@ it("queues a new photo version even when its transcript is unchanged", async () 
   );
 });
 
-// The paper pill reads the paper's year and origin, never the free-text source column.
-it.each([
-  ["nesa", "anything", "2019 HSC"],
-  ["a1", "HSC", "2019 Practice"],
-])("labels the %s paper from year and origin", (origin, source, label) => {
-  show([
-    {
-      ...attempt,
-      question: { ...attempt.question, year: 2019, source, origin },
-    },
-  ]);
-  const details = screen.getByRole("list", { name: "Question details" });
-  expect(within(details).getByText(label)).toBeVisible();
-  expect(details).not.toHaveTextContent(source === "HSC" ? "HSC" : source);
+it.each(["HSC", "2019 HSC"])("shows paper year once for %s", (source) => {
+  show([{ ...attempt, question: { ...attempt.question, year: 2019, source } }]);
+  expect(
+    within(screen.getByRole("list", { name: "Question details" })).getByText(
+      "2019 HSC",
+    ),
+  ).toBeVisible();
 });
 it("renders a question without paper metadata", () => {
   show([
