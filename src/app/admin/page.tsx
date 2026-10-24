@@ -116,7 +116,7 @@ async function Dashboard() {
           delta={week.delta ?? undefined}
           description={
             week.delta == null
-              ? "Finished sessions"
+              ? "Sessions started"
               : `vs ${week.now - week.delta} the week before`
           }
         />
@@ -204,7 +204,7 @@ async function Dashboard() {
         </Card>
         <DailyChart
           title="Sessions per day"
-          description={`Finished sessions, last ${plural(fortnight.length, "Sydney day")}`}
+          description={`Sessions started, last ${plural(fortnight.length, "Sydney day")}`}
           hero={plural(fortnightTotal, "session")}
           points={fortnight}
           kind="area"

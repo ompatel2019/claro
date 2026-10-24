@@ -181,7 +181,9 @@ it("handles an empty install and students with no finished sessions", async () =
   expect(screen.getByText("No finished sessions yet")).toBeInTheDocument();
   expect(screen.getByText(/All clear/)).toBeInTheDocument();
   // Fewer than 14 days of history: no invented comparison.
-  expect(screen.getByText("Finished sessions")).toBeInTheDocument();
+  expect(screen.getByText("Sessions started")).toBeInTheDocument();
+  // sessionsPerDay counts sessions by start date, so nothing claims "finished".
+  expect(screen.getByText(/^Sessions started, last /)).toBeInTheDocument();
 });
 
 it("links each attention row to its page with a count chip", async () => {
