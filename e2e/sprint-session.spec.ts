@@ -118,9 +118,7 @@ test.describe("Sprint session", () => {
   }
 
   for (const width of [390, 1280]) {
-    test(`flagging sits above the question at ${width}px`, async ({
-      page,
-    }) => {
+    test(`flagging sits above the question at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 850 });
       await setUp(page, ["Check as I go"]);
       const actions = page.getByRole("group", { name: "Answer actions" });
