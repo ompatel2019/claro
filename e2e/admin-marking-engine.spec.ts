@@ -80,7 +80,7 @@ test.describe("admin marking engine", () => {
       }),
     ).toBeVisible({ timeout: 30000 });
     const docs = page.getByRole("navigation", { name: "Engine documents" });
-    await expect(docs.getByRole("link", { name: /^ENGINE/ })).toBeVisible();
+    await expect(docs.getByRole("link", { name: /^Engine/ })).toBeVisible();
     await expect(
       page.getByRole("heading", { level: 3, name: "Model", exact: true }),
     ).toBeVisible();
@@ -89,12 +89,12 @@ test.describe("admin marking engine", () => {
         .getByRole("navigation", { name: "Admin navigation" })
         .getByRole("link", { name: "Accuracy", exact: true }),
     ).toHaveAttribute("aria-current", "page");
-    await docs.getByRole("link", { name: /^CHANGELOG/ }).click();
+    await docs.getByRole("link", { name: /^Changelog/ }).click();
     await expect(page).toHaveURL(/[?&]doc=CHANGELOG(&|$)/);
     await expect(
-      docs.getByRole("link", { name: /^CHANGELOG/ }),
+      docs.getByRole("link", { name: /^Changelog/ }),
     ).toHaveAttribute("aria-current", "page");
-    await docs.getByRole("link", { name: /^ENGINE/ }).click();
+    await docs.getByRole("link", { name: /^Engine/ }).click();
     await expect(page).toHaveURL(/[?&]doc=ENGINE(&|$)/);
     await page.getByRole("link", { name: "Eval runs", exact: true }).click();
     await expect(page).toHaveURL(/[?&]tab=runs(&|$)/);
@@ -299,17 +299,21 @@ test.describe("admin marking engine", () => {
       name: "Engine documents",
     });
     await expect(navigation).toBeVisible({ timeout: 30000 });
-    const hrefs = await navigation
-      .getByRole("link")
-      .evaluateAll((links) => links.map((link) => link.getAttribute("href")!));
-    expect(hrefs.length).toBeGreaterThan(0);
-    for (const href of hrefs) {
+    const links = await navigation.getByRole("link").evaluateAll((links) =>
+      links.map((link) => ({
+        href: link.getAttribute("href")!,
+        // The link shows the readable title, then the commit date.
+        name: link.firstChild!.textContent!.trim(),
+      })),
+    );
+    expect(links.length).toBeGreaterThan(0);
+    for (const { href, name } of links) {
       await page.goto(href);
       const id = new URL(href, page.url()).searchParams.get("doc")!;
       const title = page
         .locator('[data-slot="card-title"]')
-        .filter({ hasText: id });
-      await expect(title).toHaveText(id);
+        .filter({ hasText: name });
+      await expect(title).toHaveText(name);
       await expect(
         title.locator("../..").getByRole("heading", { level: 2 }).first(),
       ).toBeVisible();

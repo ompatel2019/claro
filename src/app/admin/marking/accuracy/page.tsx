@@ -22,6 +22,7 @@ import { HelpNote } from "./help-note";
 import { QualityTabs, qualityHref, type QualityTab } from "./tabs";
 import { mergeRuns } from "../engine/summary";
 import { loadDocs } from "../engine/docs";
+import { docTitle, orderDocs } from "../engine/doc-titles";
 import { Markdown } from "../engine/markdown";
 import { RunsTable } from "../engine/runs-table";
 import { loadBucketRuns } from "../engine/store";
@@ -275,7 +276,7 @@ async function runsView(params: Params) {
 }
 
 async function docsView(params: Params) {
-  const docs = await loadDocs();
+  const docs = orderDocs(await loadDocs());
   const requested = one(params.doc);
   const selected = docs.find((doc) => doc.id === requested) ?? docs[0];
   if (!selected)
@@ -309,7 +310,7 @@ async function docsView(params: Params) {
                     : "text-muted-foreground hover:bg-accent hover:text-foreground",
                 )}
               >
-                {doc.id}
+                {docTitle(doc)}
                 {doc.committedAt && (
                   <span className="text-muted-foreground mt-0.5 block text-xs font-normal">
                     Last commit {commitLabel(doc.committedAt)}
@@ -322,7 +323,7 @@ async function docsView(params: Params) {
         <Card className="min-w-0">
           <CardHeader>
             <CardTitle>
-              <h2>{selected.id}</h2>
+              <h2>{docTitle(selected)}</h2>
             </CardTitle>
             {selected.committedAt && (
               <CardDescription>

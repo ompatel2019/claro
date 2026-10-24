@@ -184,15 +184,23 @@ it("keeps every engine doc page reachable on How marking works", async () => {
   ]);
   await page(undefined, { tab: "docs", doc: "AIRO-5-2" });
   const nav = screen.getByRole("navigation", { name: "Engine documents" });
-  expect(within(nav).getByRole("link", { name: "AIRO-5-2" })).toHaveAttribute(
+  expect(within(nav).getByRole("link", { name: "Airo 5.2" })).toHaveAttribute(
     "aria-current",
     "page",
   );
-  expect(within(nav).getByRole("link", { name: "ENGINE" })).toHaveAttribute(
+  expect(within(nav).getByRole("link", { name: "Engine" })).toHaveAttribute(
     "href",
     "/admin/marking/accuracy?tab=docs&doc=ENGINE",
   );
   expect(screen.getByText("Airo 5.2 doc")).toBeInTheDocument();
+  expect(
+    screen.getByRole("heading", { level: 2, name: "Airo 5.2" }),
+  ).toBeInTheDocument();
+  expect(
+    within(nav)
+      .getAllByRole("link")
+      .map((link) => link.textContent),
+  ).toEqual(["Engine", "Airo 5.2"]);
   expect(mocks.loadAccuracy).not.toHaveBeenCalled();
 });
 
