@@ -306,7 +306,14 @@ export function SprintSetup({
                                   }
                                 >
                                   {sub.name}{" "}
-                                  <span className="tabular-nums opacity-65">
+                                  <span
+                                    className={cn(
+                                      "tabular-nums",
+                                      // Selected chips use Orange Text at full strength for AA contrast.
+                                      !c.subtopics.includes(sub.id) &&
+                                        "opacity-65",
+                                    )}
+                                  >
                                     {n(pool?.subtopics[sub.id])}
                                   </span>
                                 </Chip>
