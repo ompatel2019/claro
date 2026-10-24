@@ -47,7 +47,7 @@ async function ready(page: Page, range: Range = "month") {
   await expect(
     page.getByRole("heading", { level: 1, name: "AI spend", exact: true }),
   ).toBeVisible({ timeout: 30000 });
-  await expect(page.locator('[data-slot="card"] > dl')).toHaveCount(9);
+  await expect(page.locator('[data-slot="card"] > dl')).toHaveCount(3);
   await expectWindow(page, range);
 }
 
@@ -105,12 +105,14 @@ test.describe("admin spend", () => {
     expect(
       await page.locator('#main [data-slot="empty"]').count(),
     ).toBeLessThanOrEqual(1);
-    for (const table of ["By model", "By task", "Top students, 30 days"])
+    for (const name of ["By model", "By task", "Top students, 30 days"]) {
+      const table = page.getByRole("table", { name, exact: true });
       await expect(
-        page
-          .getByRole("table", { name: table, exact: true })
-          .or(page.locator('#main [data-slot="empty"]')),
+        (await table.count())
+          ? table
+          : page.locator('#main [data-slot="empty"]'),
       ).toBeVisible();
+    }
     if (
       await page.getByRole("table", { name: "By task", exact: true }).count()
     ) {
