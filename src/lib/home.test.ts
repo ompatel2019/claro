@@ -58,7 +58,6 @@ const topic = (
 const data = (topics: TopicProgress[]): ProgressData => ({
   topics,
   types: [],
-  verbs: [],
   history: [],
   mastery: [],
   missed: [],

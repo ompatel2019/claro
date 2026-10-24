@@ -75,7 +75,7 @@ export default async function Page({
     if (a.question_id && !bank.some((q) => q.id === a.question_id)) {
       const { data: question, error } = await db
         .from("questions")
-        .select(`${questionColumns},verb`)
+        .select(questionColumns)
         .eq("id", a.question_id)
         .maybeSingle();
       if (error) throw error;

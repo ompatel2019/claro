@@ -26,7 +26,6 @@ const topic: TopicProgress = {
 const progress = (topics = [topic]): ProgressData => ({
   topics,
   types: [],
-  verbs: [],
   history: [],
   mastery: [],
   missed: [],

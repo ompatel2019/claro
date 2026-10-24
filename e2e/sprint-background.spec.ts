@@ -36,7 +36,7 @@ test.beforeAll(async () => {
       contents: `import React from 'react'; import { createRoot } from 'react-dom/client';
       import { SprintRunner } from './src/components/sprint-runner';
       import { MarkMyAnswer } from './src/components/mark-my-answer';
-      createRoot(document.getElementById('root')).render(location.pathname === '/__mark-test' ? <MarkMyAnswer questions={[{id:'q',type:'short',stem:'Explain inflation.',marks:4,source:'Synthetic',year:2025,topic_id:'t',stimulus:null,options:null,verb:'explain'}]} topics={[]} userId='synthetic' left={20}/> : <SprintRunner
+      createRoot(document.getElementById('root')).render(location.pathname === '/__mark-test' ? <MarkMyAnswer questions={[{id:'q',type:'short',stem:'Explain inflation.',marks:4,source:'Synthetic',year:2025,topic_id:'t',stimulus:null,options:null}]} topics={[]} userId='synthetic' left={20}/> : <SprintRunner
         session={{id:'s',kind:'sprint',config:{mode:'short',feedback:'end'},elapsed_s:0}}
         initial={${JSON.stringify(attempts)}} userId="u" title="Synthetic sprint" />);`,
       resolveDir: process.cwd(),
@@ -134,7 +134,9 @@ test("queues background marks, keeps edits usable, and sends Finish without wait
       .getByRole("button", { name: new RegExp(`^Question ${question},`) })
       .click();
     await expect(
-      page.getByText(`Explain effect ${question}.`, { exact: true }),
+      page
+        .locator("#main")
+        .getByText(`Explain effect ${question}.`, { exact: true }),
     ).toBeVisible();
   };
   for (let i = 1; i <= 3; i++) {

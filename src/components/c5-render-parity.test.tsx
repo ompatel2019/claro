@@ -31,7 +31,7 @@ vi.mock("react", async (original) => {
 vi.mock("@/app/(app)/actions", () => ({ startSprint: vi.fn() }));
 vi.mock("@/utils/supabase/client", () => ({ createClient: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: vi.fn() }) }));
-import { SprintSetup, QuickStarts, SameSetup } from "./sprint-setup";
+import { SprintSetup, SameSetup } from "./sprint-setup";
 import { AnnotatedFeedback, FeedbackDetails } from "./annotated-feedback";
 
 const topics = [
@@ -54,9 +54,6 @@ const pool: Pool = {
   topics: { t1: 10 },
   subtopics: { s1: 5 },
   all_subtopics: 60,
-  verbs: { Explain: 10 },
-  difficulty: { standard: 20 },
-  trial: true,
 };
 const comments = [
   {
@@ -192,24 +189,11 @@ for (const mode of ["mcq", "short", "mixed"] as const) {
     });
   }
 }
-for (const variant of ["default", "weak", "previous", "both"] as const) {
-  for (const action of ["ready", "pending", "error"] as const) {
-    it(`preserves quick starts ${variant} / ${action}`, () => {
+for (const action of ["ready", "pending", "error"] as const) {
+  {
+    it(`preserves same setup / ${action}`, () => {
       state.pending = action === "pending";
       state.error = action === "error";
-      pin(
-        <QuickStarts
-          weak={
-            variant === "weak" || variant === "both" ? topics[1] : undefined
-          }
-          previous={
-            variant === "previous" || variant === "both"
-              ? withMode(DEFAULTS, "mixed")
-              : undefined
-          }
-          previousRaw={{ target: 45 }}
-        />,
-      );
       pin(<SameSetup config={withMode(DEFAULTS, "short")} />);
     });
   }

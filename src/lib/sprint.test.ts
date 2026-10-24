@@ -6,7 +6,6 @@ import {
   estimatedMarks,
   validPace,
   clampPace,
-  filtersOn,
   fromParams,
   restore,
   summary,
@@ -31,8 +30,8 @@ it("switching type resets size to that type's default and range", () => {
   const mixed = withMode(DEFAULTS, "mixed");
   expect(mixed).toMatchObject({ size_by: "questions", target: 15 });
   expect(withSizeBy(withMode(DEFAULTS, "short"), "questions").target).toBe(5);
-  const short = { ...withMode(DEFAULTS, "short"), difficulty: ["standard"] };
-  expect(withMode(short as typeof DEFAULTS, "mcq").difficulty).toEqual([]);
+  const short = { ...withMode(DEFAULTS, "short"), marks_per_short: 5 };
+  expect(withMode(short, "mcq").marks_per_short).toBeNull();
   expect(clampTarget(DEFAULTS, 99)).toBe(40);
   expect(clampTarget(withMode(DEFAULTS, "mixed"), 3)).toBe(5);
 });
@@ -114,7 +113,8 @@ it("URL prefill wins and tolerates old subtopic links", () => {
   expect(many.topics).toEqual(["t1", "t2"]);
   expect(many.target).toBe(40);
   expect(many.history).toBe("prefer_new");
-  expect(fromParams({ verb: "Explain" }, DEFAULTS)!.verbs).toEqual([]);
+  // Directive verb filtering was removed: a verb-only link no longer prefills.
+  expect(fromParams({ verb: "Explain" }, DEFAULTS)).toBeNull();
 });
 
 it("restores a saved setup defensively", () => {
@@ -132,17 +132,15 @@ it("restores a saved setup defensively", () => {
   ).toMatchObject({ mode: "short", size_by: "questions", target: 8 });
 });
 
-it("summarises the setup in one line and counts extra filters", () => {
+it("summarises the setup in one line", () => {
   const c = {
     ...withMode(DEFAULTS, "short"),
     topics: ["t3"],
     subtopics: ["t3-inflation", "t3-unemployment"],
-    difficulty: ["foundation" as const],
   };
   expect(summary(c, names)).toBe(
     "30 marks · 45 min · Economic Issues (Inflation, Unemployment) · Prefer new",
   );
-  expect(filtersOn(c)).toBe(1);
   expect(
     summary({ ...DEFAULTS, timed: false, history: "mistakes" }, names),
   ).toBe("20 questions · 20 marks · Untimed · Whole course · Mistakes only");
@@ -306,13 +304,13 @@ it("saved settings reject malformed arrays, unknown keys and non-finite size mem
   expect(c).toMatchObject({
     topics: ["t1", "t2"],
     subtopics: [],
-    difficulty: ["standard"],
-    origins: ["a1"],
-    verbs: [],
     history: "prefer_new",
     feedback: "end",
   });
   expect(c).not.toHaveProperty("unknown");
+  // Removed filters are dropped from old saved setups.
+  for (const key of ["difficulty", "origins", "verbs"])
+    expect(c).not.toHaveProperty(key);
   expect(c).not.toHaveProperty("include_extended");
   expect(c.sizes).not.toHaveProperty("extended:questions");
   expect(fromParams({ type: "toString" }, DEFAULTS)?.mode).toBe("mcq");

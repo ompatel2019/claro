@@ -202,9 +202,9 @@ it("colours sprint pills by mark, outlines the open one and keeps flags apart", 
   fireEvent.click(tile(1));
   expect(tile(1)).toHaveClass("border-current");
   expect(tile(2)).not.toHaveClass("border-current");
-  expect(screen.getByRole("list", { name: "Key" })).toHaveTextContent(
-    "Full marksPart marksNo marksNot answeredOpen nowFlagged",
-  );
+  // Item 18: the results legend is gone; the pills carry their own icons and labels.
+  expect(screen.queryByRole("list", { name: "Key" })).toBeNull();
+  expect(screen.queryByText("Open now")).toBeNull();
 });
 
 it("lists every question in a bordered table with the open row highlighted", () => {

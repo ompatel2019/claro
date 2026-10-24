@@ -7,6 +7,7 @@ import { cleanupAnswerPhotos } from "@/lib/answer-photo-cleanup";
 import { ensureSession, withAuthRetry } from "@/lib/auth-client";
 import {
   answered,
+  paperLabel,
   plural,
   timeLimit,
   type Attempt,
@@ -39,8 +40,7 @@ import { TYPE_LABEL } from "@/lib/results";
 
 import { SprintFocusShell } from "./student/sprint/focus-shell";
 import { questionPillState } from "./student/sprint/question-pill";
-import { BookletFilter, BookletLegend } from "./booklet-controls";
-import { BookletModal } from "./student/sprint/booklet-modal";
+import { BookletPaper } from "./student/sprint/booklet-paper";
 import {
   LeaveSprintDialog,
   leftKey,
@@ -80,12 +80,10 @@ export function SprintRunner({
   const [saveState, setSaveState] = useState<SaveState>("saved");
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
-  const [bookletOpen, setBookletOpen] = useState(false);
   const modKey = useModKey();
   const [answerModes, setAnswerModes] = useState<
     Record<string, "type" | "photo">
   >({});
-  const [filter, setFilter] = useState<"all" | "unanswered" | "flagged">("all");
   const [finishing, setFinishing] = useState(false);
   const [finishFailed, setFinishFailed] = useState(false);
   const queue = useRef<Promise<void>>(Promise.resolve());
@@ -537,7 +535,7 @@ export function SprintRunner({
   const nextRef = useRef(() => {});
   useEffect(() => {
     nextRef.current = () => {
-      if (busy || confirm || bookletOpen) return;
+      if (busy || confirm) return;
       if (index < attempts.length - 1) void act(() => change(index + 1));
       else setConfirm(true);
     };
@@ -593,8 +591,7 @@ export function SprintRunner({
   const keys = useRef<(e: KeyboardEvent) => void>(() => {});
   useEffect(() => {
     keys.current = (e) => {
-      // The booklet modal is read-only: F and A–D must not change the question behind it.
-      if (!a || busy || !editable || bookletOpen) return;
+      if (!a || busy || !editable) return;
       const k = e.key.toUpperCase();
       if (k === "F") flag();
       else if (a.question.type === "mcq" && /^[1-4A-D]$/.test(k)) {
@@ -640,72 +637,15 @@ export function SprintRunner({
   const go = (i: number) => void act(() => change(i));
   const qLabel = (i: number) => `Q${i + 1}`;
   const sprintBooklet = (
-    <div className="flex min-h-[calc(100svh-9rem)] flex-1 flex-col gap-5 md:min-h-0">
-      <p className="text-muted-foreground text-xs md:absolute md:top-6 md:right-5">
-        {attempts.filter(answered).length} of {attempts.length} answered
-      </p>
-      {/* Top of the rail: the bottom sits under the fixed answer footer.
-          data-q closes the mobile sheet, so the modal never stacks on it. */}
-      <Button
-        data-q
-        variant="outline"
-        size="sm"
-        className="w-full"
-        onClick={() => setBookletOpen(true)}
-      >
-        <PortalIcon name="book-open" className="size-4" /> View booklet
-      </Button>
-      <BookletFilter filter={filter} onFilter={setFilter} />
-      <nav aria-label="Question booklet" className="space-y-5">
-        {(["mcq", "short", "extended"] as const).map((type) => {
-          const items = attempts
-            .map((row, i) => ({ row, i }))
-            .filter(({ row }) => row.question.type === type)
-            .filter(({ row }) =>
-              filter === "unanswered"
-                ? !answered(row)
-                : filter === "flagged"
-                  ? row.flagged
-                  : true,
-            );
-          return items.length ? (
-            <div key={type}>
-              <h3 className="text-muted-foreground mb-2.5 text-xs font-medium">
-                {TYPE_LABEL[type]}
-              </h3>
-              <div className="grid grid-cols-5 gap-2">
-                {items.map(({ row, i }) => {
-                  const pill = questionPillState({
-                    active: index === i,
-                    answered: answered(row),
-                    flagged: row.flagged,
-                  });
-                  return (
-                    <button
-                      key={row.id}
-                      type="button"
-                      data-q
-                      disabled={busy}
-                      aria-current={pill["aria-current"]}
-                      aria-label={`Question ${i + 1}: ${pill.label}${checkMode && row.status === "marked" ? `, ${row.mark}/${row.max_marks} marks` : ""}`}
-                      onClick={() => go(i)}
-                      className={cn(
-                        "focus-visible:outline-ring size-9 text-sm font-medium tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2",
-                        pill.className,
-                      )}
-                    >
-                      {i + 1}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null;
-        })}
-      </nav>
-      <BookletLegend />
-    </div>
+    <BookletPaper
+      attempts={attempts}
+      index={index}
+      examMode={!checkMode}
+      busy={busy}
+      onJump={go}
+    />
   );
+  const paper = paperLabel(a.question);
 
   const answerMode =
     answerModes[a.id] ?? (a.image_paths?.length ? "photo" : "type");
@@ -732,6 +672,7 @@ export function SprintRunner({
         onFinish={() => setConfirm(true)}
         onMove={(d) => !busy && go(index + d)}
         booklet={sprintBooklet}
+        bookletMeta={`${attempts.length - unanswered.length} of ${attempts.length} answered`}
         progress={attempts.map((row, i) => {
           const pill = questionPillState({
             active: i === index,
@@ -746,7 +687,7 @@ export function SprintRunner({
               aria-current={pill["aria-current"]}
               disabled={busy}
               onClick={() => go(i)}
-              className="focus-visible:outline-ring flex h-8 min-w-8 flex-1 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
+              className="focus-visible:outline-ring flex h-8 min-w-0 flex-1 basis-0 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2"
             >
               <span aria-hidden className={cn("h-3 w-full", pill.className)} />
             </button>
@@ -786,27 +727,55 @@ export function SprintRunner({
           </div>
         )}
         <article className="space-y-6 p-0">
+          {/* Meta pills and Flag sit above the question, where the eye starts. */}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-xs">
-              <Badge variant="outline">Question {index + 1}</Badge>
-              <Badge variant="secondary">{TYPE_LABEL[a.question.type]}</Badge>
-              <Badge variant="secondary">
-                {plural(a.question.marks, "mark")}
-              </Badge>
-              {(a.question.year || a.question.source) && (
-                <span>
-                  {a.question.year &&
-                    !a.question.source.includes(String(a.question.year)) &&
-                    `${a.question.year} `}
-                  {a.question.source}
-                </span>
+            <ul
+              aria-label="Question details"
+              className="flex flex-wrap items-center gap-2 [&_[data-slot=badge]]:h-7 [&_[data-slot=badge]]:px-3 [&_[data-slot=badge]]:text-[13px] [&_[data-slot=badge]]:font-semibold"
+            >
+              <li>
+                <Badge variant="brand">Question {index + 1}</Badge>
+              </li>
+              <li>
+                <Badge variant="outline" className="bg-card">
+                  {TYPE_LABEL[a.question.type]}
+                </Badge>
+              </li>
+              <li>
+                <Badge variant="outline" className="bg-card tabular-nums">
+                  {plural(a.question.marks, "mark")}
+                </Badge>
+              </li>
+              {paper && (
+                <li>
+                  <Badge variant="outline" className="bg-card">
+                    <PortalIcon name="file-question" aria-hidden />
+                    {paper}
+                  </Badge>
+                </li>
               )}
               {seen.includes(a.question_id) && (
-                <Badge variant="outline" className="ml-2 align-middle">
-                  Seen before
-                </Badge>
+                <li>
+                  <Badge variant="muted">
+                    <PortalIcon name="history" aria-hidden />
+                    Seen before
+                  </Badge>
+                </li>
               )}
-            </p>
+            </ul>
+            <Button
+              variant="outline"
+              size="sm"
+              data-flag-toggle
+              aria-label="Flag for review"
+              aria-pressed={a.flagged}
+              disabled={busy || !editable}
+              onClick={flag}
+              className="text-ink-2 aria-pressed:bg-selected"
+            >
+              <Flag className="text-ink-2" />
+              {a.flagged ? "Flagged" : "Flag for review"}
+            </Button>
           </div>
           <QuestionView question={a.question} showMetadata={false} />
           {a.question.type === "mcq" ? (
@@ -956,23 +925,11 @@ export function SprintRunner({
             </p>
           </div>
         </article>
-        <div className="sprint-session-footer bg-background fixed right-0 bottom-0 left-[var(--sprint-rail)] z-20 border-t px-4 py-3">
+        <div className="sprint-session-footer bg-background fixed right-(--sprint-rail) bottom-0 left-0 z-20 border-t px-4 py-3">
           <div className="mx-auto flex max-w-[760px] items-center justify-end gap-2">
             <Button
               variant="outline"
-              size="sm"
               className="mr-auto"
-              aria-label="Flag for review"
-              aria-pressed={a.flagged}
-              disabled={busy || !editable}
-              onClick={flag}
-            >
-              <Flag className={cn(a.flagged && "text-brand-text")} />
-              <span className="hidden sm:inline">Flag for review</span>
-            </Button>
-
-            <Button
-              variant="outline"
               aria-label="Previous question"
               disabled={busy || index === 0}
               onClick={() => go(index - 1)}
@@ -1054,15 +1011,6 @@ export function SprintRunner({
             setLeaving(false);
             void act(() => finish());
           }}
-        />
-        <BookletModal
-          open={bookletOpen}
-          onOpenChange={setBookletOpen}
-          attempts={attempts}
-          index={index}
-          examMode={!checkMode}
-          busy={busy}
-          onJump={go}
         />
       </SprintFocusShell>
     </>

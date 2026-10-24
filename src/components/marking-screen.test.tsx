@@ -64,7 +64,6 @@ it("shows the shared screen during Mark my answer submission and restores the dr
           topic_id: "t",
           stimulus: null,
           options: null,
-          verb: "explain",
         },
       ]}
       topics={[]}
@@ -159,6 +158,10 @@ it("shows a sprint's answer sheet with real marked counts and a way to leave", (
     "/student",
   );
   expect(screen.queryByRole("button", { name: /replay/i })).toBeNull();
+  // Item 16: the sheet scrolls with the page, never an inner scrollbar.
+  const status = screen.getByRole("status");
+  expect(status.className).not.toMatch(/overflow-(y-)?(auto|scroll)/);
+  expect(status.className).not.toContain("fixed");
 });
 
 it("keeps the generic screen when a sprint has no answers", () => {

@@ -39,7 +39,9 @@ test.describe("Sprint results", () => {
       expect(intersects).toBe(false);
     };
     await page.goto("/student/sprint?type=mcq&sub=t3-inflation&size=5");
-    await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
+    await expect(
+      page.getByTestId("sprint-summary-bar").getByText("Matching"),
+    ).toBeVisible();
     for (const width of [360, 400, 640, 768]) {
       await page.setViewportSize({ width, height: 800 });
       await clearsFeedback(

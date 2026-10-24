@@ -67,7 +67,6 @@ export type ProgressData = {
   stats?: ProgressStats;
   topics: TopicProgress[];
   types: Breakdown[];
-  verbs: Breakdown[];
   history: HistoryScore[];
   mastery: Mastery[];
   missed: { id: string; name: string; missed: number }[];

@@ -24,7 +24,9 @@ for (const width of [390, 1280]) {
       page,
     }) => {
       await page.goto("/student/sprint?type=mcq&size=5");
-      await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
+      await expect(
+        page.getByTestId("sprint-summary-bar").getByText("Matching"),
+      ).toBeVisible();
       await timerStep(page);
       const multis = page.getByLabel("Multis: minutes per question");
       const shorts = page.getByLabel("Shorts: minutes per mark");
@@ -87,11 +89,8 @@ for (const width of [390, 1280]) {
                   topics: {},
                   subtopics: {},
                   all_subtopics: 0,
-                  verbs: {},
-                  difficulty: {},
                   all_years: 0,
                   years: [2018, 2025],
-                  trial: false,
                 },
           ),
         });
@@ -118,7 +117,9 @@ for (const width of [390, 1280]) {
       page,
     }) => {
       await page.goto("/student/sprint?type=short&size=10");
-      await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
+      await expect(
+        page.getByTestId("sprint-summary-bar").getByText("Matching"),
+      ).toBeVisible();
       await timerStep(page);
       await page.getByLabel("Shorts: minutes per mark").fill("");
       await page.getByRole("switch", { name: /^Timed at exam pace/ }).click();

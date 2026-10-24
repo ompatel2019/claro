@@ -12,7 +12,6 @@ const written: QuestionInput = {
   type: "short",
   topic_id: "t3-inflation",
   marks: 4,
-  verb: "Explain",
   source: "2024 HSC Q21(b)",
   year: 2024,
   stem: "Explain one cause of inflation.",
@@ -87,9 +86,6 @@ describe("question editor rules", () => {
     expect(questionSchema.safeParse(written).success).toBe(true);
     const bad = questionSchema.safeParse({ ...written, id: "No Spaces" });
     expect(bad.success).toBe(false);
-    expect(
-      questionSchema.safeParse({ ...written, verb: "Wonder" }).success,
-    ).toBe(false);
   });
 });
 

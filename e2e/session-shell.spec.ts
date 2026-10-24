@@ -45,9 +45,6 @@ test.describe("Session shell", () => {
     await expect(
       booklet.getByRole("button", { name: "Question 1: Answered, Flagged" }),
     ).toBeVisible();
-    await page.getByRole("button", { name: "Flagged", exact: true }).click();
-    await expect(booklet.getByRole("button")).toHaveCount(1);
-    await page.getByRole("button", { name: "All", exact: true }).click();
 
     // On multiple choice, C picks option C; the button opens the calculator.
     await page.getByRole("button", { name: "Calculator (C)" }).click();

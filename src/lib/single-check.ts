@@ -77,7 +77,7 @@ export const ownQuestionSchema = z.object({
     .transform((value) => value || null),
 });
 export type OwnQuestion = z.infer<typeof ownQuestionSchema>;
-export type BankQuestion = Attempt["question"] & { verb: string | null };
+export type BankQuestion = Attempt["question"];
 export const singleConfig = (question: OwnQuestion) => ({
   question: ownQuestionSchema.parse(question),
 });

@@ -30,11 +30,6 @@ const SprintConfig = z
     short_count: z.number().int().min(0).max(15).optional(),
     marks_per_short: z.number().int().min(1).max(100).nullable().optional(),
     short_marks: z.number().int().min(0).max(100).optional(),
-    difficulty: z
-      .array(z.enum(["foundation", "standard", "challenging"]))
-      .default([]),
-    verbs: z.array(z.string().max(40)).max(20).default([]),
-    origins: z.array(z.enum(["nesa", "a1"])).default([]),
     history: z
       .enum(["prefer_new", "new_only", "mistakes", "flagged", "any"])
       .default("prefer_new"),

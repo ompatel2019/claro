@@ -36,7 +36,6 @@ const bank = Array.from({ length: 1101 }, (_, i) => ({
   topic_id: "t3-inflation",
   marks: 4,
   criteria: [{ min: 1, max: 4 }],
-  verb: "Explain",
   status: "live",
   origin: "claro",
   updated_at: "2026-10-09T01:00:00Z",

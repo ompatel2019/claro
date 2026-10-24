@@ -166,12 +166,15 @@ export async function SprintResults({ id }: { id: string }) {
         }
       />
       <MarkingProgress {...progress} />
-      <section aria-label="Summary" className="grid gap-3 sm:grid-cols-3">
+      <section aria-label="Summary" className="grid gap-3 sm:grid-cols-2">
+        {/* Score is the hero: a full row above Time and Full marks. */}
         <Stat
+          hero
           label="Score"
           pill={provisional && <StatusPill pill="Provisional" />}
         >
           <StatValue
+            hero
             value={`${provisional ? "≈ " : ""}${k.score.mark}`}
             unit={`/${total}`}
             extra={scorePct == null ? null : `${Math.round(scorePct)}%`}
@@ -234,15 +237,29 @@ export async function SprintResults({ id }: { id: string }) {
 function Stat({
   label,
   pill,
+  hero = false,
   children,
 }: {
   label: string;
   pill?: React.ReactNode;
+  hero?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <Card size="sm" className="min-w-0 gap-1.5 px-(--card-spacing)">
-      <p className="text-ink-2 flex items-center gap-2 text-[13px] font-semibold">
+    <Card
+      size="sm"
+      data-hero={hero || undefined}
+      className={cn(
+        "min-w-0 gap-1.5 px-(--card-spacing)",
+        hero && "gap-2 py-6 sm:col-span-2",
+      )}
+    >
+      <p
+        className={cn(
+          "text-ink-2 flex items-center gap-2 font-semibold",
+          hero ? "text-sm" : "text-[13px]",
+        )}
+      >
         {label} {pill}
       </p>
       {children}
@@ -254,7 +271,9 @@ function StatValue({
   value,
   unit,
   extra,
+  hero = false,
 }: {
+  hero?: boolean;
   value: string;
   /** "/15" sits flush against the value; "of 22:30" is spaced. */
   unit?: string | null;
@@ -264,11 +283,21 @@ function StatValue({
   return (
     <p className="text-ink flex flex-wrap items-baseline gap-x-1.5 tabular-nums">
       <span>
-        <span className="num-display text-[28px] leading-none font-bold">
+        <span
+          className={cn(
+            "num-display leading-none font-bold",
+            hero ? "text-[56px] sm:text-[72px]" : "text-[28px]",
+          )}
+        >
           {value}
         </span>
         {flush && (
-          <span className="text-muted-foreground text-sm font-medium">
+          <span
+            className={cn(
+              "text-muted-foreground font-medium",
+              hero ? "text-2xl" : "text-sm",
+            )}
+          >
             {unit}
           </span>
         )}
@@ -279,7 +308,14 @@ function StatValue({
         </span>
       )}
       {extra && (
-        <span className="text-ink ml-1 text-base font-semibold">{extra}</span>
+        <span
+          className={cn(
+            "text-ink ml-1 font-semibold",
+            hero ? "text-2xl" : "text-base",
+          )}
+        >
+          {extra}
+        </span>
       )}
     </p>
   );

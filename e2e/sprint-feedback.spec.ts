@@ -37,10 +37,6 @@ for (const width of [400, 1280]) {
       await expect(start).toBeEnabled();
       await expect(
         page.getByRole("radiogroup", { name: "Question history" }),
-      ).toBeHidden();
-      await page.getByRole("button", { name: "Advanced" }).click();
-      await expect(
-        page.getByRole("radiogroup", { name: "Question history" }),
       ).toBeVisible();
       await expect(marks).toHaveValue("60");
       await expect(
@@ -108,7 +104,9 @@ for (const width of [400, 1280]) {
       ).toHaveCount(0);
       await page.getByRole("button", { name: "Mixed", exact: true }).click();
       await expect(page.getByText(/Include an extended/)).toHaveCount(0);
-      await expect(page.getByText(/^\d+ questions match/)).toBeVisible();
+      await expect(
+        page.getByTestId("sprint-summary-bar").getByText("Matching"),
+      ).toBeVisible();
       await reviewSprintSetup(page);
       await page.getByRole("button", { name: /^Start (sprint|with)/ }).click();
       await expect(page).toHaveURL(/\/student\/sprint\/[^/]+$/);

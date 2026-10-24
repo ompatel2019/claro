@@ -39,7 +39,6 @@ const questions = [
     topic_id: "t3-inflation",
     stimulus: null,
     options: null,
-    verb: "explain",
   },
 ] satisfies BankQuestion[];
 function setup(left = 20, allowOwnQuestion = false) {
