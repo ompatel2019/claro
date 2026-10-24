@@ -1434,7 +1434,7 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   min-height: 288px;
   font-family: var(--font-sans);
   font-size: 16px;
-  padding: var(--answer-pad) 20px 16px 72px;
+  padding: calc(var(--answer-pad) - 2px) 20px 16px 72px;
   border-radius: var(--radius);
   background-color: var(--card);
   caret-color: var(--brand);
