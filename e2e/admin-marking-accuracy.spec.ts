@@ -158,7 +158,7 @@ test.describe("admin marking accuracy", () => {
     await expect(
       page
         .getByRole("navigation", { name: "Admin navigation" })
-        .getByRole("link", { name: "Accuracy" }),
+        .getByRole("link", { name: "Marking quality" }),
     ).toHaveAttribute("aria-current", "page");
     // Read-only aggregate page: no student emails anywhere in the main content.
     expect(await page.locator("#main").innerText()).not.toMatch(/@/);

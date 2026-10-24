@@ -8,7 +8,7 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/claro";
-import { monotonePath } from "@/lib/chart-path";
+import { monotonePathAbove } from "@/lib/chart-path";
 import { PortalIcon } from "@/components/icons";
 import { dateLabel } from "@/lib/practice";
 import {
@@ -42,12 +42,15 @@ export function DailyChart({
   hero,
   points,
   kind,
+  dayPicker = true,
 }: {
   title: string;
   description?: string;
   hero: string;
   points: { day: string; value: number; models?: Record<string, number> }[];
   kind: "area" | "bars";
+  /** The "Day" select under the chart. Hover titles and the table view still give each day. */
+  dayPicker?: boolean;
 }) {
   const [selected, setSelected] = useState<string | null>(null);
   const [view, setView] = useState<"chart" | "table">("chart");
@@ -65,7 +68,10 @@ export function DailyChart({
   const step = (W - LEFT - RIGHT) / Math.max(1, points.length);
   const x = (i: number) => LEFT + (i + 0.5) * step;
   const y = (v: number) => TOP + (1 - v / max) * (BOTTOM - TOP);
-  const line = monotonePath(points.map((p, i) => [x(i), y(p.value)]));
+  const line = monotonePathAbove(
+    points.map((p, i) => [x(i), y(p.value)]),
+    BOTTOM,
+  );
   const bar = Math.min(24, step * 0.58);
   const ticks = [0, max / 2, max];
   return (
@@ -294,7 +300,7 @@ export function DailyChart({
             ))}
           </ul>
         )}
-        {current && (
+        {dayPicker && current && (
           <div className="mt-3 flex flex-wrap items-center gap-2 text-sm">
             <span className="text-muted-foreground">Day</span>
             <Select

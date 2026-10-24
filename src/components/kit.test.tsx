@@ -22,12 +22,10 @@ afterEach(cleanup);
 it("groups student and admin navigation without homework", () => {
   expect(nav.student.map((g) => g.label)).toEqual(["", "Practice", "Review"]);
   expect(nav.admin.map((g) => g.label)).toEqual([
-    "Overview",
-    "Students",
+    "",
+    "People",
     "Content",
     "Marking",
-    "Feedback",
-    "Spend",
   ]);
   const hrefs = Object.values(nav).flatMap((groups) =>
     groups.flatMap((g) => g.items.map((i) => i.href)),
@@ -62,9 +60,9 @@ it("marks the section root only on an exact match", () => {
   ]);
   expect(
     nav.admin.find((g) => g.label === "Marking")?.items.map((i) => i.label),
-  ).toEqual(["Review queue", "Accuracy", "Engine"]);
+  ).toEqual(["Review queue", "Marking quality", "AI spend"]);
   expect(activeItem("admin", "/admin")?.label).toBe("Dashboard");
-  expect(activeItem("admin", "/admin/students/x")?.label).toBe("All students");
+  expect(activeItem("admin", "/admin/students/x")?.label).toBe("Students");
   expect(activeItem("admin", "/admin/marking/review/x")?.label).toBe(
     "Review queue",
   );
@@ -231,9 +229,11 @@ it("retains Progress and the admin marking navigation", () => {
   expect(activeItem("student", "/student/activity")?.label).toBe("Activity");
   expect(activeItem("student", "/student/progress")?.label).toBe("Progress");
   expect(activeItem("admin", "/admin/marking/accuracy")?.label).toBe(
-    "Accuracy",
+    "Marking quality",
   );
-  expect(activeItem("admin", "/admin/marking/engine")?.label).toBe("Engine");
+  expect(activeItem("admin", "/admin/marking/engine")?.label).toBe(
+    "Marking quality",
+  );
 });
 it("retains checkbox filters and drops stale day inputs before changing range", () => {
   render(
@@ -284,7 +284,7 @@ it("shows the supplied exam countdown only for students without a global chat la
   );
   expect(screen.queryByText("HSC Economics exam")).toBeNull();
   expect(screen.queryByRole("button", { name: "Send feedback" })).toBeNull();
-  expect(screen.getByRole("link", { name: "Inbox" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Feedback" })).toHaveAttribute(
     "href",
     "/admin/feedback",
   );
@@ -350,7 +350,7 @@ it("gives admin the shared shell navigation, top bar and account footer", () => 
   expect(
     screen.getByRole("navigation", { name: "Admin navigation" }),
   ).toHaveTextContent(
-    "OverviewDashboardStudentsAll studentsContentQuestionsFlashcardsMarkingReview queueAccuracyEngineFeedbackInboxSpendAI spend",
+    "DashboardPeopleStudentsFeedbackContentQuestionsFlashcardsMarkingReview queueMarking qualityAI spend",
   );
 });
 

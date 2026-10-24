@@ -127,24 +127,16 @@ test.describe("Admin shell", () => {
     await expect(nav.locator('a[href^="/admin/content/papers"]')).toHaveCount(
       0,
     );
-    for (const group of [
-      "Overview",
-      "Students",
-      "Content",
-      "Marking",
-      "Feedback",
-      "Spend",
-    ])
+    for (const group of ["People", "Content", "Marking"])
       await expect(nav.getByText(group, { exact: true })).toBeVisible();
     await expect(nav.getByRole("link")).toHaveText([
       "Dashboard",
-      "All students",
+      "Students",
+      "Feedback",
       "Questions",
       "Flashcards",
       "Review queue",
-      "Accuracy",
-      "Engine",
-      "Inbox",
+      "Marking quality",
       "AI spend",
     ]);
     await expect(
