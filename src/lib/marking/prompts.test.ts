@@ -32,7 +32,7 @@ const q: MarkableQuestion = {
 };
 
 it.each([false, true])(
-  "matches the literal Airo 5.4 full baseline and derived check variant (check=%s)",
+  "matches the literal Airo 5.4b full baseline and derived check variant (check=%s)",
   (check) => {
     // Literal full-prompt baseline; check mode derives from the same shared prefix.
     const expected = baselineMessages.map((message) => ({ ...message }));
@@ -251,14 +251,14 @@ it("guards judgement advice and makes outline bullets concrete in full feedback 
     "for a how question, specify the mechanism steps to explain",
   );
   expect(tail).toContain(
-    "next_mark only on fixes = the specific change that earns the next mark, phrased as a friendly next step",
+    "next_mark only on fixes = the specific change that earns the next mark (null on strengths)",
   );
   expect(gradeMessages(q, "Answer", true)[0].content).not.toContain(
     "In Analysis comments and better_answer_outline",
   );
 });
 
-it("asks for tutor-style, question-accurate comments in full feedback only (Airo 5.2 rules, Airo 5.4 tone)", () => {
+it("asks for tutor-style, question-accurate comments in full feedback only (Airo 5.2 rules, Airo 5.4b tone)", () => {
   const system = gradeMessages(q, "Answer")[0].content as string;
   const tail = system.split("Return the full JSON")[1];
   const rules = [
@@ -544,7 +544,6 @@ it("requests direct tutor voice with editable examples only in full grading", ()
   for (const line of [
     'use "you"/"your" or a friendly suggestion such as "Try naming…" or "Now show…" rather than a bare command',
     "Being friendly never replaces the specifics: each fix still names the exact term, step or contrast to add",
-    'phrased as a friendly next step such as "Try adding…"',
     "Name the specific strength or change",
     "Apply this voice to body and next_mark",
     '"This demonstrates", "The response", "The student", "Overall", "It is important to note", "Consider", "well done"',
