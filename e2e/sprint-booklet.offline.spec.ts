@@ -293,6 +293,11 @@ for (const [platform, key, label] of [
     await page.keyboard.press(`${key}+Enter`);
     await page.keyboard.press("Escape");
     await expect(page.locator('[data-slot="dialog-content"]')).toBeHidden();
+    await page.getByRole("button", { name: "Exit sprint" }).click();
+    await expect(page.getByRole("alertdialog")).toBeVisible();
+    await page.keyboard.press(`${key}+Enter`);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("alertdialog")).toBeHidden();
     await expect(page.getByText(/Question 3 of 6/)).toBeVisible();
     await answer.press(`${key}+Enter`);
     await expect(page.getByText(/Question 4 of 6/)).toBeVisible();

@@ -493,8 +493,10 @@ export function SprintRunner({
         e.repeat ||
         e.isComposing ||
         e.defaultPrevented ||
-        // An open dialog (shortcuts, leave, finish) owns the keyboard.
-        document.querySelector('[data-slot$="dialog-content"]')
+        // An open modal (shortcuts, leave, finish, mobile booklet) owns the keyboard.
+        document.querySelector(
+          '[data-slot$="dialog-content"], [data-slot="sheet-content"], [role="alertdialog"]',
+        )
       )
         return;
       e.preventDefault();

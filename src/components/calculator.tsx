@@ -66,6 +66,7 @@ export function Calculator({ onClose }: { onClose: () => void }) {
     const onKey = (e: KeyboardEvent) => {
       if (
         e.key !== "Escape" ||
+        e.isComposing ||
         e.defaultPrevented ||
         document.querySelector('[data-slot="dialog-content"]')
       )
