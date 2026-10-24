@@ -1,10 +1,11 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Alert, CheckCircle, PortalIcon } from "@/components/icons";
+import { CheckCircle, PortalIcon } from "@/components/icons";
 import { requireAdmin } from "@/lib/auth";
 import { loadDashboard } from "@/lib/admin-data";
 import { ago } from "@/lib/admin";
+import { lastWeek, spendMeter } from "@/lib/admin-dashboard";
 import { modeLabel, percentage, plural, scoreTone } from "@/lib/practice";
 import { DailyChart } from "@/components/daily-chart";
 import { LatestSessions } from "@/components/latest-sessions";
@@ -25,7 +26,7 @@ async function Dashboard() {
         <div className="card-row grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             "Active students, 7 days",
-            "Sessions, last 7 days",
+            "Sessions, 7 days",
             "Open reviews",
             "Spend this month",
           ].map((title) => (
@@ -42,35 +43,34 @@ async function Dashboard() {
           ))}
         </div>
         <div className="card-row grid gap-4 xl:grid-cols-2">
-          {[
-            "Sessions per day",
-            "AI spend, last 7 days",
-            "Recent sessions",
-            "Needs attention",
-          ].map((title) => (
-            <Card key={title}>
-              <CardHeader>
-                <CardTitle role="heading" aria-level={2}>
-                  {title}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <TryAgain what="this" />
-              </CardContent>
-            </Card>
-          ))}
+          {["Needs attention", "Sessions per day", "Recent sessions"].map(
+            (title) => (
+              <Card key={title}>
+                <CardHeader>
+                  <CardTitle role="heading" aria-level={2}>
+                    {title}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TryAgain what="this" />
+                </CardContent>
+              </Card>
+            ),
+          )}
         </div>
       </>
     );
-  const sessions = d.sessionsPerDay.slice(-7);
-  const spend = d.spendPerDay.slice(-7);
-  const sessionTotal = sessions.reduce((sum, point) => sum + point.value, 0);
-  const spendTotal = spend.reduce((sum, point) => sum + point.value, 0);
-  const pct = Math.round((100 * d.spend.all) / d.spend.cap);
+  const week = lastWeek(d.sessionsPerDay);
+  const fortnight = d.sessionsPerDay.slice(-14);
+  const fortnightTotal = fortnight.reduce((sum, p) => sum + p.value, 0);
+  const meter = spendMeter(d.spend.month, d.spend.cap);
+  const capPct = Math.round((100 * d.spend.all) / d.spend.cap);
   const attention = [
     [
       d.openReviews.count,
-      "open mark reviews",
+      d.openReviews.oldestDays == null
+        ? "open mark reviews"
+        : `open mark reviews · oldest waiting ${plural(d.openReviews.oldestDays, "day")}`,
       "/admin/marking/review?tab=open",
     ],
     [
@@ -91,7 +91,7 @@ async function Dashboard() {
     ],
     [
       d.spend.all >= d.spend.cap * 0.8 ? 1 : 0,
-      `spend at ${pct}% of the cap`,
+      `all-time spend at ${capPct}% of the cap`,
       "/admin/spend",
     ],
     [
@@ -108,15 +108,17 @@ async function Dashboard() {
           title="Active students, 7 days"
           value={d.active.now}
           delta={d.active.now - d.active.prev}
-          description={`vs ${d.active.prev} previous 7`}
-          icon={<PortalIcon name="user" />}
+          description={`vs ${d.active.prev} the week before`}
         />
         <StatCard
-          title="Sessions, last 7 days"
-          value={sessionTotal}
-          description="Finished sessions · last 7 Sydney days"
-          values={sessions.map((point) => point.value)}
-          icon={<PortalIcon name="chart-line" />}
+          title="Sessions, 7 days"
+          value={week.now}
+          delta={week.delta ?? undefined}
+          description={
+            week.delta == null
+              ? "Finished sessions"
+              : `vs ${week.now - week.delta} the week before`
+          }
         />
         <StatCard
           title="Open reviews"
@@ -124,179 +126,139 @@ async function Dashboard() {
           description={
             d.openReviews.oldestDays == null
               ? "Nothing waiting"
-              : `oldest ${plural(d.openReviews.oldestDays, "day")}`
+              : `Oldest waiting ${plural(d.openReviews.oldestDays, "day")}`
           }
-          icon={<PortalIcon name="pen-line" />}
         />
         <Card data-component="StatCard" className="h-full gap-3">
           <CardHeader>
             <p className="text-muted-foreground text-xs">Spend this month</p>
           </CardHeader>
           <CardContent>
-            <p className="num-display text-[30px] leading-none font-bold">
-              {usd(d.spend.month)} of ${d.spend.cap}
-            </p>
+            <Link
+              href="/admin/spend"
+              className="num-display text-2xl leading-none font-bold underline-offset-4 hover:underline sm:text-[28px]"
+            >
+              {usd(d.spend.month)}
+            </Link>
             <div
               role="progressbar"
-              aria-label="All-time spend against cap"
+              aria-label="Spend this month against the cap"
               aria-valuemin={0}
               aria-valuemax={100}
-              aria-valuenow={Math.min(100, pct)}
-              aria-valuetext={`${usd(d.spend.all)} of $${d.spend.cap} (${pct}%)`}
+              aria-valuenow={meter.pct}
+              aria-valuetext={`${meter.text} (${meter.pct}%)`}
               className="mt-3"
             >
               <span aria-hidden="true">
                 <Meter
-                  value={pct}
+                  value={meter.pct}
                   tone="brand"
-                  label="All-time spend against cap"
+                  label="Spend this month against the cap"
                 />
               </span>
             </div>
             <p className="text-muted-foreground mt-2 text-xs">
-              Month to date · meter shows all-time cap usage
+              Month to date · {meter.text} cap
             </p>
           </CardContent>
         </Card>
       </div>
-      <Card className="border-brand/30">
-        <CardHeader>
-          <CardTitle role="heading" aria-level={2}>
-            Needs attention
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {rows.length ? (
-            <ul className="divide-y divide-dashed">
-              {rows.map(([n, text, href]) => (
-                <li key={href + text}>
-                  <Link
-                    href={href}
-                    className="hover:bg-accent -mx-2 flex items-center gap-3 rounded-lg px-3 py-4 text-sm"
-                  >
-                    <Badge variant="warning">
-                      <Alert className="size-3" />
-                      {n}
-                    </Badge>
-                    <span>{text}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-muted-foreground flex items-center gap-2 text-sm">
-              <CheckCircle className="size-4 shrink-0" />
-              All clear. Nothing needs attention right now.
-            </p>
-          )}
-        </CardContent>
-      </Card>
-      <div className="card-row grid gap-4 xl:grid-cols-2">
-        <DailyChart
-          title="Sessions per day"
-          hero={plural(sessionTotal, "session")}
-          points={sessions}
-          kind="area"
-        />
-        <DailyChart
-          title="AI spend, last 7 days"
-          hero={usd(spendTotal)}
-          points={spend}
-          kind="bars"
-        />
-      </div>
       <div className="card-row grid gap-4 xl:grid-cols-2">
         <Card className="min-w-0">
-          <CardHeader className="grid-cols-[1fr_auto]">
+          <CardHeader>
             <CardTitle role="heading" aria-level={2}>
-              Recent sessions
+              Needs attention
             </CardTitle>
-            <Link
-              href="/admin/students"
-              className="text-sm font-semibold underline underline-offset-4"
-            >
-              Student activity
-            </Link>
+            <p className="text-muted-foreground text-xs">
+              Each row opens the right page.
+            </p>
           </CardHeader>
           <CardContent>
-            {d.students === 0 ? (
-              <EmptyState
-                title="No students yet"
-                description="Sessions appear here once students sign up and finish a sprint."
-              />
-            ) : !d.latest.length ? (
-              <EmptyState
-                title="No finished sessions yet"
-                description="Finished sessions will appear here."
-              />
+            {rows.length ? (
+              <ul className="divide-y">
+                {rows.map(([n, text, href]) => (
+                  <li key={href + text}>
+                    <Link
+                      href={href}
+                      className="hover:bg-accent -mx-2 flex items-center gap-3 rounded-lg px-2 py-3 text-sm"
+                    >
+                      <Badge variant="brand" className="min-w-7 tabular-nums">
+                        {n}
+                      </Badge>
+                      <span className="min-w-0 flex-1">{text}</span>
+                      <PortalIcon
+                        name="chevron-right"
+                        className="text-muted-foreground size-4 shrink-0"
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
             ) : (
-              <LatestSessions
-                rows={d.latest.map((s) => ({
-                  id: s.id,
-                  user_id: s.user_id,
-                  name: s.name,
-                  kind:
-                    s.kind === "flashcards"
-                      ? "Flashcards"
-                      : s.kind === "single"
-                        ? "Mark my answer"
-                        : s.kind === "sprint"
-                          ? `${modeLabel(s.mode ?? undefined)} sprint`
-                          : "Removed session",
-                  score: percentage(s.score, s.max),
-                  tone:
-                    s.max && s.score != null
-                      ? scoreTone((100 * s.score) / s.max)
-                      : null,
-                  when: ago(s.finished_at),
-                }))}
-              />
+              <p className="text-muted-foreground flex items-center gap-2 text-sm">
+                <CheckCircle className="size-4 shrink-0" />
+                All clear. Nothing needs attention right now.
+              </p>
             )}
           </CardContent>
         </Card>
-        <Card className="min-w-0">
-          <CardHeader className="grid-cols-[1fr_auto]">
-            <CardTitle role="heading" aria-level={2}>
-              Review queue
-            </CardTitle>
-            <Link
-              href="/admin/marking/review"
-              className="text-sm font-semibold underline underline-offset-4"
-            >
-              View queue
-            </Link>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            <div className="flex items-center gap-3">
-              <span className="bg-brand-soft text-brand-text grid size-12 place-items-center rounded-[12px]">
-                <PortalIcon name="pen-line" />
-              </span>
-              <div>
-                <p className="num-display text-2xl leading-none font-bold sm:text-[28px]">
-                  {d.openReviews.count}
-                </p>
-                <p className="text-muted-foreground mt-1 text-sm">
-                  Open mark reviews
-                </p>
-              </div>
-            </div>
-            <p className="text-muted-foreground text-sm">
-              {d.openReviews.oldestDays == null
-                ? "Nothing waiting for a second look."
-                : `Oldest review has been waiting ${plural(d.openReviews.oldestDays, "day")}.`}
-            </p>
-            <Link
-              href="/admin/marking/review?tab=failed"
-              className="hover:bg-accent flex items-center justify-between gap-3 rounded-xl border p-4 text-sm"
-            >
-              <span>Failed or unreadable · last 7 days</span>
-              <Badge variant={d.attention.failed ? "warning" : "muted"}>
-                {d.attention.failed}
-              </Badge>
-            </Link>
-          </CardContent>
-        </Card>
+        <DailyChart
+          title="Sessions per day"
+          description={`Finished sessions, last ${plural(fortnight.length, "Sydney day")}`}
+          hero={plural(fortnightTotal, "session")}
+          points={fortnight}
+          kind="area"
+          dayPicker={false}
+        />
       </div>
+      <Card className="min-w-0">
+        <CardHeader className="grid-cols-[1fr_auto]">
+          <CardTitle role="heading" aria-level={2}>
+            Recent sessions
+          </CardTitle>
+          <Link
+            href="/admin/students"
+            className="text-sm font-semibold underline underline-offset-4"
+          >
+            All students
+          </Link>
+        </CardHeader>
+        <CardContent>
+          {d.students === 0 ? (
+            <EmptyState
+              title="No students yet"
+              description="Sessions appear here once students sign up and finish a sprint."
+            />
+          ) : !d.latest.length ? (
+            <EmptyState
+              title="No finished sessions yet"
+              description="Finished sessions will appear here."
+            />
+          ) : (
+            <LatestSessions
+              rows={d.latest.map((s) => ({
+                id: s.id,
+                user_id: s.user_id,
+                name: s.name,
+                kind:
+                  s.kind === "flashcards"
+                    ? "Flashcards"
+                    : s.kind === "single"
+                      ? "Mark my answer"
+                      : s.kind === "sprint"
+                        ? `${modeLabel(s.mode ?? undefined)} sprint`
+                        : "Removed session",
+                score: percentage(s.score, s.max),
+                tone:
+                  s.max && s.score != null
+                    ? scoreTone((100 * s.score) / s.max)
+                    : null,
+                when: ago(s.finished_at),
+              }))}
+            />
+          )}
+        </CardContent>
+      </Card>
     </>
   );
 }
@@ -308,7 +270,7 @@ export default function AdminHome() {
     <div className="space-y-4">
       <PageHeader
         title="Dashboard"
-        description="Students, sessions, reviews and spend at a glance."
+        description="Students, marking and spend at a glance."
       />
       <Suspense
         fallback={
@@ -322,10 +284,7 @@ export default function AdminHome() {
               <Skeleton className="h-72 rounded-xl" />
               <Skeleton className="h-72 rounded-xl" />
             </div>
-            <div className="grid gap-4 xl:grid-cols-2">
-              <Skeleton className="h-64 rounded-xl" />
-              <Skeleton className="h-64 rounded-xl" />
-            </div>
+            <Skeleton className="h-64 rounded-xl" />
           </>
         }
       >

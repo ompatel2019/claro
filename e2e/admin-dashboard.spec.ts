@@ -9,54 +9,25 @@ test.describe("Admin dashboard", () => {
   test.setTimeout(120000);
 
   for (const width of [390, 1280]) {
-    test(`daily stats remain readable and selectable at ${width}px (A1)`, async ({
+    test(`one 14-day sessions chart with no day picker at ${width}px`, async ({
       page,
     }) => {
       await page.setViewportSize({ width, height: 844 });
       await signInAdmin(page);
-      for (const title of ["Sessions per day", "AI spend, last 7 days"]) {
-        const card = page.locator('[data-slot="card"]').filter({
-          has: page.getByRole("heading", { name: title, exact: true }),
-        });
-        const select = card.getByRole("combobox", { name: `${title} day` });
-        await expect(select).toBeVisible();
-        // Wait for the client chart to hydrate before changing its state.
-        await expect
-          .poll(() =>
-            select.evaluate((el) =>
-              Object.keys(el).some((key) => key.startsWith("__reactProps$")),
-            ),
-          )
-          .toBe(true);
-        await select.click();
-        const options = page.getByRole("option");
-        await expect(options).toHaveCount(7);
-        const days = await options.allTextContents();
-        expect(new Set(days).size).toBe(7);
-        await page.keyboard.press("Escape");
-        await expect(select).toHaveText(days[6]);
-        const marks = card
-          .locator("svg > g")
-          .filter({ has: page.locator("rect, circle") });
-        await expect(marks).toHaveCount(7);
-        const valueForDay = async (index: number) => {
-          const text = await marks.nth(index).locator("title").textContent();
-          expect(text).toContain("(Sydney) · ");
-          return text!.split(" · ")[1];
-        };
-        await expect(card.getByRole("status")).toHaveText(await valueForDay(6));
-        // The kit day selector works with the keyboard, including zero days.
-        await select.click();
-        await page.keyboard.press("Home");
-        await page.keyboard.press("Enter");
-        await page.keyboard.press("Tab");
-        await expect(select).toHaveText(days[0]);
-        await expect(card.getByRole("status")).toHaveText(await valueForDay(0));
-        // Touch/mouse users can inspect a day directly on the graph.
-        await marks.nth(3).dispatchEvent("click");
-        await expect(select).toHaveText(days[3]);
-        await expect(card.getByRole("status")).toHaveText(await valueForDay(3));
-      }
+      const card = page.locator('[data-slot="card"]').filter({
+        has: page.getByRole("heading", {
+          name: "Sessions per day",
+          exact: true,
+        }),
+      });
+      await expect(card).toBeVisible({ timeout: 60000 });
+      await expect(card.getByRole("combobox")).toHaveCount(0);
+      await expect(
+        card.locator("svg > g").filter({ has: page.locator("circle") }),
+      ).toHaveCount(14);
+      await expect(
+        page.getByRole("heading", { name: "AI spend, last 7 days" }),
+      ).toHaveCount(0);
       await expect
         .poll(() =>
           page.evaluate(
@@ -77,21 +48,24 @@ test.describe("Admin dashboard", () => {
     ).toBeVisible({ timeout: 60000 });
     for (const label of [
       "Active students, 7 days",
-      "Sessions, last 7 days",
+      "Sessions, 7 days",
       "Open reviews",
       "Spend this month",
     ])
       await expect(page.getByText(label, { exact: true })).toBeVisible();
-    await expect(page.getByText(/^vs \d+ previous 7$/)).toBeVisible();
-    await expect(page.getByText(/^\$\d+\.\d\d of \$100$/)).toBeVisible();
     await expect(
-      page.getByRole("progressbar", { name: "All-time spend against cap" }),
+      page.getByText(/^vs \d+ the week before$/).first(),
     ).toBeVisible();
     await expect(
-      page.getByRole("img", { name: "Sessions per day, 7 Sydney days" }),
+      page.getByText(/^Month to date · \$\d+\.\d\d of \$100 cap$/),
     ).toBeVisible();
     await expect(
-      page.getByRole("img", { name: "AI spend, last 7 days, 7 Sydney days" }),
+      page.getByRole("progressbar", {
+        name: "Spend this month against the cap",
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("img", { name: "Sessions per day, 14 Sydney days" }),
     ).toBeVisible();
     await expect(
       page.getByRole("heading", { name: "Needs attention" }),
@@ -115,7 +89,7 @@ test.describe("Admin dashboard", () => {
       .getByRole("heading", { name: "Needs attention" })
       .locator('xpath=ancestor::*[@data-slot="card"]');
     const chart = page.getByRole("img", {
-      name: "Sessions per day, 7 Sydney days",
+      name: "Sessions per day, 14 Sydney days",
     });
     expect((await attention.boundingBox())!.y).toBeLessThan(
       (await chart.boundingBox())!.y,
@@ -125,12 +99,6 @@ test.describe("Admin dashboard", () => {
     await expect(
       page.getByRole("table", { name: "Latest finished sessions" }),
     ).toHaveCount(0);
-    // Each plotted day is also readable without a mouse.
-    for (const title of ["Sessions per day", "AI spend, last 7 days"]) {
-      await expect(
-        page.getByRole("combobox", { name: `${title} day` }),
-      ).toHaveValue(/\d{4}-\d{2}-\d{2}/);
-    }
     // Sidebar follows the §1 admin navigation.
     const nav = page.getByRole("navigation", { name: "Admin navigation" });
     await expect(
@@ -141,13 +109,12 @@ test.describe("Admin dashboard", () => {
     );
     for (const name of [
       "Dashboard",
-      "All students",
+      "Students",
+      "Feedback",
       "Questions",
       "Flashcards",
       "Review queue",
-      "Accuracy",
-      "Engine",
-      "Inbox",
+      "Marking quality",
       "AI spend",
     ])
       await expect(nav.getByRole("link", { name })).toBeVisible();

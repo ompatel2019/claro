@@ -50,7 +50,7 @@ test.describe("admin marking engine", () => {
     await expect(
       page
         .getByRole("navigation", { name: "Admin navigation" })
-        .getByRole("link", { name: "Engine", exact: true }),
+        .getByRole("link", { name: "Marking quality", exact: true }),
     ).toHaveAttribute("aria-current", "page");
     await docs.getByRole("link", { name: /^CHANGELOG/ }).click();
     await expect(page).toHaveURL(/[?&]doc=CHANGELOG(&|$)/);

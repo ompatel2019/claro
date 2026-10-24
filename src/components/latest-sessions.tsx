@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Badge } from "@/components/ui/badge";
 
 type LatestRow = {
   id: string;
@@ -25,11 +24,14 @@ export function LatestSessions({ rows }: { rows: LatestRow[] }) {
               <strong className="block truncate">{r.name}</strong>
               <span className="text-muted-foreground">{r.kind}</span>
             </span>
-            {r.tone ? (
-              <Badge variant={r.tone}>{r.score}</Badge>
-            ) : (
-              <span className="text-muted-foreground text-xs">{r.score}</span>
-            )}
+            {/* Scores read like the student's Activity: plain figures, no traffic-light fills. */}
+            <span
+              className={
+                r.tone ? "font-semibold" : "text-muted-foreground text-xs"
+              }
+            >
+              {r.score}
+            </span>
             <span className="text-muted-foreground text-xs">{r.when}</span>
             <span className="sr-only">Open Activity</span>
           </Link>

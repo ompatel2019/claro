@@ -27,6 +27,50 @@ it("has no dead admin navigation links or removed content entry", () => {
   );
 });
 
+it("groups the admin nav into three sections and eight links", () => {
+  expect(
+    nav.admin.map((group) => [group.label, group.items.map((i) => i.label)]),
+  ).toEqual([
+    ["", ["Dashboard"]],
+    ["People", ["Students", "Feedback"]],
+    ["Content", ["Questions", "Flashcards"]],
+    ["Marking", ["Review queue", "Marking quality", "AI spend"]],
+  ]);
+  expect(nav.admin.flatMap((g) => g.items)).toHaveLength(8);
+  // Accuracy and Engine both stay reachable and light up Marking quality.
+  for (const path of [
+    "/admin/marking/accuracy",
+    "/admin/marking/engine",
+    "/admin/marking/engine/runs",
+  ])
+    expect(activeItem("admin", path)?.label).toBe("Marking quality");
+  expect(activeItem("admin", "/admin/marking/review/r1")?.label).toBe(
+    "Review queue",
+  );
+  expect(activeItem("admin", "/admin")?.label).toBe("Dashboard");
+  expect(activeItem("admin", "/admin/marking/engineering")).toBeUndefined();
+});
+
+it("removes no admin page from the app", () => {
+  const adminPages = Object.keys(pages)
+    .filter((path) => path.startsWith("../app/admin"))
+    .sort();
+  expect(adminPages).toEqual([
+    "../app/admin/content/flashcards/page.tsx",
+    "../app/admin/content/questions/[id]/page.tsx",
+    "../app/admin/content/questions/page.tsx",
+    "../app/admin/feedback/page.tsx",
+    "../app/admin/marking/accuracy/page.tsx",
+    "../app/admin/marking/engine/page.tsx",
+    "../app/admin/marking/review/[id]/page.tsx",
+    "../app/admin/marking/review/page.tsx",
+    "../app/admin/page.tsx",
+    "../app/admin/spend/page.tsx",
+    "../app/admin/students/[id]/page.tsx",
+    "../app/admin/students/page.tsx",
+  ]);
+});
+
 it("keeps the default student activity navigation", () => {
   expect(activeItem("student", "/student/activity/result")?.label).toBe(
     "Activity",

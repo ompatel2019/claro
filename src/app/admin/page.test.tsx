@@ -39,145 +39,87 @@ beforeEach(() => {
   mocks.loadDashboard.mockResolvedValue(data);
 });
 afterEach(cleanup);
-it("keeps A1's dashboard KPIs and both daily charts with totals derived from the plotted range", async () => {
+const days = (values: number[]) =>
+  values.map((value, i) => ({
+    day: `2026-09-${String(i + 1).padStart(2, "0")}`,
+    value,
+  }));
+const card = (label: string) =>
+  within(
+    screen
+      .getByText(label)
+      .closest<HTMLElement>('[data-component="StatCard"]')!,
+  );
+
+it("shows four real numbers: active students, sessions, open reviews and month-to-date spend", async () => {
   mocks.loadDashboard.mockResolvedValue({
     ...data,
     active: { now: 12, prev: 9 },
     openReviews: { count: 4, oldestDays: 2 },
     spend: { month: 14.25, all: 81.5, cap: 100 },
-    sessionsPerDay: [{ day: "2026-10-09", value: 3 }],
-    spendPerDay: [{ day: "2026-10-09", value: 1.25 }],
+    sessionsPerDay: days([
+      ...Array(16).fill(9),
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+      2,
+    ]),
   });
   render(await dashboard());
-  for (const [label, value] of [
-    ["Active students, 7 days", "12"],
-    ["Sessions, last 7 days", "3"],
-    ["Open reviews", "4"],
-    ["Spend this month", "$14.25 of $100"],
-  ]) {
-    const card = within(
-      screen
-        .getByText(label)
-        .closest<HTMLElement>('[data-component="StatCard"]')!,
-    );
-    expect(card.getByText(value, { exact: true })).toBeInTheDocument();
-  }
-  expect(screen.getByText("+3")).toBeInTheDocument();
-  expect(screen.getByText("vs 9 previous 7")).toBeInTheDocument();
-  expect(screen.getByText("oldest 2 days")).toBeInTheDocument();
-  expect(screen.getByText("3 sessions")).toBeInTheDocument();
-  expect(screen.getAllByText("$1.25")[0]).toBeInTheDocument();
-  expect(
-    screen.getByRole("img", { name: "Sessions per day, 1 Sydney days" }),
-  ).toBeInTheDocument();
-  expect(
-    screen.getByRole("img", { name: "AI spend, last 7 days, 1 Sydney days" }),
-  ).toBeInTheDocument();
-  expect(screen.getAllByRole("status").map((s) => s.textContent)).toEqual([
-    "3",
-    "$1.25",
-  ]);
-  expect(screen.getByRole("progressbar")).toHaveAttribute(
-    "aria-valuetext",
-    "$81.50 of $100 (82%)",
-  );
-  expect(screen.getByRole("link", { name: /spend at 82%/ })).toHaveAttribute(
+  expect(card("Active students, 7 days").getByText("12")).toBeInTheDocument();
+  expect(card("Active students, 7 days").getByText("+3")).toBeInTheDocument();
+  expect(screen.getByText("vs 9 the week before")).toBeInTheDocument();
+  expect(card("Sessions, 7 days").getByText("14")).toBeInTheDocument();
+  expect(card("Sessions, 7 days").getByText("+7")).toBeInTheDocument();
+  expect(screen.getByText("vs 7 the week before")).toBeInTheDocument();
+  expect(card("Open reviews").getByText("4")).toBeInTheDocument();
+  expect(screen.getByText("Oldest waiting 2 days")).toBeInTheDocument();
+  const spend = card("Spend this month");
+  expect(spend.getByRole("link", { name: "$14.25" })).toHaveAttribute(
     "href",
     "/admin/spend",
   );
-});
-it.each([
-  [3, 9, "−6"],
-  [9, 9, "±0"],
-])(
-  "keeps the active-student comparison for %i vs %i",
-  async (now, prev, delta) => {
-    mocks.loadDashboard.mockResolvedValue({ ...data, active: { now, prev } });
-    const { container } = render(await dashboard());
-    expect(
-      container.querySelector('[data-component="DeltaPill"]'),
-    ).toHaveTextContent(delta === "±0" ? "0" : delta);
-  },
-);
-it("retains zero spend and both charts on an empty install", async () => {
-  mocks.loadDashboard.mockResolvedValue({ ...data, students: 0 });
-  render(await dashboard());
-  expect(screen.getByText("$0.00 of $100")).toBeInTheDocument();
-  expect(screen.getByText("0 sessions")).toBeInTheDocument();
-  expect(screen.getAllByRole("img")).toHaveLength(3);
-  expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
-  expect(screen.getAllByRole("status").map((s) => s.textContent)).toEqual([
-    "0",
-    "$0.00",
-  ]);
-});
-it("uses a real attention heading and handles students with no finished sessions", async () => {
-  render(await dashboard());
-  expect(
-    screen.getByRole("heading", { name: "Needs attention", level: 2 }),
-  ).toBeInTheDocument();
-  expect(screen.getByText("No finished sessions yet")).toBeInTheDocument();
-  expect(screen.getByText(/All clear/)).toBeInTheDocument();
-  expect(screen.queryByRole("table")).not.toBeInTheDocument();
-});
-it("shows the empty-install state", async () => {
-  mocks.loadDashboard.mockResolvedValue({ ...data, students: 0 });
-  render(await dashboard());
-  expect(screen.getByText("No students yet")).toBeInTheDocument();
-});
-it("opens the import review status from the attention list", async () => {
-  mocks.loadDashboard.mockResolvedValue({
-    ...data,
-    attention: { ...data.attention, importReview: 3 },
+  // The meter is month-to-date over the cap, not all-time.
+  const meter = screen.getByRole("progressbar", {
+    name: "Spend this month against the cap",
   });
-  render(await dashboard());
+  expect(meter).toHaveAttribute("aria-valuenow", "14");
+  expect(meter).toHaveAttribute("aria-valuetext", "$14.25 of $100 (14%)");
   expect(
-    screen.getByRole("link", { name: /drafts in import review/ }),
-  ).toHaveAttribute("href", "/admin/content/questions?status=review");
-});
-it("links failures to the failed queue and tests thresholds before rounding", async () => {
-  mocks.loadDashboard.mockResolvedValue({
-    ...data,
-    spend: { month: 0, all: 79.99, cap: 100 },
-    attention: { ...data.attention, failed: 2, agreement: 84.99 },
-  });
-  render(await dashboard());
-  expect(
-    screen.getByRole("link", { name: /failed or unreadable/ }),
-  ).toHaveAttribute("href", "/admin/marking/review?tab=failed");
-  expect(
-    screen.getByRole("link", { name: /check agreement/ }),
+    spend.getByText("Month to date · $14.25 of $100 cap"),
   ).toBeInTheDocument();
-  expect(
-    screen.queryByRole("link", { name: /spend at/ }),
-  ).not.toBeInTheDocument();
-});
-it("caps progress geometry while announcing actual spend above the cap", async () => {
-  mocks.loadDashboard.mockResolvedValue({
-    ...data,
-    spend: { month: 0, all: 110, cap: 100 },
-  });
-  render(await dashboard());
-  const progress = screen.getByRole("progressbar");
-  expect(progress).toHaveAttribute("aria-valuenow", "100");
-  expect(progress).toHaveAttribute("aria-valuetext", "$110.00 of $100 (110%)");
-});
-it("retains each card's title and retry action when loading fails", async () => {
-  mocks.loadDashboard.mockRejectedValue(new Error("Unavailable"));
-  render(await dashboard());
-  expect(screen.getAllByRole("alert")).toHaveLength(8);
-  expect(screen.getAllByRole("button", { name: "Try again" })).toHaveLength(8);
-  expect(
-    screen.getByRole("heading", { name: "Needs attention" }),
-  ).toBeInTheDocument();
-});
-it("does not swallow an authorisation redirect", async () => {
-  mocks.requireAdmin.mockRejectedValue(new Error("redirect:/student"));
-  await expect(dashboard()).rejects.toThrow("redirect:/student");
-  expect(mocks.loadDashboard).not.toHaveBeenCalled();
 });
 
-it("promotes attention above charts and caps the recent mini-list at three", async () => {
+it("drops the review queue card, the spend chart and the day pickers", async () => {
+  mocks.loadDashboard.mockResolvedValue({
+    ...data,
+    sessionsPerDay: days(Array(30).fill(1)),
+    spendPerDay: days(Array(30).fill(0.5)),
+  });
+  render(await dashboard());
+  expect(screen.queryByText("Review queue")).toBeNull();
+  expect(screen.queryByText(/AI spend, last 7 days/)).toBeNull();
+  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(screen.queryByText("Day")).toBeNull();
+  // One chart, the last 14 Sydney days of real sessions.
+  const chart = screen.getByRole("img", {
+    name: "Sessions per day, 14 Sydney days",
+  });
+  expect(chart.querySelectorAll("circle")).toHaveLength(14);
+  expect(screen.getByText("14 sessions")).toBeInTheDocument();
+});
+
+it("orders the page: numbers, then Needs attention, then activity", async () => {
   mocks.loadDashboard.mockResolvedValue({
     ...data,
     latest: Array.from({ length: 10 }, (_, i) => ({
@@ -192,43 +134,123 @@ it("promotes attention above charts and caps the recent mini-list at three", asy
     })),
   });
   render(await dashboard());
+  const before = (a: Element, b: Element) =>
+    !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+  const kpi = screen.getByText("Open reviews");
   const attention = screen.getByRole("heading", { name: "Needs attention" });
-  const chart = screen.getByRole("img", {
-    name: "Sessions per day, 1 Sydney days",
-  });
-  expect(
-    attention.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING,
-  ).toBeTruthy();
+  const chart = screen.getByRole("img", { name: /Sessions per day/ });
+  const recent = screen.getByRole("heading", { name: "Recent sessions" });
+  expect(before(kpi, attention)).toBe(true);
+  expect(before(attention, chart)).toBe(true);
+  expect(before(chart, recent)).toBe(true);
   const list = screen.getByRole("list", { name: "Recent sessions" });
   expect(within(list).getAllByRole("listitem")).toHaveLength(3);
   expect(within(list).getAllByRole("link")[0]).toHaveAttribute(
     "href",
     "/admin/students/student?tab=sessions&session=s0",
   );
-  expect(screen.queryByRole("table")).toBeNull();
+  expect(screen.getByRole("link", { name: "All students" })).toHaveAttribute(
+    "href",
+    "/admin/students",
+  );
 });
 
-it("uses the same seven plotted Sydney days for the session KPI and chart total", async () => {
+it.each([
+  [3, 9, "−6"],
+  [9, 9, "±0"],
+])(
+  "keeps the active-student comparison for %i vs %i",
+  async (now, prev, delta) => {
+    mocks.loadDashboard.mockResolvedValue({ ...data, active: { now, prev } });
+    const { container } = render(await dashboard());
+    expect(
+      container.querySelector('[data-component="DeltaPill"]'),
+    ).toHaveTextContent(delta === "±0" ? "0" : delta);
+  },
+);
+
+it("handles an empty install and students with no finished sessions", async () => {
+  mocks.loadDashboard.mockResolvedValue({ ...data, students: 0 });
+  const view = render(await dashboard());
+  expect(screen.getByText("No students yet")).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "$0.00" })).toBeInTheDocument();
+  expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "0");
+  view.unmount();
+  mocks.loadDashboard.mockResolvedValue(data);
+  render(await dashboard());
+  expect(screen.getByText("No finished sessions yet")).toBeInTheDocument();
+  expect(screen.getByText(/All clear/)).toBeInTheDocument();
+  // Fewer than 14 days of history: no invented comparison.
+  expect(screen.getByText("Finished sessions")).toBeInTheDocument();
+});
+
+it("links each attention row to its page with a count chip", async () => {
   mocks.loadDashboard.mockResolvedValue({
     ...data,
-    sessionsPerDay: Array.from({ length: 30 }, (_, i) => ({
-      day: `2026-09-${String(i + 1).padStart(2, "0")}`,
-      value: i < 23 ? 100 : 1,
-    })),
-    spendPerDay: Array.from({ length: 30 }, (_, i) => ({
-      day: `2026-09-${String(i + 1).padStart(2, "0")}`,
-      value: i < 23 ? 100 : 0.25,
-    })),
+    openReviews: { count: 4, oldestDays: 5 },
+    spend: { month: 3, all: 82, cap: 100 },
+    attention: {
+      ...data.attention,
+      importReview: 3,
+      failed: 2,
+      agreement: 84.99,
+    },
   });
   render(await dashboard());
-  const kpi = screen
-    .getByText("Sessions, last 7 days")
-    .closest<HTMLElement>('[data-component="StatCard"]')!;
-  expect(within(kpi).getByText("7", { exact: true })).toBeInTheDocument();
-  expect(screen.getByText("7 sessions")).toBeInTheDocument();
-  expect(screen.getByText("$1.75")).toBeInTheDocument();
-  const chart = screen.getByRole("img", {
-    name: "Sessions per day, 7 Sydney days",
+  expect(
+    screen.getByRole("link", {
+      name: /open mark reviews · oldest waiting 5 days/,
+    }),
+  ).toHaveAttribute("href", "/admin/marking/review?tab=open");
+  expect(
+    screen.getByRole("link", { name: /drafts in import review/ }),
+  ).toHaveAttribute("href", "/admin/content/questions?status=review");
+  expect(
+    screen.getByRole("link", { name: /failed or unreadable/ }),
+  ).toHaveAttribute("href", "/admin/marking/review?tab=failed");
+  expect(
+    screen.getByRole("link", { name: /check agreement/ }),
+  ).toBeInTheDocument();
+  // The cap warning stays on all-time spend, which is what the AI budget enforces.
+  expect(
+    screen.getByRole("link", { name: /all-time spend at 82% of the cap/ }),
+  ).toHaveAttribute("href", "/admin/spend");
+});
+
+it("tests thresholds before rounding", async () => {
+  mocks.loadDashboard.mockResolvedValue({
+    ...data,
+    spend: { month: 0, all: 79.99, cap: 100 },
+    attention: { ...data.attention, agreement: 85 },
   });
-  expect(chart.querySelectorAll("circle")).toHaveLength(7);
+  render(await dashboard());
+  expect(screen.queryByRole("link", { name: /spend at/ })).toBeNull();
+  expect(screen.queryByRole("link", { name: /check agreement/ })).toBeNull();
+});
+
+it("caps the meter while announcing month-to-date spend above the cap", async () => {
+  mocks.loadDashboard.mockResolvedValue({
+    ...data,
+    spend: { month: 110, all: 110, cap: 100 },
+  });
+  render(await dashboard());
+  const progress = screen.getByRole("progressbar");
+  expect(progress).toHaveAttribute("aria-valuenow", "100");
+  expect(progress).toHaveAttribute("aria-valuetext", "$110.00 of $100 (100%)");
+});
+
+it("retains each card's title and retry action when loading fails", async () => {
+  mocks.loadDashboard.mockRejectedValue(new Error("Unavailable"));
+  render(await dashboard());
+  expect(screen.getAllByRole("alert")).toHaveLength(7);
+  expect(screen.getAllByRole("button", { name: "Try again" })).toHaveLength(7);
+  expect(
+    screen.getByRole("heading", { name: "Needs attention" }),
+  ).toBeInTheDocument();
+});
+
+it("does not swallow an authorisation redirect", async () => {
+  mocks.requireAdmin.mockRejectedValue(new Error("redirect:/student"));
+  await expect(dashboard()).rejects.toThrow("redirect:/student");
+  expect(mocks.loadDashboard).not.toHaveBeenCalled();
 });
