@@ -56,12 +56,19 @@ export function markingSheet(attempts: SheetAttempt[]): MarkingSheet {
   };
 }
 
-/** Overlays answers the background queue has already marked this session. */
+/**
+ * Overlays answers the background queue has already marked this session, but
+ * only while the answer is still the version that was marked: an edit after
+ * marking stays Waiting until the server marks it again.
+ */
 export function markedNow<T extends { id: string; status: string }>(
   attempts: T[],
-  marked: Set<string>,
+  marked: Map<string, string>,
+  versionOf: (a: T) => string,
 ): T[] {
   return attempts.map((a) =>
-    marked.has(a.id) && a.status !== "marked" ? { ...a, status: "marked" } : a,
+    a.status !== "marked" && marked.get(a.id) === versionOf(a)
+      ? { ...a, status: "marked" }
+      : a,
   );
 }

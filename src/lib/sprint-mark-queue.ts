@@ -51,12 +51,12 @@ export function createSprintMarkQueue(
         .filter(([, entry]) => entry.state !== "marked")
         .map(([id]) => id);
     },
-    /** Answers whose latest saved version is marked. */
+    /** Marked answers, by the version that was marked. */
     marked() {
-      return new Set(
+      return new Map(
         [...entries]
           .filter(([, entry]) => entry.state === "marked")
-          .map(([id]) => id),
+          .map(([id, entry]) => [id, entry.version]),
       );
     },
     resume() {

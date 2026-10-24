@@ -127,12 +127,12 @@ it("reports settled marks and lists only the latest marked versions", async () =
   calls[1].reject();
   await tick();
   expect(settled).toHaveBeenCalledTimes(2);
-  expect([...queue.marked()]).toEqual(["a"]);
+  expect([...queue.marked()]).toEqual([["a", "one"]]);
   // An edit after marking needs a fresh mark before it counts again.
   queue.enqueue("a", "two");
   expect(queue.marked().has("a")).toBe(false);
   await tick();
   calls[2].resolve();
   await tick();
-  expect(queue.marked().has("a")).toBe(true);
+  expect(queue.marked().get("a")).toBe("two");
 });

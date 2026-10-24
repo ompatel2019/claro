@@ -128,14 +128,13 @@ export function SprintRunner({
       () => setMarkTick((t) => t + 1),
     ),
   );
+  const answerVersion = (a: Attempt) =>
+    JSON.stringify([a.answer_text, a.transcript, a.image_paths]);
   const backgroundAnswer = (a: Attempt) =>
     !checkMode && a.question.type !== "mcq";
   function enqueueAnswer(a: Attempt) {
     if (backgroundAnswer(a) && answered(a))
-      background.enqueue(
-        a.id,
-        JSON.stringify([a.answer_text, a.transcript, a.image_paths]),
-      );
+      background.enqueue(a.id, answerVersion(a));
   }
 
   function local(id: string, patch: Partial<Attempt>) {
@@ -589,7 +588,9 @@ export function SprintRunner({
   if (finishing)
     return (
       <MarkingScreen
-        sheet={markingSheet(markedNow(attempts, background.marked()))}
+        sheet={markingSheet(
+          markedNow(attempts, background.marked(), answerVersion),
+        )}
         title={title}
         onLeave={() => {
           left.current = true;

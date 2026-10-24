@@ -56,11 +56,28 @@ it("handles a single question and a sprint with no multiple choice", () => {
   expect(markingSheet([])).toEqual({ rows: [], marked: 0, total: 0 });
 });
 
-it("counts answers the background queue already marked", async () => {
+it("counts answers the background queue marked, only at the marked version", async () => {
   const { markedNow } = await import("./marking-sheet");
-  const rows = [a("1", "short"), a("2", "short"), a("3", "mcq", "marked")];
-  const live = markedNow(rows, new Set(["2"]));
-  expect(live.map((r) => r.status)).toEqual(["pending", "marked", "marked"]);
+  const rows = [
+    { ...a("1", "short"), v: "one" },
+    { ...a("2", "short"), v: "one" },
+    { ...a("3", "short"), v: "edited" },
+    { ...a("4", "mcq", "marked"), v: "" },
+  ];
+  const live = markedNow(
+    rows,
+    new Map([
+      ["2", "one"],
+      ["3", "one"],
+    ]),
+    (r) => r.v,
+  );
+  expect(live.map((r) => r.status)).toEqual([
+    "pending",
+    "marked",
+    "pending",
+    "marked",
+  ]);
   expect(live[0]).toBe(rows[0]);
   expect(markingSheet(live).marked).toBe(2);
 });
