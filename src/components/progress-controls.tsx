@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useTransition } from "react";
+import { useOptimistic, useRef, useTransition } from "react";
 import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import { PROGRESS_RANGES, type ProgressRange } from "@/lib/progress";
 import { cn } from "@/lib/utils";
@@ -10,16 +10,19 @@ export function ProgressControls({ range }: { range: ProgressRange }) {
     pathname = usePathname(),
     params = useSearchParams();
   const [pending, startTransition] = useTransition();
+  // Shows the chosen range at once, so keys move on from it while the page loads.
+  const [shown, setShown] = useOptimistic(range);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   function update(value: string) {
-    if (value === range) return;
+    if (value === shown) return;
     const next = new URLSearchParams(params.toString());
     next.set("range", value);
-    startTransition(() =>
-      router.replace(`${pathname}?${next}`, { scroll: false }),
-    );
+    startTransition(() => {
+      setShown(value as ProgressRange);
+      router.replace(`${pathname}?${next}`, { scroll: false });
+    });
   }
-  const current = PROGRESS_RANGES.findIndex((r) => r.value === range);
+  const current = PROGRESS_RANGES.findIndex((r) => r.value === shown);
   return (
     <div
       role="radiogroup"
@@ -35,8 +38,12 @@ export function ProgressControls({ range }: { range: ProgressRange }) {
               : 0;
         if (!step) return;
         e.preventDefault();
+        // Move on from the focused option, not the range still loading.
+        const focused = refs.current.findIndex(
+          (el) => el === document.activeElement,
+        );
         const n = PROGRESS_RANGES.length,
-          i = (current + step + n) % n;
+          i = ((focused >= 0 ? focused : current) + step + n) % n;
         refs.current[i]?.focus();
         update(PROGRESS_RANGES[i].value);
       }}
@@ -49,10 +56,10 @@ export function ProgressControls({ range }: { range: ProgressRange }) {
           }}
           type="button"
           role="radio"
-          aria-checked={r.value === range}
-          tabIndex={r.value === range ? 0 : -1}
+          aria-checked={r.value === shown}
+          tabIndex={r.value === shown ? 0 : -1}
           onClick={() => update(r.value)}
-          className={cn(r.value === range && "is-on")}
+          className={cn(r.value === shown && "is-on")}
         >
           {r.label}
         </button>

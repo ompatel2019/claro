@@ -17,7 +17,6 @@ beforeEach(() => {
 afterEach(cleanup);
 it("uses the segmented range switcher to refresh all range-scoped cards", () => {
   render(<ProgressControls range="90" />);
-  const group = screen.getByRole("radiogroup", { name: "Progress range" });
   expect(
     screen
       .getAllByRole("radio")
@@ -34,11 +33,19 @@ it("uses the segmented range switcher to refresh all range-scoped cards", () => 
     "/student/progress?range=year&kind=sprint",
     { scroll: false },
   );
+  cleanup();
+  mocks.replace.mockClear();
+  render(<ProgressControls range="90" />);
   fireEvent.click(screen.getByRole("radio", { name: "90 days" }));
-  expect(mocks.replace).toHaveBeenCalledTimes(1);
-  fireEvent.keyDown(group, { key: "ArrowLeft" });
-  expect(mocks.replace).toHaveBeenLastCalledWith(
+  expect(mocks.replace).not.toHaveBeenCalled();
+  // While the page is still loading, each key moves on from the last choice.
+  const radios = screen.getByRole("radiogroup", { name: "Progress range" });
+  screen.getByRole("radio", { name: "90 days" }).focus();
+  fireEvent.keyDown(radios, { key: "ArrowLeft" });
+  fireEvent.keyDown(radios, { key: "ArrowLeft" });
+  expect(screen.getByRole("radio", { name: "7 days" })).toHaveFocus();
+  expect(mocks.replace.mock.calls.map((c) => c[0])).toEqual([
     "/student/progress?range=30&kind=sprint",
-    { scroll: false },
-  );
+    "/student/progress?range=7&kind=sprint",
+  ]);
 });
