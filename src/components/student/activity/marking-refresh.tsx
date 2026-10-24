@@ -4,7 +4,10 @@ import { useEffect, useRef } from "react";
 import { MAX_WAIT_MS, SLOW_REFRESH_MS } from "@/components/marking-progress";
 import { createClient } from "@/utils/supabase/client";
 
-/** While sprints are being marked, checks (own rows, RLS) for one finishing, then calls onDone. */
+/**
+ * While sprints are being marked, checks (own rows, RLS) for one that finished or whose
+ * Finish run failed and handed its claim back, then calls onDone.
+ */
 export function MarkingRefresh({
   ids,
   onDone,
@@ -26,7 +29,7 @@ export function MarkingRefresh({
         .from("sessions")
         .select("id")
         .in("id", key.split(","))
-        .not("finished_at", "is", null);
+        .or("finished_at.not.is.null,finish_requested_at.is.null");
       if (!data?.length) return;
       clearInterval(poll);
       done.current();

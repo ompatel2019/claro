@@ -16,8 +16,8 @@ vi.mock("@/utils/supabase/client", () => ({
         chain
       ),
       in: (...args: unknown[]) => (mocks.calls.push(["in", ...args]), chain),
-      not: async (...args: unknown[]) => {
-        mocks.calls.push(["not", ...args]);
+      or: async (...args: unknown[]) => {
+        mocks.calls.push(["or", ...args]);
         return { data: mocks.finished };
       },
     };
@@ -34,7 +34,7 @@ afterEach(() => {
   mocks.calls = [];
 });
 
-it("calls onDone once a sprint being marked has finished", async () => {
+it("calls onDone once a sprint being marked has finished or its Finish was released", async () => {
   vi.useFakeTimers();
   const onDone = vi.fn();
   render(<MarkingRefresh ids={["a", "b"]} onDone={onDone} />);
@@ -43,7 +43,7 @@ it("calls onDone once a sprint being marked has finished", async () => {
     ["from", "sessions"],
     ["select", "id"],
     ["in", "id", ["a", "b"]],
-    ["not", "finished_at", "is", null],
+    ["or", "finished_at.not.is.null,finish_requested_at.is.null"],
   ]);
   expect(onDone).not.toHaveBeenCalled();
   mocks.finished = [{ id: "a" }];
