@@ -1027,8 +1027,10 @@ function CheckResult({
         <div
           role="status"
           className={cn(
-            "space-y-2 rounded-xl p-4 text-sm",
-            right ? "bg-success-soft" : "bg-destructive-soft",
+            "space-y-2 rounded-xl border p-4 text-sm",
+            right
+              ? "bg-success-soft border-success/30"
+              : "bg-destructive-soft border-destructive/30",
           )}
         >
           <p className="font-semibold">
