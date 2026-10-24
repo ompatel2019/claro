@@ -275,3 +275,45 @@ it("students table has no expanders or tick boxes and the row opens the student"
   fireEvent.click(screen.getAllByRole("row")[1].querySelectorAll("td")[5]);
   expect(nav.push).toHaveBeenCalledWith("/admin/students/ada");
 });
+
+it("shows a blocked student as a neutral ink-2 chip, never red", () => {
+  nav.router.mockReturnValue({ push: nav.push });
+  nav.path.mockReturnValue("/admin/students");
+  nav.search.mockReturnValue(new URLSearchParams());
+  render(
+    <StudentsTable
+      students={[
+        {
+          id: "s1",
+          full_name: "Student One",
+          email: "s1@example.com",
+          year_level: 12,
+          school: "School",
+          joined: "2026-10-09",
+          last_active: null,
+          sessions_7d: 0,
+          sessions_total: 0,
+          answered: 0,
+          avg_30: null,
+          streak: 0,
+          open_disputes: 0,
+          ai_spend: 0,
+          blocked: true,
+        },
+      ]}
+      pager={{ page: 1, pages: 1, total: 1, sort: { id: "last", dir: "desc" } }}
+    />,
+  );
+  for (const chip of screen
+    .getAllByText("Blocked")
+    .filter((el) => el.matches('[data-slot="badge"]'))) {
+    expect(chip).toHaveAttribute("data-variant", "secondary");
+    expect(chip).toHaveClass("text-ink-2");
+    expect(chip.className).not.toMatch(/\bbg-destructive/);
+  }
+  expect(
+    screen
+      .getAllByText("Blocked")
+      .filter((el) => el.matches('[data-slot="badge"]')).length,
+  ).toBeGreaterThan(0);
+});

@@ -9,7 +9,6 @@ import { Suspense, useRef } from "react";
 import {
   History,
   Cards,
-  Book,
   Dashboard,
   Message,
   SignOut,
@@ -56,7 +55,13 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
-type NavItem = { label: string; href: string; icon: Icon };
+type NavItem = {
+  label: string;
+  href: string;
+  icon: Icon;
+  /** Other routes this item owns (pages kept by URL but no longer in the nav). */
+  also?: string[];
+};
 export const nav: Record<
   "student" | "admin",
   { label: string; items: NavItem[] }[]
@@ -82,14 +87,19 @@ export const nav: Record<
       ],
     },
   ],
+  // Three groups, eight links. Accuracy and Engine read as one "Marking quality";
+  // every admin page stays reachable by URL.
   admin: [
     {
-      label: "Overview",
+      label: "",
       items: [{ label: "Dashboard", href: "/admin", icon: Dashboard }],
     },
     {
-      label: "Students",
-      items: [{ label: "All students", href: "/admin/students", icon: Users }],
+      label: "People",
+      items: [
+        { label: "Students", href: "/admin/students", icon: Users },
+        { label: "Feedback", href: "/admin/feedback", icon: Message },
+      ],
     },
     {
       label: "Content",
@@ -106,17 +116,14 @@ export const nav: Record<
       label: "Marking",
       items: [
         { label: "Review queue", href: "/admin/marking/review", icon: Pen },
-        { label: "Accuracy", href: "/admin/marking/accuracy", icon: Target },
-        { label: "Engine", href: "/admin/marking/engine", icon: Book },
+        {
+          label: "Marking quality",
+          href: "/admin/marking/accuracy",
+          icon: Target,
+          also: ["/admin/marking/engine"],
+        },
+        { label: "AI spend", href: "/admin/spend", icon: Wallet },
       ],
-    },
-    {
-      label: "Feedback",
-      items: [{ label: "Inbox", href: "/admin/feedback", icon: Message }],
-    },
-    {
-      label: "Spend",
-      items: [{ label: "AI spend", href: "/admin/spend", icon: Wallet }],
     },
   ],
 };
@@ -128,7 +135,9 @@ export function activeItem(kind: keyof typeof nav, path: string) {
   return items.find((i) =>
     i.href === root
       ? path === root
-      : path === i.href || path.startsWith(`${i.href}/`),
+      : [i.href, ...(i.also ?? [])].some(
+          (href) => path === href || path.startsWith(`${href}/`),
+        ),
   );
 }
 
@@ -145,12 +154,11 @@ const navIcons: Record<
   Activity: "history",
   Progress: "target",
   Dashboard: "layout-grid",
-  "All students": "users",
+  Students: "users",
   Questions: "file-question",
   "Review queue": "pen-line",
-  Accuracy: "target",
-  Engine: "book-open",
-  Inbox: "inbox",
+  "Marking quality": "target",
+  Feedback: "inbox",
   "AI spend": "tag",
 };
 
