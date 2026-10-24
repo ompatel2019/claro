@@ -266,6 +266,7 @@ const routes: {
     path: `/admin/students/${STUDENT_ID}`,
     file: "admin-students-id",
     heading: /Ada Lovelace|Sessions/,
+    dark: true,
   },
   {
     path: "/admin/content/questions",
@@ -277,11 +278,13 @@ const routes: {
     path: `/admin/content/questions/${QUESTION_ID}`,
     file: "admin-questions-id",
     heading: /Question|hsc-2023|Back to questions/,
+    dark: true,
   },
   {
     path: "/admin/content/flashcards",
     file: "admin-flashcards",
     heading: "Flashcards",
+    dark: true,
   },
   {
     path: "/admin/feedback",
@@ -370,6 +373,40 @@ async function shoot(
         .getByRole("table", { name: "Students", exact: true })
         .getByRole("columnheader", { name: "Blocked", exact: true }),
     ).toHaveCount(0);
+  }
+  if (route.path === "/admin/students") {
+    await expect(
+      page.getByRole("link", { name: "Export CSV", exact: true }),
+    ).toHaveAttribute("href", "/admin/students/export");
+    await expect(
+      page.getByRole("button", { name: "More actions" }),
+    ).toHaveCount(0);
+    await expect(page.getByText("More details")).toHaveCount(0);
+    await expect(
+      page.getByRole("table", { name: "Students" }).getByRole("checkbox"),
+    ).toHaveCount(0);
+  }
+  if (route.path === `/admin/students/${STUDENT_ID}`) {
+    const tabs = page.getByRole("navigation", { name: "Student tabs" });
+    await expect(
+      tabs.getByRole("link", { name: "Reviews and feedback", exact: true }),
+    ).toBeVisible();
+    await expect(
+      tabs.getByRole("link", { name: "Feedback", exact: true }),
+    ).toHaveCount(0);
+    await expect(page.getByLabel("Search", { exact: true })).toHaveCount(0);
+    await expect(page.getByLabel("From", { exact: true })).toHaveCount(0);
+    await expect(
+      page.getByText(/Current streak 4 days · Longest 4 days · 6 active days/),
+    ).toBeVisible();
+  }
+  if (route.path === `/admin/content/questions/${QUESTION_ID}`) {
+    await expect(
+      page.getByRole("link", { name: "Back to questions", exact: true }),
+    ).toHaveCount(1);
+  }
+  if (route.path === "/admin/content/flashcards" && width !== 390) {
+    await expect(page.getByRole("link", { name: "Live (2)" })).toBeVisible();
   }
   if (route.path === "/admin/students" && width === 390) {
     const students = page.getByRole("list", { name: "Students", exact: true });

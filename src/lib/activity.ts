@@ -68,3 +68,34 @@ export function dayLabel(iso: string, questions = 0, cards = 0) {
     ...(parts.length ? parts : ["No activity"]),
   ].join(" · ");
 }
+
+/**
+ * Streaks over the same Sydney days the heatmap counts as active (questions
+ * or cards > 0, from `from` to `today`). Current is the run ending today or
+ * yesterday; longest is the longest run in that window. Days after today are
+ * ignored, so the streak can never exceed the active days shown beside it.
+ */
+export function activityStreaks(
+  days: ActivityDay[],
+  today: string,
+  from: string,
+) {
+  const active = [
+    ...new Set(
+      days
+        .filter(
+          (d) => d.day >= from && d.day <= today && d.questions + d.cards > 0,
+        )
+        .map((d) => d.day),
+    ),
+  ].sort();
+  let longest = 0;
+  let run = 0;
+  active.forEach((day, i) => {
+    run = i > 0 && addDays(active[i - 1], 1) === day ? run + 1 : 1;
+    longest = Math.max(longest, run);
+  });
+  const last = active.at(-1);
+  const current = last && last >= addDays(today, -1) ? run : 0;
+  return { current, longest, active: active.length };
+}

@@ -1,7 +1,7 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { History, Close, PortalIcon } from "@/components/icons";
+import { History, Close, Message, PortalIcon } from "@/components/icons";
 import { loadStudentDetail, loadStudentFeedback } from "@/lib/admin-data";
 import { pageOf, singleParams, sydneyDay, tableParams } from "@/lib/admin";
 import { dateLabel, plural } from "@/lib/practice";
@@ -12,6 +12,7 @@ import {
   sessionStatus,
   sessionTitle,
 } from "@/lib/students";
+import { activityStreaks, heatmapWeeks } from "@/lib/activity";
 import { ActivityHeatmap } from "@/components/activity-heatmap";
 import { FeedbackDetail } from "@/components/feedback-detail";
 import { UrlSheet } from "@/components/url-sheet";
@@ -32,8 +33,7 @@ import { TopicsTab, ReviewsTab, FeedbackTab } from "./detail-tables";
 const TABS = {
   sessions: "Sessions",
   topics: "Topics",
-  reviews: "Reviews & disputes",
-  feedback: "Feedback",
+  reviews: "Reviews and feedback",
   usage: "AI usage",
 } as const;
 const pct = (n: number | null) => (n == null ? null : Math.round(n));
@@ -58,12 +58,21 @@ export default async function StudentDetail({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const [{ id }, raw] = await Promise.all([params, searchParams]);
+  // Each tab holds a handful of rows, so there's no search or date-range filter.
   const sp = singleParams(raw);
+  for (const key of ["q", "range", "from", "to"]) delete sp[key];
   const d = await loadStudentDetail(id);
   if (!d) notFound();
+  // Old ?tab=feedback links land on the merged tab.
+  const asked = sp.tab === "feedback" ? "reviews" : sp.tab;
   const tab = (
-    sp.tab && Object.hasOwn(TABS, sp.tab) ? sp.tab : "sessions"
+    asked && Object.hasOwn(TABS, asked) ? asked : "sessions"
   ) as keyof typeof TABS;
+  const streaks = activityStreaks(
+    d.activity.days,
+    d.today,
+    heatmapWeeks(d.today)[0][0]!,
+  );
   const { profile } = d;
   const {
     week,
@@ -74,10 +83,10 @@ export default async function StudentDetail({
   const tabHref = (t: string) => `${base}?tab=${t}`;
 
   const selectedFeedback =
-    tab === "feedback" && sp.feedback
+    tab === "reviews" && sp.feedback
       ? await loadStudentFeedback(sp.feedback, id)
       : null;
-  if (sp.feedback && tab === "feedback" && !selectedFeedback) notFound();
+  if (sp.feedback && tab === "reviews" && !selectedFeedback) notFound();
   const date = calendarDate(sp.date);
   const sessions = filterSessions(
     d.sessions,
@@ -85,29 +94,21 @@ export default async function StudentDetail({
     sydneyDay,
     d.today,
   );
-  const items: SessionItem[] = sessions
-    .map((s) => ({
-      id: s.id,
-      kind: s.kind,
-      study: s.kind === "flashcards" && s.config.mode !== "test",
-      title: sessionTitle(s, d.topics),
-      score:
-        !s.finished_at || sessionStatus(s) === "Marking" || s.score == null
-          ? null
-          : Number(s.score),
-      max: s.max_score == null ? null : Number(s.max_score),
-      items: sessionItems(s),
-      elapsed_s: s.elapsed_s ?? 0,
-      started_at: s.started_at,
-      status: sessionStatus(s),
-    }))
-    .filter(
-      (s) =>
-        !sp.q ||
-        `${s.id} ${s.kind} ${s.title} ${s.items} ${s.status} ${s.started_at} ${s.score ?? ""}`
-          .toLowerCase()
-          .includes(sp.q.trim().toLowerCase()),
-    );
+  const items: SessionItem[] = sessions.map((s) => ({
+    id: s.id,
+    kind: s.kind,
+    study: s.kind === "flashcards" && s.config.mode !== "test",
+    title: sessionTitle(s, d.topics),
+    score:
+      !s.finished_at || sessionStatus(s) === "Marking" || s.score == null
+        ? null
+        : Number(s.score),
+    max: s.max_score == null ? null : Number(s.max_score),
+    items: sessionItems(s),
+    elapsed_s: s.elapsed_s ?? 0,
+    started_at: s.started_at,
+    status: sessionStatus(s),
+  }));
   const { sort, page } = tableParams(sp, { id: "date", dir: "desc" });
   const paged = pageOf(items, SESSION_KEYS, sort, page, {
     id: "date",
@@ -116,7 +117,7 @@ export default async function StudentDetail({
   const open = sp.session ? d.sessions.find((s) => s.id === sp.session) : null;
   if (sp.session && !open) notFound();
   return (
-    <div className="space-y-6">
+    <div className="table-hairline [&_[data-slot=table]]:border-border space-y-6">
       <Link
         href="/admin/students"
         className={buttonVariants({ variant: "ghost", size: "sm" })}
@@ -169,8 +170,8 @@ export default async function StudentDetail({
         />
         <StatCard
           title="Streak"
-          value={plural(d.activity.current_streak, "day")}
-          description={`Longest ${plural(d.activity.longest_streak, "day")}`}
+          value={plural(streaks.current, "day")}
+          description={`Longest ${plural(streaks.longest, "day")}`}
         />
         <StatCard
           title="Flashcards due"
@@ -181,8 +182,8 @@ export default async function StudentDetail({
       <ActivityHeatmap
         days={d.activity.days}
         today={d.today}
-        current={d.activity.current_streak}
-        longest={d.activity.longest_streak}
+        current={streaks.current}
+        longest={streaks.longest}
         link={`${base}?tab=sessions&date=`}
       />
       <LinkTabs
@@ -194,78 +195,47 @@ export default async function StudentDetail({
           href: tabHref(value),
         }))}
       />
-      <FilterBar
-        customSelect
-        values={sp}
-        hidden={{ tab, date: date ?? undefined }}
-        primary={tab === "sessions" ? "kind" : undefined}
-        filters={[
-          {
-            name: "q",
-            label: "Search",
-            placeholder: `Search ${TABS[tab].toLowerCase()}`,
-          },
-          ...(tab === "sessions"
-            ? [
-                {
-                  name: "kind",
-                  label: "Kind",
-                  all: "All",
-                  options: [
-                    { value: "sprint", label: "Sprints" },
-                    { value: "flashcards", label: "Flashcards" },
-                    { value: "single", label: "Mark my answer" },
-                  ],
-                },
-                {
-                  name: "status",
-                  label: "Status",
-                  all: "Any",
-                  options: [
-                    "In progress",
-                    "Marking",
-                    "Finished",
-                    "Provisional",
-                  ].map((value) => ({
-                    value,
-                    label:
-                      value === "Provisional" ? "Has provisional marks" : value,
-                  })),
-                },
-                {
-                  name: "topic",
-                  label: "Topic",
-                  all: "Any",
-                  options: d.topics.map((t) => ({
-                    value: t.id,
-                    label: t.name,
-                  })),
-                },
-                {
-                  name: "range",
-                  label: "Date",
-                  all: "All time",
-                  options: ["7", "30", "90"].map((value) => ({
-                    value,
-                    label: `Last ${value} days`,
-                  })),
-                },
-                {
-                  name: "from",
-                  label: "From",
-                  placeholder: "",
-                  type: "date" as const,
-                },
-                {
-                  name: "to",
-                  label: "To",
-                  placeholder: "",
-                  type: "date" as const,
-                },
-              ]
-            : []),
-        ]}
-      />
+      {tab === "sessions" && (
+        <FilterBar
+          customSelect
+          values={sp}
+          hidden={{ tab, date: date ?? undefined }}
+          primary="kind"
+          filters={[
+            {
+              name: "kind",
+              label: "Kind",
+              all: "All",
+              options: [
+                { value: "sprint", label: "Sprints" },
+                { value: "flashcards", label: "Flashcards" },
+                { value: "single", label: "Mark my answer" },
+              ],
+            },
+            {
+              name: "status",
+              label: "Status",
+              all: "Any",
+              options: [
+                "In progress",
+                "Marking",
+                "Finished",
+                "Provisional",
+              ].map((value) => ({
+                value,
+                label:
+                  value === "Provisional" ? "Has provisional marks" : value,
+              })),
+            },
+            {
+              name: "topic",
+              label: "Topic",
+              all: "Any",
+              options: d.topics.map((t) => ({ value: t.id, label: t.name })),
+            },
+          ]}
+        />
+      )}
       {selectedFeedback && (
         <UrlSheet parameter="feedback" title="Feedback">
           <FeedbackDetail
@@ -325,8 +295,29 @@ export default async function StudentDetail({
         </>
       )}
       {tab === "topics" && <TopicsTab d={d} sp={sp} />}
-      {tab === "reviews" && <ReviewsTab d={d} sp={sp} base={base} />}
-      {tab === "feedback" && <FeedbackTab d={d} sp={sp} />}
+      {tab === "reviews" &&
+        (d.reviews.length || d.feedback.length ? (
+          <div className="space-y-6">
+            <section aria-labelledby="student-reviews" className="space-y-3">
+              <h2 id="student-reviews" className="text-base font-semibold">
+                Reviews and disputes
+              </h2>
+              <ReviewsTab d={d} sp={sp} base={base} />
+            </section>
+            <section aria-labelledby="student-feedback" className="space-y-3">
+              <h2 id="student-feedback" className="text-base font-semibold">
+                Feedback
+              </h2>
+              <FeedbackTab d={d} sp={sp} />
+            </section>
+          </div>
+        ) : (
+          <EmptyState
+            icon={Message}
+            title="No reviews or feedback yet"
+            description="Disputes, marking checks and feedback from this student show up here."
+          />
+        ))}
       {tab === "usage" && (
         <UsageTab
           usage={d.usage}

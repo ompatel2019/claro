@@ -111,27 +111,15 @@ test.describe("Admin students list", () => {
       await page.getByLabel("Search", { exact: true }).press("Enter");
       await expect(table.getByRole("row")).toHaveCount(2);
     }).toPass();
-    await expect(async () => {
-      await page
-        .getByRole("checkbox", { name: "Select all rows on this page" })
-        .check();
-      await expect(page.getByRole("status")).toContainText("1 selected");
-    }).toPass();
-    await expect(async () => {
-      await page.getByRole("button", { name: "More actions" }).click();
-      await expect(
-        page.getByRole("menuitem", { name: "Export CSV" }),
-      ).toBeVisible();
-    }).toPass();
+    await expect(table.getByRole("checkbox")).toHaveCount(0);
     const href = await page
-      .getByRole("menuitem", { name: "Export CSV" })
+      .getByRole("link", { name: "Export CSV" })
       .getAttribute("href");
     const exported = await page.request.get(href!);
     const lines = (await exported.text()).split("\r\n");
     expect(lines).toHaveLength(2);
     expect(lines[1]).toContain(email);
-    await page.keyboard.press("Escape");
-    await table.getByRole("row").nth(1).getByRole("cell").nth(3).click();
+    await table.getByRole("row").nth(1).getByRole("cell").nth(2).click();
     await expect(page).toHaveURL(/\/admin\/students\/[0-9a-f-]{36}$/);
   });
 
@@ -173,15 +161,7 @@ test.describe("Admin students list", () => {
         ),
       )
       .toBe(true);
-    const details = table.locator('[data-slot="collapsible"]').first();
-    await details.getByRole("button", { name: "More details" }).click();
-    await expect(details.getByText("School", { exact: true })).toBeVisible();
-    await expect(
-      details.getByText("Sessions total", { exact: true }),
-    ).toBeVisible();
-    await expect(
-      details.getByText("AI cost (all providers)", { exact: true }),
-    ).toBeVisible();
+    await expect(table.locator('[data-slot="collapsible"]')).toHaveCount(0);
     await expect
       .poll(() =>
         table.evaluate((el) => {

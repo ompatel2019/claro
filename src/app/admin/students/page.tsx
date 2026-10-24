@@ -1,6 +1,6 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
-import { More, SearchOff, Users } from "@/components/icons";
+import { ArrowDown, SearchOff, Users } from "@/components/icons";
 import { loadStudentRows } from "@/lib/admin-data";
 import { pageOf, singleParams, sydneyDay, tableParams } from "@/lib/admin";
 import { plural } from "@/lib/practice";
@@ -9,13 +9,7 @@ import { EmptyState } from "@/components/empty-state";
 import { FilterBar } from "@/components/filter-bar";
 import { PageHeader } from "@/components/page-header";
 import { StudentsTable } from "@/components/students-table";
-import { Button, buttonVariants } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { buttonVariants } from "@/components/ui/button";
 
 export const metadata = pageMetadata("Students");
 
@@ -36,30 +30,19 @@ export default async function StudentsPage({
     Object.entries(f).filter((e): e is [string, string] => !!e[1]),
   ).toString();
   return (
-    <div className="space-y-6">
+    <div className="table-hairline [&_[data-slot=table]]:border-border space-y-6">
       <PageHeader
         title="Students"
         description={plural(shown.length, "student")}
         actions={
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button variant="outline" size="icon" />}
-              aria-label="More actions"
-            >
-              <More />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem
-                render={
-                  <a
-                    href={`/admin/students/export${query ? `?${query}` : ""}`}
-                  />
-                }
-              >
-                Export CSV
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <a
+            href={`/admin/students/export${query ? `?${query}` : ""}`}
+            className={buttonVariants({ variant: "outline" })}
+            download
+          >
+            <ArrowDown aria-hidden />
+            Export CSV
+          </a>
         }
       />
       {all.length === 0 ? (
