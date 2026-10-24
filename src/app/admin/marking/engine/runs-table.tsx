@@ -21,6 +21,7 @@ import {
   CardDescription,
 } from "@/components/ui/card";
 import { durationLabel, runDateLabel, type RunSummary } from "./summary";
+import { HAIRLINE_TABLE } from "../accuracy/table-style";
 
 const numberLabel = (value: number | null, percent = false) =>
   value == null ? (
@@ -134,7 +135,7 @@ const columns: Column<RunSummary>[] = [
     className: "text-right tabular-nums px-1 whitespace-normal wrap-anywhere",
     header: "Cost",
     sort: (r) => r.cost,
-    cell: (r) => `$${r.cost.toFixed(4)}`,
+    cell: (r) => `$${r.cost.toFixed(2)}`,
   },
   {
     id: "duration",
@@ -156,7 +157,7 @@ const columns: Column<RunSummary>[] = [
   },
   {
     id: "by",
-    className: "px-1 whitespace-normal wrap-anywhere",
+    className: "px-1 whitespace-normal break-words",
     header: "By",
     sort: (r) => r.by,
     cell: (r) => r.by,
@@ -206,13 +207,14 @@ export function RunsTable({ rows }: { rows: RunSummary[] }) {
           time is summed per answer across 6 concurrent workers.
           Grade/check/reconcile thinking is shown when efforts differ.
         </CardDescription>
-        <div className="bg-card flex flex-wrap items-center gap-3 rounded-xl border p-3">
+        <div className="flex flex-wrap items-center gap-3 pt-1">
           <span className="text-sm">Select two runs ({selected.length}/2)</span>
           <Button
+            variant="outline"
             disabled={selected.length !== 2}
             onClick={() =>
               router.push(
-                `/admin/marking/engine?tab=runs&a=${encodeURIComponent(selected[0])}&b=${encodeURIComponent(selected[1])}`,
+                `/admin/marking/accuracy?tab=runs&a=${encodeURIComponent(selected[0])}&b=${encodeURIComponent(selected[1])}`,
               )
             }
           >
@@ -220,7 +222,7 @@ export function RunsTable({ rows }: { rows: RunSummary[] }) {
           </Button>
         </div>
       </CardHeader>
-      <div data-testid="runs-region" className="min-w-0">
+      <div data-testid="runs-region" className={`min-w-0 ${HAIRLINE_TABLE}`}>
         <ul aria-label="Eval runs" className="divide-y px-4 md:hidden">
           {shown.map((row) => (
             <li

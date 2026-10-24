@@ -47,7 +47,7 @@ export function BacklogSummary({ runs }: { runs: OfflineEvalRun[] }) {
             <p className="text-muted-foreground text-sm">
               Agreement means the same guideline band, and within one mark for
               questions worth six or more marks. Failed and excluded scripts are
-              omitted. Partial runs and the separate Karan benchmark are
+              omitted. Partial runs and the separate tutor benchmark are
               omitted.
             </p>
           </>

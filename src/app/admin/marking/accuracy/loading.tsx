@@ -5,12 +5,12 @@ export default function Loading() {
   return (
     <div
       role="status"
-      aria-label="Loading marking accuracy"
+      aria-label="Loading marking quality"
       className="min-w-0 space-y-4"
     >
       <Skeleton className="h-20 w-full rounded-xl" />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="grid gap-3 sm:grid-cols-2">
+        {[1, 2].map((i) => (
           <Card key={i}>
             <CardContent className="space-y-3">
               <Skeleton className="h-4 w-24" />
