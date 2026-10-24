@@ -1133,10 +1133,17 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   background: var(--surface-hover);
   color: var(--foreground);
 }
+/* Active item: the orange-tint tile (the selected surface), no pen underline. */
 .shell-sidebar .shell-nav-button[data-active] {
-  background: transparent;
-  color: var(--foreground);
+  background: var(--surface-selected);
+  color: var(--brand-text);
   font-weight: 650;
+}
+.shell-sidebar .shell-nav-button[data-active] > svg {
+  color: var(--brand-text);
+}
+.shell-sidebar .nav-pen {
+  display: none;
 }
 .shell-sidebar .shell-nav-button > svg {
   width: 20px;
@@ -2638,4 +2645,145 @@ body:has(.sprint-focus)
   background: none;
   border: 0;
   border-radius: 0;
+}
+/* Results one-row toggles (Review / Table, Typed copy / Photo): the chosen option is the orange tint. */
+.results-toggle [data-slot="toggle-group-item"] {
+  border-color: var(--border);
+}
+.results-toggle
+  [data-slot="toggle-group-item"]:is([data-pressed], [data-state="on"]) {
+  background: var(--surface-selected);
+  border-color: color-mix(in srgb, var(--brand) 30%, var(--border));
+  color: var(--brand-text);
+  box-shadow: none;
+}
+/* ===== Results (column mode only): one white question card holding the header, marks and
+   answer; the comments sit beside it on the canvas. Mark my answer and the sprint runner never
+   set .cma--column, so none of this reaches them. ===== */
+.cma.cma--column:not(.cma--flush) .cma-body {
+  display: block;
+  padding: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+.cma.cma--column:not(.cma--flush) .cma-page {
+  display: block;
+  padding: 20px 18px 18px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--cma-card-r);
+  box-shadow: var(--shadow-card);
+}
+.cma.cma--column:not(.cma--flush) .cma-rail {
+  display: block;
+}
+.cma.cma--column:not(.cma--flush) .cma-rail > .cma-cols {
+  margin-top: 12px;
+}
+.cma.cma--column .cma-lead + .cma-answer {
+  margin-top: 20px;
+}
+.cma.cma--column .cma-tail {
+  margin-top: 20px;
+}
+/* Marks: part of the white card, divided by a hairline; never a tinted box. */
+.cma.cma--column .cma-score {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 0;
+  margin-top: 20px;
+  padding: 18px 0 0;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+.cma.cma--column .cma-score:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+.cma.cma--column .cma-score > :not(.cma-score-hd) {
+  margin-top: 8px;
+}
+.cma.cma--column .cma-score + .cma-answer {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+}
+@container cma (min-width: 560px) {
+  .cma.cma--column .cma-score {
+    grid-template-columns: 128px minmax(0, 1fr);
+    column-gap: 24px;
+    align-items: start;
+  }
+  .cma.cma--column .cma-score-hd {
+    grid-row: 1 / span 3;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: flex-start;
+    gap: 4px;
+  }
+  .cma.cma--column .cma-score > :not(.cma-score-hd) {
+    grid-column: 2;
+  }
+  .cma.cma--column .cma-score-hd + * {
+    margin-top: 0;
+  }
+}
+/* The next mark: a plain line under the criteria with an outline arrow; never a tinted box. */
+.cma.cma--column .cma-crit .is-next {
+  border-top-color: var(--border);
+}
+.cma.cma--column .cma-crit .is-next[data-selected] .cma-crit-row {
+  box-shadow: none;
+}
+.cma.cma--column .cma-crit .is-next[data-selected] .cma-crit-t {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+/* Results: no connector lines; selection shows on the highlight and its comment. */
+.cma.cma--column .cma-lines {
+  display: none;
+}
+.cma.cma--column .cma-crit .is-next .cma-crit-row {
+  width: 100%;
+  margin-inline: 0;
+  padding: 8px 0 4px;
+  background: none;
+}
+/* Comments: calm cards. A light tone header, a hairline focus, the next mark as a flat line. */
+.cma.cma--column .cma-cm .cma-band {
+  padding: 8px 14px;
+  background: color-mix(in srgb, var(--cma-tone) 60%, var(--card));
+}
+.cma.cma--column .cma-cm:hover {
+  border-color: color-mix(in srgb, var(--cma-tone-line) 30%, var(--border));
+}
+.cma.cma--column .cma-cm[aria-pressed="true"] {
+  border-color: color-mix(in srgb, var(--cma-tone-line) 45%, var(--border));
+  box-shadow: var(--shadow-card);
+}
+.cma.cma--column .cma-cm .cma-fix {
+  margin-top: 10px;
+  padding: 10px 0 0;
+  background: none;
+  border-top: 1px solid var(--border);
+  border-radius: 0;
+}
+.cma.cma--column .cma-cm .cma-fix-tx {
+  margin-top: 2px;
+  font-weight: 600;
+}
+@container cma (min-width: 800px) {
+  .cma.cma--column:not(.cma--flush) .cma-body {
+    display: grid;
+  }
+  .cma.cma--column:not(.cma--flush) .cma-page {
+    padding: 26px 30px 24px;
+  }
+  .cma.cma--column:not(.cma--flush) .cma-rail > .cma-cols {
+    margin-top: 0;
+  }
 }

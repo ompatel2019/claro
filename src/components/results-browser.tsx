@@ -146,10 +146,21 @@ export function ResultsBrowser({
     `Question ${it.position ?? i + 1}${it.mark ? `, ${mark(it)} marks` : ""}${it.pill ? `, ${it.pill}` : ""}${it.flagged ? ", flagged" : ""}`;
   const mcTable = mcGrid && mcGrid.length > 0 && (
     <Card>
-      <CardHeader>
+      <CardHeader
+        className={
+          sprintLayout
+            ? "flex flex-wrap items-baseline justify-between gap-x-4"
+            : undefined
+        }
+      >
         <CardTitle>
           <h2>Multiple choice answers</h2>
         </CardTitle>
+        {sprintLayout && (
+          <p className="text-ink-2 text-sm">
+            {mcGrid.filter((r) => r.right).length} of {mcGrid.length} correct
+          </p>
+        )}
       </CardHeader>
       <CardContent>
         <div
@@ -164,7 +175,8 @@ export function ResultsBrowser({
               className={cn(
                 "table-hairline [&_td]:px-1 [&_th]:px-1",
                 sprintLayout &&
-                  "[&_th]:tracking-normal [&_th]:normal-case [&_tr]:border-solid",
+                  // Rows split by hairlines only: no frame or columns inside the card.
+                  "border-0 [&_:is(th,td)]:border-x-0 [&_th]:tracking-normal [&_th]:normal-case [&_thead_th]:border-t-0 [&_tr]:border-solid",
               )}
               key={group}
               aria-label={`Multiple choice answers ${group + 1}`}
@@ -196,9 +208,13 @@ export function ResultsBrowser({
                       <button
                         type="button"
                         aria-label={`Review question ${r.position}`}
-                        className="flex min-h-9 min-w-9 items-center justify-center rounded-full border font-semibold focus-visible:ring-2"
+                        className={
+                          sprintLayout
+                            ? "text-ink flex min-h-9 items-center font-semibold underline-offset-4 hover:underline focus-visible:ring-2"
+                            : "flex min-h-9 min-w-9 items-center justify-center rounded-full border font-semibold focus-visible:ring-2"
+                        }
                       >
-                        {r.position}
+                        {sprintLayout ? `Q${r.position}` : r.position}
                       </button>
                     </TableCell>
                     <TableCell>{r.your}</TableCell>
@@ -418,6 +434,7 @@ function SprintAnswers({
       >
         <h2 className="text-xl font-[650] tracking-tight">Your answers</h2>
         <ToggleGroup
+          className="results-toggle"
           aria-label="Show questions as"
           size="sm"
           variant="default"
