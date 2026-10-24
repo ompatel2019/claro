@@ -134,7 +134,9 @@ test("queues background marks, keeps edits usable, and sends Finish without wait
       .getByRole("button", { name: new RegExp(`^Question ${question},`) })
       .click();
     await expect(
-      page.getByText(`Explain effect ${question}.`, { exact: true }),
+      page
+        .locator("#main")
+        .getByText(`Explain effect ${question}.`, { exact: true }),
     ).toBeVisible();
   };
   for (let i = 1; i <= 3; i++) {

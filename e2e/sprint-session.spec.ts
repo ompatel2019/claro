@@ -38,12 +38,10 @@ test.describe("Sprint session", () => {
     page,
   }) => {
     await setUp(page, ["Check as I go"]);
-    await page.getByRole("button", { name: "Booklet (B)" }).click();
+    // The booklet sidebar is open by default; the meta pills sit above the question.
     await expect(
-      page.getByText(
-        /^Question 1 · Multiple choice · 1 mark · (\d{4} HSC Q\d+|Practice)/,
-      ),
-    ).toBeVisible();
+      page.getByRole("list", { name: "Question details" }),
+    ).toContainText(/Question 1\s*Multiple choice\s*1 mark/);
     const check = page.getByRole("button", { name: "Check answer" });
     await expect(check).toBeDisabled();
     await pick(page, "A");
@@ -122,12 +120,9 @@ test.describe("Sprint session", () => {
   }
 
   for (const width of [390, 1280]) {
-    test(`flagging uses the bottom answer actions at ${width}px`, async ({
-      page,
-    }) => {
+    test(`flagging sits above the question at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 850 });
       await setUp(page, ["Check as I go"]);
-      await page.getByRole("button", { name: "Booklet (B)" }).click();
       const actions = page.getByRole("group", { name: "Answer actions" });
       const flag = page.getByRole("button", { name: "Flag for review" });
       await expect(

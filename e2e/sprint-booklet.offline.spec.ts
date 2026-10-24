@@ -20,7 +20,10 @@ const initial = [
   row(5, q(5,'mcq',1,'Structural unemployment is best described as unemployment caused by',['a downturn in the business cycle','a mismatch between skills and jobs','seasonal changes in demand','workers moving between jobs'])),
   row(6, q(6,'extended',20,'Analyse the effectiveness of monetary policy in achieving Australia’s internal balance objectives.')),
 ];
-createRoot(document.getElementById('root')).render(<SprintRunner session={{id:'s',kind:'sprint',config:{mode:'mixed',feedback:'end'},elapsed_s:312}} initial={initial} userId="u" title="Inflation sprint" />);`;
+// ?n=30 repeats the paper so progress can be checked at a long question count.
+const n = Number(new URLSearchParams(location.search).get('n') || 0);
+const rows = n ? Array.from({length:n}, (_, i) => ({...initial[i % 6], id:'a'+(i+1), question_id:'q'+(i+1), position:i+1, question:{...initial[i % 6].question, id:'q'+(i+1)}})) : initial;
+createRoot(document.getElementById('root')).render(<SprintRunner session={{id:'s',kind:'sprint',config:{mode:'mixed',feedback:'end'},elapsed_s:312}} initial={rows} userId="u" title="Inflation sprint" />);`;
 
 const stubs = `
 export const useRouter = () => ({ push() {}, replace() {}, refresh() {} });
@@ -64,7 +67,7 @@ test.beforeAll(async () => {
   ]);
 });
 
-async function load(page: Page, width: number, height: number) {
+async function load(page: Page, width: number, height: number, query = "") {
   page.on("pageerror", (error) => {
     throw error;
   });
@@ -86,9 +89,9 @@ async function load(page: Page, width: number, height: number) {
             },
     );
   });
-  await page.goto(`${ORIGIN}/student/sprint/s`);
+  await page.goto(`${ORIGIN}/student/sprint/s${query}`);
   await page.evaluate(() => document.fonts.ready);
-  await expect(page.getByText(/Question 3 of 6/)).toBeVisible();
+  if (!query) await expect(page.getByText(/Question 3 of 6/)).toBeVisible();
 }
 
 async function shots(page: Page, width: number, name = "booklet") {
@@ -108,102 +111,140 @@ async function shots(page: Page, width: number, name = "booklet") {
   await page.evaluate(() => document.documentElement.classList.remove("dark"));
 }
 
-// The mobile sheet is also titled "Booklet"; the modal is the Dialog primitive.
-const dialog = (page: Page) => page.locator('[data-slot="dialog-content"]');
+const sidebar = (page: Page) =>
+  page.getByRole("complementary", { name: "Booklet" });
 
-async function expectPaper(page: Page) {
-  const modal = dialog(page);
-  await expect(modal).toBeVisible();
-  await expect(modal).toHaveAttribute("role", "dialog");
-  await expect(modal).toHaveAccessibleName("Booklet");
-  await expect(modal.getByText("2 of 6 answered")).toBeVisible();
-  await expect(modal.getByRole("listitem")).toHaveCount(6);
+async function expectPaper(paper: ReturnType<Page["locator"]>) {
+  await expect(paper.getByRole("listitem")).toHaveCount(6);
   await expect(
-    modal.getByRole("button", { name: "Question 1: Answered, Flagged" }),
+    paper.getByRole("button", { name: "Question 1: Answered, Flagged" }),
   ).toBeVisible();
   await expect(
-    modal.getByRole("button", { name: "Question 3: Not answered" }),
+    paper.getByRole("button", { name: "Question 3: Not answered" }),
   ).toHaveAttribute("aria-current", "step");
-  // Opens on the current question.
   await expect(
-    modal.getByRole("button", { name: "Question 3: Not answered" }),
-  ).toBeFocused();
-  await expect(
-    modal.getByText("B. An increase in household consumption"),
+    paper.getByText("B. An increase in household consumption"),
   ).toBeVisible();
   // Exam mode: the background mark on Q2 never shows.
-  await expect(modal).not.toContainText(/\d+\/\d+|Full marks|No marks|Correct/);
-  await expect(modal).toContainText("20 marks");
+  await expect(paper).not.toContainText(/\d+\/\d+|Full marks|No marks|Correct/);
+  await expect(paper).toContainText("20 marks");
 }
 
-test("View booklet at 1440px: paper, keys blocked, Esc, focus trap, jump", async ({
+test("Booklet sidebar is open by default at 1440px, collapses, and jumps", async ({
   page,
 }) => {
   await load(page, 1440, 900);
-  await page.getByRole("button", { name: "Booklet (B)" }).first().click();
-  const trigger = page.getByRole("button", { name: "View booklet" });
-  await trigger.click();
-  await expectPaper(page);
+  await expect(page.getByRole("button", { name: "View booklet" })).toHaveCount(
+    0,
+  );
+  await expect(page.locator('[data-slot="dialog-content"]')).toHaveCount(0);
+  const rail = sidebar(page);
+  await expect(rail).toBeVisible();
+  await expect(rail).toContainText("2 of 6 answered");
+  await expectPaper(rail);
+  // Right-hand side of the question column.
+  const box = await rail.boundingBox();
+  expect(box!.x + box!.width).toBeGreaterThan(1400);
   await shots(page, 1440);
 
-  // Focus stays inside the dialog while tabbing both ways.
-  for (const key of [...Array(9).fill("Tab"), ...Array(9).fill("Shift+Tab")]) {
-    await page.keyboard.press(key);
-    // Base UI's focus guards hand focus straight back into the popup.
-    await expect
-      .poll(() =>
-        page.evaluate(
-          () => !!document.activeElement?.closest('[role="dialog"]'),
-        ),
-      )
-      .toBe(true);
-  }
+  await rail.getByRole("button", { name: "Collapse booklet" }).click();
+  await expect(sidebar(page)).toHaveCount(0);
+  await page.getByText("Inflation sprint").click();
+  await page.keyboard.press("b");
+  await expect(sidebar(page)).toBeVisible();
 
-  // Runner F / A–D and shell B / arrows do nothing behind the modal.
-  for (const key of ["f", "a", "b", "ArrowRight", "k"])
-    await page.keyboard.press(key);
-  await expect(dialog(page)).toBeVisible();
-  await expect(page.getByText(/Question 3 of 6/)).toBeVisible();
-
-  await page.keyboard.press("Escape");
-  await expect(dialog(page)).toBeHidden();
-  await expect(trigger).toBeFocused();
-  // The rail is still open (B was ignored) and Q3 was not flagged.
-  const rail = page.getByRole("navigation", { name: "Question booklet" });
-  await expect(
-    rail.getByRole("button", { name: "Question 3: Not answered" }),
-  ).toBeVisible();
-
-  await trigger.click();
-  await dialog(page)
+  await sidebar(page)
     .getByRole("button", { name: "Question 5: Not answered" })
     .click();
-  await expect(dialog(page)).toBeHidden();
   await expect(page.getByText(/Question 5 of 6/)).toBeVisible();
+  // A sidebar, not a modal: it stays open after a jump.
+  await expect(sidebar(page)).toBeVisible();
 });
 
-test("View booklet at 390px from the mobile sheet", async ({ page }) => {
+test("Booklet at 390px is a closed drawer that opens and jumps", async ({
+  page,
+}) => {
   await load(page, 390, 844);
-  await page.getByRole("button", { name: "Booklet (B)" }).last().click();
-  await page.getByRole("button", { name: "View booklet" }).click();
-  await expectPaper(page);
-  // The sheet hands over to the modal rather than stacking under it.
+  await expect(sidebar(page)).toBeHidden();
   await expect(page.locator('[data-slot="sheet-content"]')).toHaveCount(0);
+  await page.getByRole("button", { name: "Booklet (B)" }).last().click();
+  const drawer = page.locator('[data-slot="sheet-content"]');
+  await expect(drawer).toBeVisible();
+  await expectPaper(drawer);
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
     390,
   );
   await shots(page, 390);
-
-  await page.keyboard.press("Escape");
-  await expect(dialog(page)).toBeHidden();
-  await page.getByRole("button", { name: "Booklet (B)" }).last().click();
-  await page.getByRole("button", { name: "View booklet" }).click();
-  await dialog(page)
+  await drawer
     .getByRole("button", { name: "Question 6: Not answered" })
     .click();
-  await expect(dialog(page)).toBeHidden();
-  await expect(page.locator('[data-slot="sheet-content"]')).toHaveCount(0);
+  await expect(drawer).toHaveCount(0);
   await expect(page.getByText(/Question 6 of 6/)).toBeVisible();
+});
+
+test("Flag for review sits above the question, ink-2 and outline", async ({
+  page,
+}) => {
+  await load(page, 1440, 900);
+  const flag = page.getByRole("button", { name: "Flag for review" });
+  const details = page.getByRole("list", { name: "Question details" });
+  await expect(details).toContainText("Question 3");
+  await expect(details).toContainText("3 marks");
+  const [flagBox, stemBox] = await Promise.all([
+    flag.boundingBox(),
+    page
+      .getByText("Explain how a depreciation of the Australian dollar")
+      .first()
+      .boundingBox(),
+  ]);
+  expect(flagBox!.y).toBeLessThan(stemBox!.y);
+  await expect(page.locator(".sprint-session-footer")).not.toContainText(
+    "Flag",
+  );
+  const colour = (selector: string) =>
+    page.evaluate(
+      (sel) =>
+        getComputedStyle(document.querySelector(sel)!).getPropertyValue(
+          "--ink-2",
+        ),
+      selector,
+    );
+  const ink2 = (await colour("html")).trim();
+  await flag.click();
+  await expect(flag).toHaveAttribute("aria-pressed", "true");
+  const icon = await flag
+    .locator("svg")
+    .evaluate((el) => [getComputedStyle(el).color, el.getAttribute("fill")]);
+  expect(icon[1]).toBe("none");
+  const ink2Rgb = await page.evaluate((c) => {
+    const el = document.createElement("i");
+    el.style.color = c;
+    document.body.append(el);
+    const rgb = getComputedStyle(el).color;
+    el.remove();
+    return rgb;
+  }, ink2);
+  expect(icon[0]).toBe(ink2Rgb);
+});
+
+test("30 progress segments fit 390px with no horizontal scroll", async ({
+  page,
+}) => {
+  await load(page, 390, 844, "?n=30");
+  await expect(page.getByText(/Question \d+ of 30/)).toBeVisible();
+  const nav = page.getByRole("navigation", { name: "Question progress" });
+  await expect(nav.getByRole("button")).toHaveCount(30);
+  const track = nav.locator("[data-progress-track]");
+  const m = await track.evaluate((el) => ({
+    sw: el.scrollWidth,
+    cw: el.clientWidth,
+    ox: getComputedStyle(el).overflowX,
+  }));
+  expect(m.ox).not.toMatch(/auto|scroll/);
+  expect(m.sw).toBeLessThanOrEqual(m.cw);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    390,
+  );
 });
 
 for (const dark of [false, true])
@@ -237,8 +278,9 @@ for (const [width, height] of [
     page,
   }) => {
     await load(page, width, height);
-    // Only the button for this breakpoint is visible: rail at 1440, sheet at 390.
-    await page.getByRole("button", { name: "Booklet (B)" }).click();
+    // The sidebar is open by default at 1440; at 390 the drawer opens from the toolbar.
+    if (width < 768)
+      await page.getByRole("button", { name: "Booklet (B)" }).last().click();
     const rail = page.getByRole("navigation", { name: "Question booklet" });
     await expect(
       rail.getByRole("button", { name: "Question 2: Answered", exact: true }),

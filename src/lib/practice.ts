@@ -98,6 +98,12 @@ export type Attempt = {
 };
 export const questionColumns =
   "id,type,topic_id,marks,stem,stimulus,options,source,year";
+/** The paper pill on a sprint question, e.g. "2013 Practice": year (once) + source. */
+export function paperLabel(q: { year: number | null; source: string }) {
+  const year =
+    q.year && !q.source.includes(String(q.year)) ? String(q.year) : "";
+  return [year, q.source].filter(Boolean).join(" ") || null;
+}
 export function answered(
   a: Pick<Attempt, "choice_index" | "transcript" | "answer_text">,
 ) {
