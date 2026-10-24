@@ -73,7 +73,6 @@ export const test = base.extend<{
                 question: {
                   topic_id: "t3-inflation",
                   marks: 5,
-                  verb: "Explain",
                 },
               },
             })

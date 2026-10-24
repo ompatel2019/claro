@@ -6,7 +6,6 @@ import { requireAdmin } from "@/lib/auth";
 import { createClient } from "@/utils/supabase/server";
 import { admin } from "@/utils/supabase/admin";
 import {
-  VERBS,
   publishProblems,
   questionSchema,
   type QuestionInput,
@@ -84,7 +83,6 @@ export type QuestionUndo = {
   expected: string;
   status: "draft" | "live" | "retired";
   topic_id: string;
-  verb: string | null;
   duplicate_of: string | null;
 };
 
@@ -97,7 +95,6 @@ export async function undoQuestionChanges(input: unknown) {
         expected: z.iso.datetime({ offset: true }),
         status: z.enum(["draft", "live", "retired"]),
         topic_id: z.string().min(1).max(100),
-        verb: z.enum(VERBS).nullable(),
         duplicate_of: z.string().nullable(),
       }),
     )
@@ -107,7 +104,9 @@ export async function undoQuestionChanges(input: unknown) {
     const { id, expected, ...patch } = row;
     const { data: current } = await admin()
       .from("questions")
-      .select("*")
+      .select(
+        "id,type,topic_id,marks,source,year,stem,stimulus,options,correct_index,explanation,criteria,guideline_notes,sample_answer,status,updated_at",
+      )
       .eq("id", id)
       .maybeSingle()
       .throwOnError();
@@ -136,8 +135,7 @@ export type BulkAction =
   | { kind: "publish" }
   | { kind: "retire" }
   | { kind: "delete" }
-  | { kind: "topic"; topic_id: string }
-  | { kind: "verb"; verb: string | null };
+  | { kind: "topic"; topic_id: string };
 
 /** Bulk actions from the list; publishing validates each row and reports failures. */
 export async function bulkQuestions(
@@ -159,7 +157,6 @@ export async function bulkQuestions(
         kind: z.literal("topic"),
         topic_id: z.string().min(1).max(100),
       }),
-      z.object({ kind: z.literal("verb"), verb: z.enum(VERBS).nullable() }),
     ])
     .parse(action);
   if (action.kind === "topic") {
@@ -177,7 +174,7 @@ export async function bulkQuestions(
   const now = new Date().toISOString();
   const { data: previous } = await db
     .from("questions")
-    .select("id,status,topic_id,verb,duplicate_of,updated_at")
+    .select("id,status,topic_id,duplicate_of,updated_at")
     .in("id", list)
     .throwOnError();
   const undo: QuestionUndo[] = [];
@@ -189,21 +186,14 @@ export async function bulkQuestions(
         expected: now,
         status: row.status as QuestionUndo["status"],
         topic_id: row.topic_id,
-        verb: row.verb,
         duplicate_of: row.duplicate_of,
       });
   };
-  if (
-    action.kind === "topic" ||
-    action.kind === "verb" ||
-    action.kind === "retire"
-  ) {
+  if (action.kind === "topic" || action.kind === "retire") {
     const patch =
       action.kind === "topic"
         ? { topic_id: z.string().min(1).parse(action.topic_id) }
-        : action.kind === "verb"
-          ? { verb: action.verb }
-          : { status: "retired" };
+        : { status: "retired" };
     for (const row of previous ?? []) {
       const { data } = await db
         .from("questions")
@@ -226,7 +216,7 @@ export async function bulkQuestions(
   const { data: rows } = await db
     .from("questions")
     .select(
-      "id,type,topic_id,marks,verb,source,year,stem,stimulus,options,correct_index,explanation,criteria,guideline_notes,sample_answer,status,updated_at",
+      "id,type,topic_id,marks,source,year,stem,stimulus,options,correct_index,explanation,criteria,guideline_notes,sample_answer,status,updated_at",
     )
     .in("id", list)
     .throwOnError();
@@ -294,7 +284,7 @@ export async function mergeDraft(draftId: string, intoId: string) {
   if (draft === into) throw new Error("Choose another question.");
   const { data: before } = await admin()
     .from("questions")
-    .select("id,status,topic_id,verb,duplicate_of,updated_at")
+    .select("id,status,topic_id,duplicate_of,updated_at")
     .eq("id", draft)
     .eq("status", "draft")
     .maybeSingle()
@@ -330,7 +320,6 @@ export async function mergeDraft(draftId: string, intoId: string) {
       expected: now,
       status: "draft",
       topic_id: before.topic_id,
-      verb: before.verb,
       duplicate_of: before.duplicate_of,
     },
   ] satisfies QuestionUndo[];

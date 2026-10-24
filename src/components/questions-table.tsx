@@ -12,7 +12,7 @@ import { DataTable, type Column } from "@/components/data-table";
 import type { Pager } from "@/lib/admin";
 import type { QuestionListRow } from "@/lib/admin-questions";
 import { dateLabel, type Topic } from "@/lib/practice";
-import { ORIGIN_LABELS, TYPE_LABELS, VERBS } from "@/lib/question-bank";
+import { ORIGIN_LABELS, TYPE_LABELS } from "@/lib/question-bank";
 import { StatusPill, STATUS_PILL } from "./status-pill";
 import {
   AlertDialog,
@@ -24,7 +24,6 @@ import {
 } from "./ui/alert-dialog";
 import { Button } from "./ui/button";
 import { TopicSelect } from "./topic-select";
-import { FormSelect } from "./ui/form-select";
 import {
   Dialog,
   DialogContent,
@@ -33,7 +32,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
-import { FormField } from "./form-field";
 
 const BASE = "/admin/content/questions";
 type Failure = { id: string; problem: string };
@@ -63,7 +61,6 @@ function columns(name: (id: string) => string): Column<QuestionListRow>[] {
     },
     { id: "topic", header: "Topic", sort: true, cell: (q) => name(q.topic_id) },
     { id: "marks", header: "Marks", sort: true, cell: (q) => q.marks },
-    { id: "verb", header: "Verb", sort: true, cell: (q) => q.verb ?? "None" },
     {
       id: "status",
       header: "Status",
@@ -115,7 +112,7 @@ function columns(name: (id: string) => string): Column<QuestionListRow>[] {
   }));
 }
 
-/** §4.4 list: sortable, paged, with bulk publish/retire/move/verb/delete. */
+/** §4.4 list: sortable, paged, with bulk publish/retire/move/delete. */
 export function QuestionsTable({
   rows,
   pager,
@@ -130,8 +127,8 @@ export function QuestionsTable({
   const router = useRouter();
   const [pending, start] = useTransition();
   const [dialog, setDialog] = useState<
-    | { kind: "topic" | "verb" | "delete"; ids: string[]; clear: () => void }
-    | { kind: "failures"; failures: Failure[]; done: number; verb: string }
+    | { kind: "topic" | "delete"; ids: string[]; clear: () => void }
+    | { kind: "failures"; failures: Failure[]; done: number; outcome: string }
     | null
   >(null);
   const [choice, setChoice] = useState("");
@@ -142,22 +139,21 @@ export function QuestionsTable({
     start(async () => {
       try {
         const r = await bulkQuestions(ids, action);
-        const verb = {
+        const outcome = {
           publish: "published",
           retire: "retired",
           delete: "deleted",
           topic: "moved",
-          verb: "updated",
         }[action.kind];
         if (r.failures.length)
           setDialog({
             kind: "failures",
             failures: r.failures,
             done: r.done,
-            verb,
+            outcome,
           });
         else {
-          toast.success(`${r.done} ${verb}`, {
+          toast.success(`${r.done} ${outcome}`, {
             duration: 4000,
             action: r.undo.length
               ? {
@@ -217,16 +213,6 @@ export function QuestionsTable({
             >
               Move to topic
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setChoice("");
-                setDialog({ kind: "verb", ids, clear });
-              }}
-            >
-              Set verb
-            </Button>
             {status === "draft" && (
               <Button
                 variant="destructive"
@@ -240,64 +226,45 @@ export function QuestionsTable({
         )}
       />
       <Dialog
-        open={dialog?.kind === "topic" || dialog?.kind === "verb"}
+        open={dialog?.kind === "topic"}
         onOpenChange={(o) => !o && setDialog(null)}
       >
         <DialogContent>
-          {dialog && (dialog.kind === "topic" || dialog.kind === "verb") && (
+          {dialog?.kind === "topic" && (
             <>
               <DialogHeader>
-                <DialogTitle>
-                  {dialog.kind === "topic"
-                    ? "Move to topic"
-                    : "Set directive verb"}
-                </DialogTitle>
+                <DialogTitle>Move to topic</DialogTitle>
                 <DialogDescription>
                   Applies to {dialog.ids.length} selected question
                   {dialog.ids.length === 1 ? "" : "s"}.
                 </DialogDescription>
               </DialogHeader>
-              {dialog.kind === "topic" ? (
-                <TopicSelect
-                  topics={topics}
-                  parent={parent}
-                  value={choice}
-                  onParentChange={(id) => {
-                    setParent(id);
-                    setChoice("");
-                  }}
-                  onChange={setChoice}
-                  disabled={pending}
-                />
-              ) : (
-                <FormField label="Verb">
-                  <FormSelect
-                    value={choice}
-                    onValueChange={setChoice}
-                    options={[
-                      { value: "", label: "None" },
-                      ...VERBS.map((value) => ({ value, label: value })),
-                    ]}
-                  />
-                </FormField>
-              )}
+              <TopicSelect
+                topics={topics}
+                parent={parent}
+                value={choice}
+                onParentChange={(id) => {
+                  setParent(id);
+                  setChoice("");
+                }}
+                onChange={setChoice}
+                disabled={pending}
+              />
               <DialogFooter>
                 <Button variant="outline" onClick={() => setDialog(null)}>
                   Cancel
                 </Button>
                 <Button
-                  disabled={pending || (dialog.kind === "topic" && !choice)}
+                  disabled={pending || !choice}
                   onClick={() =>
                     run(
                       dialog.ids,
-                      dialog.kind === "topic"
-                        ? { kind: "topic", topic_id: choice }
-                        : { kind: "verb", verb: choice || null },
+                      { kind: "topic", topic_id: choice },
                       dialog.clear,
                     )
                   }
                 >
-                  {dialog.kind === "topic" ? "Move" : "Set verb"}
+                  Move
                 </Button>
               </DialogFooter>
             </>
@@ -313,7 +280,8 @@ export function QuestionsTable({
             <>
               <DialogHeader>
                 <DialogTitle>
-                  {dialog.done} {dialog.verb}, {dialog.failures.length} skipped
+                  {dialog.done} {dialog.outcome}, {dialog.failures.length}{" "}
+                  skipped
                 </DialogTitle>
                 <DialogDescription>Fix these and try again.</DialogDescription>
               </DialogHeader>

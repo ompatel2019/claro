@@ -27,7 +27,6 @@ export type QuestionListRow = {
   type: QuestionInput["type"];
   topic_id: string;
   marks: number;
-  verb: string | null;
   status: string;
   origin: string;
   updated_at: string;
@@ -46,7 +45,6 @@ const KEYS: Record<string, (r: QuestionListRow) => string | number | null> = {
   type: (r) => r.type,
   topic: (r) => r.topic_id,
   marks: (r) => r.marks,
-  verb: (r) => r.verb?.toLowerCase() || null,
   status: (r) => r.status,
   origin: (r) => r.origin,
   attempts: (r) => r.attempts,
@@ -181,7 +179,7 @@ export async function loadQuestionList(f: QuestionFilters) {
   let q = admin()
     .from("questions")
     .select(
-      "id,source,year,type,topic_id,marks,verb,status,origin,updated_at,stem,criteria",
+      "id,source,year,type,topic_id,marks,status,origin,updated_at,stem,criteria",
     )
     .eq("status", status);
   if (f.type && ["mcq", "short", "extended"].includes(f.type))
@@ -200,7 +198,6 @@ export async function loadQuestionList(f: QuestionFilters) {
   if (f.to && /^\d{4}$/.test(f.to)) q = q.lte("year", Number(f.to));
   if (f.origin && ["nesa", "a1", "claro"].includes(f.origin))
     q = q.eq("origin", f.origin);
-  if (f.verb) q = q.eq("verb", f.verb.slice(0, 40));
   if (f.marks && /^\d{1,2}$/.test(f.marks)) q = q.eq("marks", Number(f.marks));
   if (f.missing === "explanation")
     q = q.eq("type", "mcq").or('explanation.is.null,explanation.eq.""');
@@ -237,7 +234,6 @@ export async function loadQuestionList(f: QuestionFilters) {
       TYPE_LABELS[r.type],
       keys.topic(r),
       r.marks,
-      r.verb ?? "None",
       r.status,
       ORIGIN_LABELS[r.origin as keyof typeof ORIGIN_LABELS] ?? r.origin,
       r.attempts,
@@ -294,7 +290,7 @@ export async function loadQuestion(id: string) {
   const { data } = await db
     .from("questions")
     .select(
-      "id,type,topic_id,marks,verb,source,year,stem,stimulus,options,correct_index,explanation,criteria,guideline_notes,sample_answer,status,origin,duplicate_of,updated_at",
+      "id,type,topic_id,marks,source,year,stem,stimulus,options,correct_index,explanation,criteria,guideline_notes,sample_answer,status,origin,duplicate_of,updated_at",
     )
     .eq("id", id)
     .maybeSingle()

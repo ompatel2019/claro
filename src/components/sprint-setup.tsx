@@ -711,9 +711,9 @@ export function SprintSetup({
           className="sprint-setup-dock bg-card fixed inset-x-0 bottom-0 z-30 rounded-none border-t px-4 py-3 sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]"
         >
           <p className="sr-only">{summary(c, names)}</p>
-          <div className="mx-auto flex max-w-[calc(1400px-4rem)] items-center gap-3">
+          <div className="mx-auto flex max-w-[calc(1400px-4rem)] flex-wrap items-center gap-x-3 gap-y-2">
             <dl
-              className="mr-auto flex min-w-0 items-center gap-4 sm:gap-8"
+              className="mr-auto flex min-w-0 items-center gap-4 max-[399px]:basis-full sm:gap-8"
               aria-live="polite"
             >
               {(
@@ -742,7 +742,7 @@ export function SprintSetup({
               ))}
             </dl>
             <Button
-              className="text-muted-foreground shrink-0 max-sm:px-2"
+              className="text-muted-foreground shrink-0 max-[399px]:ml-auto max-sm:px-2"
               type="button"
               variant="ghost"
               onClick={() => {

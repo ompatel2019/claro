@@ -14,7 +14,6 @@ import {
   ORIGIN_LABELS,
   REVIEW_THRESHOLD,
   TYPE_LABELS,
-  VERBS,
 } from "@/lib/question-bank";
 import { FilterBar } from "@/components/filter-bar";
 import { ImportReview } from "@/components/import-review";
@@ -122,12 +121,6 @@ export default async function QuestionsPage({
             value,
             label,
           })),
-        },
-        {
-          name: "verb",
-          label: "Verb",
-          all: "Any",
-          options: VERBS.map((v) => ({ value: v, label: v })),
         },
         {
           name: "marks",

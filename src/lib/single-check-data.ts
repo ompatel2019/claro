@@ -24,7 +24,7 @@ export async function bankQuestions(
   for (let i = 0; i < ids.length; i += 200) {
     const { data, error } = await db
       .from("questions")
-      .select(`${questionColumns},verb`)
+      .select(questionColumns)
       .in("id", ids.slice(i, i + 200))
       .eq("status", "live");
     if (error) throw error;

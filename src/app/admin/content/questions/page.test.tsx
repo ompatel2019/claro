@@ -67,7 +67,6 @@ it("links the question source without an ID column", async () => {
         type: "short",
         topic_id: "t3",
         marks: 2,
-        verb: "Explain",
         status: "live",
         origin: "claro",
         updated_at: "2026-01-01T00:00:00.000Z",

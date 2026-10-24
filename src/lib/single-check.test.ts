@@ -132,7 +132,6 @@ it("filters parent topics by their relation and searches year/source regardless 
       topic_id: "unrelated-id",
       stimulus: null,
       options: null,
-      verb: "explain",
     },
   ];
   const topics = [{ id: "unrelated-id", parent_id: "economy" }];
