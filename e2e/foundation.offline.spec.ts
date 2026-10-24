@@ -60,7 +60,7 @@ test.beforeEach(async ({ page }) => {
     });
   });
 });
-for (const width of [1440, 390])
+for (const width of [1440, 768, 390])
   test(`foundation at ${width}px: shell, tokens, search, feedback and dark mode`, async ({
     page,
   }) => {
@@ -95,6 +95,18 @@ for (const width of [1440, 390])
         page.getByRole("navigation", { name: "Main navigation" }),
       ).toBeVisible();
       await page.keyboard.press("Escape");
+    }
+    const searchTrigger = page.getByRole("button", {
+      name: "Search pages (Command or Control K)",
+      exact: true,
+    });
+    await expect(searchTrigger).toBeVisible();
+    if (width >= 768) {
+      const header = await page
+        .locator('[data-component="TopBar"]')
+        .boundingBox();
+      const pill = await searchTrigger.boundingBox();
+      expect(pill!.x - header!.x).toBe(16);
     }
     await page.keyboard.press("Control+k");
     const search = page.getByRole("combobox", { name: "Search pages" });

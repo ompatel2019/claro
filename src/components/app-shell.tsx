@@ -24,6 +24,7 @@ import {
 } from "@/components/icons";
 import { signOut } from "@/app/(auth)/actions";
 import { useFeedback } from "@/components/feedback-widget";
+import { cn } from "@/lib/utils";
 import { HSC_EXAM } from "@/lib/hsc-exam";
 import { PortalIcon } from "@/components/icons";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -377,7 +378,12 @@ function AppShellContent({
       </Sidebar>
       {/* Collapsing hands the rail's freed width to the content column. */}
       <SidebarInset className="min-w-0 md:peer-data-[state=collapsed]:[--shell-reclaim:calc(var(--sidebar-width)-var(--sidebar-width-icon))]">
-        <TopBar className="bg-background h-16 gap-3 backdrop-blur-none md:px-10">
+        <TopBar
+          className={cn(
+            "bg-background h-16 gap-3 backdrop-blur-none md:px-10",
+            kind === "student" && "md:pl-4",
+          )}
+        >
           <SidebarTrigger className="size-9 md:hidden" />
           <Link
             href={home}
