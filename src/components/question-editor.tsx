@@ -40,7 +40,7 @@ import {
 } from "./ui/alert-dialog";
 import { AnnotatedFeedback } from "./annotated-feedback";
 import { QuestionKey, QuestionView } from "./question-view";
-import { Button, buttonVariants } from "./ui/button";
+import { Button } from "./ui/button";
 import {
   Card,
   CardContent,
@@ -883,12 +883,6 @@ export function QuestionEditor({
             <Button type="submit" disabled={pending || uploading}>
               {pending ? "Saving…" : "Save"}
             </Button>
-            <Link
-              href="/admin/content/questions"
-              className={buttonVariants({ variant: "ghost" })}
-            >
-              Back to questions
-            </Link>
             <span className="text-muted-foreground text-xs">
               {dirty ? "Unsaved changes" : "Saved"} · ⌘S
             </span>

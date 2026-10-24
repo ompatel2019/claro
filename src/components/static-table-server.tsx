@@ -9,14 +9,24 @@ export function ServerTable({
   label,
   columns,
   rows,
+  paramPrefix = "",
 }: {
   params: Record<string, string | undefined>;
   label: string;
+  /** Own sort/dir/page URL keys when two tables share a page. */
+  paramPrefix?: string;
   columns: React.ComponentProps<typeof StaticTable>["columns"];
   rows: StaticRow[];
 }) {
   const fallback = { id: columns[0].id, dir: "asc" as const };
-  const { sort, page } = tableParams(params, fallback);
+  const { sort, page } = tableParams(
+    {
+      sort: params[`${paramPrefix}sort`],
+      dir: params[`${paramPrefix}dir`],
+      page: params[`${paramPrefix}page`],
+    },
+    fallback,
+  );
   const keys = Object.fromEntries(
     columns
       .filter((c) => c.sortable)
@@ -49,6 +59,7 @@ export function ServerTable({
       columns={columns}
       rows={paged.rows}
       pager={paged.pager}
+      paramPrefix={paramPrefix}
     />
   );
 }

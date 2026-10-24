@@ -17,32 +17,37 @@ export function flashcardPage(
   );
   const sub = f.sub && children.has(f.sub) ? f.sub : undefined;
   const query = f.q?.trim().toLowerCase() ?? "";
-  const filtered = rows.filter(
-    (r) =>
-      r.status === status &&
-      (!f.kind || r.kind === f.kind) &&
-      (!f.topic || r.topic_id === f.topic || children.has(r.topic_id)) &&
-      (!sub || r.topic_id === sub) &&
-      (!f.origin || r.origin === f.origin) &&
-      (!query ||
-        [
-          r.id,
-          r.front,
-          r.back,
-          r.kind,
-          names.get(r.topic_id),
-          r.status,
-          r.origin,
-          r.reviews,
-          r.knew_first == null ? "No reviews" : `${r.knew_first}%`,
-          r.avg == null ? "No reviews" : `${r.avg}%`,
-          dateLabel(r.updated_at, true),
-        ].some((v) =>
-          String(v ?? "")
-            .toLowerCase()
-            .includes(query),
-        )),
-  );
+  const matches = (r: FlashcardRow) =>
+    (!f.kind || r.kind === f.kind) &&
+    (!f.topic || r.topic_id === f.topic || children.has(r.topic_id)) &&
+    (!sub || r.topic_id === sub) &&
+    (!f.origin || r.origin === f.origin) &&
+    (!query ||
+      [
+        r.id,
+        r.front,
+        r.back,
+        r.kind,
+        names.get(r.topic_id),
+        r.status,
+        r.origin,
+        r.reviews,
+        r.knew_first == null ? "No reviews" : `${r.knew_first}%`,
+        r.avg == null ? "No reviews" : `${r.avg}%`,
+        dateLabel(r.updated_at, true),
+      ].some((v) =>
+        String(v ?? "")
+          .toLowerCase()
+          .includes(query),
+      ));
+  // Tab counts use the same rows and filters as the table, so Live (n) is what Live shows.
+  const counts = { live: 0, draft: 0, retired: 0 };
+  const filtered: FlashcardRow[] = [];
+  for (const r of rows) {
+    if (!matches(r)) continue;
+    if (r.status in counts) counts[r.status]++;
+    if (r.status === status) filtered.push(r);
+  }
   const keys: Record<string, (r: FlashcardRow) => string | number | null> = {
     front: (r) => r.front.toLowerCase(),
     back: (r) => r.back.toLowerCase(),
@@ -57,5 +62,5 @@ export function flashcardPage(
   };
   const fallback = { id: "updated", dir: "desc" as const };
   const { sort, page } = tableParams(f, fallback);
-  return { ...pageOf(filtered, keys, sort, page, fallback), status };
+  return { ...pageOf(filtered, keys, sort, page, fallback), status, counts };
 }

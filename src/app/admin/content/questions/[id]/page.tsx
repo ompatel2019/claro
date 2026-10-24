@@ -34,7 +34,6 @@ export default async function QuestionPage({
         Back to questions
       </Link>
       <PageHeader
-        eyebrow={loaded.question.source}
         title={loaded.question.id}
         description="Edit question content, marking guidance and publishing status."
       />
