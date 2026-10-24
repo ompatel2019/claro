@@ -160,6 +160,7 @@ export function MarkedAnswerDoc({
   const selected = slides.selected;
   const selectedId = selected?.id ?? null;
   // Column mode: nothing is focused until a highlight or a comment is chosen.
+  const [reveal, setReveal] = useState<{ id: number } | null>(null);
   const [focused, setFocused] = useState<number | null>(null);
   const [shift, setShift] = useState(0);
   const [lines, setLines] = useState<Connector[]>([]);
@@ -210,8 +211,9 @@ export function MarkedAnswerDoc({
       body.current
         ?.querySelector<HTMLElement>(`[data-card="${id}"]`)
         ?.focus({ preventScroll: true });
-    // From the text: the page stays put and the column slides so the comment sits level with
-    // its phrase. From the comment: nothing moves; its phrase lights up.
+    setReveal(from === "text" ? { id } : null);
+    // Align the column first; reveal the card only once its translation has settled.
+    // From the comment: nothing moves; its phrase lights up.
     if (from === "text") {
       const phrase = highlights(id)[0]?.getBoundingClientRect();
       const el = body.current?.querySelector<HTMLElement>(
@@ -256,6 +258,53 @@ export function MarkedAnswerDoc({
     (id) => (column ? focusComment(id, "text") : go(id, { reveal: true })),
     { scroll: false },
   );
+
+  useEffect(() => {
+    if (!column || focused === null) return;
+    function clear() {
+      setReveal(null);
+      setFocused(null);
+      setShift(0);
+    }
+    function outside(e: MouseEvent) {
+      const target = e.target instanceof Element ? e.target : null;
+      // Highlights, cards and the linked next-mark row move focus themselves.
+      const inside = target?.closest(
+        "[data-anchors], [data-card], [data-focus-control]",
+      );
+      if (!inside || !body.current?.contains(inside)) clear();
+    }
+    function escape(e: KeyboardEvent) {
+      if (e.key === "Escape") clear();
+    }
+    document.addEventListener("click", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("click", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [column, focused]);
+
+  useLayoutEffect(() => {
+    if (!column || reveal === null) return;
+    const card = body.current?.querySelector<HTMLElement>(
+      `[data-card="${reveal.id}"]`,
+    );
+    let cancelled = false;
+    // CSS transforms do not affect layout. Wait for the list's transition before
+    // measuring the card, including when a second selection interrupts that transition.
+    const frame = requestAnimationFrame(async () => {
+      await Promise.allSettled(
+        (cols.current?.getAnimations?.() ?? []).map((a) => a.finished),
+      );
+      if (cancelled) return;
+      into(card);
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(frame);
+    };
+  }, [column, focused, shift, reveal]);
 
   const inFocus = column ? comments.find((c) => c.id === focused) : undefined;
 
@@ -550,6 +599,7 @@ export function MarkedAnswerDoc({
                         <button
                           type="button"
                           className="cma-crit-row"
+                          data-focus-control
                           aria-pressed={linked.id === activeId}
                           onClick={() =>
                             column
@@ -579,12 +629,6 @@ export function MarkedAnswerDoc({
               className="cma-cols"
               aria-label="Comments"
               style={shift > 0 ? { paddingBottom: shift } : undefined}
-              onKeyDown={(e) => {
-                if (e.key !== "Escape" || focused === null) return;
-                e.preventDefault();
-                setFocused(null);
-                setShift(0);
-              }}
             >
               <ol
                 ref={cols}

@@ -527,6 +527,78 @@ describe("comment column", () => {
     expect(card(22)).toHaveAttribute("aria-pressed", "false");
   });
 
+  it("dismisses focus outside the answer and on Escape from a highlight", () => {
+    const { container } = render(
+      <MarkedAnswerDoc text={text} comments={comments} column />,
+    );
+    const phrase = marks(container, 22)[0];
+    const cleared = () => {
+      expect(container.querySelector('[aria-pressed="true"]')).toBeNull();
+      expect(container.querySelector("[data-dim]")).toBeNull();
+      expect(container.querySelector("[data-selected]")).toBeNull();
+    };
+    fireEvent.click(phrase);
+    fireEvent.click(document.body);
+    cleared();
+    fireEvent.click(phrase);
+    fireEvent.keyDown(phrase, { key: "Escape" });
+    cleared();
+    fireEvent.click(card(22));
+    fireEvent.click(container.querySelector(".cma-hint")!);
+    cleared();
+  });
+
+  it("keeps the next-mark row's selection when switching from another comment", () => {
+    render(
+      <MarkedAnswerDoc text={text} comments={comments} score={score} column />,
+    );
+    fireEvent.click(card(11));
+    expect(card(11)).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Your next mark: Add a statistic." }),
+    );
+    expect(card(22)).toHaveAttribute("aria-pressed", "true");
+    expect(card(11)).toHaveAttribute("aria-pressed", "false");
+  });
+
+  it.each([true, false])(
+    "reveals the final card position after translation (reduced motion: %s)",
+    async (reduced) => {
+      vi.mocked(window.matchMedia).mockReturnValue({
+        matches: reduced,
+      } as MediaQueryList);
+      const { container } = render(
+        <MarkedAnswerDoc text={text} comments={comments} column />,
+      );
+      let finish!: () => void;
+      const finished = new Promise<void>((resolve) => {
+        finish = resolve;
+      });
+      const list = container.querySelector("ol")!;
+      Object.defineProperty(list, "getAnimations", {
+        value: () => [{ finished }],
+      });
+      // Initially on-screen; the translation moves the card below the viewport.
+      card(22).getBoundingClientRect = () =>
+        ({ top: 100, bottom: 200 }) as DOMRect;
+      fireEvent.click(marks(container, 22)[0]);
+      await act(async () => {
+        for (const [callback] of vi.mocked(requestAnimationFrame).mock.calls)
+          callback(0);
+      });
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      card(22).getBoundingClientRect = () =>
+        ({ top: 700, bottom: 1100 }) as DOMRect;
+      await act(async () => {
+        finish();
+      });
+      expect(scrollIntoView).toHaveBeenCalledExactlyOnceWith({
+        block: "nearest",
+        behavior: reduced ? "auto" : "smooth",
+      });
+    },
+  );
+
   it("moves keyboard focus from a highlight to its comment without scrolling", () => {
     const { container } = render(
       <MarkedAnswerDoc text={text} comments={comments} column />,

@@ -7,6 +7,7 @@ test.beforeAll(async () => {
   css = await offlineCss();
   bundle = await offlineBundle(
     `import React from 'react'; import {createRoot} from 'react-dom/client';
+        import {ResultsAnswers} from './src/components/results-report';
         import {ImportCards} from './src/components/student/flashcards/import-cards';
         import Home from './src/app/(app)/student/page';
         import Admin from './src/app/admin/page';
@@ -18,8 +19,12 @@ test.beforeAll(async () => {
         function FeedbackTrigger(){const open=useFeedback();return <button onClick={()=>open()}>Feedback</button>;}
         const f=Object.fromEntries(new URLSearchParams(location.search));
         const activity={rows:[{id:'s',kind:'sprint',title:'Mixed sprint · Inflation',status:'Finished',provisional:false,study:false,pct:75,items:8,answered:8,elapsed_s:125,started_at:'2026-10-19T00:00:00Z',finished_at:'2026-10-19T00:02:00Z'}],page:1,total:1,all_total:1,kinds:{sprint:1},kind_total:1,stats:{sessions:1,questions:8,average:75,best:75}};
+        // Synthetic sprint review using the same composition as SprintResults.
+        const answer = 'Real GDP removes the effect of price changes.\\n' + Array.from({length:12}, (_,i)=>'Working line '+(i+1)+': compare nominal output with the price index.').join('\\n') + '\\nReal GDP = nominal GDP divided by the price index.';
+        const quotes = ['Real GDP removes', 'Working line 6', 'Real GDP = nominal GDP'];
+        const row = {attempt_id:'synthetic-answer',question_id:'synthetic-question',position:2,type:'short',status:'marked',check_status:'none',source:'Practice',year:null,topic_id:null,stem:'Calculate real GDP.',marks:3,max_marks:3,mark:1,answer_text:answer,transcript:null,image_paths:[],criteria:[],feedback:{earned:[],missing_points:['Calculate the value'],comments:quotes.map((quote,i)=>({kind:i===0?'strength':'fix',quote,start:answer.indexOf(quote),tag:'Knowledge',body:'Use the supplied nominal GDP and price index to calculate real output. Show each step and state the units.',next_mark:i===0?null:'Substitute the figures and give the calculated value with units.'}))}};
         const path=location.pathname;
-        const page=path.endsWith('/flashcards/import') ? <ImportCards topics={[{id:'inflation',name:'Inflation',parent_id:'t3',sort:1}]}/> : path.includes('progress') ? await Progress({searchParams:Promise.resolve(f)}) : path.includes('flashcards') ? await Flashcards({searchParams:Promise.resolve(f)}) : path.includes('admin') ? Admin() : path.includes('activity') ? <ActivityBrowser data={activity} filters={{kind:'',status:'',topic:'',range:'',q:'',sort:'newest',date:'',from:'',to:'',page:1}} topics={[]} today="2026-10-19"/> : await Home();
+        const page=path.endsWith('/results-review') ? <><h1>Synthetic sprint results</h1><ResultsAnswers rows={[row]} id="synthetic-sprint" name={()=>''} photos={new Map()} sprintLayout readOnly/><div className="h-screen"/></> : path.endsWith('/flashcards/import') ? <ImportCards topics={[{id:'inflation',name:'Inflation',parent_id:'t3',sort:1}]}/> : path.includes('progress') ? await Progress({searchParams:Promise.resolve(f)}) : path.includes('flashcards') ? await Flashcards({searchParams:Promise.resolve(f)}) : path.includes('admin') ? Admin() : path.includes('activity') ? <ActivityBrowser data={activity} filters={{kind:'',status:'',topic:'',range:'',q:'',sort:'newest',date:'',from:'',to:'',page:1}} topics={[]} today="2026-10-19"/> : await Home();
         const resolved=await resolve(page);
         createRoot(document.getElementById('root')).render(<FeedbackWidget userId="student"><header className="h-16 border-b px-4 py-5">Claro<FeedbackTrigger/></header><main className="mx-auto max-w-[1280px] px-4 py-6 md:px-6"><div className="pb-0 lg:pb-12">{resolved}</div></main></FeedbackWidget>);`,
     [
@@ -465,3 +470,84 @@ test("Flashcard import: Quizlet guide, preview and cleaned submission", async ({
     },
   ]);
 });
+
+test("Results review: outside click and Escape clear comment focus", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto("http://claro.test/student/results-review");
+  const review = page.locator("#q-2");
+  const marks = review.locator('mark[role="button"]');
+  const pressed = review.locator('[data-card][aria-pressed="true"]');
+  const dimmed = review.locator("[data-card][data-dim]");
+  await marks.first().click();
+  await expect(pressed).toHaveCount(1);
+  await expect(dimmed).toHaveCount(2);
+  await page.getByRole("heading", { name: "Synthetic sprint results" }).click();
+  await expect(pressed).toHaveCount(0);
+  await expect(dimmed).toHaveCount(0);
+  await marks.first().click();
+  await expect(pressed).toHaveCount(1);
+  await page.keyboard.press("Escape");
+  await expect(pressed).toHaveCount(0);
+  await expect(dimmed).toHaveCount(0);
+  await marks.first().click();
+  await marks.nth(1).click();
+  await expect(pressed).toContainText("Working line 6");
+  await pressed.click();
+  await expect(pressed).toHaveCount(0);
+  await expect(dimmed).toHaveCount(0);
+});
+
+for (const reducedMotion of ["reduce", "no-preference"] as const) {
+  test(`Results review: reveal the entire translated comment (${reducedMotion})`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.emulateMedia({ reducedMotion });
+    await page.goto("http://claro.test/student/results-review");
+    const highlight = page.locator('#q-2 mark[role="button"]').last();
+    const card = page.locator('#q-2 [data-card][aria-pressed="true"]');
+    await expect(highlight).toBeVisible();
+    const positionHighlight = async (top: number) => {
+      await highlight.evaluate((el, top) => {
+        window.scrollBy(0, el.getBoundingClientRect().top - top);
+      }, top);
+    };
+    // When alignment leaves enough room for the whole card, the page must stay put.
+    await positionHighlight(220);
+    const before = await page.evaluate(() => scrollY);
+    await highlight.click();
+    await page.waitForTimeout(50);
+    await highlight.click(); // Repeated selection during translation keeps the alignment.
+    await expect(card).toHaveCount(1);
+    await page.waitForTimeout(500); // Allow the column's 220ms transition to finish.
+    expect(await page.evaluate(() => scrollY)).toBe(before);
+    await expect
+      .poll(async () => {
+        const box = await card.boundingBox();
+        return !!box && box.y >= 0 && box.y + box.height <= 900;
+      })
+      .toBe(true);
+
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(300);
+    // The phrase is visible, but its aligned card would extend below the viewport.
+    await positionHighlight(810);
+    const low = await page.evaluate(() => scrollY);
+    await highlight.click();
+    await expect(card).toHaveCount(1);
+    await page.waitForTimeout(500);
+    await expect
+      .poll(async () => {
+        const box = await card.boundingBox();
+        return !!box && box.y >= 0 && box.y + box.height <= 900;
+      })
+      .toBe(true);
+    const scrolled = await page.evaluate(() => scrollY);
+    expect(scrolled).toBeGreaterThan(low);
+    expect(scrolled - low).toBeLessThan(
+      (await card.boundingBox())!.height + 100,
+    );
+  });
+}
