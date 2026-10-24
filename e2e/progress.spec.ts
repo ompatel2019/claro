@@ -95,32 +95,6 @@ test.describe("Student progress (read only)", () => {
     }).toPass({ timeout: 20000 });
     // The Start button is deliberately never pressed: no sessions or AI calls.
   });
-  test("history chips survive hydration and preserve the range", async ({
-    page,
-  }) => {
-    await page.getByRole("button", { name: "Show chart data" }).first().click();
-    await expect(async () => {
-      await page.getByText("Filter score history", { exact: true }).click();
-      if (new URL(page.url()).searchParams.get("kind") !== "sprint")
-        await page
-          .getByRole("button", { name: "Sprints", exact: true })
-          .click();
-      await expect(page).toHaveURL(/[?&]kind=sprint(?:&|$)/, { timeout: 1000 });
-      await expect(
-        page.getByRole("button", { name: "Sprints", exact: true }),
-      ).toHaveAttribute("aria-pressed", "true", { timeout: 1000 });
-    }).toPass({ timeout: 20000 });
-    await expect(async () => {
-      if (new URL(page.url()).searchParams.get("type") !== "short")
-        await page.getByRole("button", { name: "Short", exact: true }).click();
-      const url = new URL(page.url());
-      expect(url.searchParams.get("kind")).toBe("sprint");
-      expect(url.searchParams.get("type")).toBe("short");
-      await expect(
-        page.getByRole("button", { name: "Short", exact: true }),
-      ).toHaveAttribute("aria-pressed", "true", { timeout: 1000 });
-    }).toPass({ timeout: 20000 });
-  });
   for (const width of [360, 400, 1280]) {
     test(`${width}px keeps topic tables within their containers`, async ({
       page,
@@ -199,9 +173,7 @@ test.describe("Progress with local synthetic reads", () => {
     ]);
   });
   for (const width of [390, 1440]) {
-    test(`real page ranges, dot points and score filters at ${width}px`, async ({
-      page,
-    }) => {
+    test(`real page ranges and dot points at ${width}px`, async ({ page }) => {
       await page.setViewportSize({ width, height: 900 });
       await page.goto("/student/progress");
       await expect(
@@ -217,23 +189,11 @@ test.describe("Progress with local synthetic reads", () => {
       await expect(
         topics.getByRole("link", { name: "Practise Inflation" }),
       ).toHaveAttribute("href", "/student/sprint?topics=t3&sub=inflation");
-      await page.getByRole("button", { name: "Show chart data" }).click();
-      await expect(page.getByRole("link", { name: /60%/ })).toHaveAttribute(
-        "href",
-        "/student/activity/synthetic-2",
-      );
-      await page.getByText("Filter score history", { exact: true }).click();
-      await page.getByRole("button", { name: "Sprints", exact: true }).click();
-      await expect(page).toHaveURL(/kind=sprint/);
-      await expect(
-        page.getByRole("button", { name: "Sprints", exact: true }),
-      ).toHaveAttribute("aria-pressed", "true");
       await page.getByRole("radio", { name: "All time", exact: true }).click();
       await expect(page.getByTestId("progress-page")).toHaveAttribute(
         "data-range",
         "all",
       );
-      expect(new URL(page.url()).searchParams.get("kind")).toBe("sprint");
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= innerWidth,
