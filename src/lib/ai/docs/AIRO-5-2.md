@@ -2,13 +2,13 @@
 
 23 Oct 2026. **Prompt tweak, evaluated on 23 Oct (runs 1414 and 1417). Baseline is run 1415 (9 Oct, before Airo 5.0), so every delta below combines Airo 5.0, 5.1 and 5.2; no saved 5.1 run exists to isolate 5.2.**
 
-Source: S22 (Karan call, 23 Oct, short answer review): "He does not fully agree with the marking comments; one he called 'not correct'." Proposed fix: "Review the short-answer comment prompt against his marking."
+Source: S22 (tutor call, 23 Oct, short answer review): "He does not fully agree with the marking comments; one he called 'not correct'." Proposed fix: "Review the short-answer comment prompt against the tutor's marking."
 
 ## Change
 
 The full grading prompt in `src/lib/marking/prompts.ts` adds tutor-style comment rules. Comments are written like an experienced HSC tutor's margin notes: correct for the question, usually one short sentence, and naming the exact fix.
 
-| Rule                     | Basis in Karan's marking                                                                                                    |
+| Rule                     | Basis in the tutor's marking                                                                                                |
 | ------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
 | Statistics only if asked | His A1 critiques called "add a statistic" advice wrong on questions that do not require one (four of 20 items).             |
 | Keep needed definitions  | He disagreed with advice to drop a definition the question requires, and wants loose definitions made more direct.          |
@@ -45,7 +45,7 @@ Headline n = 18 (fm-1 and ei-4 excluded).
 | Mean signed (+ = lenient)      | +0.39 | +0.33      |
 | Comments asking for stats/data | 7     | 1          |
 
-One mark changed on the 20: ei-1 moved from 2 to 1, matching Karan's mark. The largest judge gains were ge-3 (3 to 9), ei-1 (4 to 9) and ei-2 (4 to 10).
+One mark changed on the 20: ei-1 moved from 2 to 1, matching the tutor mark. The largest judge gains were ge-3 (3 to 9), ei-1 (4 to 9) and ei-2 (4 to 10).
 
 ### Held-out (run 1417, 196 answers, 41 questions, 678 marks)
 
@@ -68,7 +68,7 @@ A1 check $1.76 (73 calls, $0.088 per item including judge). Held-out $11.55 (488
 ### Known shortfalls
 
 - Comments are not shorter: median comment body 87 characters in 1415, 98 in 1414.
-- No "you are writing too much" advice appears on the over-long short answers Karan flagged.
+- No "you are writing too much" advice appears on the over-long short answers the tutor flagged.
 - Judge scores fell on ge-4 (4 to 3) and ge-5 (6 to 4).
 - Slightly harsher on strong answers: signed error for tutor-5 answers moved from -0.75 to -1.00.
 - Marks can still shift with comment wording because comments share the first-pass call.
