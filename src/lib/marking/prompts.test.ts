@@ -32,7 +32,7 @@ const q: MarkableQuestion = {
 };
 
 it.each([false, true])(
-  "matches the literal Airo 5.2 full baseline and derived check variant (check=%s)",
+  "matches the literal Airo 5.4 full baseline and derived check variant (check=%s)",
   (check) => {
     // Literal full-prompt baseline; check mode derives from the same shared prefix.
     const expected = baselineMessages.map((message) => ({ ...message }));
@@ -251,21 +251,21 @@ it("guards judgement advice and makes outline bullets concrete in full feedback 
     "for a how question, specify the mechanism steps to explain",
   );
   expect(tail).toContain(
-    "next_mark only on fixes = the specific change that earns the next mark (null on strengths)",
+    "next_mark only on fixes = the specific change that earns the next mark, phrased as a friendly next step",
   );
   expect(gradeMessages(q, "Answer", true)[0].content).not.toContain(
     "In Analysis comments and better_answer_outline",
   );
 });
 
-it("asks for tutor-style, question-accurate comments in full feedback only (Airo 5.2)", () => {
+it("asks for tutor-style, question-accurate comments in full feedback only (Airo 5.2 rules, Airo 5.4 tone)", () => {
   const system = gradeMessages(q, "Answer")[0].content as string;
   const tail = system.split("Return the full JSON")[1];
   const rules = [
     "Comment like an experienced HSC tutor writing margin notes against this guideline",
     "every comment must be correct for this question, and each body is usually one short sentence",
     "Name the exact fix: the missing term, the cause-and-effect step to add or the contrast to draw",
-    "When a sentence is wrong, say so plainly and give the correct idea",
+    "When a sentence is wrong, say so kindly but clearly and give the correct idea",
     "Flag an opening that only restates the question, waffle or content that does not answer the question as a fix",
     "Ask for statistics or data only when the question or guideline requires them; otherwise never suggest a statistic in comments, next_mark, missing_points or better_answer_outline",
     "Never tell the student to remove a definition the question needs",
@@ -542,7 +542,9 @@ it("renders accepted tutor comments as bounded tutor rationales", () => {
 it("requests direct tutor voice with editable examples only in full grading", () => {
   const system = gradeMessages(q, "Answer")[0].content;
   for (const line of [
-    'use "you"/"your" or a clear imperative',
+    'use "you"/"your" or a friendly suggestion such as "Try naming…" or "Now show…" rather than a bare command',
+    "Being friendly never replaces the specifics: each fix still names the exact term, step or contrast to add",
+    'phrased as a friendly next step such as "Try adding…"',
     "Name the specific strength or change",
     "Apply this voice to body and next_mark",
     '"This demonstrates", "The response", "The student", "Overall", "It is important to note", "Consider", "well done"',

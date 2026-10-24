@@ -1,5 +1,9 @@
 # Engine changelog
 
+## 24 Oct 2026: Airo 5.4 (calmer comment wording)
+
+Full-grading comments are one step calmer and friendlier than Airo 5.2, with the same specificity: fixes are phrased as friendly suggestions ("Try naming…", "Now show…") instead of bare commands, `next_mark` is a friendly next step ("Try adding…"), harsh words ("fails", "lacks", "poor", "weak", "careless") are out, a wrong sentence is called out "kindly but clearly", and three voice examples gain "Try"/"Now try". A new line keeps the 5.2 specificity explicit: each fix still names the exact term, step or contrast. Everything else in the comment tail (tutor rules, quote rule, statistics rule, verb needs, outline, next_band) is unchanged. The blind-check and reconcile prompts, and the first-pass marking prefix and user message, are byte-identical to 5.2 (sha256 over 61 rendered A1 questions); comments share the first-pass call, so first-pass marks can still shift by sampling. The prompt grows by 420 characters (about 105 tokens) per first-pass call. No 5.3 voice filter or summary changes.
+
 ## 23 Oct 2026: S16 scan-to-text (transcription options)
 
 `transcribeImage` takes optional `task` and `detail` options, and `transcribeMessages` sets `image_url.detail` only when given. Defaults are unchanged (`transcribe_answer`, no detail), so the photo-answer flow and the prompt baseline are untouched. The new sprint-only `POST /api/attempts/[id]/scan` uses them (`transcribe_answer:scan`, `detail: "high"`, gpt-6.1-sol) to type a photo into `answer_text`; the photo is never stored and the route writes nothing to attempts. See [TRANSCRIPTION](/admin/marking/engine?tab=docs&doc=TRANSCRIPTION).
