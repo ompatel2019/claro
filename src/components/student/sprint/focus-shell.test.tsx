@@ -104,69 +104,42 @@ it("announces the mobile booklet sheet state independently of the desktop rail",
   expect(mobile).toHaveAttribute("aria-expanded", "false");
 });
 
-it("starts with the question centred and keeps progress available", () => {
+it("opens the booklet sidebar on the right by default and collapses it", () => {
   show();
   expect(
     screen.getByRole("navigation", { name: "Question progress" }),
   ).toContainElement(screen.getByRole("button", { name: "Question 2" }));
-  expect(screen.queryByText("Questions")).toBeNull();
   vi.stubGlobal("matchMedia", () => ({ matches: true }));
   const desktop = screen
     .getAllByRole("button", { name: "Booklet (B)" })
     .find((button) => button.hasAttribute("aria-pressed"))!;
-  expect(desktop).toHaveAttribute("aria-pressed", "false");
-  fireEvent.click(desktop);
-  const rail = screen.getByText("Questions").closest("aside")!;
+  // Open by default: no click needed to see the booklet.
+  expect(desktop).toHaveAttribute("aria-pressed", "true");
+  const rail = screen.getByRole("complementary", { name: "Booklet" });
+  expect(rail).toContainElement(screen.getByText("Questions"));
   const progress = screen.getByRole("navigation", {
     name: "Question progress",
   });
-  expect(rail).toHaveClass("top-[68px]", "h-[calc(100svh-68px)]");
-  expect(rail.nextElementSibling).toBe(progress.parentElement);
+  expect(rail).toHaveClass("top-[68px]", "h-[calc(100svh-68px)]", "border-l");
+  // Right-hand side: the sidebar follows the question column.
+  expect(rail.previousElementSibling).toBe(progress.parentElement);
   expect(progress.nextElementSibling).toBe(screen.getByRole("main"));
-  expect(rail.closest(".sprint-focus")).toHaveClass("md:[--sprint-rail:272px]");
-  fireEvent.click(desktop);
-  expect(screen.queryByText("Questions")).toBeNull();
+  expect(rail.closest(".sprint-focus")).toHaveClass("md:[--sprint-rail:320px]");
+  fireEvent.click(screen.getByRole("button", { name: "Collapse booklet" }));
+  expect(screen.queryByRole("complementary", { name: "Booklet" })).toBeNull();
+  expect(desktop).toHaveAttribute("aria-pressed", "false");
   expect(progress.closest(".sprint-focus")).not.toHaveClass(
-    "md:[--sprint-rail:272px]",
+    "md:[--sprint-rail:320px]",
   );
+  fireEvent.click(desktop);
+  expect(screen.getByRole("complementary", { name: "Booklet" })).toBeTruthy();
 });
 
-it("scrolls the current question into view when navigation changes", () => {
-  const scroll = vi.fn();
-  Element.prototype.scrollIntoView = scroll;
-  const props = {
-    title: "Long sprint",
-    children: null,
-    onRetry: vi.fn(),
-    total: 55,
-    answered: 0,
-    saveState: "saved" as const,
-    clock: { mode: "up" as const, seconds: 0 },
-    onExit: vi.fn(),
-    onFinish: vi.fn(),
-    onMove: vi.fn(),
-    booklet: null,
-  };
-  const progress = (position: number) =>
-    Array.from({ length: 55 }, (_, i) => (
-      <button key={i} aria-current={i + 1 === position ? "step" : undefined}>
-        Question {i + 1}
-      </button>
-    ));
-  const { rerender } = render(
-    <SprintFocusShell {...props} position={1} progress={progress(1)} />,
-  );
-  expect(scroll.mock.instances.at(-1)).toBe(
-    screen.getByRole("button", { name: "Question 1" }),
-  );
-  rerender(
-    <SprintFocusShell {...props} position={55} progress={progress(55)} />,
-  );
-  expect(scroll.mock.instances.at(-1)).toBe(
-    screen.getByRole("button", { name: "Question 55" }),
-  );
-  expect(scroll).toHaveBeenLastCalledWith({
-    block: "nearest",
-    inline: "nearest",
-  });
+it("fits progress segments to the width with no horizontal scrollbar", () => {
+  show();
+  const track = screen
+    .getByRole("navigation", { name: "Question progress" })
+    .querySelector("[data-progress-track]")!;
+  expect(track.className).not.toMatch(/overflow-(x-)?(auto|scroll)/);
+  expect(track).toHaveClass("overflow-hidden", "min-w-0");
 });

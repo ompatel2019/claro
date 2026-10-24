@@ -3,7 +3,6 @@ import { Fragment, useEffect, useState } from "react";
 import type { McGridRow } from "@/lib/results";
 import {
   RESULT_ICON,
-  RESULT_LEGEND,
   RESULT_OPEN,
   RESULT_SWATCH,
   RESULT_TILE,
@@ -568,38 +567,6 @@ function SprintAnswers({
               );
             })}
           </ol>
-          <ul
-            aria-label="Key"
-            className="text-muted-foreground flex flex-wrap gap-x-4 gap-y-1 text-[13px]"
-          >
-            {RESULT_LEGEND.map(([text, state]) => (
-              <li key={text} className="flex items-center gap-1.5">
-                <span
-                  aria-hidden
-                  className={cn(
-                    "inline-grid h-4 w-5 place-items-center rounded-full",
-                    state === "open"
-                      ? "border-ink-2 border-[1.5px]"
-                      : RESULT_SWATCH[state],
-                  )}
-                >
-                  {state !== "open" && (
-                    <PortalIcon name={RESULT_ICON[state]} className="size-3" />
-                  )}
-                </span>
-                {text}
-              </li>
-            ))}
-            {items.some((it) => it.flagged) && (
-              <li className="flex items-center gap-1.5">
-                <span
-                  aria-hidden
-                  className={cn("size-2.5 rounded-full", TRACKER_STATE.flag)}
-                />
-                Flagged
-              </li>
-            )}
-          </ul>
         </div>
       )}
       {/* Keyed by question: a draft in one question's actions (e.g. a dispute) never carries over. */}
