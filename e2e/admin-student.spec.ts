@@ -60,8 +60,7 @@ test.describe("Admin student detail", () => {
     const tabs = page.getByRole("navigation", { name: "Student tabs" });
     for (const [label, value] of [
       ["Topics", "topics"],
-      ["Reviews & disputes", "reviews"],
-      ["Feedback", "feedback"],
+      ["Reviews and feedback", "reviews"],
       ["AI usage", "usage"],
       ["Sessions", "sessions"],
     ]) {

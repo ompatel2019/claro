@@ -9,11 +9,6 @@ import type { StudentRow } from "@/lib/students";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-} from "@/components/ui/collapsible";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { TablePagination } from "@/components/table-pagination";
 
@@ -111,49 +106,6 @@ export function StudentsTable({
   const router = useRouter();
   const responsive = columns.map((c) => ({
     ...c,
-    cell:
-      c.id === "name"
-        ? (s: StudentRow) => (
-            <>
-              {c.cell(s)}
-              <Collapsible
-                className="mt-1 text-xs 2xl:hidden"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <CollapsibleTrigger className="text-muted-foreground hover:text-foreground flex items-center gap-1 py-1 [&[aria-expanded=true]>svg]:rotate-90">
-                  <PortalIcon
-                    name="chevron-right"
-                    className="size-3 transition-transform"
-                  />
-                  More details
-                </CollapsibleTrigger>
-                <CollapsibleContent>
-                  <dl className="space-y-1 py-2">
-                    {columns
-                      .filter((column) => !["name", "last"].includes(column.id))
-                      .map((column) => (
-                        <div
-                          key={column.id}
-                          className={
-                            ["email", "year", "sessions7", "avg"].includes(
-                              column.id,
-                            )
-                              ? "sm:hidden"
-                              : undefined
-                          }
-                        >
-                          <dt className="text-muted-foreground">
-                            {column.header}
-                          </dt>
-                          <dd className="wrap-anywhere">{column.cell(s)}</dd>
-                        </div>
-                      ))}
-                  </dl>
-                </CollapsibleContent>
-              </Collapsible>
-            </>
-          )
-        : c.cell,
     className: cn(
       c.id === "name"
         ? "max-w-48 whitespace-normal wrap-anywhere max-sm:max-w-32"
@@ -251,7 +203,6 @@ export function StudentsTable({
           columns={responsive}
           rows={students}
           pager={pager}
-          selectable
           onRow={(s) => router.push(`/admin/students/${s.id}`)}
         />
       </div>
