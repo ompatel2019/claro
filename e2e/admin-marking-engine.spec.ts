@@ -28,6 +28,37 @@ test.describe("admin marking engine", () => {
     "Needs an admin account",
   );
   test.setTimeout(120000);
+  test("old engine URLs redirect to the matching quality tab", async ({
+    page,
+  }) => {
+    await signInAdmin(page);
+    for (const [query, target] of [
+      ["", "tab=docs"],
+      ["?tab=docs", "tab=docs"],
+      ["?doc=CHANGELOG", "tab=docs&doc=CHANGELOG"],
+      ["?tab=docs&doc=ENGINE", "tab=docs&doc=ENGINE"],
+      ["?tab=runs", "tab=runs"],
+      ["?a=2026-10-09-1415", "tab=runs&a=2026-10-09-1415"],
+      ["?b=2026-10-09-1358", "tab=runs&b=2026-10-09-1358"],
+      [
+        "?tab=runs&a=2026-10-09-1415&b=2026-10-09-1358",
+        "tab=runs&a=2026-10-09-1415&b=2026-10-09-1358",
+      ],
+    ]) {
+      await page.goto(`/admin/marking/engine${query}`);
+      await expect(page).toHaveURL(
+        new URL(`/admin/marking/accuracy?${target}`, page.url()).href,
+      );
+      const tab = target.startsWith("tab=docs")
+        ? "How marking works"
+        : "Eval runs";
+      await expect(
+        page
+          .getByRole("navigation", { name: "Marking quality" })
+          .getByRole("link", { name: tab, exact: true }),
+      ).toHaveAttribute("aria-current", "page");
+    }
+  });
   test("docs navigation and read-only runs table", async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await signInAdmin(page);
@@ -35,10 +66,16 @@ test.describe("admin marking engine", () => {
       .context()
       .addCookies([{ name: "sidebar_state", value: "true", url: page.url() }]);
     await page.goto("/admin/marking/engine");
+    await expect(page).toHaveURL(/\/admin\/marking\/accuracy\?tab=docs$/);
+    await expect(
+      page
+        .getByRole("navigation", { name: "Marking quality" })
+        .getByRole("link", { name: "How marking works" }),
+    ).toHaveAttribute("aria-current", "page");
     await expect(
       page.getByRole("heading", {
         level: 1,
-        name: "Marking engine",
+        name: "Marking quality",
         exact: true,
       }),
     ).toBeVisible({ timeout: 30000 });
@@ -50,7 +87,7 @@ test.describe("admin marking engine", () => {
     await expect(
       page
         .getByRole("navigation", { name: "Admin navigation" })
-        .getByRole("link", { name: "Engine", exact: true }),
+        .getByRole("link", { name: "Accuracy", exact: true }),
     ).toHaveAttribute("aria-current", "page");
     await docs.getByRole("link", { name: /^CHANGELOG/ }).click();
     await expect(page).toHaveURL(/[?&]doc=CHANGELOG(&|$)/);
@@ -59,7 +96,7 @@ test.describe("admin marking engine", () => {
     ).toHaveAttribute("aria-current", "page");
     await docs.getByRole("link", { name: /^ENGINE/ }).click();
     await expect(page).toHaveURL(/[?&]doc=ENGINE(&|$)/);
-    await page.getByRole("button", { name: "Eval runs", exact: true }).click();
+    await page.getByRole("link", { name: "Eval runs", exact: true }).click();
     await expect(page).toHaveURL(/[?&]tab=runs(&|$)/);
     const calibration = page.getByLabel("A1 mock backlog calibration");
     await expect(calibration).toBeVisible();
@@ -117,7 +154,7 @@ test.describe("admin marking engine", () => {
     }) => {
       await page.setViewportSize({ width, height: 900 });
       await signInAdmin(page);
-      await page.goto("/admin/marking/engine?tab=runs");
+      await page.goto("/admin/marking/accuracy?tab=runs");
       const card = page.getByLabel("A1 mock backlog calibration");
       await expect(card).toBeVisible();
       // Independently derive expected metrics from the shipped human-marked run.
@@ -172,13 +209,13 @@ test.describe("admin marking engine", () => {
           (element) => element.scrollWidth <= element.clientWidth,
         ),
       ).toBe(true);
-      await page.getByRole("button", { name: "Docs", exact: true }).click();
+      await page
+        .getByRole("link", { name: "How marking works", exact: true })
+        .click();
       await expect(
         page.getByRole("navigation", { name: "Engine documents" }),
       ).toBeVisible();
-      await page
-        .getByRole("button", { name: "Eval runs", exact: true })
-        .click();
+      await page.getByRole("link", { name: "Eval runs", exact: true }).click();
       await expect(card).toBeVisible();
     });
   }
@@ -190,7 +227,7 @@ test.describe("admin marking engine", () => {
     await page
       .context()
       .addCookies([{ name: "sidebar_state", value: "true", url: page.url() }]);
-    await page.goto("/admin/marking/engine?tab=runs");
+    await page.goto("/admin/marking/accuracy?tab=runs");
     const runs = page.getByRole("table", { name: "Eval runs" });
     await runs
       .getByRole("checkbox", { name: /^Select sonnet-5\.5-shipped-chain / })
@@ -200,13 +237,16 @@ test.describe("admin marking engine", () => {
       .check();
     await page.getByRole("button", { name: "Compare", exact: true }).click();
     await expect(page).toHaveURL(
-      /tab=runs&a=2026-10-09-1415&b=2026-10-09-1358/,
+      /\/admin\/marking\/accuracy\?tab=runs&a=2026-10-09-1415&b=2026-10-09-1358$/,
     );
     await expect(
       page.getByText(/Legacy repeated answers are compared by occurrence/),
     ).toBeVisible();
     const table = page.getByRole("table", { name: "Compared items" });
     await expect(table).toBeVisible();
+    await expect(
+      table.getByRole("columnheader", { name: "Tutor mark", exact: true }),
+    ).toBeVisible();
     const allRows = await table.getByRole("row").count();
     expect(allRows).toBeGreaterThan(1);
     const filter = page.getByLabel("Only rows where runs differ");
@@ -240,8 +280,13 @@ test.describe("admin marking engine", () => {
     expect(await noOverflow(page)).toBe(true);
     await filter.uncheck();
     expect(await cards.getByRole("listitem").count()).toBe(allRows - 1);
-    await page.getByRole("link", { name: "Back to runs" }).click();
-    await expect(page).toHaveURL(/\?tab=runs$/);
+    const back = page.getByRole("link", { name: "Back to runs" });
+    await expect(back).toHaveAttribute(
+      "href",
+      "/admin/marking/accuracy?tab=runs",
+    );
+    await back.click();
+    await expect(page).toHaveURL(/\/admin\/marking\/accuracy\?tab=runs$/);
     await expect(page.getByRole("list", { name: "Eval runs" })).toBeVisible();
     expect(await noOverflow(page)).toBe(true);
   });
@@ -249,7 +294,7 @@ test.describe("admin marking engine", () => {
     test.slow();
     await page.setViewportSize({ width: 400, height: 844 });
     await signInAdmin(page);
-    await page.goto("/admin/marking/engine?tab=docs");
+    await page.goto("/admin/marking/accuracy?tab=docs");
     const navigation = page.getByRole("navigation", {
       name: "Engine documents",
     });
@@ -287,7 +332,7 @@ test.describe("admin marking engine", () => {
           ),
       ).toBe(true);
     }
-    await page.goto("/admin/marking/engine?tab=runs");
+    await page.goto("/admin/marking/accuracy?tab=runs");
     await expect(page.getByLabel("A1 mock backlog calibration")).toBeVisible();
     await expect(page.getByLabel("A1 mock backlog calibration")).toContainText(
       "Human-mark agreement",
