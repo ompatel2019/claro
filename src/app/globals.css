@@ -559,6 +559,13 @@
     /* No cell fill: the table is the surface, so row states show through. */
     @apply border-foreground border;
   }
+  /* Student tables: hairline grid. The dark grid above stays for admin. */
+  .table-hairline,
+  .table-hairline :is(th, td),
+  .progress-topics,
+  .progress-topics :is(th, td) {
+    @apply border-border;
+  }
   [data-slot="table-head"] {
     @apply text-muted-foreground h-10 px-3 text-left align-middle text-xs font-medium whitespace-nowrap;
   }
