@@ -32,7 +32,7 @@ export default async function FlashcardsPage({
   const filtered = ["q", "kind", "topic", "sub", "origin"].some((k) => f[k]);
   const parents = topics.filter((t) => !t.parent_id);
   return (
-    <div>
+    <div className="table-hairline [&_[data-slot=table]]:border-border">
       <PageHeader
         title="Flashcards"
         description={
@@ -55,19 +55,19 @@ export default async function FlashcardsPage({
             {
               value: "live",
               label: "Live",
-              count: counts.live,
+              count: list.counts.live,
               href: `${BASE}?status=live`,
             },
             {
               value: "draft",
               label: "Draft",
-              count: counts.draft,
+              count: list.counts.draft,
               href: `${BASE}?status=draft`,
             },
             {
               value: "retired",
               label: "Retired",
-              count: counts.retired,
+              count: list.counts.retired,
               href: `${BASE}?status=retired`,
             },
           ]}

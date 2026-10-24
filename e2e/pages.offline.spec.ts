@@ -86,7 +86,7 @@ test.beforeAll(async () => {
                         : path === "@/lib/admin-content"
                           ? `export const loadTopics=async()=>(${JSON.stringify(topics)});`
                           : path === "@/lib/admin-flashcards"
-                            ? `export const loadFlashcardCounts=async()=>({own:0,live:0,draft:0,retired:0});export const loadFlashcardList=async()=>({rows:[],status:'live'});`
+                            ? `export const loadFlashcardCounts=async()=>({own:0,live:0,draft:0,retired:0});export const loadFlashcardList=async()=>({rows:[],status:'live',counts:{live:0,draft:0,retired:0}});`
                             : path === "@/components/flashcards-table"
                               ? `export const AddCard=()=>null;export const FlashcardsTable=()=>null;`
                               : path === "@/components/flashcard-import"

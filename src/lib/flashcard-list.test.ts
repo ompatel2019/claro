@@ -73,3 +73,21 @@ it("narrows a topic to its subtopic and ignores stale or unrelated subtopic valu
     }).rows,
   ).toEqual([]);
 });
+
+it("counts each status tab from the same filtered rows the table shows", () => {
+  const cards: FlashcardRow[] = [
+    { ...rows[0], id: "live-cpi", front: "CPI" },
+    { ...rows[0], id: "live-gdp", front: "GDP" },
+    { ...rows[0], id: "live-stat", front: "CPI rate", kind: "stat" },
+    { ...rows[0], id: "draft-cpi", front: "CPI basket", status: "draft" },
+    { ...rows[0], id: "retired", front: "Old", status: "retired" },
+  ];
+  const all = flashcardPage(cards, topics, {});
+  expect(all.counts).toEqual({ live: 3, draft: 1, retired: 1 });
+  expect(all.pager.total).toBe(all.counts.live);
+  const cpiTerms = flashcardPage(cards, topics, { q: "cpi", kind: "term" });
+  expect(cpiTerms.counts).toEqual({ live: 1, draft: 1, retired: 0 });
+  expect(cpiTerms.rows.map((r) => r.id)).toEqual(["live-cpi"]);
+  const drafts = flashcardPage(cards, topics, { status: "draft", q: "cpi" });
+  expect(drafts.pager.total).toBe(drafts.counts.draft);
+});
