@@ -436,7 +436,7 @@ function SprintAnswers({
           <div className="bg-card shadow-card overflow-hidden rounded-xl border">
             <Table
               aria-label="Questions"
-              className="table-hairline [&_tbody_tr:last-child>td]:border-b-0 [&_tr:first-child>*]:border-t-0 [&_tr>*:first-child]:border-l-0 [&_tr>*:last-child]:border-r-0"
+              className="table-hairline border-0 [&_tbody_tr:last-child>td]:border-b-0 [&_tr:first-child>*]:border-t-0 [&_tr>*:first-child]:border-l-0 [&_tr>*:last-child]:border-r-0"
             >
               <TableHeader>
                 <TableRow>
