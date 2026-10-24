@@ -92,6 +92,41 @@ for (const [width, height] of [
     );
     await expect(page.getByText("Paper years", { exact: true })).toHaveCount(0);
     await capture("setup-initial");
+    const timer = page.getByRole("region", { name: "Timer" });
+    const timed = timer.getByRole("switch", { name: /Timed at exam pace/ });
+    for (const theme of ["light", "dark"]) {
+      await page.evaluate((theme) => {
+        document.documentElement.classList.toggle("dark", theme === "dark");
+      }, theme);
+      await expect(timed).toBeChecked();
+      await expect(timer.getByLabel("Shorts: minutes per mark")).toBeVisible();
+      await expect(
+        timer.getByLabel("Multis: minutes per question"),
+      ).toBeVisible();
+      await expect(timer.getByText(/≈ \d+ min/)).toBeVisible();
+      await expect(timer.getByText(/Keep working in overtime/)).toBeVisible();
+      await expect(page.getByText("Adjust exam pace")).toHaveCount(0);
+      await expect(timer.locator("details, summary")).toHaveCount(0);
+      expect(
+        await timed.locator("..").evaluate((el) => {
+          const style = getComputedStyle(el);
+          return [style.borderTopWidth, style.backgroundColor];
+        }),
+      ).toEqual(["0px", "rgba(0, 0, 0, 0)"]);
+      await timer.screenshot({
+        path: test.info().outputPath(`timer-${theme}-${width}.png`),
+        animations: "disabled",
+      });
+      await timed.click();
+      await expect(timed).not.toBeChecked();
+      await expect(timer.getByRole("spinbutton")).toHaveCount(0);
+      await expect(timer.getByText(/≈/)).toHaveCount(0);
+      await expect(timer.getByText(/Keep working in overtime/)).toHaveCount(0);
+      await timed.click();
+    }
+    await page.evaluate(() =>
+      document.documentElement.classList.remove("dark"),
+    );
     const bar = page
       .getByRole("button", { name: "Start sprint" })
       .locator("xpath=ancestor::div[contains(@class,'fixed')][1]");
