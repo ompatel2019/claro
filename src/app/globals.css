@@ -1550,17 +1550,11 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   background: var(--surface-hover);
   color: var(--foreground);
 }
-/* Active item: the orange-tint tile (the selected surface), no pen underline. */
+/* Active item: ink label with the pen underline, no filled tile (admin and student). */
 .shell-sidebar .shell-nav-button[data-active] {
-  background: var(--surface-selected);
-  color: var(--brand-text);
+  background: transparent;
+  color: var(--foreground);
   font-weight: 650;
-}
-.shell-sidebar .shell-nav-button[data-active] > svg {
-  color: var(--brand-text);
-}
-.shell-sidebar .nav-pen {
-  display: none;
 }
 .shell-sidebar .shell-nav-button > svg {
   width: 20px;
