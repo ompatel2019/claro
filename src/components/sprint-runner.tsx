@@ -25,7 +25,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { MarkingScreen } from "./marking-screen";
-import { markingSheet } from "@/lib/marking-sheet";
+import { markedNow, markingSheet } from "@/lib/marking-sheet";
 import { McqExplanationView } from "./mcq-explanation";
 import type { McqExplanation } from "@/lib/mcq-explanation";
 import { QuestionView } from "./question-view";
@@ -99,20 +99,27 @@ export function SprintRunner({
   const [explanations, setExplanations] =
     useState<Record<string, string | McqExplanation>>(initialExplanations);
 
+  // Re-render when a background mark settles, so the marking screen's counts stay live.
+  const [, setMarkTick] = useState(0);
+  // Set once the student leaves the marking screen: Finish must not pull them back.
+  const left = useRef(false);
   const [background] = useState(() =>
-    createSprintMarkQueue(async (id) => {
-      const post = () =>
-        fetch(`/api/attempts/${id}/mark`, {
-          method: "POST",
-          credentials: "same-origin",
-        });
-      let response = await post();
-      if (response.status === 401) {
-        await ensureSession(db);
-        response = await post();
-      }
-      if (!response.ok) throw new Error("Background marking failed");
-    }),
+    createSprintMarkQueue(
+      async (id) => {
+        const post = () =>
+          fetch(`/api/attempts/${id}/mark`, {
+            method: "POST",
+            credentials: "same-origin",
+          });
+        let response = await post();
+        if (response.status === 401) {
+          await ensureSession(db);
+          response = await post();
+        }
+        if (!response.ok) throw new Error("Background marking failed");
+      },
+      () => setMarkTick((t) => t + 1),
+    ),
   );
   const backgroundAnswer = (a: Attempt) =>
     !checkMode && a.question.type !== "mcq";
@@ -393,7 +400,8 @@ export function SprintRunner({
           result.error ?? "Could not finish your session. Please try again.",
         );
       // Hard navigation so no cached "unfinished" redirect can bounce us back.
-      window.location.assign(`/student/activity/${session.id}`);
+      if (!left.current)
+        window.location.assign(`/student/activity/${session.id}`);
     } catch (error) {
       try {
         const { data } = await db
@@ -402,7 +410,8 @@ export function SprintRunner({
           .eq("id", session.id)
           .maybeSingle();
         if (data?.finished_at) {
-          window.location.assign(`/student/activity/${session.id}`);
+          if (!left.current)
+            window.location.assign(`/student/activity/${session.id}`);
           return;
         }
       } catch {}
@@ -571,7 +580,15 @@ export function SprintRunner({
       </main>
     );
   if (finishing)
-    return <MarkingScreen sheet={markingSheet(attempts)} title={title} />;
+    return (
+      <MarkingScreen
+        sheet={markingSheet(markedNow(attempts, background.marked()))}
+        title={title}
+        onLeave={() => {
+          left.current = true;
+        }}
+      />
+    );
   const go = (i: number) => void act(() => change(i));
   const qLabel = (i: number) => `Q${i + 1}`;
   const sprintBooklet = (

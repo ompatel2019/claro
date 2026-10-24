@@ -14,8 +14,11 @@ export function MarkingScreen({
   single = false,
   sheet,
   title,
+  onLeave,
 }: {
   single?: boolean;
+  /** Called when the student leaves while marking carries on. */
+  onLeave?: () => void;
   /** A sprint's answers, from the runner. Without it the screen stays generic. */
   sheet?: MarkingSheet;
   title?: string;
@@ -32,7 +35,12 @@ export function MarkingScreen({
         </div>
         <AnswerSheet sheet={sheet} />
         <MarkedBar marked={sheet.marked} total={sheet.total} />
-        <LeaveCard title={title} marked={sheet.marked} total={sheet.total} />
+        <LeaveCard
+          title={title}
+          marked={sheet.marked}
+          total={sheet.total}
+          onLeave={onLeave}
+        />
       </MarkingLayout>
     );
   return (
@@ -219,8 +227,10 @@ export function LeaveCard({
   title,
   marked,
   total,
+  onLeave,
 }: {
   title?: string;
+  onLeave?: () => void;
   marked: number;
   total: number;
 }) {
@@ -247,12 +257,14 @@ export function LeaveCard({
       <div className="flex flex-wrap items-center gap-2 border-t pt-4">
         <Link
           href="/student/activity"
+          onClick={onLeave}
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
           Go to Activity
         </Link>
         <Link
           href="/student"
+          onClick={onLeave}
           className={buttonVariants({ variant: "ghost", size: "sm" })}
         >
           Back to Home

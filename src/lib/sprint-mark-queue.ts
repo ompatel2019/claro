@@ -1,5 +1,9 @@
 /** One entry per saved answer version. Failures wait for the server's Finish retry. */
-export function createSprintMarkQueue(mark: (id: string) => Promise<void>) {
+export function createSprintMarkQueue(
+  mark: (id: string) => Promise<void>,
+  /** Called whenever an answer's mark settles, so a view can re-read `marked()`. */
+  onSettled?: () => void,
+) {
   type Entry = {
     version: string;
     state: "queued" | "running" | "marked" | "failed";
@@ -26,6 +30,7 @@ export function createSprintMarkQueue(mark: (id: string) => Promise<void>) {
         )
         .finally(() => {
           active.delete(id);
+          onSettled?.();
           pump();
         });
       active.set(id, task);
@@ -45,6 +50,14 @@ export function createSprintMarkQueue(mark: (id: string) => Promise<void>) {
       return [...entries]
         .filter(([, entry]) => entry.state !== "marked")
         .map(([id]) => id);
+    },
+    /** Answers whose latest saved version is marked. */
+    marked() {
+      return new Set(
+        [...entries]
+          .filter(([, entry]) => entry.state === "marked")
+          .map(([id]) => id),
+      );
     },
     resume() {
       stopped = false;

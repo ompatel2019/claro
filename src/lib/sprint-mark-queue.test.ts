@@ -114,3 +114,25 @@ it("resumes queued work if Finish fails", async () => {
   await tick();
   expect(mark.mock.calls).toEqual([["a"], ["b"], ["c"]]);
 });
+
+it("reports settled marks and lists only the latest marked versions", async () => {
+  const calls = [deferred(), deferred(), deferred()];
+  let n = 0;
+  const settled = vi.fn();
+  const queue = createSprintMarkQueue(() => calls[n++].promise, settled);
+  queue.enqueue("a", "one");
+  queue.enqueue("b", "one");
+  await tick();
+  calls[0].resolve();
+  calls[1].reject();
+  await tick();
+  expect(settled).toHaveBeenCalledTimes(2);
+  expect([...queue.marked()]).toEqual(["a"]);
+  // An edit after marking needs a fresh mark before it counts again.
+  queue.enqueue("a", "two");
+  expect(queue.marked().has("a")).toBe(false);
+  await tick();
+  calls[2].resolve();
+  await tick();
+  expect(queue.marked().has("a")).toBe(true);
+});

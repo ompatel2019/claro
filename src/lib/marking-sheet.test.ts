@@ -55,3 +55,12 @@ it("handles a single question and a sprint with no multiple choice", () => {
   expect(short.rows[0].detail).toBe("Written answer · 1 mark");
   expect(markingSheet([])).toEqual({ rows: [], marked: 0, total: 0 });
 });
+
+it("counts answers the background queue already marked", async () => {
+  const { markedNow } = await import("./marking-sheet");
+  const rows = [a("1", "short"), a("2", "short"), a("3", "mcq", "marked")];
+  const live = markedNow(rows, new Set(["2"]));
+  expect(live.map((r) => r.status)).toEqual(["pending", "marked", "marked"]);
+  expect(live[0]).toBe(rows[0]);
+  expect(markingSheet(live).marked).toBe(2);
+});

@@ -55,3 +55,13 @@ export function markingSheet(attempts: SheetAttempt[]): MarkingSheet {
     total: attempts.length,
   };
 }
+
+/** Overlays answers the background queue has already marked this session. */
+export function markedNow<T extends { id: string; status: string }>(
+  attempts: T[],
+  marked: Set<string>,
+): T[] {
+  return attempts.map((a) =>
+    marked.has(a.id) && a.status !== "marked" ? { ...a, status: "marked" } : a,
+  );
+}
