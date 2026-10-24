@@ -307,7 +307,6 @@ const routes: {
   {
     path: "/admin/marking/review",
     file: "admin-review",
-    dark: true,
     heading: /Review|Open/,
     dark: true,
   },
