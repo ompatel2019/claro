@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import type { MarkingSheet } from "@/lib/marking-sheet";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
@@ -244,18 +245,18 @@ export function LeaveCard({
         </span>
       </div>
       <div className="flex flex-wrap items-center gap-2 border-t pt-4">
-        <a
+        <Link
           href="/student/activity"
           className={buttonVariants({ variant: "outline", size: "sm" })}
         >
           Go to Activity
-        </a>
-        <a
+        </Link>
+        <Link
           href="/student"
           className={buttonVariants({ variant: "ghost", size: "sm" })}
         >
           Back to Home
-        </a>
+        </Link>
       </div>
     </section>
   );
