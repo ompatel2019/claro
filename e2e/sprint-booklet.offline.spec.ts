@@ -206,6 +206,28 @@ test("View booklet at 390px from the mobile sheet", async ({ page }) => {
   await expect(page.getByText(/Question 6 of 6/)).toBeVisible();
 });
 
+for (const dark of [false, true])
+  test(`tracker segments in ${dark ? "dark" : "light"} mode`, async ({
+    page,
+  }) => {
+    await load(page, 390, 844);
+    await page.evaluate(
+      (dark) => document.documentElement.classList.toggle("dark", dark),
+      dark,
+    );
+    const progress = page.getByRole("navigation", {
+      name: "Question progress",
+    });
+    const fills = await progress
+      .locator("button > span")
+      .evaluateAll((pills) =>
+        pills.map((pill) => getComputedStyle(pill).backgroundColor),
+      );
+    expect(fills[0]).not.toBe(fills[2]);
+    expect(fills[2]).not.toBe(fills[3]);
+    expect(fills[3]).toMatch(/0\.25/);
+  });
+
 // Exam mode: Q2's background mark never reaches the rail, sheet or progress pills.
 for (const [width, height] of [
   [1440, 900],
