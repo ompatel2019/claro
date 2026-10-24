@@ -281,6 +281,12 @@
     font-variant-numeric: tabular-nums;
   }
 }
+/* Ticking timers only: equal-width digits so the clock does not jitter each second. */
+@utility num-ticking {
+  font-feature-settings:
+    "tnum" 1,
+    "pnum" 0;
+}
 /* Big stat numerals (brand portal-number): proportional figures, -2% tracking. */
 @utility num-display {
   font-variant-numeric: proportional-nums;
