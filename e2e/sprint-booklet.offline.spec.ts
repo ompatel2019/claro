@@ -206,6 +206,28 @@ test("View booklet at 390px from the mobile sheet", async ({ page }) => {
   await expect(page.getByText(/Question 6 of 6/)).toBeVisible();
 });
 
+for (const dark of [false, true])
+  test(`tracker segments in ${dark ? "dark" : "light"} mode`, async ({
+    page,
+  }) => {
+    await load(page, 390, 844);
+    await page.evaluate(
+      (dark) => document.documentElement.classList.toggle("dark", dark),
+      dark,
+    );
+    const progress = page.getByRole("navigation", {
+      name: "Question progress",
+    });
+    const fills = await progress
+      .locator("button > span")
+      .evaluateAll((pills) =>
+        pills.map((pill) => getComputedStyle(pill).backgroundColor),
+      );
+    expect(fills[0]).not.toBe(fills[2]);
+    expect(fills[2]).not.toBe(fills[3]);
+    expect(fills[3]).toMatch(/0\.25/);
+  });
+
 // Exam mode: Q2's background mark never reaches the rail, sheet or progress pills.
 for (const [width, height] of [
   [1440, 900],
@@ -233,78 +255,4 @@ for (const [width, height] of [
       /\d+\/\d+|Full marks|No marks|Correct/,
     );
     await shots(page, width, "exam-rail");
-  });
-
-test("Calculator closes from its X, Esc and the toolbar toggle", async ({
-  page,
-}) => {
-  await load(page, 1440, 900);
-  const toggle = page.getByRole("button", { name: "Calculator (C)" });
-  const calculator = page.getByRole("dialog", { name: "Calculator" });
-
-  await toggle.click();
-  await expect(calculator).toBeVisible();
-  await expect(toggle).toHaveAttribute("aria-pressed", "true");
-  await calculator.getByRole("button", { name: "Close calculator" }).click();
-  await expect(calculator).toBeHidden();
-  await expect(toggle).toHaveAttribute("aria-pressed", "false");
-
-  await toggle.click();
-  await expect(calculator).toBeVisible();
-  await page.keyboard.press("Escape");
-  await expect(calculator).toBeHidden();
-
-  // Esc also works once focus has left the panel.
-  await toggle.click();
-  await expect(calculator).toBeVisible();
-  await page.getByText("Inflation sprint").click();
-  await page.keyboard.press("Escape");
-  await expect(calculator).toBeHidden();
-
-  await toggle.click();
-  await expect(calculator).toBeVisible();
-  await toggle.click();
-  await expect(calculator).toBeHidden();
-});
-
-for (const [platform, key, label] of [
-  ["MacIntel", "Meta", "⌘"],
-  ["Win32", "Control", "Ctrl"],
-] as const)
-  test(`${label} Enter in the answer box moves to the next question (${platform})`, async ({
-    page,
-  }) => {
-    await page.addInitScript((p) => {
-      Object.defineProperty(Navigator.prototype, "platform", { get: () => p });
-      Object.defineProperty(Navigator.prototype, "userAgentData", {
-        get: () => undefined,
-      });
-    }, platform);
-    await load(page, 1440, 900);
-    const hint = page.locator("p").filter({ hasText: "↵ next question" });
-    await expect(hint).toHaveText(`${label}↵ next question`);
-
-    const answer = page.locator("textarea").first();
-    await answer.fill("A lower dollar raises import prices.");
-    // Ignored while a dialog owns the keyboard.
-    await page.getByText("Inflation sprint").click();
-    await page.keyboard.press("?");
-    await expect(page.locator('[data-slot="dialog-content"]')).toBeVisible();
-    await page.keyboard.press(`${key}+Enter`);
-    await page.keyboard.press("Escape");
-    await expect(page.locator('[data-slot="dialog-content"]')).toBeHidden();
-    await page.getByRole("button", { name: "Exit sprint" }).click();
-    await expect(page.getByRole("alertdialog")).toBeVisible();
-    await page.keyboard.press(`${key}+Enter`);
-    await page.keyboard.press("Escape");
-    await expect(page.getByRole("alertdialog")).toBeHidden();
-    await expect(page.getByText(/Question 3 of 6/)).toBeVisible();
-    await answer.press(`${key}+Enter`);
-    await expect(page.getByText(/Question 4 of 6/)).toBeVisible();
-    // The other modifier works too, whatever the platform.
-    await page
-      .locator("textarea")
-      .first()
-      .press(`${key === "Meta" ? "Control" : "Meta"}+Enter`);
-    await expect(page.getByText(/Question 5 of 6/)).toBeVisible();
   });

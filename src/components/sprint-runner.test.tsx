@@ -1032,11 +1032,11 @@ it("keeps long-sprint progress targets usable and preserves answered and flagged
   expect(buttons[54]).toHaveClass("focus-visible:outline-2");
   expect(bookletPill).toHaveClass("focus-visible:outline-2");
   expect(screen.getByText("Current").firstElementChild).toHaveClass(
-    "bg-brand-soft",
+    "bg-heat-2",
   );
   expect(
     screen.getByText("Flagged", { selector: "li" }).firstElementChild,
-  ).toHaveClass("bg-muted", "after:bg-[var(--pill-flag)]");
+  ).toHaveClass("bg-foreground/25", "after:bg-[var(--pill-flag)]");
   expect(
     screen
       .getByRole("button", { name: "Flag for review" })
@@ -1063,7 +1063,7 @@ it.each(
 )("maps question pill states: %o", ({ active, answered, flagged }) => {
   const pill = questionPillState({ active, answered, flagged });
   expect(pill.className.split(" ")).toContain(
-    answered ? "bg-brand" : active ? "bg-brand-soft" : "bg-muted",
+    answered ? "bg-brand" : active ? "bg-heat-2" : "bg-foreground/25",
   );
   expect(pill.className.includes("text-brand-foreground")).toBe(answered);
   expect(pill.className.includes("scale-110")).toBe(active);
