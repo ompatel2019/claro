@@ -81,10 +81,7 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
         })
       : weakestTopics(items);
   const row = (r: TopicProgress) => (
-    <tr
-      key={r.id}
-      className={r.parent_id ? "bg-muted/35 border-t text-[13px]" : "border-t"}
-    >
+    <tr key={r.id} className={r.parent_id ? "text-[13px]" : undefined}>
       <td className={r.parent_id ? "py-2.5 pr-3 pl-11" : "px-5 py-3"}>
         {r.parent_id ? (
           r.name
@@ -114,10 +111,7 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
             <span className="min-w-0">
               {r.name}
               {r.id === focus && (
-                <span className="bg-brand-soft text-brand-text ml-2 inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-medium">
-                  <PortalIcon name="circle-dot" size={20} strokeWidth={1.5} />{" "}
-                  Focus
-                </span>
+                <span className="progress-focus ml-2">Focus</span>
               )}
             </span>
           </button>
@@ -159,16 +153,17 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
         }
       >
         <Link
-          aria-label={`Sprint on ${r.name}`}
+          aria-label={`Practise ${r.name}`}
           href={practiseHref(r)}
           className={buttonVariants({
-            variant:
-              r.id === focus ? "default" : r.parent_id ? "ghost" : "outline",
+            variant: r.parent_id ? "ghost" : "outline",
             size: "sm",
-            className: r.parent_id ? "text-[13px]" : "border-input!",
+            className: r.parent_id
+              ? "progress-act is-quiet text-[13px]"
+              : "progress-act",
           })}
         >
-          Sprint
+          Practise
         </Link>
       </td>
     </tr>
@@ -178,7 +173,7 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
       <label className="text-muted-foreground flex items-center gap-3 px-5 pb-4 text-xs lg:hidden">
         Sort topics
         <select
-          className="bg-card text-foreground min-w-0 rounded-full border px-3 py-2"
+          className="bg-card text-foreground min-w-0 rounded-md border px-3 py-2"
           value={sort.sorting ? `${sort.sorting.id}:${sort.sorting.dir}` : ""}
           onChange={(e) => {
             const [id, dir] = e.target.value.split(":");
@@ -205,7 +200,7 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
       </label>
       <table
         aria-label="Marks by topic"
-        className="progress-topics w-full table-fixed text-sm tabular-nums"
+        className="progress-topics w-full table-fixed text-sm"
       >
         <colgroup>
           <col />
@@ -215,7 +210,7 @@ export function TopicProgressTable({ rows }: { rows: TopicProgress[] }) {
           <col />
           <col />
         </colgroup>
-        <thead className="text-muted-foreground border-t text-left text-xs">
+        <thead className="text-muted-foreground text-left text-xs">
           <tr>
             {[
               ["name", "Topic"],

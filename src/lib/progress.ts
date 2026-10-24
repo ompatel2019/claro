@@ -4,6 +4,7 @@ import type { Topic } from "./practice";
 export const PRACTICE_TARGET = 80;
 
 export const PROGRESS_RANGES = [
+  { value: "7", label: "7 days" },
   { value: "30", label: "30 days" },
   { value: "90", label: "90 days" },
   { value: "year", label: "This year" },
@@ -55,7 +56,15 @@ export type Mastery = {
   missed: number;
   new: number;
 };
+export type ProgressStats = {
+  answered: number;
+  earned: number;
+  possible: number;
+  pct: number | null;
+  active: number;
+};
 export type ProgressData = {
+  stats?: ProgressStats;
   topics: TopicProgress[];
   types: Breakdown[];
   verbs: Breakdown[];

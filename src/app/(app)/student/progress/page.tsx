@@ -1,44 +1,76 @@
 import { pageMetadata } from "@/lib/page-metadata";
 import Link from "next/link";
 import { requireProfile } from "@/lib/auth";
-import { loadProgress, progressToday } from "@/lib/progress-data";
-import { parseRange, rangeFrom } from "@/lib/progress";
+import {
+  loadMarkedComments,
+  loadProgress,
+  progressToday,
+} from "@/lib/progress-data";
+import {
+  PRACTICE_TARGET,
+  parseRange,
+  practiseHref,
+  rangeFrom,
+} from "@/lib/progress";
+import {
+  TAG_LABELS,
+  coverage,
+  markerAsks,
+  marksLost,
+  practiceTrend,
+} from "@/lib/progress-insights";
+import { examDaysLeft } from "@/lib/hsc-exam";
+import { plural } from "@/lib/practice";
 import type { ActivityDay } from "@/lib/activity";
 import { createClient } from "@/utils/supabase/server";
-import { PageHeader } from "@/components/claro/layout";
+import { PortalIcon } from "@/components/icons";
 import { ProgressControls } from "@/components/progress-controls";
 import { TopicProgressTable } from "@/components/progress-tables";
-import { PracticeDays } from "@/components/student/progress/practice-days";
+import { PracticeTrend } from "@/components/student/progress/practice-trend";
 import { Meter } from "@/components/claro/data-display";
 import { buttonVariants } from "@/components/ui/button";
-import { HomeLostMarks } from "@/components/student/home/sections";
 
-function Section({
+function Panel({
+  id,
   title,
   caption,
+  aside,
+  className,
   children,
-  flush = false,
 }: {
+  id: string;
   title: string;
-  caption?: string;
+  caption?: React.ReactNode;
+  aside?: React.ReactNode;
+  className?: string;
   children: React.ReactNode;
-  flush?: boolean;
 }) {
   return (
     <section
       data-slot="card"
-      className="bg-card shadow-card relative min-w-0 gap-0 overflow-hidden rounded-2xl border py-0"
+      aria-labelledby={id}
+      className={`progress-card ${className ?? ""}`}
     >
-      <div className="px-5 pt-5 pb-4">
-        <h2 className="text-lg leading-6 font-semibold">{title}</h2>
-        {caption && (
-          <p className="text-muted-foreground mt-1 text-[13px]">{caption}</p>
-        )}
+      <div className="progress-card-hd">
+        <div className="min-w-0">
+          <h2 id={id}>{title}</h2>
+          {caption && <p>{caption}</p>}
+        </div>
+        {aside}
       </div>
-      <div className={flush ? "pb-5" : "px-5 pb-5"}>{children}</div>
+      {children}
     </section>
   );
 }
+const Empty = ({ children }: { children: React.ReactNode }) => (
+  <p className="progress-empty">{children}</p>
+);
+const PAPER = [
+  ["mcq", "Section I · Multiple choice", "question"],
+  ["short", "Section II · Short answer", "question"],
+  ["extended", "Sections III and IV · Extended response", "response"],
+] as const;
+
 export const metadata = pageMetadata("Progress");
 export default async function Progress({
   searchParams,
@@ -48,14 +80,12 @@ export default async function Progress({
   const profile = await requireProfile();
   const p = await searchParams,
     range = parseRange(p.range),
-    today = progressToday();
+    today = progressToday(),
+    from = rangeFrom(range, today);
   const d = await loadProgress(range, today);
   const db = await createClient();
-  const [volume, due] = await Promise.all([
-    db.rpc("activity_days", {
-      p_from: rangeFrom(range, today),
-      p_to: today,
-    }),
+  const [volume, due, marked] = await Promise.all([
+    db.rpc("activity_days", { p_from: from, p_to: today }),
     db
       .from("flashcard_progress")
       .select("flashcard_id,flashcards!inner(id)", {
@@ -65,12 +95,22 @@ export default async function Progress({
       .eq("flashcards.status", "live")
       .eq("user_id", profile.id)
       .lte("due_on", today),
+    loadMarkedComments(profile.id, from),
   ]);
   const parents = d.topics.filter((t) => !t.parent_id);
   const earned = parents.reduce((n, t) => n + t.earned, 0),
     possible = parents.reduce((n, t) => n + t.possible, 0),
     answered = parents.reduce((n, t) => n + t.answered, 0);
+  const average =
+    typeof d.stats?.pct === "number"
+      ? Math.round(d.stats.pct)
+      : possible
+        ? Math.round((100 * earned) / possible)
+        : null;
   const days = volume.error ? null : ((volume.data ?? []) as ActivityDay[]);
+  const activeDays = days?.filter(
+    (day) => day.questions + day.cards > 0,
+  ).length;
   const seconds = d.history
     .filter(
       (row) => row.finished_at && Number.isFinite(Date.parse(row.finished_at)),
@@ -79,137 +119,223 @@ export default async function Progress({
       (sum, row) => sum + (Number.isFinite(row.elapsed_s) ? row.elapsed_s : 0),
       0,
     );
-  const stats = [
-    ["Marks earned", `${earned}/${possible}`],
-    ["Questions answered", answered],
-    [
-      "Days studied",
-      days
-        ? days.filter((day) => day.questions + day.cards > 0).length
-        : "Unavailable",
-    ],
-    [
-      "Study time",
-      `${Math.floor(seconds / 3600)}h ${Math.floor(seconds / 60) % 60}m`,
-    ],
-  ] as const;
+  const trend = practiceTrend(d.history, from, today);
+  const lost = marksLost(d.topics);
+  const focus = lost.find((l) => l.weak)?.topic.id;
+  const maxLost = lost[0]?.lost ?? 0;
+  const asks = marked ? markerAsks(marked) : null;
+  const cover = coverage(d.topics);
+  const examDays = examDaysLeft(today);
+  const dueCount = due.error ? null : (due.count ?? 0);
+  const scope =
+    range === "all"
+      ? "across all time"
+      : range === "year"
+        ? "this year"
+        : `in the last ${range} days`;
   return (
     <div
-      className="progress-page min-w-0 space-y-6"
+      className="progress-page min-w-0"
       data-testid="progress-page"
       data-range={range}
     >
-      <PageHeader
-        title="Progress"
-        eyebrow="From your marked answers"
-        actions={<ProgressControls range={range} />}
-      />
-      <Section
-        title="Marks by topic"
-        caption="Share of marks earned, weakest first. Open a topic for its dot points."
-        flush
-      >
-        <TopicProgressTable rows={d.topics} />
-      </Section>
-      <Section
-        title="Your practice"
-        caption={
-          range === "all"
-            ? "Across all time"
-            : range === "year"
-              ? "This year"
-              : `In the last ${range} days`
-        }
-      >
-        <dl className="grid grid-cols-2 gap-5 xl:grid-cols-4">
-          {stats.map(([label, value]) => (
-            <div key={label}>
-              <dt className="text-muted-foreground text-sm">{label}</dt>
-              <dd className="num-display mt-1 text-2xl font-semibold">
-                {value}
-              </dd>
-            </div>
-          ))}
-        </dl>
-        <p className="text-muted-foreground mt-5 border-t pt-4 text-sm">
-          <Link
-            className="text-foreground font-semibold underline underline-offset-4"
-            href="/student/flashcards"
-          >
-            Cards due: {due.error ? "Unavailable" : (due.count ?? 0)}
-          </Link>{" "}
-          · Previously studied cards whose saved review date has arrived. This
-          count is for today.
-        </p>
-      </Section>
-      <div className="grid gap-6 xl:grid-cols-[7fr_5fr]">
-        <div className="progress-loss grid">
-          <HomeLostMarks
-            progress={Promise.resolve(d)}
-            caption="Marks dropped in this range, by dot point. Practise a dot point to improve it."
-          />
+      <div className="progress-hd">
+        <div className="min-w-0">
+          <h1>Progress</h1>
+          <p data-testid="progress-meta">
+            From your marked answers: {plural(answered, "question")}
+            {activeDays == null
+              ? ""
+              : ` over ${plural(activeDays, "active day")}`}
+            , {Math.floor(seconds / 3600)}h {Math.floor(seconds / 60) % 60}m of
+            practice{dueCount == null ? "." : ". "}
+            {dueCount != null && (
+              <Link href="/student/flashcards">
+                {plural(dueCount, "flashcard")} due today
+              </Link>
+            )}
+          </p>
         </div>
-        <Section
-          title="By question type"
-          caption="Share of marks earned in this range"
+        <ProgressControls range={range} />
+      </div>
+
+      <div className="progress-grid progress-grid--a">
+        <Panel
+          id="progress-trend-h"
+          title="Practice average"
+          caption={`Share of marks earned, ${trend.size === 1 ? "day by day" : trend.size === 7 ? "week by week" : "in 30-day blocks"}`}
+          className="progress-trend-card"
         >
-          <ul className="divide-y">
-            {(
-              [
-                ["mcq", "Multiple choice"],
-                ["short", "Short answer"],
-                ["extended", "Extended response"],
-              ] as const
-            ).map(([id, label]) => {
+          <div className="progress-trend-figs">
+            <p className="progress-trend-avg">
+              {average == null ? "No marks yet" : `${average}%`}
+            </p>
+            <p className="progress-trend-note">
+              {plural(trend.sessions, "marked session")} {scope}
+            </p>
+            <p className="progress-trend-target">
+              <span aria-hidden="true" />
+              Target <b>{PRACTICE_TARGET}%</b>
+            </p>
+          </div>
+          {trend.sessions ? (
+            <PracticeTrend points={trend.points} size={trend.size} />
+          ) : (
+            <Empty>
+              No marked practice {scope}.{" "}
+              <Link href="/student/sprint">Start a Topic Sprint</Link>
+            </Empty>
+          )}
+        </Panel>
+
+        <Panel
+          id="progress-loss-h"
+          title="Where you’re losing marks"
+          caption="Dot points ranked by marks lost. Start at the top."
+        >
+          {lost.length ? (
+            <ol className="progress-loss">
+              {lost.map((l, i) => (
+                <li key={l.topic.id}>
+                  <div className="min-w-0">
+                    <b>
+                      {l.topic.name}
+                      {l.topic.id === focus && (
+                        <span className="progress-focus">Focus</span>
+                      )}
+                    </b>
+                    <small>
+                      {l.parent ? `${l.parent} · ` : ""}lost {l.lost} of{" "}
+                      {l.topic.possible} marks
+                    </small>
+                  </div>
+                  <Link
+                    href={practiseHref(l.topic)}
+                    aria-label={`Practise ${l.topic.name}`}
+                    className={buttonVariants({
+                      variant: "outline",
+                      size: "sm",
+                      className: "progress-act",
+                    })}
+                  >
+                    Practise
+                  </Link>
+                  <i
+                    aria-hidden="true"
+                    className={i === 0 ? "is-top" : undefined}
+                    style={{ width: `${(100 * l.lost) / maxLost}%` }}
+                  />
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <Empty>No marks lost {scope}.</Empty>
+          )}
+        </Panel>
+      </div>
+
+      <div className="progress-grid progress-grid--b">
+        <Panel
+          id="progress-asks-h"
+          title="What the marker keeps asking for"
+          caption={
+            asks?.answers
+              ? `From the marker’s fixes on your ${plural(asks.answers, "marked written answer")} ${scope}`
+              : "From the marker’s fixes on your written answers"
+          }
+        >
+          {asks == null ? (
+            <Empty>Marker comments are unavailable right now.</Empty>
+          ) : asks.asks.length ? (
+            <ol className="progress-asks">
+              {asks.asks.map((a) => (
+                <li key={a.tag}>
+                  <div className="min-w-0">
+                    <b>{TAG_LABELS[a.tag]}</b>
+                    <small>
+                      <span className="sr-only">Latest comment: </span>
+                      {a.latest}
+                    </small>
+                  </div>
+                  <span className="progress-asks-n">
+                    {plural(a.answers, "answer")}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          ) : (
+            <Empty>
+              {asks.answers
+                ? `No tagged fixes on your written answers ${scope}.`
+                : `No marked written answers ${scope}.`}
+            </Empty>
+          )}
+        </Panel>
+
+        <Panel
+          id="progress-ready-h"
+          title="Exam readiness"
+          caption="Your marks in each part of the paper"
+          aside={
+            examDays != null && (
+              <span className="progress-tag">
+                <PortalIcon name="clock" size={14} strokeWidth={1.5} />
+                {examDays === 0
+                  ? "Exam today"
+                  : `${plural(examDays, "day")} to go`}
+              </span>
+            )
+          }
+        >
+          <ul className="progress-ready">
+            {PAPER.map(([id, label, unit]) => {
               const row = d.types.find((r) => r.id === id);
               return (
-                <li key={id} className="py-3 first:pt-0 last:pb-0">
-                  <div className="flex items-baseline justify-between gap-3 text-sm">
-                    <span className="font-semibold">{label}</span>
-                    <span className="tabular-nums">
+                <li key={id}>
+                  <div className="progress-ready-hd">
+                    <b>{label}</b>
+                    <span>
                       {row?.pct == null
                         ? "Not started"
                         : `${Math.round(row.pct)}%`}
                     </span>
                   </div>
-                  {row?.pct != null && (
-                    <Meter
-                      value={row.pct}
-                      label={`${label} average`}
-                      className="mt-2"
-                    />
-                  )}
-                  <div className="mt-2 flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground text-xs tabular-nums">
-                      {row?.answered ?? 0} answered
-                    </span>
-                    {id !== "extended" && (
-                      <Link
-                        href={`/student/sprint?type=${id}`}
-                        className={buttonVariants({
-                          variant: "ghost",
-                          size: "sm",
-                        })}
-                      >
-                        Practise<span className="sr-only"> {label}</span>
-                      </Link>
-                    )}
+                  <small>
+                    {plural(row?.answered ?? 0, unit)}{" "}
+                    {unit === "response" ? "marked" : "answered"}
+                  </small>
+                  <div
+                    className="progress-ready-meter"
+                    style={
+                      {
+                        "--target": `${PRACTICE_TARGET}%`,
+                      } as React.CSSProperties
+                    }
+                  >
+                    <Meter value={row?.pct ?? 0} label={`${label} average`} />
                   </div>
                 </li>
               );
             })}
           </ul>
-        </Section>
-        <div className="min-w-0 xl:col-span-2">
-          <Section title="Practice days" caption="Small sessions add up">
-            <PracticeDays
-              days={days}
-              today={today}
-              from={rangeFrom(range, today)}
-            />
-          </Section>
-        </div>
+          <p className="progress-cover">
+            <b>
+              {cover.practised} of {cover.total}
+            </b>{" "}
+            dot points practised {scope}. The line on each bar is your{" "}
+            {PRACTICE_TARGET}% practice target.
+          </p>
+        </Panel>
       </div>
+
+      <Panel
+        id="progress-topics-h"
+        title="Marks by topic"
+        caption="Weakest first. Open a topic for its dot points."
+        className="progress-topics-card"
+      >
+        <TopicProgressTable rows={d.topics} />
+      </Panel>
     </div>
   );
 }

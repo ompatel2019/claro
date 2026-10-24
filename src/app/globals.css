@@ -755,38 +755,431 @@
 .progress-topics td {
   padding-block: 16px;
 }
-/* Flush in its card: the card edge is the side border, so no double line. */
-.progress-topics,
-.progress-topics :is(th, td):first-child {
-  border-left-width: 0;
+/* Progress cards: solid card on the canvas, hairlines only, one card per job. */
+.progress-hd > div {
+  flex: 1 1 360px;
 }
-.progress-topics,
-.progress-topics :is(th, td):last-child {
-  border-right-width: 0;
+.progress-hd {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px 24px;
+  margin-bottom: 24px;
 }
-.progress-loss > [data-slot="card"] {
-  padding: 20px;
-  gap: 16px;
+.progress-hd h1 {
+  font-size: 28px;
+  line-height: 1.15;
+  font-weight: 700;
+  letter-spacing: -0.025em;
 }
-.progress-loss h2 {
-  font-size: 18px;
-  line-height: 24px;
+.progress-hd p {
+  margin-top: 6px;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  line-height: 20px;
 }
-.progress-loss [data-component="BarList"] li + li {
-  border-top: 1px solid var(--border);
+.progress-hd a {
+  color: var(--foreground);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
-.progress-loss [data-component="BarList"] a {
-  border-radius: 0;
-  padding-block: 16px;
+.progress-range {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-card);
 }
-.progress-loss [data-component="BarList"] a::after {
-  content: "Practise";
-  justify-self: end;
+.progress-range button {
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  color: var(--muted-foreground);
   font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color 150ms,
+    color 150ms;
+}
+.progress-range button:hover {
+  color: var(--foreground);
+  background: var(--surface-hover);
+}
+.progress-range button.is-on {
+  color: var(--foreground);
+  font-weight: 600;
+  background: var(--surface-selected);
+}
+.progress-range[aria-busy="true"] {
+  opacity: 0.7;
+}
+.progress-grid {
+  display: grid;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.progress-grid--a {
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+}
+.progress-grid--b {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.progress-card {
+  min-width: 0;
+  padding: 20px 22px 22px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-card);
+  box-shadow: var(--shadow-card);
+}
+.progress-card-hd {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.progress-card-hd h2 {
+  font-size: 16px;
+  line-height: 22px;
   font-weight: 600;
 }
-.progress-loss [data-component="BarList"] .bg-chart-3 {
+.progress-card-hd p,
+.progress-empty {
+  margin-top: 2px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 18px;
+}
+.progress-empty {
+  margin-top: 16px;
+}
+.progress-empty a {
+  color: var(--foreground);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.progress-tag {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+.progress-page .progress-act {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  box-shadow: none;
+}
+.progress-page .progress-act:hover {
+  background: var(--surface-hover);
+}
+.progress-page .progress-act.is-quiet {
+  border-color: transparent;
+}
+.progress-focus {
+  display: inline-flex;
+  padding: 1px 8px;
+  border-radius: 5px;
+  background: var(--surface-selected);
+  color: var(--brand-text);
+  font-size: 11px;
+  line-height: 18px;
+  font-weight: 600;
+  vertical-align: 1px;
+}
+/* trend */
+.progress-trend-card {
+  display: flex;
+  flex-direction: column;
+}
+.progress-trend-figs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  margin-top: 10px;
+}
+.progress-trend-avg {
+  font-size: 32px;
+  line-height: 36px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.progress-trend-note {
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.progress-trend-target {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}
+.progress-trend-target b {
+  color: var(--foreground);
+  font-weight: 600;
+}
+.progress-trend-target span {
+  width: 18px;
+  border-top: 1.5px dashed var(--chart-3);
+}
+.progress-trend {
+  flex: 1 1 240px;
+  min-height: 240px;
+  margin-top: 12px;
+  display: flex;
+}
+.progress-trend-plot {
+  position: relative;
+  flex: 1;
+  margin: 6px 36px 24px 36px;
+}
+.progress-trend-area {
+  position: absolute;
+  inset: 0;
+}
+.progress-trend-area svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.progress-trend-area :is(line, path) {
+  vector-effect: non-scaling-stroke;
+}
+.progress-trend-area .grid {
+  stroke: var(--border);
+  stroke-width: 1;
+}
+.progress-trend-area .target {
+  stroke: var(--chart-3);
+  stroke-width: 1.25;
+  stroke-dasharray: 4 4;
+}
+.progress-trend-area .wash {
+  fill: color-mix(in srgb, var(--chart-1) 8%, transparent);
+}
+.progress-trend-area .line {
+  fill: none;
+  stroke: var(--chart-1);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+.progress-trend-area .dot {
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  margin: -6.5px 0 0 -6.5px;
+  border: 2px solid var(--surface-card);
+  border-radius: 50%;
   background: var(--chart-1);
+  box-sizing: content-box;
+}
+.progress-trend-area .dot.is-end {
+  background: var(--chart-2);
+}
+.progress-trend-end {
+  position: absolute;
+  margin: -9px 0 0 10px;
+  font-size: 12px;
+  line-height: 18px;
+  font-weight: 700;
+}
+.progress-trend-y {
+  position: absolute;
+  right: calc(100% + 8px);
+  translate: 0 -50%;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.progress-trend-x {
+  position: absolute;
+  inset: auto 0 -22px 0;
+  height: 16px;
+}
+.progress-trend-x span {
+  position: absolute;
+  translate: -50% 0;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  white-space: nowrap;
+}
+/* ranked rows: marks lost, marker asks, paper parts */
+.progress-loss,
+.progress-asks,
+.progress-ready {
+  margin-top: 12px;
+}
+:is(.progress-loss, .progress-asks, .progress-ready) > li {
+  padding: 11px 0 12px;
+  border-top: 1px solid var(--border);
+}
+:is(.progress-loss, .progress-asks, .progress-ready) > li:first-child {
+  border-top: 0;
+}
+:is(.progress-loss, .progress-asks) > li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 12px;
+  align-items: center;
+}
+:is(.progress-loss, .progress-asks, .progress-ready) b {
+  display: block;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+:is(.progress-loss, .progress-asks, .progress-ready) small {
+  display: block;
+  margin-top: 1px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 18px;
+}
+.progress-loss b .progress-page .progress-act {
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  box-shadow: none;
+}
+.progress-page .progress-act:hover {
+  background: var(--surface-hover);
+}
+.progress-page .progress-act.is-quiet {
+  border-color: transparent;
+}
+.progress-focus {
+  margin-left: 8px;
+}
+.progress-loss i {
+  grid-column: 1 / -1;
+  height: 6px;
+  margin-top: 8px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--chart-3) 40%, var(--surface-card));
+}
+.progress-loss i.is-top {
+  background: var(--chart-2);
+}
+.progress-asks > li {
+  align-items: baseline;
+}
+.progress-asks small {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+.progress-asks-n {
+  color: var(--muted-foreground);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.progress-ready-hd {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+.progress-ready-hd span {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.progress-ready-meter {
+  position: relative;
+  margin-top: 8px;
+}
+.progress-ready-meter::after {
+  content: "";
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  left: var(--target, 80%);
+  width: 1.5px;
+  border-radius: 1px;
+  background: var(--chart-3);
+}
+.progress-cover {
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 18px;
+}
+.progress-cover b {
+  color: var(--foreground);
+  font-weight: 600;
+}
+/* marks by topic: row hairlines only, flush to the card edge */
+.progress-topics-card {
+  padding-bottom: 6px;
+  overflow: hidden;
+}
+.progress-topics-card .progress-card-hd {
+  margin-bottom: 14px;
+}
+.progress-topics-card > .relative {
+  margin: 0 -22px;
+}
+.progress-topics,
+.progress-topics :is(th, td) {
+  border-width: 0;
+}
+.progress-topics tbody tr {
+  border-top: 1px solid var(--border);
+}
+.progress-topics thead tr {
+  border-top: 1px solid var(--border);
+}
+@media (max-width: 1100px) {
+  .progress-grid--a {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 760px) {
+  .progress-range {
+    width: 100%;
+  }
+  .progress-range button {
+    flex: 1;
+    padding: 0 4px;
+  }
+  .progress-grid--b {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .progress-card {
+    padding: 18px 16px 20px;
+  }
+  .progress-topics-card > .relative {
+    margin: 0 -16px;
+  }
+  .progress-trend-target {
+    margin-left: 0;
+  }
+  .progress-trend {
+    flex-basis: 200px;
+    min-height: 200px;
+  }
+  .progress-trend-plot {
+    margin-right: 28px;
+  }
 }
 .progress-calendar {
   display: flex;
@@ -874,6 +1267,21 @@
   }
   .progress-topics button {
     overflow-wrap: anywhere;
+  }
+}
+@media (max-width: 760px) {
+  .progress-topics col:nth-child(1) {
+    width: 52%;
+  }
+  .progress-topics col:nth-child(4) {
+    width: 22%;
+  }
+  .progress-topics col:nth-child(6) {
+    width: 26%;
+  }
+  .progress-topics td:last-child {
+    padding-left: 4px;
+    padding-right: 16px;
   }
 }
 
