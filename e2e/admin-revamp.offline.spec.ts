@@ -350,7 +350,7 @@ async function shoot(
     await expect(
       page.locator('[data-component="StatCard"] [data-component="Sparkline"]'),
     ).toHaveCount(0);
-    await expect(page.locator('[data-component="DeltaPill"]')).toHaveCount(2);
+    await expect(page.locator('[data-component="StatCard"]')).toHaveCount(4);
     await expect(
       page.getByRole("progressbar", {
         name: "Spend this month against the cap",
