@@ -77,7 +77,7 @@ export function Chip({
       pressed={on}
       disabled={disabled}
       onClick={onClick}
-      className="aria-pressed:bg-selected aria-pressed:text-brand-text aria-pressed:border-brand h-auto min-h-8 max-w-full gap-1.5 text-left text-[13px] whitespace-normal"
+      className="border-border bg-card aria-pressed:bg-selected aria-pressed:text-brand-text aria-pressed:border-brand h-auto min-h-9 max-w-full gap-1.5 rounded-lg border px-3 text-left text-[13px] font-medium whitespace-normal shadow-none"
     >
       {children}
     </FoundationChip>
@@ -114,18 +114,19 @@ export function Stepper({
     setDraft(null);
   }
   return (
-    <div className="flex items-center justify-between gap-3">
-      <label htmlFor={id} className="min-w-0 text-sm font-medium">
+    <div className="flex items-center justify-between gap-4">
+      <label htmlFor={id} className="min-w-0 text-sm leading-5 font-medium">
         {label}
-        <span className="text-muted-foreground block text-xs font-normal">
+        <span className="text-muted-foreground block text-xs leading-4 font-normal">
           {min}–{max}
         </span>
       </label>
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="bg-card flex h-10 shrink-0 items-stretch overflow-hidden rounded-lg border">
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="icon"
+          className="h-full w-10 rounded-none"
           aria-label={`Decrease ${label.toLowerCase()}`}
           disabled={value <= min}
           onClick={() => onChange(value - 1)}
@@ -139,7 +140,7 @@ export function Stepper({
           min={min}
           max={max}
           step={1}
-          className="w-16 text-center tabular-nums"
+          className="h-full w-14 rounded-none border-0 border-x text-center font-semibold tabular-nums shadow-none focus-visible:ring-0"
           value={draft ?? value}
           onChange={(e) => setDraft(e.target.value)}
           onBlur={commit}
@@ -155,8 +156,9 @@ export function Stepper({
         </span>
         <Button
           type="button"
-          variant="outline"
+          variant="ghost"
           size="icon"
+          className="h-full w-10 rounded-none"
           aria-label={`Increase ${label.toLowerCase()}`}
           disabled={value >= max}
           onClick={() => onChange(value + 1)}

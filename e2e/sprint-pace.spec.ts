@@ -87,11 +87,8 @@ for (const width of [390, 1280]) {
                   topics: {},
                   subtopics: {},
                   all_subtopics: 0,
-                  verbs: {},
-                  difficulty: {},
                   all_years: 0,
                   years: [2018, 2025],
-                  trial: false,
                 },
           ),
         });

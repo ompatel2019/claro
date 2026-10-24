@@ -1,6 +1,6 @@
 "use client";
 import { useActionState, useEffect, useId, useRef, useState } from "react";
-import { Alert, ChevronDown, SearchOff, PortalIcon } from "@/components/icons";
+import { Alert, SearchOff, PortalIcon } from "@/components/icons";
 import { startSprint } from "@/app/(app)/actions";
 import { createClient } from "@/utils/supabase/client";
 import { modes, type Mode, type Topic } from "@/lib/practice";
@@ -9,8 +9,6 @@ import {
   validPace,
   DEFAULTS,
   estimateMinutes,
-  estimatedMarks,
-  filtersOn,
   fromParams,
   HISTORY_LABELS,
   restore,
@@ -20,42 +18,25 @@ import {
   withTarget,
   withMixedCount,
   withSizeBy,
-  type Difficulty,
   type History,
   type Pool,
   type SetupConfig,
 } from "@/lib/sprint";
 import { cn } from "@/lib/utils";
 import { EmptyState } from "./empty-state";
-import { Badge } from "./claro/controls";
-import { Meter } from "./claro/data-display";
 import { Button } from "./ui/button";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "./ui/collapsible";
 import { Input } from "./ui/input";
 import { RadioGroup, RadioGroupItem } from "./ui/radio-group";
 import { Switch } from "./ui/switch";
 import { ToggleGroup, ToggleGroupItem } from "./ui/toggle-group";
 
 import { Section, Choice, Chip, Stepper } from "./sprint-setup/parts";
-export {
-  QuickStarts,
-  SameSetup,
-  RecommendedSprint,
-} from "./sprint-setup/starts";
+export { SameSetup } from "./sprint-setup/starts";
 
 const KEY = "claro.sprint.v1";
-const DIFFICULTY: [Difficulty, string][] = [
-  ["foundation", "Foundation · 1–3 marks"],
-  ["standard", "Standard · 4–5 marks"],
-  ["challenging", "Challenging · 6+ marks"],
-];
 const n = (v: number | undefined) => (v === undefined ? "–" : String(v));
 
-/** Every control updates the live pool and the summary beside the builder. */
+/** Every control updates the live pool and the docked summary bar. */
 export function SprintSetup({
   topics,
   params,
@@ -160,15 +141,6 @@ export function SprintSetup({
           : pool.questions
       : pool.questions
     : undefined;
-  const matchingNew = pool
-    ? c.mode === "mixed" && pool.mcq_new !== undefined
-      ? c.mcq_count === 0
-        ? pool.new - pool.mcq_new
-        : c.short_count === 0
-          ? pool.mcq_new
-          : pool.new
-      : pool.new
-    : undefined;
   const mixedShortfall =
     pool &&
     c.mode === "mixed" &&
@@ -177,6 +149,13 @@ export function SprintSetup({
   const shortfall = available !== null && available > 0 && available < c.target;
   const unit = byMarks ? "marks" : "questions";
   const minutes = estimateMinutes(c);
+  const startLabel = pending
+    ? "Building…"
+    : shortfall
+      ? c.mode === "mixed"
+        ? "Start with available questions"
+        : `Start with ${available} ${unit}`
+      : "Start sprint";
   const fixes = pool
     ? (
         [
@@ -195,12 +174,9 @@ export function SprintSetup({
     : [];
 
   return (
-    <div className="grid items-start gap-5 pb-[calc(6rem+env(safe-area-inset-bottom))] xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+    <div className="grid gap-5 pb-[calc(6rem+env(safe-area-inset-bottom))]">
       {prefilled && (
-        <p
-          className="text-muted-foreground text-sm xl:col-span-2"
-          role="status"
-        >
+        <p className="text-muted-foreground text-sm" role="status">
           Prefilled from a link.{" "}
           <button
             type="button"
@@ -489,26 +465,50 @@ export function SprintSetup({
                   onChange={(value) => setC(withTarget(c, value))}
                 />
               ) : (
-                <p className="text-muted-foreground text-sm">
-                  Edit total marks in Your sprint.
-                </p>
+                <Stepper
+                  label="Total marks"
+                  inputLabel="Marks"
+                  value={c.target}
+                  min={s.min}
+                  max={s.max}
+                  onChange={(value) => setC(withTarget(c, value))}
+                />
               )}
             </Section>
           </div>
           <div className="space-y-6">
-            {(c.history === "prefer_new" || c.history === "any") && (
-              <Section title="Question history">
-                <label className="flex items-center gap-2 text-sm">
-                  <Switch
-                    checked={c.history === "prefer_new"}
-                    onCheckedChange={(prefer) =>
-                      set({ history: prefer ? "prefer_new" : "any" })
-                    }
-                  />
-                  Prefer questions I haven’t seen
-                </label>
-              </Section>
-            )}
+            <Section
+              title="Question history"
+              hint="Seen means answered in a finished sprint."
+            >
+              <Choice<History>
+                label="Question history"
+                value={c.history}
+                onChange={(history) => set({ history })}
+                options={(
+                  [
+                    ["prefer_new", "any"],
+                    ["new_only", "new"],
+                    ["mistakes", "mistakes"],
+                    ["flagged", "flagged"],
+                    ["any", "any"],
+                  ] as const
+                ).map(([h, k]) => [
+                  h,
+                  <>
+                    {HISTORY_LABELS[h]}
+                    <span className="text-muted-foreground tabular-nums">
+                      · {n(pool?.[k])}
+                    </span>
+                  </>,
+                  !!pool &&
+                    h !== "prefer_new" &&
+                    h !== "any" &&
+                    pool[k] === 0 &&
+                    c.history !== h,
+                ])}
+              />
+            </Section>
 
             <div>
               <h2 className="mb-4 text-sm font-semibold">Timer and feedback</h2>
@@ -657,135 +657,39 @@ export function SprintSetup({
                 </div>
               </div>
             </div>
-            <Collapsible>
-              <CollapsibleTrigger className="flex w-full items-center justify-between text-sm font-semibold">
-                <span>
-                  Advanced
-                  {filtersOn(c) > 0 && (
-                    <span className="text-muted-foreground ml-2 font-normal">
-                      {filtersOn(c)} {filtersOn(c) === 1 ? "filter" : "filters"}{" "}
-                      on
-                    </span>
-                  )}
-                </span>
-                <ChevronDown className="size-4" />
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-6 pt-4">
-                {c.mode === "short" || c.mode === "mixed" ? (
-                  <Section
-                    title="Difficulty (by marks)"
-                    hint="Written questions only."
-                  >
-                    <div
-                      className="flex flex-wrap gap-1.5"
-                      role="group"
-                      aria-label="Difficulty"
-                    >
-                      {DIFFICULTY.map(([d, label]) => (
-                        <Chip
-                          key={d}
-                          on={c.difficulty.includes(d)}
-                          onClick={() =>
-                            set({ difficulty: toggle(c.difficulty, d) })
-                          }
-                        >
-                          {label} ·{" "}
-                          {n(pool?.difficulty[d] ?? (pool ? 0 : undefined))}
-                        </Chip>
-                      ))}
-                    </div>
-                  </Section>
-                ) : null}
-                {written && pool && Object.keys(pool.verbs).length > 0 && (
-                  <Section title="Directive verb">
-                    <div
-                      className="flex flex-wrap gap-1.5"
-                      role="group"
-                      aria-label="Directive verb"
-                    >
-                      {Object.entries(pool.verbs)
-                        .sort((a, b) => b[1] - a[1])
-                        .map(([v, k]) => (
-                          <Chip
-                            key={v}
-                            on={c.verbs.includes(v)}
-                            onClick={() => set({ verbs: toggle(c.verbs, v) })}
-                          >
-                            {v} · {k}
-                          </Chip>
-                        ))}
-                    </div>
-                  </Section>
-                )}
-                {pool?.trial && (
-                  <Section title="Source">
-                    <div
-                      className="flex gap-1.5"
-                      role="group"
-                      aria-label="Source"
-                    >
-                      {(
-                        [
-                          ["nesa", "HSC papers"],
-                          ["a1", "Practice"],
-                        ] as const
-                      ).map(([o, label]) => (
-                        <Chip
-                          key={o}
-                          on={c.origins.length === 0 || c.origins.includes(o)}
-                          onClick={() => {
-                            // Empty = both; never deselect the last one.
-                            const next = toggle<"nesa" | "a1">(
-                              c.origins.length ? c.origins : ["nesa", "a1"],
-                              o,
-                            );
-                            if (next.length)
-                              set({ origins: next.length === 2 ? [] : next });
-                          }}
-                        >
-                          {label}
-                        </Chip>
-                      ))}
-                    </div>
-                  </Section>
-                )}
-                <Section
-                  title="Question history"
-                  hint="Seen means answered in a finished sprint."
-                >
-                  <Choice<History>
-                    label="Question history"
-                    value={c.history}
-                    onChange={(history) => set({ history })}
-                    options={(
-                      [
-                        ["prefer_new", "any"],
-                        ["new_only", "new"],
-                        ["mistakes", "mistakes"],
-                        ["flagged", "flagged"],
-                        ["any", "any"],
-                      ] as const
-                    ).map(([h, k]) => [
-                      h,
-                      <>
-                        {HISTORY_LABELS[h]}
-                        <span className="text-muted-foreground tabular-nums">
-                          · {n(pool?.[k])}
-                        </span>
-                      </>,
-                      !!pool &&
-                        h !== "prefer_new" &&
-                        h !== "any" &&
-                        pool[k] === 0 &&
-                        c.history !== h,
-                    ])}
-                  />
-                </Section>
-              </CollapsibleContent>
-            </Collapsible>
           </div>
         </div>
       </div>
+
+      {(shortfall || mixedShortfall || poolError || state.error) && (
+        <div className="grid gap-2">
+          {poolError && (
+            <SetupNotice>Couldn&apos;t count matching questions.</SetupNotice>
+          )}
+          {shortfall && c.mode !== "mixed" && (
+            <SetupNotice>
+              Only {available} {unit} match. Start with {available} {unit} or
+              widen your filters.
+            </SetupNotice>
+          )}
+          {mixedShortfall && (
+            <SetupNotice>
+              Only {pool?.mcq_questions} multis and {pool?.short_questions}{" "}
+              short-answer questions match. Each bucket uses what is available;
+              adjust the split or widen your filters.
+            </SetupNotice>
+          )}
+          {state.error && (
+            <p
+              role="alert"
+              className="bg-card text-destructive flex items-start gap-2.5 rounded-lg border px-4 py-3 text-sm"
+            >
+              <Alert className="mt-0.5 size-4 shrink-0" /> Couldn’t start the
+              sprint. {state.error}
+            </p>
+          )}
+        </div>
+      )}
 
       <form
         ref={form}
@@ -800,175 +704,45 @@ export function SprintSetup({
           )
             e.preventDefault();
         }}
-        className="bg-card rounded-2xl border p-5 xl:sticky xl:top-20"
       >
         <input type="hidden" name="config" value={JSON.stringify(c)} />
-        <div className="grid gap-5">
-          <div>
-            <h2 className="text-sm font-semibold">Your sprint</h2>
-            <p className="text-muted-foreground mt-1 text-[13px]">
-              Updates as you build it
-            </p>
-          </div>
-          <div className="flex flex-wrap items-end gap-5">
-            <div>
-              {byMarks ? (
-                <Stepper
-                  label="Total marks"
-                  inputLabel="Marks"
-                  value={c.target}
-                  min={s.min}
-                  max={s.max}
-                  onChange={(value) => setC(withTarget(c, value))}
-                />
-              ) : (
-                <>
-                  <p
-                    className="num-display text-4xl leading-none font-bold"
-                    aria-live="polite"
-                  >
-                    {c.target}
-                  </p>
-                  <p className="text-muted-foreground mt-2 text-xs">{unit}</p>
-                </>
-              )}
-            </div>
-            <div>
-              <p className="num-display text-4xl leading-none font-bold">
-                {c.timed ? minutes : "—"}
-              </p>
-              <p className="text-muted-foreground mt-2 text-xs">
-                {c.timed ? "minutes" : "untimed"}
-              </p>
-            </div>
-          </div>
-          {written && (c.mode === "mixed" || !byMarks) && (
-            <p className="text-muted-foreground text-sm" aria-live="polite">
-              {c.marks_per_short === null
-                ? "Estimated total: about "
-                : "Total: "}
-              {estimatedMarks(c)} marks.
-              {c.marks_per_short === null &&
-                " Uses 3 marks per short answer; actual marks depend on the questions selected."}
-            </p>
-          )}
-          <dl className="grid gap-2.5 text-[13px]">
-            {[
-              [
-                "Multiple choice",
-                c.mode === "short"
-                  ? "—"
-                  : `${c.mode === "mixed" ? c.mcq_count : c.target} questions`,
-              ],
-              [
-                "Short answer",
-                c.mode === "mcq"
-                  ? "—"
-                  : c.mode === "mixed"
-                    ? `${c.short_count} questions`
-                    : `${c.target} ${unit}`,
-              ],
-              [
-                "Feedback",
-                c.feedback === "end" ? "Exam mode" : "Check as I go",
-              ],
-            ].map(([label, value]) => (
-              <div key={label} className="flex justify-between gap-4">
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd className="text-right font-medium">{value}</dd>
-              </div>
-            ))}
-          </dl>
-          <div className="grid gap-2">
-            <p className="text-muted-foreground text-xs">
-              {c.subtopics.length
-                ? `${c.subtopics.length} dot point${c.subtopics.length === 1 ? "" : "s"}`
-                : c.topics.length
-                  ? `${c.topics.length} topics`
-                  : "Whole course"}
-            </p>
-            <div className="flex flex-wrap gap-1.5">
-              {c.topics
-                .flatMap((id) => {
-                  const subs = c.subtopics.filter(
-                    (sub) => topics.find((t) => t.id === sub)?.parent_id === id,
-                  );
-                  return subs.length ? subs : [id];
-                })
-                .map((id) => (
-                  <Badge key={id} variant="secondary">
-                    {names[id]}
-                  </Badge>
-                ))}
-            </div>
-          </div>
-          <div className="min-w-0 space-y-2 border-t pt-3.5 text-[13px]">
-            <p className="sr-only">{summary(c, names)}</p>
-            <div
-              className="flex items-baseline justify-between gap-3"
+        <div
+          data-testid="sprint-summary-bar"
+          className="sprint-setup-dock bg-card fixed inset-x-0 bottom-0 z-30 rounded-none border-t px-4 py-3 shadow-none sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]"
+        >
+          <p className="sr-only">{summary(c, names)}</p>
+          <div className="mx-auto flex max-w-[calc(1400px-4rem)] items-center gap-3">
+            <dl
+              className="mr-auto flex min-w-0 items-center gap-4 sm:gap-8"
               aria-live="polite"
             >
-              {poolError ? (
-                <p className="text-muted-foreground">
-                  {"Couldn't count matching questions."}
-                </p>
-              ) : (
-                <>
-                  <p>
-                    <span className="font-semibold tabular-nums">
-                      {n(matching)}
-                    </span>{" "}
-                    questions match
-                  </p>
-                  <p className="text-muted-foreground tabular-nums">
-                    {n(matchingNew)} new to you
-                  </p>
-                </>
-              )}
-            </div>
-            <Meter
-              value={matching ? ((matchingNew ?? 0) / matching) * 100 : 0}
-              label="New matching questions"
-              className="h-1.5"
-            />
-          </div>
-        </div>
-        {(shortfall || mixedShortfall || state.error) && (
-          <div className="px-4 pb-3 text-sm">
-            {shortfall && c.mode !== "mixed" && (
-              <p role="alert" className="text-warning-text">
-                <Alert className="mr-1 inline size-4" /> Only {available} {unit}{" "}
-                match. Start with {available} {unit} or widen your filters.
-              </p>
-            )}
-            {mixedShortfall && (
-              <p role="alert" className="text-warning-text">
-                <Alert className="mr-1 inline size-4" /> Only{" "}
-                {pool?.mcq_questions} multis and {pool?.short_questions}{" "}
-                short-answer questions match. Each bucket uses what is
-                available; adjust the split or widen your filters.
-              </p>
-            )}
-            {state.error && (
-              <p role="alert" className="text-destructive">
-                <Alert className="mr-1 inline size-4" /> Couldn’t start the
-                sprint. {state.error}
-              </p>
-            )}
-          </div>
-        )}
-        <div className="sprint-setup-dock bg-canvas fixed inset-x-0 bottom-0 z-30 border-t px-4 py-3 sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]">
-          <div className="mx-auto flex max-w-[calc(1400px-4rem)] flex-wrap items-center justify-end gap-x-3 gap-y-2">
-            <p className="text-muted-foreground mr-auto min-w-0 truncate text-[13px] tabular-nums">
-              <span className="text-foreground font-semibold">
-                {c.target} {unit}
-              </span>
-              <span className="max-sm:hidden">
-                {c.timed && ` · ${minutes} min`} · {n(matching)} match
-              </span>
-            </p>
+              {(
+                [
+                  [byMarks ? "Marks" : "Questions", c.target],
+                  ["Minutes", c.timed ? minutes : "—"],
+                  [
+                    "Matching",
+                    poolError ? "–" : n(matching),
+                    poolError ? "Couldn't count matching questions" : undefined,
+                  ],
+                ] as [string, React.ReactNode, string?][]
+              ).map(([label, value, title]) => (
+                <div
+                  key={label}
+                  className="flex shrink-0 flex-col"
+                  title={title}
+                >
+                  <dt className="text-muted-foreground order-last text-xs leading-4">
+                    {label === "Minutes" && !c.timed ? "Untimed" : label}
+                  </dt>
+                  <dd className="num-display text-xl leading-6 font-semibold tabular-nums">
+                    {value}
+                  </dd>
+                </div>
+              ))}
+            </dl>
             <Button
-              className="text-muted-foreground"
+              className="text-muted-foreground shrink-0 max-sm:px-2"
               type="button"
               variant="ghost"
               onClick={() => {
@@ -978,8 +752,9 @@ export function SprintSetup({
               Reset
             </Button>
             <Button
-              className="h-11"
+              className="h-11 shrink-0"
               type="submit"
+              aria-label={startLabel}
               disabled={
                 invalidSize ||
                 pending ||
@@ -990,13 +765,10 @@ export function SprintSetup({
               }
             >
               <PortalIcon name="zap" className="size-4" />
-              {pending
-                ? "Building…"
-                : shortfall
-                  ? c.mode === "mixed"
-                    ? "Start with available questions"
-                    : `Start with ${available} ${unit}`
-                  : "Start sprint"}
+              <span className="max-sm:hidden">{startLabel}</span>
+              <span className="sm:hidden">
+                {pending ? "Building…" : "Start"}
+              </span>
             </Button>
           </div>
         </div>
@@ -1026,6 +798,19 @@ export function SprintSetup({
         />
       )}
     </div>
+  );
+}
+
+/** Brand-kit callout: hairline card, Orange Text tone, outline icon. */
+function SetupNotice({ children }: { children: React.ReactNode }) {
+  return (
+    <p
+      role="alert"
+      className="bg-card text-brand-text flex items-start gap-2.5 rounded-lg border px-4 py-3 text-sm leading-5"
+    >
+      <Alert className="mt-0.5 size-4 shrink-0" />
+      <span className="min-w-0">{children}</span>
+    </p>
   );
 }
 

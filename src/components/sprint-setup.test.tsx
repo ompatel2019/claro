@@ -12,8 +12,7 @@ vi.mock("@/app/(app)/actions", () => ({ startSprint: mocks.start }));
 vi.mock("@/utils/supabase/client", () => ({
   createClient: () => ({ rpc: mocks.rpc }),
 }));
-import { SprintSetup, QuickStarts } from "./sprint-setup";
-import { restore } from "@/lib/sprint";
+import { SprintSetup } from "./sprint-setup";
 
 const render = rtlRender;
 
@@ -34,9 +33,6 @@ const pool = {
   topics: {},
   subtopics: {},
   all_subtopics: 30,
-  verbs: {},
-  difficulty: {},
-  trial: true,
 };
 const start = () =>
   screen.getByRole("button", { name: /^Start (sprint|with)/ });
@@ -53,19 +49,16 @@ it("keeps the live summary after the builder with warnings and controls", async 
     error: null,
   });
   render(<SprintSetup topics={topics} params={{ type: "short" }} />);
-  const form = start().closest("form")!;
-  const builder = screen.getByRole("heading", { name: "Build your own" })
-    .parentElement!.parentElement!;
-  expect(builder.parentElement).toBe(form.parentElement);
-  expect(builder.nextElementSibling).toBe(form);
+  const bar = screen.getByTestId("sprint-summary-bar");
   await waitFor(() =>
     expect(screen.getByRole("alert")).toHaveTextContent("Only 10 marks match"),
   );
-  expect(form).toContainElement(screen.getByRole("alert"));
-  expect(form).toHaveTextContent("30 marks · 45 min");
-  expect(form).toHaveTextContent("4 questions match");
-  expect(form).toHaveTextContent("4 new to you");
-  expect(form).toContainElement(screen.getByRole("button", { name: "Reset" }));
+  // The callout sits in the page flow, not inside the docked bar.
+  expect(bar).not.toContainElement(screen.getByRole("alert"));
+  expect(bar).toHaveTextContent("Marks30");
+  expect(bar).toHaveTextContent("Minutes45");
+  expect(bar).toHaveTextContent("Matching4");
+  expect(bar).toContainElement(screen.getByRole("button", { name: "Reset" }));
   expect(start()).toBeEnabled();
 });
 it("shows all builder sections, preserves settings across type selection, and resets", async () => {
@@ -87,10 +80,6 @@ it("shows all builder sections, preserves settings across type selection, and re
   fireEvent.click(screen.getByRole("button", { name: "Short answer" }));
   expect(marks).toHaveValue(45);
   expect(start()).toBeEnabled();
-  expect(
-    screen.queryByRole("radiogroup", { name: "Question history" }),
-  ).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
   expect(
     screen.getByRole("radiogroup", { name: "Question history" }),
   ).toBeVisible();
@@ -126,9 +115,6 @@ it("empty pools keep the summary after the builder, block start and provide a wi
   await waitFor(() =>
     expect(screen.getByText("No questions match")).toBeVisible(),
   );
-  const builder = screen.getByRole("heading", { name: "Build your own" })
-    .parentElement!.parentElement!;
-  expect(builder.nextElementSibling).toBe(start().closest("form"));
   expect(start()).toBeDisabled();
   fireEvent.click(
     screen.getByRole("button", { name: "Include seen questions (+10)" }),
@@ -186,7 +172,6 @@ it("mixed question inputs are independent and send the marks filter to the pool"
   expect(shorts).toHaveValue(15);
   expect(mc).toHaveValue(0);
   fireEvent.click(await screen.findByRole("button", { name: "5 marks" }));
-  expect(screen.getByText("Total: 75 marks.")).toBeVisible();
   await waitFor(() =>
     expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config).toMatchObject({
       short_count: 15,
@@ -351,7 +336,7 @@ it("reveals only selected topics' subtopics and All topics clears narrowing", as
 });
 
 it.each(["mistakes", "new_only", "flagged"])(
-  "preserves the advanced %s history without a conflicting switch",
+  "preserves the %s history in the main section",
   async (history) => {
     render(<SprintSetup topics={topics} params={{ type: "short", history }} />);
     expect(
@@ -360,7 +345,6 @@ it.each(["mistakes", "new_only", "flagged"])(
     await waitFor(() =>
       expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config.history).toBe(history),
     );
-    fireEvent.click(screen.getByRole("button", { name: "Advanced" }));
     const selected = within(
       screen.getByRole("radiogroup", { name: "Question history" }),
     )
@@ -375,20 +359,20 @@ it.each(["mistakes", "new_only", "flagged"])(
     ).toBe(history);
   },
 );
-it("toggles prefer-new only for the compatible history choices", async () => {
+it("switches between prefer-new and any from the question history choice", async () => {
   render(
     <SprintSetup topics={topics} params={{ type: "short", history: "any" }} />,
   );
-  const toggle = await screen.findByRole("switch", {
-    name: /Prefer questions/,
-  });
-  fireEvent.click(toggle);
+  const history = within(
+    screen.getByRole("radiogroup", { name: "Question history" }),
+  );
+  fireEvent.click(history.getByRole("radio", { name: /Prefer new/ }));
   await waitFor(() =>
     expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config.history).toBe(
       "prefer_new",
     ),
   );
-  fireEvent.click(toggle);
+  fireEvent.click(history.getByRole("radio", { name: /^Any/ }));
   await waitFor(() =>
     expect(mocks.rpc.mock.calls.at(-1)?.[1].p_config.history).toBe("any"),
   );
@@ -414,12 +398,8 @@ it("summarises a whole topic alongside the other topic's selected subtopic", () 
       params={{ topics: "t1,t2", sub: "t1-a" }}
     />,
   );
-  const summary = start().closest("form")!;
-  expect(within(summary).queryByText("Topic 1", { exact: true })).toBeNull();
-  expect(
-    within(summary).getByText("Dot point A", { exact: true }),
-  ).toBeVisible();
-  expect(within(summary).getByText("Topic 2", { exact: true })).toBeVisible();
+  const summary = screen.getByTestId("sprint-summary-bar");
+  expect(summary).toHaveTextContent("Topic 1 (Dot point A) · Topic 2");
 });
 
 it("clears a unit's UUID dot points when its checkbox is deselected", async () => {
@@ -487,56 +467,57 @@ it("keeps sequential marks keystrokes as a draft until blur or Enter", () => {
   expect(marks).toHaveValue(10);
 });
 
-it("quick starts label their question counts and preserve legacy session units", () => {
-  const raw = {
-    mode: "mixed",
-    size_by: "marks",
-    target: 30,
-    mcq_count: 12,
-    short_marks: 18,
-  };
-  render(
-    <QuickStarts
-      weak={{ id: "t1", name: "Topic", parent_id: null }}
-      previous={restore(raw)}
-      previousRaw={raw}
-    />,
-  );
-  const weak = screen.getByRole("button", {
-    name: "Mixed · 8 questions · about 15 min",
-  });
-  expect(JSON.parse(weak.getAttribute("value")!)).toMatchObject({
-    size_by: "questions",
-    target: 8,
-    mcq_count: 6,
-    short_count: 2,
-  });
-  const previous = screen.getByRole("button", {
-    name: "Mixed · 30 marks · 0 topics",
-  });
-  expect(JSON.parse(previous.getAttribute("value")!)).toEqual(raw);
+it("guard: setup has no recommendation, side card, advanced or removed filters", async () => {
+  render(<SprintSetup topics={topics} params={{ type: "mixed" }} />);
+  await waitFor(() => expect(mocks.rpc).toHaveBeenCalled());
+  for (const text of [
+    /Recommended/,
+    /Same as last time/,
+    /Section I drill/,
+    /Your sprint/,
+    /Updates as you build it/,
+    /Estimated total/,
+    /Advanced/,
+    /Difficulty/,
+    /Directive verb/,
+  ])
+    expect(screen.queryByText(text)).toBeNull();
+  for (const name of ["Difficulty", "Directive verb", "Source"])
+    expect(screen.queryByRole("group", { name })).toBeNull();
+  expect(screen.queryByRole("region", { name: "Source" })).toBeNull();
+  expect(screen.queryByRole("button", { name: "Advanced" })).toBeNull();
+  expect(
+    screen.getByRole("radiogroup", { name: "Question history" }),
+  ).toBeVisible();
+  const sent = mocks.rpc.mock.calls.at(-1)![1].p_config;
+  for (const key of ["difficulty", "verbs", "origins"])
+    expect(sent).not.toHaveProperty(key);
 });
 
-it("starts the recommendation with the measured dot point and check-as-you-go feedback", async () => {
-  const { RecommendedSprint } = await import("./sprint-setup/starts");
-  render(
-    <RecommendedSprint
-      weak={{ id: "dot", name: "Inflation", parent_id: "unit" }}
-    />,
+it("guard: the summary bar is the only summary, docked flush with no shadow or inset", () => {
+  render(<SprintSetup topics={topics} params={{}} />);
+  const bar = screen.getByTestId("sprint-summary-bar");
+  const cls = bar.className.split(/\s+/);
+  expect(cls).toEqual(
+    expect.arrayContaining([
+      "fixed",
+      "inset-x-0",
+      "bottom-0",
+      "border-t",
+      "rounded-none",
+      "shadow-none",
+    ]),
   );
-  const button = screen.getByRole("button", {
-    name: "Start recommended sprint",
-  });
-  expect(button).toHaveAttribute("data-variant", "outline");
-  const config = JSON.parse(button.getAttribute("value")!);
-  expect(config).toMatchObject({
-    mode: "mixed",
-    target: 8,
-    topics: ["unit"],
-    subtopics: ["dot"],
-    feedback: "each",
-  });
-  expect(screen.getByText(/8 questions · about/)).toBeVisible();
+  // Never floating: no shadow, inset margin, rounded > 8px or bottom offset.
+  for (const c of cls)
+    expect(c).not.toMatch(
+      /^(shadow-(?!none)|drop-shadow|m[xyb]?-|bottom-(?!0$)|rounded-(xl|2xl|3xl|full))/,
+    );
+  for (const label of ["Questions", "Minutes", "Matching"])
+    expect(within(bar).getByText(label)).toBeVisible();
+  expect(within(bar).getByRole("button", { name: "Reset" })).toBeVisible();
+  expect(start()).toBeVisible();
+  expect(bar).toContainElement(start());
 });
 
 it("shows exam pace inline only while timed and restores saved pace values", () => {
