@@ -14,16 +14,24 @@ vi.mock("./annotated-feedback", () => ({
     row,
     aiNote = true,
     flush = false,
+    lead,
+    tail,
   }: {
     row: ReviewRow;
     aiNote?: boolean;
     flush?: boolean;
+    lead?: React.ReactNode;
+    tail?: React.ReactNode;
   }) => (
-    <p>
-      Written feedback: {row.status}
-      {aiNote && " (with AI line)"}
-      {flush && " (flush)"}
-    </p>
+    <>
+      {lead}
+      <p>
+        Written feedback: {row.status}
+        {aiNote && " (with AI line)"}
+        {flush && " (flush)"}
+      </p>
+      {tail}
+    </>
   ),
 }));
 vi.mock("./session-shell", () => ({ isTyping: () => false }));

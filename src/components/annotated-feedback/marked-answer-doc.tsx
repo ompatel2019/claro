@@ -1,5 +1,11 @@
 "use client";
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { Check, Close, PortalIcon } from "@/components/icons";
 import type { NumberedComment } from "@/lib/feedback";
 import { highlightSegments } from "@/lib/practice";
@@ -123,6 +129,8 @@ export function MarkedAnswerDoc({
   flush = false,
   aiNote = true,
   column = false,
+  lead,
+  tail,
 }: {
   /** Display text: line breaks become paragraphs. */
   text: string;
@@ -136,6 +144,10 @@ export function MarkedAnswerDoc({
   aiNote?: boolean;
   /** Every comment in a column beside the answer (under it when narrow); no slider. */
   column?: boolean;
+  /** Column mode: the host's question header, drawn at the top of the answer card. */
+  lead?: ReactNode;
+  /** Column mode: drawn at the foot of the answer card (e.g. the full-marks answer). */
+  tail?: ReactNode;
 }) {
   const body = useRef<HTMLDivElement>(null);
   const rail = useRef<HTMLDivElement>(null);
@@ -480,10 +492,92 @@ export function MarkedAnswerDoc({
     c.kind === "strength" ? "earned" : "missed";
   const linkTone = selected ? `is-${tone(selected)}` : undefined;
 
+  const scoreCard = score && (
+    <aside className="cma-score" aria-label={score.label}>
+      <div className="cma-score-hd">
+        <p className="cma-total">
+          {score.mark}
+          <span>/{score.max} marks</span>
+        </p>
+        <p className="cma-gain">
+          {score.gain > 0 ? `${score.gain} to gain` : "Full marks"}
+        </p>
+      </div>
+      {score.tags.length > 0 && (
+        <p className="cma-score-meta">
+          {score.tags.map((t) => (
+            <span key={t} className="cma-tag">
+              {t}
+            </span>
+          ))}
+        </p>
+      )}
+      {score.note && <p className="cma-score-note">{score.note}</p>}
+      {(score.earned.length > 0 ||
+        score.missing.length > 0 ||
+        (score.next && score.gain > 0)) && (
+        <ul className="cma-crit" aria-label="Marking points">
+          {score.earned.map((t, i) => (
+            <li key={`e${i}`} className="cma-crit-earned">
+              <div className="cma-crit-row">
+                <Check className="ic" />
+                <span className="cma-crit-t">{t}</span>
+                <span className="cma-crit-s">Earned</span>
+              </div>
+            </li>
+          ))}
+          {score.missing.map((t, i) => (
+            <li key={`m${i}`} className="cma-crit-missed">
+              <div className="cma-crit-row">
+                <Close className="ic" />
+                <span className="cma-crit-t">{t}</span>
+                <span className="cma-crit-s">Missed</span>
+              </div>
+            </li>
+          ))}
+          {score.next && score.gain > 0 && (
+            <li
+              className="is-next"
+              data-selected={
+                linked && linked.id === activeId ? "true" : undefined
+              }
+            >
+              {linked ? (
+                <button
+                  type="button"
+                  className="cma-crit-row"
+                  data-focus-control
+                  aria-pressed={linked.id === activeId}
+                  onClick={() =>
+                    column
+                      ? focusComment(linked.id, "mark", true)
+                      : go(linked.id, {
+                          reveal: true,
+                          showMark: true,
+                          focus: true,
+                        })
+                  }
+                >
+                  <NextMark text={score.next} />
+                </button>
+              ) : (
+                <div className="cma-crit-row">
+                  <NextMark text={score.next} />
+                </div>
+              )}
+            </li>
+          )}
+        </ul>
+      )}
+    </aside>
+  );
+
   return (
     <div className={cn("cma", flush && "cma--flush", column && "cma--column")}>
       <div ref={body} className="cma-body">
         <div ref={page} className="cma-page">
+          {column && lead && <div className="cma-lead">{lead}</div>}
+          {column && scoreCard}
           <div className="cma-answer">
             <div className="cma-answer-hd">
               <h2>Your answer, marked</h2>
@@ -543,87 +637,10 @@ export function MarkedAnswerDoc({
               ))}
             </div>
           </div>
+          {column && tail && <div className="cma-tail">{tail}</div>}
         </div>
         <div ref={rail} className="cma-rail">
-          {score && (
-            <aside className="cma-score" aria-label={score.label}>
-              <div className="cma-score-hd">
-                <p className="cma-total">
-                  {score.mark}
-                  <span>/{score.max} marks</span>
-                </p>
-                <p className="cma-gain">
-                  {score.gain > 0 ? `${score.gain} to gain` : "Full marks"}
-                </p>
-              </div>
-              {score.tags.length > 0 && (
-                <p className="cma-score-meta">
-                  {score.tags.map((t) => (
-                    <span key={t} className="cma-tag">
-                      {t}
-                    </span>
-                  ))}
-                </p>
-              )}
-              {score.note && <p className="cma-score-note">{score.note}</p>}
-              {(score.earned.length > 0 ||
-                score.missing.length > 0 ||
-                (score.next && score.gain > 0)) && (
-                <ul className="cma-crit" aria-label="Marking points">
-                  {score.earned.map((t, i) => (
-                    <li key={`e${i}`} className="cma-crit-earned">
-                      <div className="cma-crit-row">
-                        <Check className="ic" />
-                        <span className="cma-crit-t">{t}</span>
-                        <span className="cma-crit-s">Earned</span>
-                      </div>
-                    </li>
-                  ))}
-                  {score.missing.map((t, i) => (
-                    <li key={`m${i}`} className="cma-crit-missed">
-                      <div className="cma-crit-row">
-                        <Close className="ic" />
-                        <span className="cma-crit-t">{t}</span>
-                        <span className="cma-crit-s">Missed</span>
-                      </div>
-                    </li>
-                  ))}
-                  {score.next && score.gain > 0 && (
-                    <li
-                      className="is-next"
-                      data-selected={
-                        linked && linked.id === activeId ? "true" : undefined
-                      }
-                    >
-                      {linked ? (
-                        <button
-                          type="button"
-                          className="cma-crit-row"
-                          data-focus-control
-                          aria-pressed={linked.id === activeId}
-                          onClick={() =>
-                            column
-                              ? focusComment(linked.id, "mark", true)
-                              : go(linked.id, {
-                                  reveal: true,
-                                  showMark: true,
-                                  focus: true,
-                                })
-                          }
-                        >
-                          <NextMark text={score.next} />
-                        </button>
-                      ) : (
-                        <div className="cma-crit-row">
-                          <NextMark text={score.next} />
-                        </div>
-                      )}
-                    </li>
-                  )}
-                </ul>
-              )}
-            </aside>
-          )}
+          {!column && scoreCard}
           {column && comments.length > 0 && (
             <section
               className="cma-cols"
@@ -652,7 +669,18 @@ export function MarkedAnswerDoc({
                         onFocus={(e) => revealCard(e.currentTarget)}
                         className={`cma-cm cma-cm--${tone(c)}`}
                       >
-                        <CommentContent c={c} next={c === nextComment} inline />
+                        <CommentContent
+                          c={c}
+                          next={c === nextComment}
+                          inline
+                          // The rubric already shows this next mark; say it once.
+                          hideFix={
+                            !!linked &&
+                            c.id === linked.id &&
+                            !!score &&
+                            score.gain > 0
+                          }
+                        />
                       </button>
                     </li>
                   );
@@ -810,10 +838,12 @@ function CommentContent({
   c,
   next,
   inline = false,
+  hideFix = false,
 }: {
   c: NumberedComment;
   next: boolean;
   inline?: boolean;
+  hideFix?: boolean;
 }) {
   const P = inline ? "span" : "p";
   const Div = inline ? "span" : "div";
@@ -846,7 +876,7 @@ function CommentContent({
           )}
         </P>
         <P className="cma-cm-text">{c.body}</P>
-        {c.next_mark && (
+        {c.next_mark && !hideFix && (
           <Div className="cma-fix">
             <P className="cma-fix-hd">
               <PortalIcon name="arrow-up-right" className="ic" />

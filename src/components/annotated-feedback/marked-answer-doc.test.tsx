@@ -485,6 +485,31 @@ describe("comment column", () => {
     );
   });
 
+  it("draws the header and marks inside the answer card, the column holds only comments, and the next mark shows once", () => {
+    const { container } = render(
+      <MarkedAnswerDoc
+        text={text}
+        comments={comments}
+        score={score}
+        column
+        lead={<h3>Question header</h3>}
+        tail={<p>Full-marks answer</p>}
+      />,
+    );
+    const page = container.querySelector(".cma-page")!;
+    const rail = container.querySelector(".cma-rail")!;
+    expect(page).toContainElement(screen.getByText("Question header"));
+    expect(page).toContainElement(
+      screen.getByRole("complementary", { name: score.label }),
+    );
+    expect(page).toContainElement(screen.getByText("Full-marks answer"));
+    expect(rail.querySelector(".cma-score")).toBeNull();
+    // The rubric's next mark is not repeated on its linked comment.
+    expect(screen.getAllByText("Add a statistic.")).toHaveLength(1);
+    expect(card(22)).not.toHaveTextContent("Add a statistic.");
+    expect(card(33)).toHaveTextContent("Link the conclusion.");
+  });
+
   it("shows every comment at once with no slider, and the marks card without a slider", () => {
     render(
       <MarkedAnswerDoc text={text} comments={comments} score={score} column />,
