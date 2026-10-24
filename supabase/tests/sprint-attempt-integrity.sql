@@ -6,14 +6,14 @@ insert into auth.users(id) values (current_setting('claro.test_student_id')::uui
 select set_config('request.jwt.claim.sub', current_setting('claro.test_student_id'), true);
 insert into public.topics(id,parent_id,name,sort)
 values ('t1-d1-integrity','t1','Synthetic D1 integrity',98), ('t2-d1-other','t2','Synthetic D1 other',98);
-insert into public.questions(id,type,topic_id,marks,stem,options,correct_index,criteria,sample_answer,source,year,origin,status,verb)
+insert into public.questions(id,type,topic_id,marks,stem,options,correct_index,criteria,sample_answer,source,year,origin,status)
 select 'd1-mc-'||i,'mcq','t1-d1-integrity',1,'Synthetic D1 MC question '||i,
-  array['A','B','C','D'],0,null,null,'Synthetic Q'||i,2026,'claro','live',null
+  array['A','B','C','D'],0,null,null,'Synthetic Q'||i,2026,'claro','live'
 from generate_series(1,12) i;
-insert into public.questions(id,type,topic_id,marks,stem,criteria,sample_answer,source,year,origin,status,verb)
+insert into public.questions(id,type,topic_id,marks,stem,criteria,sample_answer,source,year,origin,status)
 select 'd1-short-'||i,'short','t1-d1-integrity',5,'Synthetic D1 short question '||i,
   '[{"min":1,"max":5,"descriptor":"Synthetic criteria"}]'::jsonb,'Synthetic sample',
-  'Synthetic Q'||i,2026,'claro','live','explain'
+  'Synthetic Q'||i,2026,'claro','live'
 from generate_series(1,8) i;
 insert into public.questions(id,type,topic_id,marks,stem,criteria,source,year,origin,status)
 values ('d1-draft','short','t1-d1-integrity',5,'Synthetic D1 draft','[]','Synthetic draft',2026,'claro','draft'),
@@ -101,7 +101,6 @@ begin
     ('{"mode":"short","topics":["t1"]}'::jsonb,'d1-other'),
     ('{"mode":"short","marks_per_short":2}'::jsonb,'d1-short-8'),
     ('{"mode":"short","difficulty":["foundation"]}'::jsonb,'d1-short-8'),
-    ('{"mode":"short","verbs":["describe"]}'::jsonb,'d1-short-8'),
     ('{"mode":"short","origins":["nesa"]}'::jsonb,'d1-short-8'),
     ('{"mode":"mcq","history":"new_only"}'::jsonb,'d1-mc-1'),
     ('{"mode":"mcq","history":"mistakes"}'::jsonb,'d1-mc-12'),
