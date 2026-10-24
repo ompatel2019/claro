@@ -16,7 +16,7 @@ export function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-3.5" aria-label={title}>
+    <section className="space-y-4" aria-label={title}>
       <div>
         <h2 className="text-sm font-semibold">{title}</h2>
         {hint && (
@@ -77,7 +77,7 @@ export function Chip({
       pressed={on}
       disabled={disabled}
       onClick={onClick}
-      className="h-auto min-h-8 max-w-full gap-1.5 text-left text-[13px] whitespace-normal"
+      className="aria-pressed:bg-selected aria-pressed:text-brand-text aria-pressed:border-brand h-auto min-h-8 max-w-full gap-1.5 text-left text-[13px] whitespace-normal"
     >
       {children}
     </FoundationChip>
