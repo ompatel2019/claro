@@ -321,7 +321,10 @@ export function QuestionEditor({
     >
       <fieldset disabled={pending || uploading} className="min-w-0 space-y-4">
         {loaded.duplicate && (
-          <p role="status" className="bg-muted rounded-xl px-4 py-3 text-sm">
+          <p
+            role="status"
+            className="bg-card rounded-xl border px-4 py-3 text-sm"
+          >
             Duplicate of{" "}
             <Link
               className="underline"
@@ -333,7 +336,10 @@ export function QuestionEditor({
           </p>
         )}
         {locked && (
-          <p role="status" className="bg-muted rounded-xl px-4 py-3 text-sm">
+          <p
+            role="status"
+            className="bg-card rounded-xl border px-4 py-3 text-sm"
+          >
             Has {loaded.attemptCount} attempts. Type and marks are locked.
           </p>
         )}

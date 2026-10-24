@@ -206,7 +206,7 @@ export function RunsTable({ rows }: { rows: RunSummary[] }) {
           time is summed per answer across 6 concurrent workers.
           Grade/check/reconcile thinking is shown when efforts differ.
         </CardDescription>
-        <div className="bg-muted/60 flex flex-wrap items-center gap-3 rounded-xl p-3">
+        <div className="bg-card flex flex-wrap items-center gap-3 rounded-xl border p-3">
           <span className="text-sm">Select two runs ({selected.length}/2)</span>
           <Button
             disabled={selected.length !== 2}

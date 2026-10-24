@@ -52,7 +52,7 @@ export default async function ReviewQueue({
           </form>
         }
       />
-      <p className="bg-muted/60 text-muted-foreground rounded-xl p-4 text-sm leading-relaxed">
+      <p className="bg-card text-muted-foreground rounded-xl border p-4 text-sm leading-relaxed">
         Students select <strong>Question this mark</strong> beside written
         feedback on their{" "}
         <Link className="underline" href="/student/activity">

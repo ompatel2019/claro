@@ -128,7 +128,7 @@ export function SingleResult({
             </div>
           </div>
           {verb && meanings[verb.toLowerCase()] && (
-            <div className="bg-muted mx-5 mt-auto rounded-xl px-4 py-3">
+            <div className="mx-5 mt-auto border-t pt-3">
               <p className="text-xs font-semibold">
                 The verb is “{verb[0].toUpperCase() + verb.slice(1)}”
               </p>

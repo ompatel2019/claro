@@ -415,7 +415,7 @@ export function ReviewEditor({
                   {row.criteria?.map((c) => (
                     <p
                       key={c.descriptor}
-                      className={`mt-2 ${c === criterion ? "bg-accent rounded p-2" : ""}`}
+                      className={`mt-2 ${c === criterion ? "bg-selected rounded p-2" : ""}`}
                     >
                       <strong>
                         {c.min}–{c.max}:

@@ -18,13 +18,20 @@
 :root {
   --radius: 1rem;
 
+  /* Surface rule: page + chrome on the canvas, every card one solid surface,
+     one tint for selected. Hover is a state, never a resting fill. */
+  --surface-canvas: #faf7f3; /* page, sidebar, top bars, docks (brand) */
+  --surface-card: #ffffff; /* cards, panels, options, inputs, popovers */
+  --surface-selected: #fdeee7; /* selected / active (brand orange tint) */
+  --surface-hover: #f3eee7; /* hover and press only */
+
   /* surfaces + ink */
-  --background: #faf7f3; /* page canvas (brand) */
+  --background: var(--surface-canvas);
   --foreground: #1e223d; /* ink (brand navy) */
   --ink-2: #4a4e68;
-  --card: #ffffff;
+  --card: var(--surface-card);
   --card-foreground: #1e223d;
-  --popover: #ffffff;
+  --popover: var(--surface-card);
   --popover-foreground: #1e223d;
 
   /* shadcn roles */
@@ -34,7 +41,7 @@
   --secondary-foreground: #1e223d;
   --muted: #f3eee7; /* tracks, icon tiles, table heads */
   --muted-foreground: #646780;
-  --accent: #faf7f3; /* hover wash */
+  --accent: var(--surface-hover); /* hover wash */
   --accent-foreground: #1e223d;
   --destructive: #b3261e;
   --destructive-soft: #fdecea;
@@ -47,7 +54,7 @@
   --pill-flag: var(--destructive);
   --brand: #f54f1b; /* orange: marks, indicators, highlights */
   --brand-foreground: #ffffff;
-  --brand-soft: #fdeee7; /* orange tint: active nav, brand badges */
+  --brand-soft: var(--surface-selected); /* active nav, brand badges */
   --brand-text: #c2360b; /* orange text that passes AA on white + orange tint */
   --brand-deep: #d63c0e; /* the stripe in the term banner */
 
@@ -73,11 +80,11 @@
   --heat-4: #f54f1b;
 
   /* sidebar (shadcn sidebar block) */
-  --sidebar: #ffffff;
+  --sidebar: var(--surface-canvas);
   --sidebar-foreground: #1e223d;
   --sidebar-primary: #f54f1b;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #fdeee7;
+  --sidebar-accent: var(--surface-selected);
   --sidebar-accent-foreground: #1e223d;
   --sidebar-border: #e7e1d9;
   --sidebar-ring: #1e223d;
@@ -86,12 +93,17 @@
 }
 
 .dark {
-  --background: #13152b;
+  --surface-canvas: #13152b;
+  --surface-card: #1d2039;
+  --surface-selected: #3b2019;
+  --surface-hover: #262a47;
+
+  --background: var(--surface-canvas);
   --foreground: #f5f1ec;
   --ink-2: #c5c7d6;
-  --card: #1d2039;
+  --card: var(--surface-card);
   --card-foreground: #f5f1ec;
-  --popover: #262a47;
+  --popover: var(--surface-card);
   --popover-foreground: #f5f1ec;
 
   --primary: #f5f1ec;
@@ -100,7 +112,7 @@
   --secondary-foreground: #f5f1ec;
   --muted: #181b33;
   --muted-foreground: #a3a6bd;
-  --accent: #262a47;
+  --accent: var(--surface-hover);
   --accent-foreground: #f5f1ec;
   --destructive: #ff6b5e;
   --pill-flag: var(--destructive);
@@ -112,7 +124,7 @@
 
   --brand: #f54f1b;
   --brand-foreground: #ffffff;
-  --brand-soft: #3b2019;
+  --brand-soft: var(--surface-selected);
   --brand-text: #ff7a4d;
   --brand-deep: #d63c0e;
 
@@ -135,11 +147,11 @@
   --heat-3: color-mix(in srgb, var(--brand) 65%, var(--brand-soft));
   --heat-4: #f54f1b;
 
-  --sidebar: #1d2039;
+  --sidebar: var(--surface-canvas);
   --sidebar-foreground: #f5f1ec;
   --sidebar-primary: #f54f1b;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #3b2019;
+  --sidebar-accent: var(--surface-selected);
   --sidebar-accent-foreground: #f5f1ec;
   --sidebar-border: #2f3354;
   --sidebar-ring: #f5f1ec;
@@ -153,6 +165,9 @@
   --font-hand: var(--font-caveat), "Segoe Print", cursive;
   --font-mono: var(--font-claro-sans), ui-sans-serif, system-ui, sans-serif;
 
+  --color-canvas: var(--surface-canvas);
+  --color-selected: var(--surface-selected);
+  --color-hover: var(--surface-hover);
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -461,7 +476,7 @@
     @apply hover:border-foreground/25 transition-[border-color,background-color,box-shadow] duration-150;
   }
   [data-slot="option-card"][data-state="on"] {
-    @apply border-brand bg-brand-soft/60 ring-brand/10 ring-[3px];
+    @apply border-brand bg-selected ring-brand/10 ring-[3px];
   }
   [data-slot="option-card"] .option-dot {
     @apply border-input bg-card absolute top-4 right-4 grid size-4 place-items-center rounded-full border;
@@ -925,7 +940,7 @@
 
 :root,
 .dark {
-  --surface: var(--card);
+  --surface: var(--surface-card);
   --chart-4: var(--chart-3);
   --chart-5: var(--chart-track);
   --heatmap-0: var(--heat-0);
@@ -971,7 +986,7 @@
     @apply text-muted-foreground mb-2 text-sm font-semibold;
   }
   .field {
-    @apply border-input bg-background w-full min-w-0 rounded-[10px] border px-3 py-2 text-sm;
+    @apply border-input bg-card w-full min-w-0 rounded-[10px] border px-3 py-2 text-sm;
   }
   .button-link {
     @apply bg-ink text-surface inline-flex h-9 items-center justify-center rounded-full px-4 text-sm font-semibold;
@@ -1097,7 +1112,7 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   font-weight: 500;
 }
 .shell-sidebar .shell-nav-button:hover {
-  background: var(--muted);
+  background: var(--surface-hover);
   color: var(--foreground);
 }
 .shell-sidebar .shell-nav-button[data-active] {
@@ -1176,8 +1191,9 @@ html[data-theme-motion="instant"] .theme-toggle:active {
 .home-next {
   --paper-rule: color-mix(in srgb, var(--foreground) 5.5%, transparent);
   --paper-margin: color-mix(in srgb, var(--brand) 28%, transparent);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background-color: var(--muted);
+  background-color: var(--card);
   background-image:
     linear-gradient(
       to right,
@@ -1267,7 +1283,7 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   text-decoration: none;
 }
 .home-marked-list a:hover {
-  background: var(--muted);
+  background: var(--surface-hover);
 }
 .home-session-score {
   font-size: 22px;
@@ -1434,7 +1450,7 @@ html[data-theme-motion="instant"] .theme-toggle:active {
   min-height: 288px;
   font-family: var(--font-sans);
   font-size: 16px;
-  padding: var(--answer-pad) 20px 16px 72px;
+  padding: calc(var(--answer-pad) - 2px) 20px 16px 72px;
   border-radius: var(--radius);
   background-color: var(--card);
   caret-color: var(--brand);
@@ -1793,7 +1809,7 @@ body:has(.sprint-focus)
   padding: 12px 24px;
 }
 .ac-row:hover {
-  background: var(--muted);
+  background: var(--surface-hover);
 }
 .ac-ic {
   display: grid;

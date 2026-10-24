@@ -80,7 +80,7 @@ export function OptionCard({
     <Radio.Root
       data-slot="option-card"
       className={cn(
-        "data-checked:border-brand data-checked:bg-brand-soft/60 data-checked:ring-brand/10 data-checked:ring-[3px]",
+        "data-checked:border-brand data-checked:bg-selected data-checked:ring-brand/10 data-checked:ring-[3px]",
         className,
       )}
       {...props}

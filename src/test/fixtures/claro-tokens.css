@@ -1,13 +1,18 @@
 :root {
   --radius: 1rem;
 
+  --surface-canvas: #faf7f3;
+  --surface-card: #ffffff;
+  --surface-selected: #fdeee7;
+  --surface-hover: #f3eee7;
+
   /* surfaces + ink */
-  --background: #faf7f3; /* page canvas (brand) */
+  --background: var(--surface-canvas);
   --foreground: #1e223d; /* ink (brand navy) */
   --ink-2: #4a4e68;
-  --card: #ffffff;
+  --card: var(--surface-card);
   --card-foreground: #1e223d;
-  --popover: #ffffff;
+  --popover: var(--surface-card);
   --popover-foreground: #1e223d;
 
   /* shadcn roles */
@@ -17,7 +22,7 @@
   --secondary-foreground: #1e223d;
   --muted: #f3eee7; /* tracks, icon tiles, table heads */
   --muted-foreground: #646780;
-  --accent: #faf7f3; /* hover wash */
+  --accent: var(--surface-hover);
   --accent-foreground: #1e223d;
   --destructive: #b3261e;
   --destructive-soft: #fdecea;
@@ -29,7 +34,7 @@
   /* brand */
   --brand: #f54f1b; /* orange: marks, indicators, highlights */
   --brand-foreground: #ffffff;
-  --brand-soft: #fdeee7; /* orange tint: active nav, brand badges */
+  --brand-soft: var(--surface-selected);
   --brand-text: #c2360b; /* orange text that passes AA on white + orange tint */
   --brand-deep: #d63c0e; /* the stripe in the term banner */
 
@@ -55,11 +60,11 @@
   --heat-4: #f54f1b;
 
   /* sidebar (shadcn sidebar block) */
-  --sidebar: #ffffff;
+  --sidebar: var(--surface-canvas);
   --sidebar-foreground: #1e223d;
   --sidebar-primary: #f54f1b;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #fdeee7;
+  --sidebar-accent: var(--surface-selected);
   --sidebar-accent-foreground: #1e223d;
   --sidebar-border: #e7e1d9;
   --sidebar-ring: #1e223d;
@@ -68,12 +73,17 @@
 }
 
 .dark {
-  --background: #13152b;
+  --surface-canvas: #13152b;
+  --surface-card: #1d2039;
+  --surface-selected: #3b2019;
+  --surface-hover: #262a47;
+
+  --background: var(--surface-canvas);
   --foreground: #f5f1ec;
   --ink-2: #c5c7d6;
-  --card: #1d2039;
+  --card: var(--surface-card);
   --card-foreground: #f5f1ec;
-  --popover: #262a47;
+  --popover: var(--surface-card);
   --popover-foreground: #f5f1ec;
 
   --primary: #f5f1ec;
@@ -82,7 +92,7 @@
   --secondary-foreground: #f5f1ec;
   --muted: #181b33;
   --muted-foreground: #a3a6bd;
-  --accent: #262a47;
+  --accent: var(--surface-hover);
   --accent-foreground: #f5f1ec;
   --destructive: #ff6b5e;
   --destructive-soft: color-mix(in srgb, var(--destructive) 12%, var(--card));
@@ -93,7 +103,7 @@
 
   --brand: #f54f1b;
   --brand-foreground: #ffffff;
-  --brand-soft: #3b2019;
+  --brand-soft: var(--surface-selected);
   --brand-text: #ff7a4d;
   --brand-deep: #d63c0e;
 
@@ -116,11 +126,11 @@
   --heat-3: color-mix(in srgb, var(--brand) 65%, var(--brand-soft));
   --heat-4: #f54f1b;
 
-  --sidebar: #1d2039;
+  --sidebar: var(--surface-canvas);
   --sidebar-foreground: #f5f1ec;
   --sidebar-primary: #f54f1b;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #3b2019;
+  --sidebar-accent: var(--surface-selected);
   --sidebar-accent-foreground: #f5f1ec;
   --sidebar-border: #2f3354;
   --sidebar-ring: #f5f1ec;

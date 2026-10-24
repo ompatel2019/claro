@@ -192,7 +192,7 @@ export function SprintFocusShell(
       </FocusBar>
       <div className="flex flex-1">
         {rail && (
-          <aside className="bg-card sticky top-[68px] hidden h-[calc(100svh-68px)] w-[272px] shrink-0 flex-col overflow-y-auto border-r p-5 md:flex">
+          <aside className="bg-canvas sticky top-[68px] hidden h-[calc(100svh-68px)] w-[272px] shrink-0 flex-col overflow-y-auto border-r p-5 md:flex">
             <h2 className="mb-5 text-sm font-semibold">Booklet</h2>
             {booklet}
           </aside>

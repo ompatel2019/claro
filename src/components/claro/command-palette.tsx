@@ -131,7 +131,7 @@ export function CommandPalette({ routes }: { routes: CommandRoute[] }) {
                   tabIndex={-1}
                   onMouseMove={() => setIndex(i)}
                   onClick={() => navigate(r)}
-                  className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm ${i === selected ? "bg-accent" : ""}`}
+                  className={`flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left text-sm ${i === selected ? "bg-selected" : ""}`}
                 >
                   <r.icon className="text-muted-foreground size-4" />
                   <span className="flex-1">{r.label}</span>

@@ -55,10 +55,7 @@ export function FocusBar({
   return (
     <header
       data-component="FocusBar"
-      className={cn(
-        "bg-card/90 sticky top-0 z-30 border-b backdrop-blur-md",
-        className,
-      )}
+      className={cn("bg-canvas sticky top-0 z-30 border-b", className)}
       {...props}
     >
       {items.slice(0, -1)}
@@ -76,7 +73,7 @@ export function TopBar({
     <header
       data-component="TopBar"
       className={cn(
-        "bg-background/90 sticky top-0 z-30 flex h-14 items-center gap-1.5 border-b px-4 backdrop-blur-md sm:px-8",
+        "bg-canvas sticky top-0 z-30 flex h-14 items-center gap-1.5 border-b px-4 sm:px-8",
         className,
       )}
       {...props}

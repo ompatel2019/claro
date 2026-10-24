@@ -61,7 +61,7 @@ it("opens with the default label and server budget while refreshing, with mobile
   expect(within(dialog).getByRole("button", { name: "Run" })).toBeEnabled();
   expect(mocks.dialogData).toHaveBeenCalledOnce();
   expect(dialog).toHaveClass(
-    "bg-background",
+    "bg-popover",
     "max-w-full",
     "max-h-[90dvh]",
     "overflow-y-auto",
@@ -71,7 +71,7 @@ it("opens with the default label and server budget while refreshing, with mobile
   ).toBeInTheDocument();
   expect(dialog.querySelector('[data-slot="dialog-footer"]')).toHaveClass(
     "sticky",
-    "bg-background",
+    "bg-popover",
   );
 });
 

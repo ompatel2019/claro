@@ -538,3 +538,65 @@ it("starts the recommendation with the measured dot point and check-as-you-go fe
   });
   expect(screen.getByText(/8 questions · about/)).toBeVisible();
 });
+
+it("shows exam pace inline only while timed and restores saved pace values", () => {
+  localStorage.setItem(
+    "claro.sprint.v1",
+    JSON.stringify({
+      timed: false,
+      short_min_per_mark: 2,
+      mcq_min_per_q: 1.25,
+    }),
+  );
+  const { unmount } = render(<SprintSetup topics={[]} params={{}} />);
+  const timer = within(screen.getByRole("region", { name: "Timer" }));
+  const toggle = timer.getByRole("switch", { name: /Timed at exam pace/ });
+  expect(toggle).not.toBeChecked();
+  expect(timer.queryAllByRole("spinbutton")).toHaveLength(0);
+  fireEvent.click(toggle);
+  expect(timer.getByLabelText("Shorts: minutes per mark")).toHaveValue(2);
+  const multis = timer.getByLabelText("Multis: minutes per question");
+  expect(multis).toHaveValue(1.25);
+  expect(timer.getByText("≈ 25 min")).toBeVisible();
+  expect(timer.getByText(/Keep working in overtime/)).toBeVisible();
+  expect(screen.queryByText("Adjust exam pace")).not.toBeInTheDocument();
+  expect(multis.closest("details")).toBeNull();
+  fireEvent.change(multis, { target: { value: "2" } });
+  fireEvent.blur(multis);
+  fireEvent.click(toggle);
+  expect(timer.queryAllByRole("spinbutton")).toHaveLength(0);
+  expect(timer.queryByText(/≈/)).not.toBeInTheDocument();
+  expect(timer.queryByText(/Keep working in overtime/)).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("claro.sprint.v1")!)).toMatchObject({
+    timed: false,
+    short_min_per_mark: 2,
+    mcq_min_per_q: 2,
+  });
+  unmount();
+  render(<SprintSetup topics={[]} params={{}} />);
+  fireEvent.click(screen.getByRole("switch", { name: /Timed at exam pace/ }));
+  expect(screen.getByLabelText("Shorts: minutes per mark")).toHaveValue(2);
+  expect(screen.getByLabelText("Multis: minutes per question")).toHaveValue(2);
+});
+
+it("validates inline pace and clamps it on blur or when timing is disabled", () => {
+  render(<SprintSetup topics={[]} params={{}} />);
+  const timer = within(screen.getByRole("region", { name: "Timer" }));
+  const shorts = timer.getByLabelText("Shorts: minutes per mark");
+  fireEvent.change(shorts, { target: { value: "0" } });
+  expect(shorts).toHaveAttribute("aria-invalid", "true");
+  expect(timer.getByRole("alert")).toHaveTextContent("between 0.25 and 10");
+  expect(start()).toBeDisabled();
+  fireEvent.blur(shorts);
+  expect(shorts).toHaveValue(0.25);
+  expect(timer.queryByRole("alert")).not.toBeInTheDocument();
+  expect(start()).toBeEnabled();
+  fireEvent.change(timer.getByLabelText("Multis: minutes per question"), {
+    target: { value: "11" },
+  });
+  const toggle = timer.getByRole("switch", { name: /Timed at exam pace/ });
+  fireEvent.click(toggle);
+  expect(start()).toBeEnabled();
+  fireEvent.click(toggle);
+  expect(timer.getByLabelText("Multis: minutes per question")).toHaveValue(10);
+});

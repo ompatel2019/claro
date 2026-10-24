@@ -661,7 +661,7 @@ export function FlashcardRunner({
     </div>
   );
   const model = (
-    <div className="bg-muted rounded-xl border p-4 whitespace-pre-wrap">
+    <div className="bg-card rounded-xl border p-4 whitespace-pre-wrap">
       <h3 className="mb-2 font-semibold">Model answer</h3>
       <p>{card?.back}</p>
     </div>

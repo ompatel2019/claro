@@ -96,7 +96,7 @@ export function SessionShell(props: SessionProps) {
     <div className="flex min-h-svh flex-col">
       <FocusBar
         className={cn(
-          "bg-card/90 sticky top-0 z-30 flex h-[68px] items-center gap-1.5 border-b px-2 backdrop-blur sm:gap-4 sm:px-8",
+          "bg-canvas sticky top-0 z-30 flex h-[68px] items-center gap-1.5 border-b px-2 sm:gap-4 sm:px-8",
           "gap-3 px-3 sm:gap-3 sm:px-5 [&>[data-component=MobileFocusFeedback]]:hidden",
         )}
       >

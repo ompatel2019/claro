@@ -146,7 +146,7 @@ export function CompareView({ data }: { data: CompareData }) {
     const detail = details[row.key];
     return (
       <div
-        className="bg-muted/60 min-w-0 space-y-4 rounded-xl p-4 text-sm wrap-anywhere whitespace-normal"
+        className="bg-card min-w-0 space-y-4 rounded-xl border p-4 text-sm wrap-anywhere whitespace-normal"
         aria-label={`Details for ${row.section} ${row.id}`}
       >
         {!detail ? (
