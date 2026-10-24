@@ -755,6 +755,15 @@
 .progress-topics td {
   padding-block: 16px;
 }
+/* Flush in its card: the card edge is the side border, so no double line. */
+.progress-topics,
+.progress-topics :is(th, td):first-child {
+  border-left-width: 0;
+}
+.progress-topics,
+.progress-topics :is(th, td):last-child {
+  border-right-width: 0;
+}
 .progress-loss > [data-slot="card"] {
   padding: 20px;
   gap: 16px;
