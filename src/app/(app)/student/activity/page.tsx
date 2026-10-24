@@ -84,9 +84,6 @@ export default async function Activity({
   });
   if (filters.sort === "newest")
     rows.sort((a, b) => b.started_at.localeCompare(a.started_at));
-  const marking = rows
-    .filter((r) => r.status === "Marking" && !r.finished_at)
-    .map((r) => r.id);
   return (
     <div className="min-w-0">
       <PageHeader
@@ -102,10 +99,11 @@ export default async function Activity({
           </Link>
         }
       />
-      {marking.length > 0 && <MarkingRefresh />}
+      {rows.some((r) => r.status === "Marking" && !r.finished_at) && (
+        <MarkingRefresh />
+      )}
       <ActivityBrowser
-        // The browser caches loaded rows; a sprint whose marking finished remounts it.
-        key={JSON.stringify({ ...filters, page: undefined, marking })}
+        key={JSON.stringify({ ...filters, page: undefined })}
         filters={filters}
         data={{ ...data, rows }}
         details={details}

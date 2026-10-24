@@ -50,6 +50,7 @@ export function ActivityBrowser({
 }) {
   const [loaded, setLoaded] = useState({
     page: suppliedData.page,
+    supplied: suppliedData.rows,
     rows: suppliedData.rows,
     details: details ?? {},
   });
@@ -61,10 +62,20 @@ export function ActivityBrowser({
         : suppliedData.rows;
     setLoaded({
       page: suppliedData.page,
+      supplied: suppliedData.rows,
       rows: [...new Map(rows.map((r) => [r.id, r])).values()],
       details: { ...loaded.details, ...details },
     });
     setVisible((n) => n + 12);
+  } else if (loaded.supplied !== suppliedData.rows) {
+    // A refresh of the same page (a sprint's marking finished): update its rows in place.
+    const fresh = new Map(suppliedData.rows.map((r) => [r.id, r]));
+    setLoaded({
+      ...loaded,
+      supplied: suppliedData.rows,
+      rows: loaded.rows.map((r) => fresh.get(r.id) ?? r),
+      details: { ...loaded.details, ...details },
+    });
   }
   const data = { ...suppliedData, rows: loaded.rows.filter(isStudentSession) };
   const router = useRouter();

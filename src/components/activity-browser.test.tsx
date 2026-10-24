@@ -333,3 +333,37 @@ it("shows actual card ratings and uses the latest rating for each card", () => {
     "1/2",
   );
 });
+it("a refresh flips a Marking row to its score and keeps rows loaded from earlier pages", () => {
+  const marking: ActivityRow = {
+    ...row,
+    status: "Marking",
+    pct: null,
+    finished_at: null,
+  };
+  const older: ActivityRow = { ...row, id: "old", title: "Older sprint" };
+  const props = { filters, topics: [], today: "2026-10-09" };
+  const item = () =>
+    screen.getByRole("link", { name: row.title }).closest("li");
+  const view = render(
+    <ActivityBrowser {...props} data={{ ...data, rows: [marking] }} />,
+  );
+  expect(item()).toHaveTextContent("Marking");
+  // Load more appends page 2 without the sprint being marked.
+  view.rerender(
+    <ActivityBrowser {...props} data={{ ...data, page: 2, rows: [older] }} />,
+  );
+  expect(item()).toHaveTextContent("Marking");
+  // Same page refreshed after marking finished: the row updates in place.
+  view.rerender(
+    <ActivityBrowser {...props} data={{ ...data, page: 2, rows: [older] }} />,
+  );
+  view.rerender(
+    <ActivityBrowser
+      {...props}
+      data={{ ...data, page: 2, rows: [{ ...row, id: "s" }, older] }}
+    />,
+  );
+  expect(item()).not.toHaveTextContent("Marking");
+  expect(item()).toHaveTextContent("75%");
+  expect(screen.getByRole("link", { name: "Older sprint" })).toBeVisible();
+});
