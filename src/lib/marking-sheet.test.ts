@@ -40,6 +40,7 @@ it("groups multiple choice and lists each written answer with real counts", () =
         detail: "Written answer · 6 marks",
         marked: 0,
         total: 1,
+        marking: true,
       },
     ],
   });
@@ -80,4 +81,36 @@ it("counts answers the background queue marked, only at the marked version", asy
   ]);
   expect(live[0]).toBe(rows[0]);
   expect(markingSheet(live).marked).toBe(2);
+});
+
+it("shows early marks the server already saved or started, which this tab never saw", async () => {
+  const { markedNow, withServerStatus } = await import("./marking-sheet");
+  // Q1 to Q8 were marked early on the server; the tab's own queue saw none settle.
+  const rows = [
+    ...Array.from({ length: 8 }, (_, i) => a(`w${i + 1}`, "short")),
+    a("w9", "short"),
+    a("w10", "short"),
+    a("m1", "mcq"),
+  ];
+  const local = markedNow(rows, new Map(), () => "");
+  expect(markingSheet(local).marked).toBe(0);
+  const server = new Map<string, string>([
+    ...Array.from({ length: 8 }, (_, i) => [`w${i + 1}`, "marked"] as const),
+    ["w9", "marking"],
+    ["w10", "pending"],
+    ["m1", "pending"],
+  ]);
+  const sheet = markingSheet(withServerStatus(local, server));
+  expect(sheet.marked).toBe(8);
+  const byLabel = Object.fromEntries(sheet.rows.map((r) => [r.label, r]));
+  expect(byLabel.Q8).toMatchObject({ marked: 1, total: 1 });
+  expect(byLabel.Q9).toMatchObject({ marked: 0, marking: true });
+  expect(byLabel.Q10).toMatchObject({ marked: 0 });
+  expect(byLabel.Q10.marking).toBeUndefined();
+  // A server row never un-marks what this tab already knows is marked.
+  const kept = withServerStatus(
+    [a("x", "short", "marked")],
+    new Map([["x", "pending"]]),
+  );
+  expect(kept[0].status).toBe("marked");
 });

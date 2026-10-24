@@ -174,6 +174,8 @@ export function AnswerSheet({ sheet }: { sheet: MarkingSheet }) {
                   </span>
                 ) : row.total > 1 && row.marked > 0 ? (
                   `${row.marked} of ${row.total} marked`
+                ) : row.marking ? (
+                  "Marking"
                 ) : (
                   "Waiting"
                 )}

@@ -126,6 +126,14 @@ it("shows a sprint's answer sheet with real marked counts and a way to leave", (
             marked: 0,
             total: 1,
           },
+          {
+            key: "c",
+            label: "Q6",
+            detail: "Written answer · 3 marks",
+            marked: 0,
+            total: 1,
+            marking: true,
+          },
         ],
       }}
     />,
@@ -135,6 +143,7 @@ it("shows a sprint's answer sheet with real marked counts and a way to leave", (
     "Multiple choice · Q1 to Q32 of 3 marked3 questions",
     "Q4MarkedWritten answer · 4 marks",
     "Q5WaitingWritten answer · 6 marks",
+    "Q6MarkingWritten answer · 3 marks",
   ]);
   const bar = screen.getByRole("progressbar", { name: "Answers marked" });
   expect(bar).toHaveAttribute("aria-valuenow", "3");

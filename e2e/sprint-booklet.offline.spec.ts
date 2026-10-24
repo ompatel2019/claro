@@ -372,3 +372,24 @@ for (const [platform, key, label] of [
       .press(`${key === "Meta" ? "Control" : "Meta"}+Enter`);
     await expect(page.getByText(/Question 5 of 6/)).toBeVisible();
   });
+
+test("Calculator opens on screen even from a spot saved on a wider window", async ({
+  page,
+}) => {
+  await load(page, 390, 844);
+  // A spot dragged or saved on a 1440px screen sits off a phone viewport.
+  await page.evaluate(() =>
+    localStorage.setItem(
+      "claro-calculator-position",
+      JSON.stringify({ x: 1180, y: 900 }),
+    ),
+  );
+  const toggle = page.getByRole("button", { name: "Calculator (C)" });
+  const calculator = page.getByRole("dialog", { name: "Calculator" });
+  await toggle.click();
+  await expect(calculator).toBeInViewport({ ratio: 1 });
+  await calculator.getByRole("button", { name: "7" }).click();
+  await expect(calculator.getByLabel("Calculator display")).toHaveText("7");
+  await calculator.getByRole("button", { name: "Close calculator" }).click();
+  await expect(calculator).toBeHidden();
+});
