@@ -393,8 +393,17 @@ it("requests transferable writing feedback using the five relevant criteria", ()
   );
   expect(system).toContain("Do not invent links or buttons");
   expect(system).toContain("Only written short-answer items are supplied");
-  expect(system).toContain("multiple-choice (MC) answers are not supplied");
-  expect(system).toContain("make no claims about MC performance");
+  expect(system).toContain(
+    "Make no claims about multiple-choice (MC) performance",
+  );
+  expect(system).toContain(
+    "never write meta lines about what the summary covers or what was not supplied",
+  );
+  expect(system).not.toContain("State that this summary covers");
+  expect(system).toContain("Give at most 3 points per list, each one line");
+  expect(system).toContain(
+    "The first next_steps item is the single most valuable action; do not repeat a Top fix word for word.",
+  );
   expect(system).toContain(
     'Avoid stock openers such as "In this answer, your..."',
   );
