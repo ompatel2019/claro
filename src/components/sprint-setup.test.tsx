@@ -505,13 +505,12 @@ it("guard: the summary bar is the only summary, docked flush with no shadow or i
       "bottom-0",
       "border-t",
       "rounded-none",
-      "shadow-none",
     ]),
   );
   // Never floating: no shadow, inset margin, rounded > 8px or bottom offset.
   for (const c of cls)
     expect(c).not.toMatch(
-      /^(shadow-(?!none)|drop-shadow|m[xyb]?-|bottom-(?!0$)|rounded-(xl|2xl|3xl|full))/,
+      /^(shadow|drop-shadow|m[xyb]?-|bottom-(?!0$)|rounded-(xl|2xl|3xl|full))/,
     );
   for (const label of ["Questions", "Minutes", "Matching"])
     expect(within(bar).getByText(label)).toBeVisible();

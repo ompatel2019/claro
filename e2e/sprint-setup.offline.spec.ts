@@ -83,7 +83,10 @@ for (const [width, height] of [
     };
     await page.goto("http://localhost:3202/student/sprint");
     await page.evaluate(() => document.fonts.ready);
-    await expect(page.getByText("100 questions match")).toBeVisible();
+    const summary = page.getByTestId("sprint-summary-bar");
+    await expect(summary).toContainText("Matching");
+    await expect(summary.locator("dd").nth(2)).toHaveText("100");
+    await expect(page.getByText("Your sprint")).toHaveCount(0);
     await expect(
       page.getByRole("button", { name: "All topics" }),
     ).toHaveAttribute("aria-pressed", "true");
@@ -184,7 +187,9 @@ for (const [width, height] of [
     await shorts.press("Enter");
     await expect(mc).toHaveValue("12");
     await expect(shorts).toHaveValue("7");
-    await expect(page.getByText("Total: 47 marks.")).toBeVisible();
+    await expect(page.getByTestId("sprint-summary-bar")).toContainText(
+      "Questions19",
+    );
     await capture("setup-mixed");
     const check = page.getByRole("radio", {
       name: "Check as I go",

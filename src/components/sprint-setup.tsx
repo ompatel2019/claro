@@ -708,7 +708,7 @@ export function SprintSetup({
         <input type="hidden" name="config" value={JSON.stringify(c)} />
         <div
           data-testid="sprint-summary-bar"
-          className="sprint-setup-dock bg-card fixed inset-x-0 bottom-0 z-30 rounded-none border-t px-4 py-3 shadow-none sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]"
+          className="sprint-setup-dock bg-card fixed inset-x-0 bottom-0 z-30 rounded-none border-t px-4 py-3 sm:px-8 md:left-[calc(var(--sidebar-width,0px)-var(--shell-reclaim,0px))]"
         >
           <p className="sr-only">{summary(c, names)}</p>
           <div className="mx-auto flex max-w-[calc(1400px-4rem)] items-center gap-3">
