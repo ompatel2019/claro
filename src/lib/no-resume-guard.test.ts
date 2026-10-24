@@ -36,10 +36,13 @@ it("keeps open sessions out of Home and Activity queries", () => {
   expect(source("src/components/student/home/sections.tsx")).toMatch(
     /\.not\("finished_at", "is", null\)/,
   );
-  expect(source("src/app/(app)/student/activity/page.tsx")).toMatch(
-    /\.not\("finished_at", "is", null\)/,
+  // Activity also lists a sprint whose Finish is under way, as Marking (never a resumable row).
+  expect(source("src/app/(app)/student/activity/page.tsx")).toContain(
+    '"finished_at.not.is.null,and(kind.eq.sprint,finish_requested_at.not.is.null)"',
   );
-  expect(source("supabase/migrations/0084_session_last_active.sql")).toMatch(
-    /and s\.finished_at is not null/,
+  expect(
+    source("supabase/migrations/0085_session_finish_requested.sql"),
+  ).toContain(
+    "and (s.finished_at is not null or s.kind = 'sprint' and s.finish_requested_at is not null)",
   );
 });

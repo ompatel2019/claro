@@ -10,6 +10,12 @@ const mocks = vi.hoisted(() => ({
   release: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
+// The cross-instance claim has its own tests; this file races the engine and allowances.
+vi.mock("@/lib/finish-claim", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/finish-claim")>()),
+  claimFinish: async () => "claim",
+  releaseFinish: async () => {},
+}));
 vi.mock("@/utils/supabase/admin", () => ({
   admin: () => ({ from: mocks.from, rpc: mocks.rpc }),
 }));

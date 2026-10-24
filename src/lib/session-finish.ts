@@ -3,6 +3,11 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 import { finishSession } from "@/lib/marking/engine";
 import {
+  FinishInProgress,
+  claimFinish,
+  releaseFinish,
+} from "@/lib/finish-claim";
+import {
   assertStudentAiRateLimit,
   withDeferredAiUsageReservation,
 } from "@/lib/ai/rate-limit";
@@ -20,9 +25,32 @@ export const LEAVABLE_KINDS = ["sprint", "flashcards"] as const;
 
 /**
  * Finishes one of the student's own sessions under the same AI allowance as the Finish button.
- * Callers pass the verified user id; `db` only reads that user's role.
+ * Callers pass the verified user id; `db` only reads that user's role. A sprint is claimed
+ * first, so a second caller (another tab, a sweep, the results page) gets FinishInProgress
+ * instead of marking or summarising it again.
  */
 export async function finishOwnSession(
+  db: SupabaseClient,
+  userId: string,
+  sessionId: string,
+  session: { kind: string; finished_at: string | null },
+) {
+  const claim =
+    session.kind === "sprint" && !session.finished_at
+      ? await claimFinish(sessionId, userId)
+      : null;
+  try {
+    return await finishClaimed(db, userId, sessionId, session);
+  } catch (error) {
+    if (claim)
+      await releaseFinish(sessionId, claim).catch((cause) =>
+        console.error("could not release the finish claim", cause),
+      );
+    throw error;
+  }
+}
+
+async function finishClaimed(
   db: SupabaseClient,
   userId: string,
   sessionId: string,
@@ -124,7 +152,8 @@ export async function finishOpenSessions(
       await finishOwnSession(db, userId, s.id, s);
       finished++;
     } catch (cause) {
-      console.error("auto-finish failed; retried on the next visit", cause);
+      if (!(cause instanceof FinishInProgress))
+        console.error("auto-finish failed; retried on the next visit", cause);
     } finally {
       running.delete(s.id);
     }

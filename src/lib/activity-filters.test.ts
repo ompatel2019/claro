@@ -133,6 +133,24 @@ it.each([
     expect(sessionHref({ id: "s", kind: kind!, finished_at })).toBe(expected);
   },
 );
+it("links a sprint being marked to its results, not the runner", () => {
+  expect(
+    sessionHref({
+      id: "s",
+      kind: "sprint",
+      finished_at: null,
+      status: "Marking",
+    }),
+  ).toBe("/student/activity/s");
+  expect(
+    sessionHref({
+      id: "s",
+      kind: "sprint",
+      finished_at: null,
+      status: "In progress",
+    }),
+  ).toBe("/student/sprint/s");
+});
 it("bounds pages, ignores duplicate parameters, and never interprets malformed days", () => {
   for (const page of ["0", "-1", "Infinity", "9007199254740992"])
     expect(parseActivityFilters({ page }, today).page).toBe(1);

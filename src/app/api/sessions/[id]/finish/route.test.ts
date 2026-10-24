@@ -13,8 +13,15 @@ const mocks = vi.hoisted(() => ({
   finish: vi.fn(),
   rate: vi.fn(),
   release: vi.fn(),
+  claim: vi.fn(),
+  unclaim: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
+vi.mock("@/lib/finish-claim", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/finish-claim")>()),
+  claimFinish: mocks.claim,
+  releaseFinish: mocks.unclaim,
+}));
 vi.mock("@/lib/ai/rate-limit", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/ai/rate-limit")>()),
   assertStudentAiRateLimit: mocks.rate,
@@ -63,6 +70,8 @@ const finish = () =>
   });
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.claim.mockResolvedValue("claim-1");
+  mocks.unclaim.mockResolvedValue(undefined);
   mocks.kind = "sprint";
   mocks.finishedAt = null;
   mocks.role = "student";
@@ -292,3 +301,12 @@ it.each(["daily denial", "daily error", "engine error"])(
     }
   },
 );
+
+it("answers 202 while another run is marking the sprint", async () => {
+  const { FinishInProgress } = await import("@/lib/finish-claim");
+  mocks.claim.mockRejectedValue(new FinishInProgress());
+  const response = await finish();
+  expect(response.status).toBe(202);
+  expect(await response.json()).toEqual({ marking: true });
+  expect(mocks.finish).not.toHaveBeenCalled();
+});

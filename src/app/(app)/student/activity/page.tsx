@@ -13,6 +13,7 @@ import { sydneyToday } from "@/lib/flashcards";
 import { type Topic } from "@/lib/practice";
 import { PageHeader } from "@/components/claro/layout";
 import { ActivityBrowser } from "@/components/activity-browser";
+import { MarkingRefresh } from "@/components/student/activity/marking-refresh";
 import { buttonVariants } from "@/components/ui/button";
 export const metadata = pageMetadata("Activity");
 
@@ -31,7 +32,10 @@ export default async function Activity({
       .select("id", { count: "exact", head: true })
       .eq("user_id", profile.id)
       .in("kind", ["sprint", "flashcards", "single"])
-      .not("finished_at", "is", null),
+      // Same rows as activity_stats: finished, or a sprint being marked.
+      .or(
+        "finished_at.not.is.null,and(kind.eq.sprint,finish_requested_at.not.is.null)",
+      ),
     db.from("topics").select("id,parent_id,name,sort").order("sort"),
   ]);
   if (total.error || topics.error || total.count === null)
@@ -95,6 +99,9 @@ export default async function Activity({
           </Link>
         }
       />
+      {rows.some((r) => r.status === "Marking" && !r.finished_at) && (
+        <MarkingRefresh />
+      )}
       <ActivityBrowser
         key={JSON.stringify({ ...filters, page: undefined })}
         filters={filters}

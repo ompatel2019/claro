@@ -9,8 +9,15 @@ const mocks = vi.hoisted(() => ({
   needsAi: vi.fn(),
   daily: vi.fn(),
   rate: vi.fn(),
+  claim: vi.fn(),
+  unclaim: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
+vi.mock("@/lib/finish-claim", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/finish-claim")>()),
+  claimFinish: mocks.claim,
+  releaseFinish: mocks.unclaim,
+}));
 vi.mock("@/lib/marking/engine", () => ({ finishSession: mocks.finish }));
 vi.mock("@/lib/marking/finish-limits", () => ({
   sessionNeedsAi: mocks.needsAi,
@@ -58,9 +65,11 @@ vi.mock("@/utils/supabase/admin", () => ({
     },
   }),
 }));
+import { FinishInProgress } from "@/lib/finish-claim";
 import {
   IDLE_FINISH_MS,
   finishOpenSessions,
+  finishOwnSession,
   sessionIdle,
 } from "./session-finish";
 
@@ -86,6 +95,8 @@ beforeEach(() => {
   mocks.needsAi.mockResolvedValue(false);
   mocks.rate.mockResolvedValue({ ok: true, reservationId: "r" });
   mocks.daily.mockResolvedValue({ ok: true, reservationId: "d" });
+  mocks.claim.mockResolvedValue("claim-1");
+  mocks.unclaim.mockResolvedValue(undefined);
 });
 
 it("treats 30 minutes without activity as idle", () => {
@@ -178,4 +189,61 @@ it("surfaces a failed session read", async () => {
   mocks.readError = new Error("read failed");
   await expect(finishOpenSessions("student-1")).rejects.toThrow("read failed");
   expect(mocks.finish).not.toHaveBeenCalled();
+});
+
+const db = mocks as never;
+it("claims an open sprint before finishing it, and never a deck or a finished sprint", async () => {
+  await finishOwnSession(db, "student-1", "s", {
+    kind: "sprint",
+    finished_at: null,
+  });
+  expect(mocks.claim).toHaveBeenCalledExactlyOnceWith("s", "student-1");
+  expect(mocks.claim.mock.invocationCallOrder[0]).toBeLessThan(
+    mocks.finish.mock.invocationCallOrder[0],
+  );
+  expect(mocks.unclaim).not.toHaveBeenCalled();
+  mocks.claim.mockClear();
+  await finishOwnSession(db, "student-1", "d", {
+    kind: "flashcards",
+    finished_at: null,
+  });
+  await finishOwnSession(db, "student-1", "f", {
+    kind: "sprint",
+    finished_at: "2026-10-24",
+  });
+  expect(mocks.claim).not.toHaveBeenCalled();
+});
+
+it("a second Finish run neither marks nor reserves the AI allowance", async () => {
+  mocks.needsAi.mockResolvedValue(true);
+  mocks.claim.mockRejectedValue(new FinishInProgress());
+  await expect(
+    finishOwnSession(db, "student-1", "s", {
+      kind: "sprint",
+      finished_at: null,
+    }),
+  ).rejects.toBeInstanceOf(FinishInProgress);
+  expect(mocks.finish).not.toHaveBeenCalled();
+  expect(mocks.rate).not.toHaveBeenCalled();
+  expect(mocks.daily).not.toHaveBeenCalled();
+  expect(mocks.unclaim).not.toHaveBeenCalled();
+});
+
+it("a failed run hands its claim back", async () => {
+  mocks.finish.mockRejectedValue(new Error("Answers changed while marking."));
+  await expect(
+    finishOwnSession(db, "student-1", "s", {
+      kind: "sprint",
+      finished_at: null,
+    }),
+  ).rejects.toThrow("Answers changed while marking.");
+  expect(mocks.unclaim).toHaveBeenCalledExactlyOnceWith("s", "claim-1");
+});
+
+it("a sweep skips a sprint another run is marking, without logging an error", async () => {
+  mocks.claim.mockRejectedValue(new FinishInProgress());
+  const error = vi.spyOn(console, "error").mockImplementation(() => {});
+  expect(await finishOpenSessions("student-1", { only: "live" })).toBe(0);
+  expect(error).not.toHaveBeenCalled();
+  error.mockRestore();
 });

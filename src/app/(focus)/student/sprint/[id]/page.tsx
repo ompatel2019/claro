@@ -14,9 +14,10 @@ export default async function Sprint({
 }) {
   const { id } = await params;
   const { session, attempts, profile, explanations } = await loadSprint(id);
-  // No resume: an idle sprint goes to its results, which finish it.
+  // No resume: an idle or finishing sprint goes to its results, which finish it.
   if (
     session.finished_at ||
+    session.finish_requested_at ||
     sessionIdle((session as { last_active_at?: string }).last_active_at)
   )
     redirect(`/student/activity/${id}`);

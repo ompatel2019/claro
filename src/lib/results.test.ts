@@ -7,6 +7,7 @@ import {
   visibleResults,
   firstBelow,
   kpis,
+  FINISH_LEASE_MS,
   markingInFlight,
   markTone,
   sprintHref,
@@ -179,17 +180,35 @@ describe("markingInFlight", () => {
     status,
     claimed_at,
   });
+  const open = { finish_requested_at: null };
   it("is true for a fresh claim, false for a stale or absent one", () => {
     expect(
-      markingInFlight([at("marking", "2026-10-19T00:08:00Z")], "each", now),
+      markingInFlight(open, [at("marking", "2026-10-19T00:08:00Z")], now),
     ).toBe(true);
     expect(
-      markingInFlight([at("marking", "2026-10-19T00:01:00Z")], "each", now),
+      markingInFlight(open, [at("marking", "2026-10-19T00:01:00Z")], now),
     ).toBe(false);
-    expect(markingInFlight([at("answered", null)], "end", now)).toBe(false);
+    expect(markingInFlight(open, [at("answered", null)], now)).toBe(false);
   });
-  it("treats marked answers as Finish under way only in exam mode", () => {
-    expect(markingInFlight([at("marked", null)], "end", now)).toBe(true);
-    expect(markingInFlight([at("marked", null)], "each", now)).toBe(false);
+  it("is true while a Finish run holds its lease, false once the lease is stale", () => {
+    const requested = (iso: string) => ({ finish_requested_at: iso });
+    expect(
+      markingInFlight(
+        requested("2026-10-19T00:05:00Z"),
+        [at("marked", null)],
+        now,
+      ),
+    ).toBe(true);
+    expect(
+      markingInFlight(
+        requested(new Date(now - FINISH_LEASE_MS).toISOString()),
+        [at("marked", null)],
+        now,
+      ),
+    ).toBe(false);
+  });
+  it("background-marked answers alone are not a Finish under way", () => {
+    // A closed marking tab: the sprint is open, nothing runs, so the results page finishes it.
+    expect(markingInFlight(open, [at("marked", null)], now)).toBe(false);
   });
 });

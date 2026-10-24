@@ -1,6 +1,7 @@
 import { createClient } from "@/utils/supabase/server";
 
 import { AiRateLimitError, rateLimitedResponse } from "@/lib/ai/rate-limit";
+import { FinishInProgress } from "@/lib/finish-claim";
 import { finishOwnSession } from "@/lib/session-finish";
 
 export const maxDuration = 300;
@@ -37,6 +38,9 @@ export async function POST(
       finished: true,
     });
   } catch (error) {
+    // Another run is marking this sprint; its results page fills in when it is done.
+    if (error instanceof FinishInProgress)
+      return Response.json({ marking: true }, { status: 202 });
     if (error instanceof AiRateLimitError)
       return rateLimitedResponse(error.result);
     console.error(error);

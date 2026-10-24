@@ -32,6 +32,8 @@ export type Session = {
   config: SprintConfig;
   started_at: string;
   finished_at: string | null;
+  /** Set by the server while a Finish run marks the sprint (see FINISH_LEASE_MS). */
+  finish_requested_at?: string | null;
   score: number | null;
   max_score: number | null;
   elapsed_s: number;
