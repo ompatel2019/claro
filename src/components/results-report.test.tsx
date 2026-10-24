@@ -302,7 +302,7 @@ it("keeps unanswered MC rows distinct from incorrect answers in sprint tiles and
   expect(unanswered.querySelector("svg")).toBeTruthy();
   // Q1 is open (the first lost mark): grey with an outline; Q2 scored zero, so it is red.
   expect(unanswered).toHaveAttribute("aria-current", "true");
-  expect(unanswered).toHaveClass("bg-muted", "border-current");
+  expect(unanswered).toHaveClass("bg-foreground/25", "border-current");
   expect(
     screen.getByRole("button", { name: "Question 2, 0/1 marks" }),
   ).toHaveClass("bg-destructive-soft");
