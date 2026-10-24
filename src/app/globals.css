@@ -1685,6 +1685,34 @@ body:has(.sprint-focus)
   background-attachment: local;
 }
 
+/* Marking screen: the sprint's answer sheet, ruled like the answer box
+   (32px lines, brand margin rule 56px in). Two lines per question. */
+.marking-sheet {
+  --sheet-line: 32px;
+  --paper-rule: color-mix(in srgb, var(--foreground) 5.5%, transparent);
+  --paper-margin: color-mix(in srgb, var(--brand) 28%, transparent);
+  padding: 8px 16px 32px 72px;
+  line-height: var(--sheet-line);
+  background-image:
+    linear-gradient(var(--paper-margin), var(--paper-margin)),
+    linear-gradient(
+      to bottom,
+      transparent calc(var(--sheet-line) - 1px),
+      var(--paper-rule) calc(var(--sheet-line) - 1px)
+    );
+  background-size:
+    1px 100%,
+    100% var(--sheet-line);
+  background-repeat: no-repeat, repeat-y;
+  background-position:
+    56px 0,
+    0 8px;
+}
+.marking-sheet-row p,
+.marking-sheet-row > div {
+  min-height: var(--sheet-line);
+}
+
 /* Student Activity: kind chips with counts, pill menus, sessions grouped by day. */
 .ac-filters {
   display: flex;

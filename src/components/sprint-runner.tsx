@@ -25,6 +25,7 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 import { MarkingScreen } from "./marking-screen";
+import { markingSheet } from "@/lib/marking-sheet";
 import { McqExplanationView } from "./mcq-explanation";
 import type { McqExplanation } from "@/lib/mcq-explanation";
 import { QuestionView } from "./question-view";
@@ -569,7 +570,8 @@ export function SprintRunner({
         </Button>
       </main>
     );
-  if (finishing) return <MarkingScreen />;
+  if (finishing)
+    return <MarkingScreen sheet={markingSheet(attempts)} title={title} />;
   const go = (i: number) => void act(() => change(i));
   const qLabel = (i: number) => `Q${i + 1}`;
   const sprintBooklet = (
