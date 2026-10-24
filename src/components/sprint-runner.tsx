@@ -133,8 +133,11 @@ export function SprintRunner({
   const [serverStatus, setServerStatus] = useState<Map<string, string>>(
     () => new Map(),
   );
+  // Set once Finish has saved every answer, so a stale mark on an edited answer can't show.
+  const [saved, setSaved] = useState(false);
+  const polling = finishing && saved;
   useEffect(() => {
-    if (!finishing) return;
+    if (!polling) return;
     let live = true;
     const poll = async () => {
       try {
@@ -162,7 +165,7 @@ export function SprintRunner({
       // A failed Finish reopens the sprint; its edits must not inherit old marks.
       setServerStatus(new Map());
     };
-  }, [finishing, db, session.id, userId]);
+  }, [polling, db, session.id, userId]);
   const answerVersion = (a: Attempt) =>
     JSON.stringify([a.answer_text, a.transcript, a.image_paths]);
   const backgroundAnswer = (a: Attempt) =>
@@ -411,6 +414,7 @@ export function SprintRunner({
   }
   async function finish() {
     setConfirm(false);
+    setSaved(false);
     setFinishing(true);
     setError("");
     setFinishFailed(false);
@@ -418,6 +422,7 @@ export function SprintRunner({
       await ensureSession(db);
       await flush();
       await persistTime();
+      setSaved(true);
       // Send Finish now, not after in-flight background marks: the server waits for them
       // and marks the rest, and keepalive lets it start even if this tab closes.
       void background.finish();
