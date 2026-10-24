@@ -123,8 +123,9 @@ it("scopes a page override to its route and clears it on unmount", () => {
   expect(screen.getByRole("status")).toHaveTextContent("Activity");
 });
 
+const route = vi.hoisted(() => ({ path: "/student" }));
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/student",
+  usePathname: () => route.path,
   useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn() }),
 }));
@@ -204,3 +205,64 @@ it.each([true, false])(
     expect(screen.queryByText("HSC · Year 12")).toBeNull();
   },
 );
+
+it("renders the admin and student side panels with the same sidebar component", () => {
+  window.matchMedia = () =>
+    ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }) as unknown as MediaQueryList;
+  const panel = (kind: "student" | "admin", path: string) => {
+    route.path = path;
+    const { container, unmount } = render(
+      <AppShell kind={kind} name="Test" defaultOpen>
+        Content
+      </AppShell>,
+    );
+    const sidebar = container.querySelector<HTMLElement>(".shell-sidebar")!;
+    const nav = sidebar.querySelector("nav")!;
+    const buttons = [...nav.querySelectorAll<HTMLElement>("a[data-slot]")];
+    const active = buttons.filter((b) => b.hasAttribute("data-active"));
+    const shape = {
+      sidebar: sidebar.className,
+      slots: [...new Set(buttons.map((b) => b.dataset.slot))],
+      buttonClasses: [...new Set(buttons.map((b) => b.className))],
+      activeCount: active.length,
+      activePen: active.map((b) => !!b.querySelector(".nav-label > .nav-pen")),
+      logo: [...sidebar.querySelectorAll("img")].map((i) =>
+        i.getAttribute("src"),
+      ),
+      groupLabels: sidebar.querySelectorAll('[data-slot="sidebar-group-label"]')
+        .length,
+    };
+    const links = buttons.map((b) => b.getAttribute("aria-label"));
+    const footer = [
+      ...sidebar.querySelectorAll('[data-slot="sidebar-footer"] a'),
+    ].map((a) => a.getAttribute("aria-label"));
+    unmount();
+    return { shape, links, footer };
+  };
+  const student = panel("student", "/student");
+  const admin = panel("admin", "/admin/marking/engine");
+  route.path = "/student";
+  // Same markup, classes, active treatment and logo; only the config differs.
+  expect({ ...admin.shape, groupLabels: 0 }).toEqual({
+    ...student.shape,
+    groupLabels: 0,
+  });
+  expect(admin.shape.activeCount).toBe(1);
+  expect(admin.shape.activePen).toEqual([true]);
+  expect(admin.links).toEqual([
+    "Dashboard",
+    "Students",
+    "Feedback",
+    "Questions",
+    "Flashcards",
+    "Review queue",
+    "Marking quality",
+    "AI spend",
+  ]);
+  expect(admin.footer).toEqual(["Open student app", "Profile"]);
+  expect(student.footer).toEqual(["Profile"]);
+});
