@@ -130,21 +130,26 @@ export function resultsState(rows: ReviewRow[], summary: unknown) {
 
 /** Matches STALE_CLAIM_MS in the marking engine: older claims are abandoned, not in flight. */
 const CLAIM_FRESH_MS = 5 * 60_000;
+/** A Finish run's lease (sessions.finish_requested_at); longer than the finish route's maxDuration. */
+export const FINISH_LEASE_MS = 6 * 60_000;
+
+const fresh = (at: string | null | undefined, ms: number, now: number) =>
+  !!at && now - new Date(at).getTime() < ms;
 
 /**
- * True while Finish is still marking: finished_at is only set once marking (and the
- * summary) completes. Exam-mode answers are only marked by Finish, so any marked
- * answer there also means Finish is under way.
+ * True while a Finish run holds its lease or an answer is being marked: finished_at is
+ * only set once marking (and the summary) completes. Otherwise nothing is running and the
+ * open sprint can be finished (or a dead run taken over).
  */
 export function markingInFlight(
+  session: { finish_requested_at?: string | null },
   attempts: { status: string; claimed_at?: string | null }[],
-  feedback?: string,
   now = Date.now(),
 ) {
-  return attempts.some(
-    (a) =>
-      (a.status === "marking" &&
-        now - new Date(a.claimed_at ?? 0).getTime() < CLAIM_FRESH_MS) ||
-      (feedback === "end" && a.status === "marked"),
+  return (
+    fresh(session.finish_requested_at, FINISH_LEASE_MS, now) ||
+    attempts.some(
+      (a) => a.status === "marking" && fresh(a.claimed_at, CLAIM_FRESH_MS, now),
+    )
   );
 }

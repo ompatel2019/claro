@@ -31,7 +31,10 @@ export default async function Activity({
       .select("id", { count: "exact", head: true })
       .eq("user_id", profile.id)
       .in("kind", ["sprint", "flashcards", "single"])
-      .not("finished_at", "is", null),
+      // Same rows as activity_stats: finished, or a sprint being marked.
+      .or(
+        "finished_at.not.is.null,and(kind.eq.sprint,finish_requested_at.not.is.null)",
+      ),
     db.from("topics").select("id,parent_id,name,sort").order("sort"),
   ]);
   if (total.error || topics.error || total.count === null)

@@ -84,7 +84,7 @@ test.beforeAll(async () => {
   runner = result.outputFiles[0].text;
 });
 
-test("queues background marks, keeps edits usable, and waits at Finish", async ({
+test("queues background marks, keeps edits usable, and sends Finish without waiting", async ({
   page,
 }) => {
   const held: (() => Promise<void>)[] = [];
@@ -162,12 +162,7 @@ test("queues background marks, keeps edits usable, and waits at Finish", async (
     .focus();
   await page.keyboard.press("Enter");
   await expect.poll(() => saved.a3).toBe("The final current answer");
-  expect(finishCalls).toBe(0);
-  await expect(
-    page.getByRole("heading", { name: "Marking your answers", exact: true }),
-  ).toBeVisible();
-  await held.shift()!();
-  await held.shift()!();
+  // Finish goes out while two marks still run: the server waits for them and marks the rest.
   await expect.poll(() => finishCalls).toBe(1);
   expect(marks).toEqual(["a0", "a1", "a0"]);
   await expect(page).toHaveURL(/\/student\/activity\/s$/);

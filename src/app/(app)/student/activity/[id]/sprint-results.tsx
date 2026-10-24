@@ -53,8 +53,9 @@ const avg = (xs: (number | null)[]) => {
 export async function SprintResults({ id }: { id: string }) {
   const { session: s, profile, attempts } = await loadSprint(id);
   if (!s.finished_at) {
-    // No resume: an open sprint opened here is finished (answered questions marked).
-    if (!markingInFlight(attempts, s.config.feedback))
+    // No resume: an open sprint opened here is finished (answered questions marked), and a
+    // Finish run that died (tab closed before it was sent, or a timed-out run) is resumed.
+    if (!markingInFlight(s, attempts))
       after(() => finishOpenSessions(profile.id, { only: id }));
     const counted = attempts.filter((a) => a.status !== "skipped");
     return (

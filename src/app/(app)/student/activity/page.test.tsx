@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   rpc: vi.fn(),
   browser: vi.fn(),
+  or: vi.fn(),
 }));
 vi.mock("server-only", () => ({}));
 vi.mock("@/lib/auth", () => ({
@@ -76,7 +77,8 @@ function responses(
       in() {
         return this;
       },
-      not() {
+      or(...args: unknown[]) {
+        mocks.or(...args);
         return this;
       },
       is() {
@@ -275,4 +277,11 @@ it("keeps count failures at the route error boundary", async () => {
     "Couldn't load your activity.",
   );
   expect(mocks.rpc).not.toHaveBeenCalled();
+});
+
+it("counts sprints being marked alongside finished sessions", async () => {
+  render(await resolve(await Activity({ searchParams: Promise.resolve({}) })));
+  expect(mocks.or).toHaveBeenCalledWith(
+    "finished_at.not.is.null,and(kind.eq.sprint,finish_requested_at.not.is.null)",
+  );
 });

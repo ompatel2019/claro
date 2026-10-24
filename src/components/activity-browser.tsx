@@ -8,6 +8,7 @@ import {
   type SessionDetail,
 } from "./student/activity/session-list";
 import { SessionGlyph } from "./student/activity/session-icon";
+import { MarkingRefresh } from "./student/activity/marking-refresh";
 import { ActivityFilterControls } from "./student/activity/filter-controls";
 import { EmptyState } from "./empty-state";
 import { History, SearchOff, Close } from "./icons";
@@ -50,6 +51,7 @@ export function ActivityBrowser({
 }) {
   const [loaded, setLoaded] = useState({
     page: suppliedData.page,
+    supplied: suppliedData.rows,
     rows: suppliedData.rows,
     details: details ?? {},
   });
@@ -61,13 +63,30 @@ export function ActivityBrowser({
         : suppliedData.rows;
     setLoaded({
       page: suppliedData.page,
+      supplied: suppliedData.rows,
       rows: [...new Map(rows.map((r) => [r.id, r])).values()],
       details: { ...loaded.details, ...details },
     });
     setVisible((n) => n + 12);
+  } else if (loaded.supplied !== suppliedData.rows && suppliedData.page === 1) {
+    // Page 1 refreshed (a sprint's marking finished): show its rows as they are now.
+    setLoaded({
+      page: 1,
+      supplied: suppliedData.rows,
+      rows: suppliedData.rows,
+      details: { ...loaded.details, ...details },
+    });
   }
   const data = { ...suppliedData, rows: loaded.rows.filter(isStudentSession) };
   const router = useRouter();
+  const marking = data.rows
+    .filter((r) => r.status === "Marking" && !r.finished_at)
+    .map((r) => r.id);
+  // A finished sprint reloads page 1, which also drops any stale later pages.
+  const markingDone = () =>
+    loaded.page === 1
+      ? router.refresh()
+      : router.replace(activityHref(f, { page: 1 }));
   const online = useSyncExternalStore(
     subscribeOnline,
     onlineSnapshot,
@@ -95,6 +114,9 @@ export function ActivityBrowser({
   };
   return (
     <div className="min-w-0">
+      {marking.length > 0 && (
+        <MarkingRefresh ids={marking} onDone={markingDone} />
+      )}
       {!online && (
         <p
           role="status"

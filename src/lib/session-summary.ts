@@ -84,10 +84,12 @@ export function sessionHref(s: {
   id: string;
   kind?: string;
   finished_at?: string | null;
+  status?: string;
 }) {
   if (s.kind && !isStudentSession(s)) return null;
   if (s.kind === "single") return `/student/activity/${s.id}`;
-  if (s.finished_at)
+  // A sprint being marked opens its results, which fill in when marking is done.
+  if (s.finished_at || s.status === "Marking")
     return reportHref({
       id: s.id,
       kind: s.kind ?? "sprint",

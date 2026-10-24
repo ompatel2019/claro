@@ -369,12 +369,15 @@ export function SprintRunner({
       await ensureSession(db);
       await flush();
       await persistTime();
-      await background.finish();
+      // Send Finish now, not after in-flight background marks: the server waits for them
+      // and marks the rest, and keepalive lets it start even if this tab closes.
+      void background.finish();
       async function post() {
         const response = await fetch(`/api/sessions/${session.id}/finish`, {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
+          keepalive: true,
         });
         const result = await response.json().catch(() => ({}));
         return { response, result };
