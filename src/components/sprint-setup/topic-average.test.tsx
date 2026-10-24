@@ -9,6 +9,7 @@ it("shows a topic's real average, clamped and rounded, or Not practised", async 
   const { TopicAverage } = await import("../sprint-setup");
   const { rerender, container } = render(<TopicAverage pct={64.6} />);
   expect(screen.getByText("65%")).toBeInTheDocument();
+  expect(container).toHaveTextContent("65%of marks scored, all time");
   expect(
     (container.querySelector("[aria-hidden] > span") as HTMLElement).style
       .width,
