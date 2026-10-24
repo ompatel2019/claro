@@ -286,6 +286,14 @@ for (const [platform, key, label] of [
 
     const answer = page.locator("textarea").first();
     await answer.fill("A lower dollar raises import prices.");
+    // Ignored while a dialog owns the keyboard.
+    await page.getByText("Inflation sprint").click();
+    await page.keyboard.press("?");
+    await expect(page.locator('[data-slot="dialog-content"]')).toBeVisible();
+    await page.keyboard.press(`${key}+Enter`);
+    await page.keyboard.press("Escape");
+    await expect(page.locator('[data-slot="dialog-content"]')).toBeHidden();
+    await expect(page.getByText(/Question 3 of 6/)).toBeVisible();
     await answer.press(`${key}+Enter`);
     await expect(page.getByText(/Question 4 of 6/)).toBeVisible();
     // The other modifier works too, whatever the platform.

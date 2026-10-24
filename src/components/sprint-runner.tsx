@@ -487,7 +487,16 @@ export function SprintRunner({
     // ⌘Enter / Ctrl+Enter, even from the answer box: checks the answer in
     // check mode, otherwise moves on (or asks to finish on the last question).
     const onKey = (e: KeyboardEvent) => {
-      if (!(e.metaKey || e.ctrlKey) || e.key !== "Enter" || e.repeat) return;
+      if (
+        !(e.metaKey || e.ctrlKey) ||
+        e.key !== "Enter" ||
+        e.repeat ||
+        e.isComposing ||
+        e.defaultPrevented ||
+        // An open dialog (shortcuts, leave, finish) owns the keyboard.
+        document.querySelector('[data-slot$="dialog-content"]')
+      )
+        return;
       e.preventDefault();
       if (checkMode) void checkRef.current();
       else nextRef.current();
