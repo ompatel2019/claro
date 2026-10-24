@@ -27,6 +27,50 @@ it("has no dead admin navigation links or removed content entry", () => {
   );
 });
 
+it("groups the admin nav into three sections and eight links", () => {
+  expect(
+    nav.admin.map((group) => [group.label, group.items.map((i) => i.label)]),
+  ).toEqual([
+    ["", ["Dashboard"]],
+    ["People", ["Students", "Feedback"]],
+    ["Content", ["Questions", "Flashcards"]],
+    ["Marking", ["Review queue", "Marking quality", "AI spend"]],
+  ]);
+  expect(nav.admin.flatMap((g) => g.items)).toHaveLength(8);
+  // Accuracy and Engine both stay reachable and light up Marking quality.
+  for (const path of [
+    "/admin/marking/accuracy",
+    "/admin/marking/engine",
+    "/admin/marking/engine/runs",
+  ])
+    expect(activeItem("admin", path)?.label).toBe("Marking quality");
+  expect(activeItem("admin", "/admin/marking/review/r1")?.label).toBe(
+    "Review queue",
+  );
+  expect(activeItem("admin", "/admin")?.label).toBe("Dashboard");
+  expect(activeItem("admin", "/admin/marking/engineering")).toBeUndefined();
+});
+
+it("removes no admin page from the app", () => {
+  const adminPages = Object.keys(pages)
+    .filter((path) => path.startsWith("../app/admin"))
+    .sort();
+  expect(adminPages).toEqual([
+    "../app/admin/content/flashcards/page.tsx",
+    "../app/admin/content/questions/[id]/page.tsx",
+    "../app/admin/content/questions/page.tsx",
+    "../app/admin/feedback/page.tsx",
+    "../app/admin/marking/accuracy/page.tsx",
+    "../app/admin/marking/engine/page.tsx",
+    "../app/admin/marking/review/[id]/page.tsx",
+    "../app/admin/marking/review/page.tsx",
+    "../app/admin/page.tsx",
+    "../app/admin/spend/page.tsx",
+    "../app/admin/students/[id]/page.tsx",
+    "../app/admin/students/page.tsx",
+  ]);
+});
+
 it("keeps the default student activity navigation", () => {
   expect(activeItem("student", "/student/activity/result")?.label).toBe(
     "Activity",
@@ -79,8 +123,9 @@ it("scopes a page override to its route and clears it on unmount", () => {
   expect(screen.getByRole("status")).toHaveTextContent("Activity");
 });
 
+const route = vi.hoisted(() => ({ path: "/student" }));
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/student",
+  usePathname: () => route.path,
   useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: vi.fn() }),
 }));
@@ -160,3 +205,64 @@ it.each([true, false])(
     expect(screen.queryByText("HSC · Year 12")).toBeNull();
   },
 );
+
+it("renders the admin and student side panels with the same sidebar component", () => {
+  window.matchMedia = () =>
+    ({
+      matches: false,
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }) as unknown as MediaQueryList;
+  const panel = (kind: "student" | "admin", path: string) => {
+    route.path = path;
+    const { container, unmount } = render(
+      <AppShell kind={kind} name="Test" defaultOpen>
+        Content
+      </AppShell>,
+    );
+    const sidebar = container.querySelector<HTMLElement>(".shell-sidebar")!;
+    const nav = sidebar.querySelector("nav")!;
+    const buttons = [...nav.querySelectorAll<HTMLElement>("a[data-slot]")];
+    const active = buttons.filter((b) => b.hasAttribute("data-active"));
+    const shape = {
+      sidebar: sidebar.className,
+      slots: [...new Set(buttons.map((b) => b.dataset.slot))],
+      buttonClasses: [...new Set(buttons.map((b) => b.className))],
+      activeCount: active.length,
+      activePen: active.map((b) => !!b.querySelector(".nav-label > .nav-pen")),
+      logo: [...sidebar.querySelectorAll("img")].map((i) =>
+        i.getAttribute("src"),
+      ),
+      groupLabels: sidebar.querySelectorAll('[data-slot="sidebar-group-label"]')
+        .length,
+    };
+    const links = buttons.map((b) => b.getAttribute("aria-label"));
+    const footer = [
+      ...sidebar.querySelectorAll('[data-slot="sidebar-footer"] a'),
+    ].map((a) => a.getAttribute("aria-label"));
+    unmount();
+    return { shape, links, footer };
+  };
+  const student = panel("student", "/student");
+  const admin = panel("admin", "/admin/marking/engine");
+  route.path = "/student";
+  // Same markup, classes, active treatment and logo; only the config differs.
+  expect({ ...admin.shape, groupLabels: 0 }).toEqual({
+    ...student.shape,
+    groupLabels: 0,
+  });
+  expect(admin.shape.activeCount).toBe(1);
+  expect(admin.shape.activePen).toEqual([true]);
+  expect(admin.links).toEqual([
+    "Dashboard",
+    "Students",
+    "Feedback",
+    "Questions",
+    "Flashcards",
+    "Review queue",
+    "Marking quality",
+    "AI spend",
+  ]);
+  expect(admin.footer).toEqual(["Open student app", "Profile"]);
+  expect(student.footer).toEqual(["Profile"]);
+});

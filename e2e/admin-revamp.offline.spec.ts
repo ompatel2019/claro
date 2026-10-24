@@ -296,17 +296,20 @@ const routes: {
     path: "/admin/marking/accuracy",
     file: "admin-accuracy",
     heading: /Marking accuracy|accuracy/i,
+    dark: true,
   },
   {
     path: "/admin/marking/engine",
     file: "admin-engine",
     heading: /Engine|Marking engine|Runs/i,
+    dark: true,
   },
   {
     path: "/admin/marking/review",
     file: "admin-review",
     dark: true,
     heading: /Review|Open/,
+    dark: true,
   },
   {
     path: `/admin/marking/review/${REVIEW_ID}`,
@@ -349,19 +352,21 @@ async function shoot(
       "d",
       /C/,
     );
+    // Wave 3: no review queue card, no spend chart, no day pickers.
     await expect(
       page.getByRole("heading", { name: "Review queue", exact: true }),
-    ).toBeVisible();
+    ).toHaveCount(0);
+    await expect(sessions.getByRole("combobox")).toHaveCount(0);
+    await expect(page.getByRole("combobox")).toHaveCount(0);
     await expect(
       page.locator('[data-component="StatCard"] [data-component="Sparkline"]'),
-    ).toHaveCount(1);
-    await expect(page.locator('[data-component="DeltaPill"]')).toHaveCount(1);
-    await sessions.getByRole("combobox").click();
-    await expect(page.getByRole("option")).toHaveCount(7);
-    await page.getByRole("option").first().click();
-    await expect(sessions.getByRole("combobox")).toBeFocused();
-    await sessions.getByRole("combobox").click();
-    await page.getByRole("option").last().click();
+    ).toHaveCount(0);
+    await expect(page.locator('[data-component="StatCard"]')).toHaveCount(4);
+    await expect(
+      page.getByRole("progressbar", {
+        name: "Spend this month against the cap",
+      }),
+    ).toBeVisible();
   }
   if (route.path === "/admin/content/questions") {
     const table = page.getByRole("table", { name: "Questions", exact: true });

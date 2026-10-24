@@ -167,10 +167,10 @@ export function StudentsTable({
                       : "Never active"}
                   </span>
                   <Badge
-                    className="mt-2"
+                    className={cn("mt-2", student.blocked && "text-ink-2")}
                     variant={
                       student.blocked
-                        ? "destructive"
+                        ? "secondary"
                         : student.open_disputes
                           ? "warning"
                           : student.sessions_7d

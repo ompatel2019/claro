@@ -251,9 +251,10 @@ test("A1: attention precedes charts, mini-list has three working report links", 
     exact: true,
   });
   await expect(attention).toBeVisible();
-  expect((await attention.boundingBox())!.y).toBeLessThan(
-    (await chart.boundingBox())!.y,
-  );
+  // Needs attention sits beside (or, on narrow screens, above) the chart.
+  const a = (await attention.boundingBox())!;
+  const c = (await chart.boundingBox())!;
+  expect(a.y <= c.y && (a.y < c.y || a.x < c.x)).toBe(true);
   const list = page.getByRole("list", { name: "Recent sessions" });
   await expect(list.getByRole("listitem")).toHaveCount(3);
   await expect(list.getByRole("link").first()).toHaveAttribute(
