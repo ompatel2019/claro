@@ -506,7 +506,7 @@ export function SprintSetup({
               <h2 className="mb-4 text-sm font-semibold">Timer and feedback</h2>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div role="region" aria-label="Timer">
-                  <label className="flex items-start gap-3 rounded-xl border p-3.5 text-[13px]">
+                  <label className="flex items-start gap-3 text-[13px]">
                     <Switch
                       checked={c.timed}
                       onCheckedChange={(timed) =>
@@ -533,57 +533,49 @@ export function SprintSetup({
                     </span>
                   </label>
                   {c.timed && (
-                    <details>
-                      <summary className="text-muted-foreground cursor-pointer text-xs">
-                        Adjust exam pace
-                      </summary>
-                      <div className="mt-3 space-y-3">
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          {(
-                            [
-                              [
-                                "short_min_per_mark",
-                                "Shorts: minutes per mark",
-                              ],
-                              ["mcq_min_per_q", "Multis: minutes per question"],
-                            ] as const
-                          ).map(([key, label]) => (
-                            <label
-                              key={key}
-                              className="grid gap-1.5 text-sm font-medium"
-                            >
-                              {label}
-                              <Input
-                                type="number"
-                                min={0.25}
-                                max={10}
-                                step={0.25}
-                                value={c[key] || ""}
-                                aria-invalid={!validPace(c[key])}
-                                onChange={(e) =>
-                                  set({ [key]: Number(e.target.value) })
-                                }
-                                onBlur={() => set({ [key]: clampPace(c[key]) })}
-                              />
-                            </label>
-                          ))}
-                        </div>
-                        {(!validPace(c.short_min_per_mark) ||
-                          !validPace(c.mcq_min_per_q)) && (
-                          <p role="alert" className="text-destructive text-sm">
-                            <Alert className="mr-1 inline size-4" /> Use a pace
-                            between 0.25 and 10 minutes.
-                          </p>
-                        )}
-                        <p className="text-muted-foreground text-xs">
-                          ≈ {minutes} min
-                        </p>
-                        <p className="text-muted-foreground text-xs">
-                          A sound and banner let you know when time is up. Keep
-                          working in overtime until you choose to finish.
-                        </p>
+                    <div className="mt-3 space-y-3">
+                      <div className="grid items-end gap-3 sm:grid-cols-2">
+                        {(
+                          [
+                            ["short_min_per_mark", "Shorts: minutes per mark"],
+                            ["mcq_min_per_q", "Multis: minutes per question"],
+                          ] as const
+                        ).map(([key, label]) => (
+                          <label
+                            key={key}
+                            className="grid gap-1.5 text-sm font-medium"
+                          >
+                            {label}
+                            <Input
+                              type="number"
+                              min={0.25}
+                              max={10}
+                              step={0.25}
+                              value={c[key] || ""}
+                              aria-invalid={!validPace(c[key])}
+                              onChange={(e) =>
+                                set({ [key]: Number(e.target.value) })
+                              }
+                              onBlur={() => set({ [key]: clampPace(c[key]) })}
+                            />
+                          </label>
+                        ))}
                       </div>
-                    </details>
+                      {(!validPace(c.short_min_per_mark) ||
+                        !validPace(c.mcq_min_per_q)) && (
+                        <p role="alert" className="text-destructive text-sm">
+                          <Alert className="mr-1 inline size-4" /> Use a pace
+                          between 0.25 and 10 minutes.
+                        </p>
+                      )}
+                      <p className="text-muted-foreground text-xs">
+                        ≈ {minutes} min
+                      </p>
+                      <p className="text-muted-foreground text-xs">
+                        A sound and banner let you know when time is up. Keep
+                        working in overtime until you choose to finish.
+                      </p>
+                    </div>
                   )}
                 </div>
                 <div
