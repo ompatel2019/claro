@@ -174,7 +174,6 @@ test.beforeAll(async () => {
         import FlashcardsPage from './src/app/admin/content/flashcards/page';
         import FeedbackPage from './src/app/admin/feedback/page';
         import AccuracyPage from './src/app/admin/marking/accuracy/page';
-        import EnginePage from './src/app/admin/marking/engine/page';
         import ReviewQueue from './src/app/admin/marking/review/page';
         import ReviewPage from './src/app/admin/marking/review/[id]/page';
         import SpendPage from './src/app/admin/spend/page';
@@ -194,8 +193,8 @@ test.beforeAll(async () => {
             return QuestionPage({params: Promise.resolve({id: QUESTION})});
           if (pathname === '/admin/content/flashcards') return FlashcardsPage({searchParams: empty});
           if (pathname === '/admin/feedback') return FeedbackPage({searchParams: empty});
-          if (pathname === '/admin/marking/accuracy') return AccuracyPage({searchParams: empty});
-          if (pathname === '/admin/marking/engine') return EnginePage({searchParams: Promise.resolve({tab: 'runs'})});
+          if (pathname === '/admin/marking/accuracy')
+            return AccuracyPage({searchParams: Promise.resolve(Object.fromEntries(new URLSearchParams(location.search)))});
           if (pathname === '/admin/marking/review') return ReviewQueue({searchParams: empty});
           if (pathname.startsWith('/admin/marking/review/'))
             return ReviewPage({params: Promise.resolve({id: REVIEW}), searchParams: empty});
@@ -293,14 +292,20 @@ const routes: {
   },
   {
     path: "/admin/marking/accuracy",
-    file: "admin-accuracy",
-    heading: /Marking accuracy|accuracy/i,
+    file: "admin-marking-quality-live",
+    heading: "Marking quality",
     dark: true,
   },
   {
-    path: "/admin/marking/engine",
-    file: "admin-engine",
-    heading: /Engine|Marking engine|Runs/i,
+    path: "/admin/marking/accuracy?tab=runs",
+    file: "admin-marking-quality-runs",
+    heading: "Marking quality",
+    dark: true,
+  },
+  {
+    path: "/admin/marking/accuracy?tab=docs",
+    file: "admin-marking-quality-docs",
+    heading: "Marking quality",
     dark: true,
   },
   {

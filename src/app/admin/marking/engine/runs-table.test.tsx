@@ -196,7 +196,7 @@ it("selects exactly two stable run ids and opens Compare", () => {
   ).toBeChecked();
   fireEvent.click(compare);
   expect(push).toHaveBeenCalledWith(
-    "/admin/marking/engine?tab=runs&a=2026-10-09-0901&b=two",
+    "/admin/marking/accuracy?tab=runs&a=2026-10-09-0901&b=two",
   );
   fireEvent.click(within(table).getByLabelText("Select two (two)"));
   expect(compare).toBeDisabled();

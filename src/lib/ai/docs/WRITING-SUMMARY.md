@@ -4,7 +4,7 @@ Session Strengths and Top fixes cite specific questions as “Q3”, using their
 
 ## Working rubric
 
-These criteria implement Karan's feedback in S13. They are a working rubric for Om and Karan to refine together under O3, not a claim that their joint review has happened.
+These criteria implement the tutor's feedback in S13. They are a working rubric for Om and the tutor to refine together under O3, not a claim that their joint review has happened.
 
 | Criterion              | What to look for                                                           |
 | ---------------------- | -------------------------------------------------------------------------- |

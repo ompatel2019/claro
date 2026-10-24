@@ -6,11 +6,11 @@ const nextConfig: NextConfig = {
   experimental: { serverActions: { bodySizeLimit: "8mb" } },
   env: { ENGINE_DOC_COMMIT_DATES: docCommitDates() },
   outputFileTracingIncludes: {
-    "/admin/marking/engine": [
+    // Marking quality reads the engine docs and eval results at runtime.
+    "/admin/marking/accuracy": [
       "./src/lib/ai/docs/*.md",
       "./data/eval/results/*.json",
     ],
-    "/admin/marking/accuracy": ["./data/eval/results/*.json"],
   },
   // Home and sprints moved under /student (§3, §7); keep old links working.
   async redirects() {
