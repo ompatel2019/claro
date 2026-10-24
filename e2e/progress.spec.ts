@@ -16,24 +16,21 @@ test.describe("Student progress (read only)", () => {
     await expect(page.getByTestId("progress-stats")).toHaveCount(0);
     await expect(page.getByTestId("activity-heatmap")).toHaveCount(0);
     await expect(
-      page.getByRole("combobox", { name: "Progress range" }),
-    ).toBeEnabled();
+      page.getByRole("radiogroup", { name: "Progress range" }),
+    ).toBeVisible();
   });
   test("range changes the URL and the card snapshot", async ({ page }) => {
     for (const [value, label] of [
-      ["30", "Last 30 days"],
+      ["7", "7 days"],
+      ["30", "30 days"],
       ["year", "This year"],
       ["all", "All time"],
-      ["90", "Last 90 days"],
+      ["90", "90 days"],
     ]) {
-      const control = page.getByRole("combobox", { name: "Progress range" });
-      await expect(control).toBeEnabled();
+      const control = page.getByRole("radio", { name: label, exact: true });
       await expect(async () => {
-        if (new URL(page.url()).searchParams.get("range") !== value) {
-          const option = page.getByRole("option", { name: label, exact: true });
-          if (!(await option.isVisible())) await control.click();
-          await option.click();
-        }
+        if (new URL(page.url()).searchParams.get("range") !== value)
+          await control.click();
         await expect(page).toHaveURL(new RegExp(`[?&]range=${value}(?:&|$)`), {
           timeout: 1000,
         });
@@ -43,7 +40,7 @@ test.describe("Student progress (read only)", () => {
         "data-range",
         value,
       );
-      await expect(control).toBeEnabled();
+      await expect(control).toHaveAttribute("aria-checked", "true");
     }
   });
   test("practice and review links open existing setups without starting work", async ({
@@ -56,7 +53,7 @@ test.describe("Student progress (read only)", () => {
     );
     const practice = page
       .getByRole("table", { name: "Marks by topic", exact: true })
-      .getByRole("link", { name: /^Sprint on / });
+      .getByRole("link", { name: /^Practise / });
     await expect(practice.first()).toBeVisible();
     for (const link of await practice.all()) {
       const target = new URL((await link.getAttribute("href"))!, page.url());
@@ -151,7 +148,7 @@ test.describe("Student progress (read only)", () => {
           container.evaluate((el) => el.scrollWidth >= el.clientWidth),
         )
         .toBe(true);
-      const action = table.getByRole("link", { name: /^Sprint on / }).first();
+      const action = table.getByRole("link", { name: /^Practise / }).first();
       await action.scrollIntoViewIfNeeded();
       await expect(action).toBeInViewport();
       await expect
@@ -218,7 +215,7 @@ test.describe("Progress with local synthetic reads", () => {
       await topic.click();
       await expect(topic).toHaveAttribute("aria-expanded", "true");
       await expect(
-        topics.getByRole("link", { name: "Sprint on Inflation" }),
+        topics.getByRole("link", { name: "Practise Inflation" }),
       ).toHaveAttribute("href", "/student/sprint?topics=t3&sub=inflation");
       await page.getByRole("button", { name: "Show chart data" }).click();
       await expect(page.getByRole("link", { name: /60%/ })).toHaveAttribute(
@@ -231,9 +228,7 @@ test.describe("Progress with local synthetic reads", () => {
       await expect(
         page.getByRole("button", { name: "Sprints", exact: true }),
       ).toHaveAttribute("aria-pressed", "true");
-      const range = page.getByRole("combobox", { name: "Progress range" });
-      await range.click();
-      await page.getByRole("option", { name: "All time", exact: true }).click();
+      await page.getByRole("radio", { name: "All time", exact: true }).click();
       await expect(page.getByTestId("progress-page")).toHaveAttribute(
         "data-range",
         "all",

@@ -70,10 +70,10 @@ it("expands a parent, shows untouched topics and sorts children locally", () => 
     name: "Marks by topic",
   });
   expect(
-    within(table).getByRole("link", { name: "Sprint on Unemployment" }),
+    within(table).getByRole("link", { name: "Practise Unemployment" }),
   ).toHaveAttribute("href", "/student/sprint?topics=t3&sub=t3-unemployment");
   expect(
-    within(table).getByRole("link", { name: "Sprint on Inflation" }),
+    within(table).getByRole("link", { name: "Practise Inflation" }),
   ).toHaveAttribute("href", "/student/sprint?topics=t3&sub=t3-inflation");
   expect(
     within(table).getAllByText(

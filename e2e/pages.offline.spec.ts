@@ -102,7 +102,7 @@ test.beforeAll(async () => {
                                         : path === "@/utils/supabase/client"
                                           ? `export const createClient=()=>({});`
                                           : path === "@/utils/supabase/server"
-                                            ? `const topicsData=${JSON.stringify(topics)};const progress={topics:topicsData.map((t,i)=>({...t,answered:i+1,earned:i,possible:i+2,pct:50+i*10,last_answered:'2026-10-18T00:00:00Z'})),types:[],verbs:[],history:[],mastery:[],missed:[],due:[]};const days=[{day:'2026-10-19',questions:4,cards:2},{day:'2026-10-16',questions:20,cards:0},{day:'2026-10-15',questions:0,cards:40},{day:'2026-09-01',questions:8,cards:8}];const query={select(){return this},eq(){return this},in(){return this},is(){return this},not(){return this},order(){return this},lte(){return this},limit:async()=>({data:[{id:'resume',kind:'single',config:{},elapsed_s:0,started_at:'2026-10-19T00:00:00Z',attempts:[],flashcard_reviews:[]}],error:null}),then(done){return Promise.resolve(done({data:topicsData,count:7,error:null}))}};export const createClient=async()=>({from:()=>query,rpc:(name)=>name==='student_progress'?Promise.resolve({data:progress,error:null}):Object.assign(Promise.resolve({data:days,error:null}),{single:async()=>({data:{current_streak:3,longest_streak:8},error:null})})});`
+                                            ? `const topicsData=${JSON.stringify(topics)};const progress={topics:topicsData.map((t,i)=>({...t,answered:i+1,earned:i,possible:i+2,pct:50+i*10,last_answered:'2026-10-18T00:00:00Z'})),types:[],verbs:[],history:[],mastery:[],missed:[],due:[]};const days=[{day:'2026-10-19',questions:4,cards:2},{day:'2026-10-16',questions:20,cards:0},{day:'2026-10-15',questions:0,cards:40},{day:'2026-09-01',questions:8,cards:8}];const query={select(){return this},eq(){return this},in(){return this},is(){return this},not(){return this},gte(){return this},neq(){return this},gt(){return this},range(){return this},order(){return this},lte(){return this},limit:async()=>({data:[{id:'resume',kind:'single',config:{},elapsed_s:0,started_at:'2026-10-19T00:00:00Z',attempts:[],flashcard_reviews:[]}],error:null}),then(done){return Promise.resolve(done({data:topicsData,count:7,error:null}))}};export const createClient=async()=>({from:()=>query,rpc:(name)=>name==='student_progress'?Promise.resolve({data:progress,error:null}):Object.assign(Promise.resolve({data:days,error:null}),{single:async()=>({data:{current_streak:3,longest_streak:8},error:null})})});`
                                             : "";
               return { contents, loader: "tsx", resolveDir: process.cwd() };
             },
@@ -307,7 +307,7 @@ test("A2: Topic selection changes Subtopic choices and clears an old child", asy
   );
 });
 
-test("Progress: mobile topic rows and sprint actions stay within the page", async ({
+test("Progress: mobile topic rows and practise actions stay within the page", async ({
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
@@ -315,15 +315,18 @@ test("Progress: mobile topic rows and sprint actions stay within the page", asyn
   await expect(
     page.getByRole("heading", { name: "Marks by topic", exact: true }),
   ).toBeVisible();
-  await expect(page.getByRole("heading", { level: 2 }).first()).toHaveText(
+  await expect(
+    page.getByRole("heading", { level: 2 }).allTextContents(),
+  ).resolves.toEqual([
+    "Practice average",
+    "Where you’re losing marks",
+    "What the marker keeps asking for",
+    "Exam readiness",
     "Marks by topic",
-  );
+  ]);
   await expect(
-    page.getByRole("heading", { name: "Practice average", exact: true }),
-  ).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Show chart data" }),
-  ).toHaveCount(0);
+    page.getByRole("radiogroup", { name: "Progress range" }),
+  ).toBeVisible();
   const topics = page.getByRole("table", {
     name: "Marks by topic",
     exact: true,
@@ -333,24 +336,8 @@ test("Progress: mobile topic rows and sprint actions stay within the page", asyn
     .getByRole("button", { name: "The Global Economy", exact: true })
     .click();
   await expect(
-    topics.getByRole("link", { name: "Sprint on Trade", exact: true }),
+    topics.getByRole("link", { name: "Practise Trade", exact: true }),
   ).toHaveAttribute("href", "/student/sprint?topics=t1&sub=trade");
-  const days = page
-    .getByRole("group", {
-      name: "Practice days over the last eight weeks",
-    })
-    .getByRole("link");
-  expect(await days.count()).toBeGreaterThan(0);
-  for (const day of await days.all()) {
-    const box = await day.boundingBox();
-    expect(box!.width).toBeGreaterThanOrEqual(24);
-    expect(box!.height).toBeGreaterThanOrEqual(24);
-  }
-  await days.last().focus();
-  await page.keyboard.press("Shift+Tab");
-  await page.keyboard.press("Tab");
-  await expect(days.last()).toBeFocused();
-  await expect(days.last()).toHaveCSS("outline-width", "2px");
   const overflow = await page.evaluate(() =>
     [...document.querySelectorAll("body *")]
       .filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1)
@@ -365,16 +352,20 @@ test("Progress: mobile topic rows and sprint actions stay within the page", asyn
     JSON.stringify(overflow),
   ).toBe(390);
   await page.setViewportSize({ width: 1440, height: 1000 });
-  const loss = await page
-    .getByRole("heading", { name: "Where your marks go" })
-    .locator('xpath=ancestor::*[@data-slot="card"][1]')
-    .boundingBox();
-  const types = await page
-    .getByRole("heading", { name: "By question type" })
-    .locator('xpath=ancestor::*[@data-slot="card"][1]')
-    .boundingBox();
-  expect(loss!.y).toBe(types!.y);
-  expect(loss!.height).toBe(types!.height);
+  const card = (name: string) =>
+    page
+      .getByRole("heading", { name, exact: true })
+      .locator('xpath=ancestor::*[@data-slot="card"][1]')
+      .boundingBox();
+  const [trend, loss, asks, ready] = await Promise.all([
+    card("Practice average"),
+    card("Where you’re losing marks"),
+    card("What the marker keeps asking for"),
+    card("Exam readiness"),
+  ]);
+  expect(trend!.y).toBe(loss!.y);
+  expect(asks!.y).toBe(ready!.y);
+  expect(asks!.height).toBe(ready!.height);
 });
 
 test("Feedback chips have individual borders and no outer tray in both themes", async ({
