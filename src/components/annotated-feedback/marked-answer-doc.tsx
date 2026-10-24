@@ -268,7 +268,10 @@ export function MarkedAnswerDoc({
     }
     function outside(e: MouseEvent) {
       const target = e.target instanceof Element ? e.target : null;
-      const inside = target?.closest("[data-anchors], [data-card]");
+      // Highlights, cards and the linked next-mark row move focus themselves.
+      const inside = target?.closest(
+        "[data-anchors], [data-card], [data-focus-control]",
+      );
       if (!inside || !body.current?.contains(inside)) clear();
     }
     function escape(e: KeyboardEvent) {
@@ -596,6 +599,7 @@ export function MarkedAnswerDoc({
                         <button
                           type="button"
                           className="cma-crit-row"
+                          data-focus-control
                           aria-pressed={linked.id === activeId}
                           onClick={() =>
                             column

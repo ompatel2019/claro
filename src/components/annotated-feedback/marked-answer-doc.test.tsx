@@ -548,6 +548,19 @@ describe("comment column", () => {
     cleared();
   });
 
+  it("keeps the next-mark row's selection when switching from another comment", () => {
+    render(
+      <MarkedAnswerDoc text={text} comments={comments} score={score} column />,
+    );
+    fireEvent.click(card(11));
+    expect(card(11)).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(
+      screen.getByRole("button", { name: "Your next mark: Add a statistic." }),
+    );
+    expect(card(22)).toHaveAttribute("aria-pressed", "true");
+    expect(card(11)).toHaveAttribute("aria-pressed", "false");
+  });
+
   it.each([true, false])(
     "reveals the final card position after translation (reduced motion: %s)",
     async (reduced) => {
