@@ -214,11 +214,11 @@ export function SprintSetup({
           </button>
         </p>
       )}
-      <div className="space-y-5">
+      <div className="space-y-6">
         <div>
           <h2 className="text-xl font-[650] tracking-tight">Build your own</h2>
         </div>
-        <div className="space-y-5">
+        <div className="space-y-6">
           <div>
             <Section
               title="Topics"
@@ -487,7 +487,7 @@ export function SprintSetup({
               )}
             </Section>
           </div>
-          <div className="space-y-5">
+          <div className="space-y-6">
             {(c.history === "prefer_new" || c.history === "any") && (
               <Section title="Question history">
                 <label className="flex items-center gap-2 text-sm">
@@ -662,7 +662,7 @@ export function SprintSetup({
                 </span>
                 <ChevronDown className="size-4" />
               </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-5 pt-4">
+              <CollapsibleContent className="space-y-6 pt-4">
                 {c.mode === "short" || c.mode === "mixed" ? (
                   <Section
                     title="Difficulty (by marks)"

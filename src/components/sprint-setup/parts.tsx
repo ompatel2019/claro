@@ -16,7 +16,7 @@ export function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="space-y-3.5" aria-label={title}>
+    <section className="space-y-4" aria-label={title}>
       <div>
         <h2 className="text-sm font-semibold">{title}</h2>
         {hint && (
