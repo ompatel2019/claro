@@ -19,3 +19,17 @@ it("shows a topic's real average, clamped and rounded, or Not practised", async 
   expect(screen.getByText("Not practised")).toBeInTheDocument();
   expect(screen.queryByText(/%/)).toBeNull();
 });
+
+it("selected dot-point chips use the orange selected tint, not navy", async () => {
+  const { Chip } = await import("./parts");
+  render(
+    <Chip on onClick={() => {}}>
+      Inflation
+    </Chip>,
+  );
+  const chip = screen.getByRole("button", { name: "Inflation" });
+  expect(chip).toHaveAttribute("aria-pressed", "true");
+  expect(chip.className).toContain("aria-pressed:bg-selected");
+  expect(chip.className).toContain("aria-pressed:text-brand-text");
+  expect(chip.className).not.toContain("aria-pressed:bg-primary");
+});

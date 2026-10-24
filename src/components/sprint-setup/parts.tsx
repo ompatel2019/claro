@@ -77,7 +77,7 @@ export function Chip({
       pressed={on}
       disabled={disabled}
       onClick={onClick}
-      className="h-auto min-h-8 max-w-full gap-1.5 text-left text-[13px] whitespace-normal"
+      className="aria-pressed:bg-selected aria-pressed:text-brand-text aria-pressed:border-brand h-auto min-h-8 max-w-full gap-1.5 text-left text-[13px] whitespace-normal"
     >
       {children}
     </FoundationChip>
