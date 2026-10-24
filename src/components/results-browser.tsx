@@ -274,7 +274,7 @@ export function ResultsBrowser({
             ))}
           </ul>
         </div>
-        <div className="bg-muted absolute top-0 right-0 flex rounded-full p-0.5 sm:static">
+        <div className="absolute top-0 right-0 flex gap-2 sm:static">
           <button
             type="button"
             onClick={() => setTable(false)}
@@ -419,7 +419,6 @@ function SprintAnswers({
         <h2 className="text-xl font-[650] tracking-tight">Your answers</h2>
         <ToggleGroup
           aria-label="Show questions as"
-          className="bg-muted rounded-full p-0.5"
           size="sm"
           variant="default"
           value={[table ? "table" : "review"]}

@@ -206,6 +206,54 @@ test("View booklet at 390px from the mobile sheet", async ({ page }) => {
   await expect(page.getByText(/Question 6 of 6/)).toBeVisible();
 });
 
+for (const dark of [false, true])
+  test(`tracker and MCQ selection in ${dark ? "dark" : "light"} mode`, async ({
+    page,
+  }) => {
+    await load(page, 390, 844);
+    await page.evaluate(
+      (dark) => document.documentElement.classList.toggle("dark", dark),
+      dark,
+    );
+    const progress = page.getByRole("navigation", {
+      name: "Question progress",
+    });
+    const fills = await progress
+      .locator("button > span")
+      .evaluateAll((pills) =>
+        pills.map((pill) => getComputedStyle(pill).backgroundColor),
+      );
+    expect(fills[0]).not.toBe(fills[2]);
+    expect(fills[2]).not.toBe(fills[3]);
+    expect(fills[3]).toMatch(/0\.25/);
+    await progress
+      .getByRole("button", { name: "Question 5, not answered", exact: true })
+      .click();
+    const options = page.getByRole("radio");
+    for (const [index, key] of ["a", "b", "c", "d"].entries()) {
+      await page.keyboard.press(key);
+      for (let i = 0; i < 4; i++) {
+        const option = options.nth(i);
+        await expect(option).toBeChecked({ checked: i === index });
+        await expect(option.locator("..")).toHaveCSS(
+          "background-color",
+          i === index
+            ? dark
+              ? "rgb(59, 32, 25)"
+              : "rgb(253, 238, 231)"
+            : dark
+              ? "rgb(29, 32, 57)"
+              : "rgb(255, 255, 255)",
+        );
+        if (i === index)
+          await expect(option.locator("..")).toHaveCSS(
+            "border-color",
+            "rgb(245, 79, 27)",
+          );
+      }
+    }
+  });
+
 // Exam mode: Q2's background mark never reaches the rail, sheet or progress pills.
 for (const [width, height] of [
   [1440, 900],

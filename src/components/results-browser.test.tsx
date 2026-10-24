@@ -187,7 +187,7 @@ it("colours sprint pills by mark, outlines the open one and keeps flags apart", 
   expect(tile(2)).toHaveAttribute("aria-current", "true");
   expect(tile(2)).toHaveTextContent("1.5/4");
   expect(tile(3)).toHaveClass("bg-destructive-soft", "text-destructive-text");
-  expect(tile(4)).toHaveClass("bg-muted");
+  expect(tile(4)).toHaveClass("bg-foreground/25");
   expect(tile(4)).toHaveTextContent(/^Q4$/);
   for (const n of [1, 2, 3, 4, 5]) {
     expect(tile(n).querySelector("svg")).toBeTruthy();

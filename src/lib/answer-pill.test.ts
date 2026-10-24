@@ -26,7 +26,7 @@ it("colours by mark: soft green full, amber part, red zero, grey not answered", 
   expect(RESULT_TILE.full).toBe("bg-success-soft text-success-text");
   expect(RESULT_TILE.part).toBe("bg-warning-soft text-warning-text");
   expect(RESULT_TILE.zero).toBe("bg-destructive-soft text-destructive-text");
-  expect(RESULT_TILE.not_answered).toBe("bg-muted text-muted-foreground");
+  expect(RESULT_TILE.not_answered).toBe("bg-foreground/25 text-foreground");
   // No loud fills: every tile is a soft tint, and the open one is an outline only.
   for (const tone of Object.values(RESULT_TILE)) {
     expect(tone).not.toMatch(
