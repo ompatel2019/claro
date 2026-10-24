@@ -18,6 +18,8 @@ export function SprintFocusShell(
     clock: { mode: "down" | "up"; seconds: number };
     wide?: boolean;
     booklet: React.ReactNode;
+    /** Shown beside the booklet heading, e.g. "2 of 6 answered". */
+    bookletMeta?: React.ReactNode;
     progress: React.ReactNode;
   },
 ) {
@@ -35,17 +37,13 @@ export function SprintFocusShell(
     onFinish,
     onMove,
     booklet,
+    bookletMeta,
     progress,
     children,
   } = props;
   const bookletId = useId();
-  const progressRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    progressRef.current
-      ?.querySelector('[aria-current="step"]')
-      ?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [position, total]);
-  const [rail, setRail] = useState(false);
+  // The booklet sidebar is open by default on desktop; mobile keeps a closed drawer.
+  const [rail, setRail] = useState(true);
   const [sheet, setSheet] = useState(false);
   const [calc, setCalc] = useState(false);
   const [help, setHelp] = useState(false);
@@ -87,7 +85,7 @@ export function SprintFocusShell(
     <div
       className={cn(
         "sprint-focus flex min-h-svh flex-col [--sprint-rail:0px]",
-        rail && "md:[--sprint-rail:272px]",
+        rail && "md:[--sprint-rail:320px] lg:[--sprint-rail:380px]",
       )}
     >
       <FocusBar className="bg-background flex flex-wrap items-center gap-x-3 gap-y-2 px-4 py-3 backdrop-blur-none md:h-[68px] md:flex-nowrap md:py-0 lg:gap-4 lg:px-8 [&>[data-component=MobileFocusFeedback]]:hidden">
@@ -149,7 +147,8 @@ export function SprintFocusShell(
             aria-label="Booklet (B)"
             className="hidden md:inline-flex"
             aria-pressed={rail}
-            title="Booklet"
+            aria-controls={`${bookletId}-rail`}
+            title={rail ? "Collapse booklet" : "Open booklet"}
             onClick={toggleBooklet}
           >
             <PortalIcon name="book-open" />
@@ -191,20 +190,15 @@ export function SprintFocusShell(
         </Button>
       </FocusBar>
       <div className="flex flex-1">
-        {rail && (
-          <aside className="bg-canvas sticky top-[68px] hidden h-[calc(100svh-68px)] w-[272px] shrink-0 flex-col overflow-y-auto border-r p-5 md:flex">
-            <h2 className="mb-5 text-sm font-semibold">Booklet</h2>
-            {booklet}
-          </aside>
-        )}
         <div className="min-w-0 flex-1">
           <nav
             aria-label="Question progress"
             className="bg-background border-b px-4 py-3 sm:px-8"
           >
+            {/* Segments shrink to fit any question count: never a scrollbar. */}
             <div
-              ref={progressRef}
-              className="mx-auto flex max-w-5xl gap-1.5 overflow-x-auto p-1"
+              data-progress-track
+              className="mx-auto flex max-w-5xl min-w-0 gap-1 overflow-hidden p-1"
             >
               {progress}
             </div>
@@ -219,14 +213,50 @@ export function SprintFocusShell(
             {children}
           </main>
         </div>
+        {rail && (
+          <aside
+            id={`${bookletId}-rail`}
+            aria-label="Booklet"
+            className="bg-background sticky top-[68px] hidden h-[calc(100svh-68px)] w-(--sprint-rail) shrink-0 flex-col border-l md:flex"
+          >
+            <div className="flex items-center justify-between gap-2 border-b px-4 py-3">
+              <h2 className="text-sm font-semibold">
+                Booklet
+                {bookletMeta && (
+                  <span className="text-muted-foreground ml-2 text-xs font-normal">
+                    {bookletMeta}
+                  </span>
+                )}
+              </h2>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label="Collapse booklet"
+                onClick={() => setRail(false)}
+              >
+                <PortalIcon name="chevron-right" />
+              </Button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-24">
+              {booklet}
+            </div>
+          </aside>
+        )}
       </div>
       <Sheet open={sheet} onOpenChange={setSheet}>
         <SheetContent
           id={bookletId}
-          side="left"
-          className="w-72 overflow-y-auto p-4"
+          side="right"
+          className="w-[min(22rem,90vw)] gap-0 overflow-y-auto p-0"
         >
-          <SheetTitle>Booklet</SheetTitle>
+          <SheetTitle className="border-b px-4 py-3 pr-12">
+            Booklet
+            {bookletMeta && (
+              <span className="text-muted-foreground ml-2 text-xs font-normal">
+                {bookletMeta}
+              </span>
+            )}
+          </SheetTitle>
           <div
             onClick={(e) => {
               if ((e.target as HTMLElement).closest("[data-q]"))

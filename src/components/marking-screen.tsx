@@ -54,7 +54,11 @@ export function MarkingLayout({
 }) {
   return (
     <div
-      className="bg-background fixed inset-0 z-[100] grid min-h-dvh place-items-center overflow-y-auto p-6"
+      // The sprint answer sheet scrolls with the page: no inner scrollbar.
+      className={cn(
+        "bg-background grid min-h-dvh place-items-center p-6",
+        wide ? "relative" : "fixed inset-0 z-[100] overflow-y-auto",
+      )}
       role="status"
       aria-live="polite"
       aria-atomic="true"

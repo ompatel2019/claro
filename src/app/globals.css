@@ -51,7 +51,7 @@
   --toggle-on: #ffffff; /* active segment in a toggle group */
 
   /* brand */
-  --pill-flag: var(--destructive);
+  --pill-flag: var(--ink-2); /* flags are ink-2, never red */
   --brand: #f54f1b; /* orange: marks, indicators, highlights */
   --brand-foreground: #ffffff;
   --brand-soft: var(--surface-selected); /* active nav, brand badges */
@@ -115,7 +115,7 @@
   --accent: var(--surface-hover);
   --accent-foreground: #f5f1ec;
   --destructive: #ff6b5e;
-  --pill-flag: var(--destructive);
+  --pill-flag: var(--ink-2); /* flags are ink-2, never red */
   --destructive-soft: color-mix(in srgb, var(--destructive) 12%, var(--card));
   --border: #2f3354;
   --input: #6e7396;

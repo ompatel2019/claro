@@ -54,20 +54,27 @@ vi.mock("./session-shell", () => ({
 vi.mock("./student/sprint/focus-shell", () => ({
   SprintFocusShell: ({
     booklet,
+    bookletMeta,
     progress,
     children,
     onExit,
   }: {
     booklet: React.ReactNode;
+    bookletMeta?: React.ReactNode;
     progress: React.ReactNode;
     children: React.ReactNode;
     onExit: () => void;
   }) => (
     <>
       <button onClick={onExit}>Exit sprint</button>
-      {booklet}
-      <nav aria-label="Question progress">{progress}</nav>
-      {children}
+      <aside aria-label="Booklet">
+        <p>{bookletMeta}</p>
+        {booklet}
+      </aside>
+      <nav aria-label="Question progress">
+        <div data-progress-track>{progress}</div>
+      </nav>
+      <main>{children}</main>
     </>
   ),
 }));
@@ -671,7 +678,11 @@ it("Exam mode never shows or announces awarded marks; check mode still does", ()
   show([marked], { ...session.config, feedback: "end" });
   expect(names().join(" ")).not.toMatch(/\d+\/\d+|marks/);
   expect(document.body).not.toHaveTextContent(/2\/4|Band|Correct/);
-  expect(screen.getByText("4 marks")).toBeVisible();
+  expect(
+    within(screen.getByRole("list", { name: "Question details" })).getByText(
+      "4 marks",
+    ),
+  ).toBeVisible();
   cleanup();
   show([marked]);
   expect(
@@ -730,15 +741,28 @@ it("queues a new photo version even when its transcript is unchanged", async () 
   );
 });
 
-it.each(["HSC", "2019 HSC"])("shows paper year once for %s", (source) => {
-  show([{ ...attempt, question: { ...attempt.question, year: 2019, source } }]);
-  expect(screen.getByText("2019 HSC")).toBeVisible();
+// The paper pill reads the paper's year and origin, never the free-text source column.
+it.each([
+  ["nesa", "anything", "2019 HSC"],
+  ["a1", "HSC", "2019 Practice"],
+])("labels the %s paper from year and origin", (origin, source, label) => {
+  show([
+    {
+      ...attempt,
+      question: { ...attempt.question, year: 2019, source, origin },
+    },
+  ]);
+  const details = screen.getByRole("list", { name: "Question details" });
+  expect(within(details).getByText(label)).toBeVisible();
+  expect(details).not.toHaveTextContent(source === "HSC" ? "HSC" : source);
 });
 it("renders a question without paper metadata", () => {
   show([
     { ...attempt, question: { ...attempt.question, year: null, source: "" } },
   ]);
-  expect(screen.getByText("What is inflation?")).toBeVisible();
+  expect(
+    within(screen.getByRole("main")).getByText("What is inflation?"),
+  ).toBeVisible();
   expect(screen.queryByText(/No source|undefined|null/)).toBeNull();
 });
 
@@ -1019,38 +1043,42 @@ it("keeps long-sprint progress targets usable and preserves answered and flagged
   const buttons = within(nav).getAllByRole("button");
   expect(buttons).toHaveLength(55);
   expect(buttons[54]).toHaveAccessibleName("Question 55, flagged, answered");
-  expect(buttons[54]).toHaveClass("h-8", "min-w-8");
+  // Segments shrink to fit (min-w-0, flex-1): no horizontal scroll at any count.
+  expect(buttons[54]).toHaveClass("h-8", "min-w-0", "flex-1");
   expect(buttons[54].firstElementChild).toHaveClass(
     "bg-brand",
     "after:bg-[var(--pill-flag)]",
   );
-  const booklet = screen.getByRole("navigation", { name: "Question booklet" });
-  const bookletPill = within(booklet).getByRole("button", {
-    name: "Question 55: Answered, Flagged",
-  });
-  expect(bookletPill).toHaveClass("bg-brand", "after:bg-[var(--pill-flag)]");
-  expect(buttons[54]).toHaveClass("focus-visible:outline-2");
-  expect(bookletPill).toHaveClass("focus-visible:outline-2");
-  expect(screen.getByText("Current").firstElementChild).toHaveClass(
-    "bg-heat-2",
+  expect(nav.querySelector("[data-progress-track]")?.className).not.toMatch(
+    /overflow-x-auto|overflow-auto|overflow-x-scroll/,
   );
-  expect(
-    screen.getByText("Flagged", { selector: "li" }).firstElementChild,
-  ).toHaveClass("bg-foreground/25", "after:bg-[var(--pill-flag)]");
+  const booklet = screen.getByRole("navigation", { name: "Question booklet" });
+  const bookletRow = within(booklet)
+    .getByRole("button", { name: "Question 55: Answered, Flagged" })
+    .closest("li")!;
+  expect(bookletRow.dataset.state).toBe("answered");
+  expect(bookletRow.querySelector("[data-flag]")).toBeTruthy();
+  expect(buttons[54]).toHaveClass("focus-visible:outline-2");
+  // Flag lives above the question with the meta pills, not in the footer.
+  const flagButton = screen.getByRole("button", { name: "Flag for review" });
+  expect(flagButton.closest(".sprint-session-footer")).toBeNull();
+  expect(flagButton.closest("article")).toBeTruthy();
   expect(
     screen
-      .getByRole("button", { name: "Flag for review" })
+      .getByRole("button", { name: "Previous question" })
       .closest(".sprint-session-footer"),
-  ).toHaveClass("left-[var(--sprint-rail)]");
+  ).toHaveClass("right-(--sprint-rail)", "left-0");
   fireEvent.click(buttons[54]);
   await waitFor(() =>
     expect(buttons[54]).toHaveAttribute("aria-current", "step"),
   );
   expect(buttons[54]).toHaveAccessibleName("Question 55, flagged, answered");
-  expect(bookletPill).toHaveClass(
-    "bg-brand",
-    "scale-110",
-    "after:bg-[var(--pill-flag)]",
+  await waitFor(() =>
+    expect(
+      within(booklet)
+        .getByRole("button", { name: "Question 55: Answered, Flagged" })
+        .closest("li")!.dataset.state,
+    ).toBe("active"),
   );
 });
 
@@ -1075,7 +1103,7 @@ it.each(
   );
 });
 
-it("View booklet blocks F and option keys, then jumps to the clicked question", async () => {
+it("shows the booklet sidebar from the start, with no View booklet button or modal", async () => {
   const second = {
     ...attempt,
     id: "b",
@@ -1084,19 +1112,38 @@ it("View booklet blocks F and option keys, then jumps to the clicked question", 
     question: { ...attempt.question, id: "q2", stem: "What is deflation?" },
   } satisfies Attempt;
   show([attempt, second], { ...session.config, feedback: "end" });
-  fireEvent.click(screen.getByRole("button", { name: "View booklet" }));
-  const dialog = await screen.findByRole("dialog", { name: "Booklet" });
-  for (const key of ["f", "a", "1"]) fireEvent.keyDown(dialog, { key });
-  expect(mocks.update).not.toHaveBeenCalled();
+  expect(screen.queryByRole("button", { name: "View booklet" })).toBeNull();
+  expect(screen.queryByRole("dialog")).toBeNull();
+  const booklet = screen.getByRole("navigation", { name: "Question booklet" });
+  expect(booklet.closest("aside")).toBeTruthy();
+  expect(within(booklet).getAllByRole("listitem")).toHaveLength(2);
+  expect(screen.getByText("1 of 2 answered")).toBeTruthy();
   fireEvent.click(
-    within(dialog).getByRole("button", { name: "Question 1: Answered" }),
+    within(booklet).getByRole("button", { name: "Question 1: Answered" }),
   );
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Question 1: Answered" }),
+      within(booklet).getByRole("button", { name: "Question 1: Answered" }),
     ).toHaveAttribute("aria-current", "step"),
   );
+  // The sidebar stays open after a jump.
+  expect(booklet.isConnected).toBe(true);
+});
+
+it("puts Flag for review above the question in ink-2 with an outline icon", () => {
+  show();
+  const details = screen.getByRole("list", { name: "Question details" });
+  const flagButton = screen.getByRole("button", { name: "Flag for review" });
+  expect(details.parentElement).toContainElement(flagButton);
+  expect(
+    details.compareDocumentPosition(
+      within(screen.getByRole("main")).getByText("What is inflation?"),
+    ) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+  expect(flagButton.className).toContain("text-ink-2");
+  expect(flagButton.className).not.toMatch(/destructive|red|brand-text/);
+  expect(within(details).getByText("Question 1")).toBeTruthy();
+  expect(within(details).getByText("Multiple choice")).toBeTruthy();
 });
 
 it("a reload after a confirmed leave saves the restored draft, then finishes", async () => {

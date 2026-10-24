@@ -1,16 +1,14 @@
-import { useState } from "react";
 import {
   cleanup,
   fireEvent,
   render,
   screen,
-  waitFor,
   within,
 } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { Attempt } from "@/lib/practice";
 import { TRACKER_STATE } from "@/components/sprint/tracker-state";
-import { BookletModal } from "./booklet-modal";
+import { BookletPaper } from "./booklet-paper";
 
 afterEach(cleanup);
 
@@ -69,33 +67,16 @@ const attempts: Attempt[] = [
   },
 ];
 
-function Harness({
-  examMode,
-  onJump,
-}: {
-  examMode: boolean;
-  onJump: (i: number) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <button onClick={() => setOpen(true)}>View booklet</button>
-      <BookletModal
-        open={open}
-        onOpenChange={setOpen}
-        attempts={attempts}
-        index={1}
-        examMode={examMode}
-        onJump={onJump}
-      />
-    </>
+function openModal(examMode = true, onJump = vi.fn(), index = 1) {
+  render(
+    <BookletPaper
+      attempts={attempts}
+      index={index}
+      examMode={examMode}
+      onJump={onJump}
+    />,
   );
-}
-
-async function openModal(examMode = true, onJump = vi.fn()) {
-  render(<Harness examMode={examMode} onJump={onJump} />);
-  fireEvent.click(screen.getByRole("button", { name: "View booklet" }));
-  return screen.findByRole("dialog", { name: "Booklet" });
+  return screen.getByRole("navigation", { name: "Question booklet" });
 }
 const row = (dialog: HTMLElement, n: number) =>
   within(dialog)
@@ -103,9 +84,8 @@ const row = (dialog: HTMLElement, n: number) =>
     .closest("li")!;
 const disc = (li: HTMLElement) => li.querySelector("span[aria-hidden]")!;
 
-it("renders every question with its tracker state, flag and answer preview", async () => {
-  const dialog = await openModal();
-  expect(within(dialog).getByText("2 of 3 answered")).toBeTruthy();
+it("renders every question with its tracker state, flag and answer preview", () => {
+  const dialog = openModal();
   expect(within(dialog).getAllByRole("listitem")).toHaveLength(3);
 
   const first = row(dialog, 1);
@@ -138,25 +118,15 @@ it("renders every question with its tracker state, flag and answer preview", asy
   expect(third.textContent).toContain("…");
 });
 
-it("marks unanswered, not-current questions grey", async () => {
-  render(
-    <BookletModal
-      open
-      onOpenChange={() => {}}
-      attempts={attempts}
-      index={0}
-      examMode
-      onJump={() => {}}
-    />,
-  );
-  const dialog = await screen.findByRole("dialog", { name: "Booklet" });
+it("marks unanswered, not-current questions grey", () => {
+  const dialog = openModal(true, vi.fn(), 0);
   const second = row(dialog, 2);
   expect(second.dataset.state).toBe("unanswered");
   expect(disc(second).className).toContain(TRACKER_STATE.unanswered);
 });
 
-it("never shows awarded marks or correctness in Exam mode, even for marked rows", async () => {
-  const dialog = await openModal(true);
+it("never shows awarded marks or correctness in Exam mode, even for marked rows", () => {
+  const dialog = openModal(true);
   const text = dialog.textContent ?? "";
   expect(text).not.toMatch(/\d+\/\d+|Full marks|Part marks|No marks|Correct/);
   for (const button of within(dialog).getAllByRole("button", {
@@ -167,8 +137,8 @@ it("never shows awarded marks or correctness in Exam mode, even for marked rows"
   expect(text).toContain("4 marks");
 });
 
-it("shows awarded marks with a word in Check as I go mode", async () => {
-  const dialog = await openModal(false);
+it("shows awarded marks with a word in Check as I go mode", () => {
+  const dialog = openModal(false);
   expect(row(dialog, 1).textContent).toContain("0/1No marks");
   expect(row(dialog, 3).textContent).toContain("2/4Part marks");
   expect(
@@ -178,16 +148,18 @@ it("shows awarded marks with a word in Check as I go mode", async () => {
   ).toBeTruthy();
 });
 
-it("closes and jumps when a question is clicked", async () => {
+it("jumps when a question is clicked and stays open (it is a sidebar, not a modal)", () => {
   const onJump = vi.fn();
-  const dialog = await openModal(true, onJump);
-  fireEvent.click(within(dialog).getByRole("button", { name: /^Question 3:/ }));
+  const nav = openModal(true, onJump);
+  fireEvent.click(within(nav).getByRole("button", { name: /^Question 3:/ }));
   expect(onJump).toHaveBeenCalledWith(2);
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  expect(screen.queryByRole("dialog")).toBeNull();
+  expect(nav.isConnected).toBe(true);
 });
 
-it("closes on Escape", async () => {
-  const dialog = await openModal();
-  fireEvent.keyDown(dialog, { key: "Escape" });
-  await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+it("shows flags in ink-2 with an outline icon, never red", () => {
+  const nav = openModal();
+  const flag = within(row(nav, 1)).getByText("Flagged");
+  expect(flag.className).toContain("text-ink-2");
+  expect(flag.className).not.toMatch(/destructive|red/);
 });
