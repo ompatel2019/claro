@@ -87,6 +87,8 @@ export function AnnotatedFeedback({
   flush = false,
   bare = false,
   commentColumn = false,
+  lead,
+  tail,
 }: {
   row: ReviewRow;
   photos?: string[];
@@ -108,6 +110,10 @@ export function AnnotatedFeedback({
   bare?: boolean;
   /** Sprint results: every comment in a column beside the answer, no slider and no "Marked" chip. */
   commentColumn?: boolean;
+  /** Column mode: the host's question header, drawn inside the answer card. */
+  lead?: React.ReactNode;
+  /** Column mode: drawn at the foot of the answer card. */
+  tail?: React.ReactNode;
 }) {
   const nextCommentId = useRef(
     Math.min(0, ...(edit?.comments.map((c) => c.id) ?? [])) - 1,
@@ -179,6 +185,11 @@ export function AnnotatedFeedback({
     !edit && showMark && !!text && (view === "typed" || !photos.length);
   const AnswerContainer =
     singleResult && !docView ? ResultAnswerCard : Fragment;
+  // Column mode, typed answer: the marked doc draws the white card (header, marks, answer) and the
+  // comments sit beside it on the canvas. Anything else (photo, unmarked) gets one plain card here.
+  const docCard = commentColumn && docView && !photos.length;
+  const frame = commentColumn && !docCard && (!!lead || !!tail);
+  const flat = flush || frame;
   const outline = Array.isArray(row.feedback?.better_answer_outline)
     ? (row.feedback.better_answer_outline as string[])
     : [];
@@ -478,7 +489,7 @@ export function AnnotatedFeedback({
   );
   const popComment = comments.find((c) => c.id === popover?.id);
 
-  return (
+  const content = (
     <div
       ref={root}
       data-comment-navigation
@@ -488,7 +499,7 @@ export function AnnotatedFeedback({
       {!answerOnly && showReferences && !!row.criteria?.length && (
         <section
           aria-label="Marking criteria"
-          className={cn("space-y-3", !flush && "rounded-xl border p-4")}
+          className={cn("space-y-3", !flat && "rounded-xl border p-4")}
         >
           <h2 className="text-sm font-semibold">Marking criteria</h2>
           {completeCriteria ? (
@@ -557,10 +568,10 @@ export function AnnotatedFeedback({
         // In a host card (flush), the photo / unmarked fallback is a flat section, not a nested card.
         <Card
           className={
-            flush ? "border-0 bg-transparent py-0 shadow-none" : undefined
+            flat ? "border-0 bg-transparent py-0 shadow-none" : undefined
           }
         >
-          <CardContent className={cn("space-y-4", flush && "px-0")}>
+          <CardContent className={cn("space-y-4", flat && "px-0")}>
             <div className="flex flex-wrap items-center gap-3">
               {showMark ? (
                 <p
@@ -650,6 +661,7 @@ export function AnnotatedFeedback({
             {view === "typed" && !docView && filterBar}
             {photos.length > 0 && text && (
               <ToggleGroup
+                className={commentColumn ? "results-toggle" : undefined}
                 aria-label="Answer view"
                 variant="outline"
                 size="sm"
@@ -673,9 +685,11 @@ export function AnnotatedFeedback({
               keepLineBreaks || !row.transcript ? text : displayAnswer(text)
             }
             comments={comments}
-            flush={flush}
+            flush={flat}
             aiNote={aiNote}
             column={commentColumn}
+            lead={docCard ? lead : undefined}
+            tail={docCard ? tail : undefined}
             note={
               photos.length > 0
                 ? "Highlights show on the typed copy of your photo."
@@ -690,7 +704,8 @@ export function AnnotatedFeedback({
                     max,
                     gain: Math.max(0, max - Number(row.mark)),
                     tags: [
-                      band?.label,
+                      // Sprint results show the mark only; never a band label.
+                      commentColumn ? null : band?.label,
                       commentColumn && pill === "Marked" ? null : pill,
                     ].filter((t): t is string => !!t),
                     note:
@@ -814,7 +829,7 @@ export function AnnotatedFeedback({
               <FeedbackDetails
                 name="outline"
                 title="How to reach full marks"
-                flat={flush}
+                flat={flat}
               >
                 <ul className="list-disc space-y-1 pl-5">
                   {outline.map((t, i) => (
@@ -828,7 +843,7 @@ export function AnnotatedFeedback({
                 aria-label="Sample answer"
                 className={cn(
                   "space-y-3",
-                  flush ? "border-t pt-5" : "bg-muted/40 rounded-xl border p-5",
+                  flat ? "border-t pt-5" : "bg-muted/40 rounded-xl border p-5",
                 )}
               >
                 <h2 className="text-lg font-semibold">Sample answer</h2>
@@ -858,6 +873,15 @@ export function AnnotatedFeedback({
         </div>
       )}
     </div>
+  );
+  return frame ? (
+    <Card className="gap-4 px-6 py-6 max-sm:px-4.5 max-sm:py-5">
+      {lead}
+      {content}
+      {tail}
+    </Card>
+  ) : (
+    content
   );
 }
 
