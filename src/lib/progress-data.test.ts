@@ -4,7 +4,7 @@ const q = vi.hoisted(() => {
   const calls: unknown[][] = [];
   const result = { value: { data: [] as unknown, error: null as unknown } };
   const chain: Record<string, unknown> = {};
-  for (const m of ["select", "eq", "not", "order", "limit", "gte"])
+  for (const m of ["select", "eq", "neq", "gt", "not", "order", "limit", "gte"])
     chain[m] = (...args: unknown[]) => {
       calls.push([m, ...args]);
       return chain;
@@ -16,7 +16,11 @@ vi.mock("server-only", () => ({}));
 vi.mock("@/utils/supabase/server", () => ({
   createClient: async () => ({ rpc, from: q.from }),
 }));
-import { loadMarkedComments, loadProgress } from "./progress-data";
+import {
+  loadMarkedComments,
+  loadProgress,
+  loadSessionScores,
+} from "./progress-data";
 it("requests SQL aggregation with inclusive Sydney range dates, never limited raw rows", async () => {
   rpc.mockResolvedValue({
     data: { topics: [{ answered: 1501, sessions: 100 }] },
@@ -69,4 +73,29 @@ it("reads only the student's own marker comments from finished sessions in range
   );
   q.result.value = { data: null, error: { message: "denied" } };
   expect(await loadMarkedComments("me", null)).toBeNull();
+});
+
+it("reads the student's own finished non-flashcard session marks in range", async () => {
+  q.calls.length = 0;
+  q.result.value = {
+    data: [
+      { finished_at: "2026-10-01T15:00:00Z", score: 3, max_score: 4 },
+      { finished_at: "2026-09-30T13:00:00Z", score: 1, max_score: 4 },
+    ],
+    error: null,
+  };
+  expect(await loadSessionScores("me", "2026-10-01")).toEqual([
+    { finished_at: "2026-10-01T15:00:00Z", score: 3, max_score: 4 },
+  ]);
+  expect(q.from).toHaveBeenLastCalledWith("score_history");
+  expect(q.calls).toEqual(
+    expect.arrayContaining([
+      ["eq", "user_id", "me"],
+      ["neq", "kind", "flashcards"],
+      ["gt", "max_score", 0],
+      ["gte", "finished_at", "2026-09-30"],
+    ]),
+  );
+  q.result.value = { data: null, error: { message: "denied" } };
+  expect(await loadSessionScores("me", null)).toBeNull();
 });

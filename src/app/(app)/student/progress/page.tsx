@@ -4,6 +4,7 @@ import { requireProfile } from "@/lib/auth";
 import {
   loadMarkedComments,
   loadProgress,
+  loadSessionScores,
   progressToday,
 } from "@/lib/progress-data";
 import {
@@ -84,7 +85,7 @@ export default async function Progress({
     from = rangeFrom(range, today);
   const d = await loadProgress(range, today);
   const db = await createClient();
-  const [volume, due, marked] = await Promise.all([
+  const [volume, due, marked, scores] = await Promise.all([
     db.rpc("activity_days", { p_from: from, p_to: today }),
     db
       .from("flashcard_progress")
@@ -96,30 +97,21 @@ export default async function Progress({
       .eq("user_id", profile.id)
       .lte("due_on", today),
     loadMarkedComments(profile.id, from),
+    loadSessionScores(profile.id, from),
   ]);
-  const parents = d.topics.filter((t) => !t.parent_id);
-  const earned = parents.reduce((n, t) => n + t.earned, 0),
-    possible = parents.reduce((n, t) => n + t.possible, 0),
-    answered = parents.reduce((n, t) => n + t.answered, 0);
+  // Every marked answer in range, including ones not tied to a topic.
+  const answered =
+    d.stats?.answered ??
+    d.topics.filter((t) => !t.parent_id).reduce((n, t) => n + t.answered, 0);
   const average =
-    typeof d.stats?.pct === "number"
+    typeof d.stats?.pct === "number" && Number.isFinite(d.stats.pct)
       ? Math.round(d.stats.pct)
-      : possible
-        ? Math.round((100 * earned) / possible)
-        : null;
+      : null;
   const days = volume.error ? null : ((volume.data ?? []) as ActivityDay[]);
   const activeDays = days?.filter(
     (day) => day.questions + day.cards > 0,
   ).length;
-  const seconds = d.history
-    .filter(
-      (row) => row.finished_at && Number.isFinite(Date.parse(row.finished_at)),
-    )
-    .reduce(
-      (sum, row) => sum + (Number.isFinite(row.elapsed_s) ? row.elapsed_s : 0),
-      0,
-    );
-  const trend = practiceTrend(d.history, from, today);
+  const trend = scores ? practiceTrend(scores, from, today) : null;
   const lost = marksLost(d.topics);
   const focus = lost.find((l) => l.weak)?.topic.id;
   const maxLost = lost[0]?.lost ?? 0;
@@ -147,8 +139,7 @@ export default async function Progress({
             {activeDays == null
               ? ""
               : ` over ${plural(activeDays, "active day")}`}
-            , {Math.floor(seconds / 3600)}h {Math.floor(seconds / 60) % 60}m of
-            practice{dueCount == null ? "." : ". "}
+            {dueCount == null ? "." : ". "}
             {dueCount != null && (
               <Link href="/student/flashcards">
                 {plural(dueCount, "flashcard")} due today
@@ -163,7 +154,11 @@ export default async function Progress({
         <Panel
           id="progress-trend-h"
           title="Practice average"
-          caption={`Share of marks earned, ${trend.size === 1 ? "day by day" : trend.size === 7 ? "week by week" : "in 30-day blocks"}`}
+          caption={
+            trend
+              ? `Marks earned out of marks available. Chart: finished sessions, ${trend.size === 1 ? "day by day" : trend.size === 7 ? "week by week" : "in 30-day blocks"}.`
+              : "Marks earned out of marks available"
+          }
           className="progress-trend-card"
         >
           <div className="progress-trend-figs">
@@ -171,18 +166,20 @@ export default async function Progress({
               {average == null ? "No marks yet" : `${average}%`}
             </p>
             <p className="progress-trend-note">
-              {plural(trend.sessions, "marked session")} {scope}
+              {plural(answered, "marked answer")} {scope}
             </p>
             <p className="progress-trend-target">
               <span aria-hidden="true" />
               Target <b>{PRACTICE_TARGET}%</b>
             </p>
           </div>
-          {trend.sessions ? (
+          {trend == null ? (
+            <Empty>Your session history is unavailable right now.</Empty>
+          ) : trend.sessions ? (
             <PracticeTrend points={trend.points} size={trend.size} />
           ) : (
             <Empty>
-              No marked practice {scope}.{" "}
+              No finished practice sessions {scope}.{" "}
               <Link href="/student/sprint">Start a Topic Sprint</Link>
             </Empty>
           )}
@@ -205,8 +202,8 @@ export default async function Progress({
                       )}
                     </b>
                     <small>
-                      {l.parent ? `${l.parent} · ` : ""}lost {l.lost} of{" "}
-                      {l.topic.possible} marks
+                      {l.whole ? "Whole-topic questions" : (l.parent ?? "")}
+                      {" · "}lost {l.lost} of {l.possible} marks
                     </small>
                   </div>
                   <Link

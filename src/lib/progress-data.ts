@@ -4,7 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { sydneyToday } from "./flashcards";
 import { addDays } from "./activity";
 import { rangeFrom, type ProgressRange, type ProgressData } from "./progress";
-import type { MarkedComments } from "./progress-insights";
+import type { MarkedComments, SessionScore } from "./progress-insights";
 import { sydneyDay } from "./sydney-day";
 
 export const loadProgress = cache(
@@ -49,5 +49,32 @@ export const loadMarkedComments = cache(
     return (data as { marked_at: string | null; comments: unknown }[])
       .filter((r) => !from || (r.marked_at && sydneyDay(r.marked_at) >= from))
       .map(({ marked_at, comments }) => ({ marked_at, comments }));
+  },
+);
+
+/**
+ * Finished practice sessions' marks (score_history, RLS: own rows) in range,
+ * for the practice average chart. Flashcard decks are not marked answers.
+ */
+export const loadSessionScores = cache(
+  async (
+    userId: string,
+    from: string | null,
+  ): Promise<SessionScore[] | null> => {
+    const db = await createClient();
+    let q = db
+      .from("score_history")
+      .select("finished_at,score,max_score")
+      .eq("user_id", userId)
+      .neq("kind", "flashcards")
+      .gt("max_score", 0);
+    if (from) q = q.gte("finished_at", addDays(from, -1));
+    const { data, error } = await q
+      .order("finished_at", { ascending: false })
+      .limit(1000);
+    if (error || !data) return null;
+    return (data as SessionScore[]).filter(
+      (r) => !from || (r.finished_at && sydneyDay(r.finished_at) >= from),
+    );
   },
 );

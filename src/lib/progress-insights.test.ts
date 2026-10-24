@@ -1,5 +1,6 @@
 import { expect, it } from "vitest";
-import type { HistoryScore, TopicProgress } from "./progress";
+import type { TopicProgress } from "./progress";
+import type { SessionScore } from "./progress-insights";
 import {
   coverage,
   markerAsks,
@@ -8,18 +9,13 @@ import {
 } from "./progress-insights";
 
 const session = (
-  id: string,
   finished_at: string,
-  pct: number | null,
-  kind = "sprint",
-): HistoryScore => ({
-  id,
-  kind,
-  config: {},
+  score: number,
+  max_score = 10,
+): SessionScore => ({
   finished_at,
-  elapsed_s: 60,
-  pct,
-  by_type: {},
+  score,
+  max_score,
 });
 const topic = (t: Partial<TopicProgress> & { id: string }): TopicProgress => ({
   parent_id: null,
@@ -33,22 +29,23 @@ const topic = (t: Partial<TopicProgress> & { id: string }): TopicProgress => ({
   ...t,
 });
 
-it("buckets scored sessions by Sydney day, skips flashcards and leaves gaps", () => {
+it("buckets finished sessions by Sydney day, weighting by marks available, with gaps", () => {
   const t = practiceTrend(
     [
       // 2026-10-08 13:30Z is 9 Oct 00:30 in Sydney.
-      session("a", "2026-10-08T13:30:00Z", 60),
-      session("b", "2026-10-09T01:00:00Z", 80),
-      session("c", "2026-10-04T01:00:00Z", 50),
-      session("cards", "2026-10-09T01:00:00Z", 100, "flashcards"),
-      session("none", "2026-10-09T01:00:00Z", null),
-      session("old", "2026-09-01T01:00:00Z", 10),
+      session("2026-10-08T13:30:00Z", 2, 10),
+      session("2026-10-09T01:00:00Z", 27, 30),
+      session("2026-10-04T01:00:00Z", 5),
+      { finished_at: "2026-10-09T01:00:00Z", score: "1.5", max_score: "2" },
+      session("2026-10-09T01:00:00Z", 3, 0),
+      { finished_at: null, score: 1, max_score: 1 },
+      session("2026-09-01T01:00:00Z", 1),
     ],
     "2026-10-03",
     "2026-10-09",
   );
   expect(t.size).toBe(1);
-  expect(t.sessions).toBe(3);
+  expect(t.sessions).toBe(4);
   expect(t.points.map((p) => p.day)).toEqual([
     "2026-10-03",
     "2026-10-04",
@@ -58,6 +55,7 @@ it("buckets scored sessions by Sydney day, skips flashcards and leaves gaps", ()
     "2026-10-08",
     "2026-10-09",
   ]);
+  // 9 Oct: (2 + 27 + 1.5) / (10 + 30 + 2) = 73%, not the 70% mean of session scores.
   expect(t.points.map((p) => p.pct)).toEqual([
     null,
     50,
@@ -65,14 +63,14 @@ it("buckets scored sessions by Sydney day, skips flashcards and leaves gaps", ()
     null,
     null,
     null,
-    70,
+    73,
   ]);
-  expect(t.points[6].sessions).toBe(2);
+  expect(t.points[6].sessions).toBe(3);
 });
 
 it("uses weeks ending today for 90 days and 30-day blocks for long spans", () => {
   const w = practiceTrend(
-    [session("a", "2026-10-02T01:00:00Z", 40)],
+    [session("2026-10-02T01:00:00Z", 4)],
     "2026-07-12",
     "2026-10-09",
   );
@@ -84,7 +82,7 @@ it("uses weeks ending today for 90 days and 30-day blocks for long spans", () =>
   });
   expect(w.points.at(-2)).toEqual({ day: "2026-09-26", pct: 40, sessions: 1 });
   const all = practiceTrend(
-    [session("a", "2025-01-01T01:00:00Z", 40)],
+    [session("2025-01-01T01:00:00Z", 4)],
     null,
     "2026-10-09",
   );
@@ -135,6 +133,23 @@ it("ranks dot points by marks lost and flags weak ones with the shared rule", ()
     ["a", 8, true, "Economic Issues"],
     ["b", 3, false, "Economic Issues"],
   ]);
+  // Parent totals include whole-topic questions; their marks are kept as a row.
+  const whole = marksLost([
+    { ...rows[0], earned: 7, possible: 20, answered: 9, pct: 35 },
+    ...rows.slice(1),
+  ]);
+  expect(
+    whole.map((l) => [l.topic.id, l.lost, l.possible, l.whole, l.weak]),
+  ).toEqual([
+    ["a", 8, 10, false, true],
+    ["b", 3, 4, false, false],
+    ["p", 2, 3, true, false],
+  ]);
+  expect(
+    marksLost([
+      topic({ id: "q", earned: 1, possible: 6, answered: 6, pct: 16.7 }),
+    ]),
+  ).toMatchObject([{ lost: 5, whole: true, parent: null }]);
   expect(coverage(rows)).toEqual({ practised: 3, total: 4 });
 });
 

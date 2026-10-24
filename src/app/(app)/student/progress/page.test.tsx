@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   eq: vi.fn(),
   rpc: vi.fn(),
   marked: vi.fn(),
+  scores: vi.fn(),
 }));
 vi.mock("@/utils/supabase/server", () => ({
   createClient: async () => ({
@@ -24,6 +25,7 @@ vi.mock("@/lib/auth", () => ({
 vi.mock("@/lib/progress-data", () => ({
   loadProgress: mocks.load,
   loadMarkedComments: mocks.marked,
+  loadSessionScores: mocks.scores,
   progressToday: () => "2026-10-09",
 }));
 vi.mock("@/components/progress-controls", () => ({
@@ -59,6 +61,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   mocks.load.mockResolvedValue(empty);
   mocks.marked.mockResolvedValue([]);
+  mocks.scores.mockResolvedValue([]);
   mocks.eq.mockReturnValue({
     eq: mocks.eq,
     lte: async () => ({ count: 7, error: null }),
@@ -86,7 +89,11 @@ it("renders the redesigned cards with range-scoped empty states", async () => {
     "Exam readiness",
     "Marks by topic",
   ]);
-  expect(screen.getByText("No marked practice this year.")).toBeVisible();
+  expect(
+    screen.getByText("No finished practice sessions this year."),
+  ).toBeVisible();
+  expect(mocks.scores).toHaveBeenCalledWith("student", "2026-01-01");
+  expect(screen.queryByText(/study time|of practice/i)).toBeNull();
   expect(screen.getByText("No marks lost this year.")).toBeVisible();
   expect(
     screen.getByText("No marked written answers this year."),
@@ -172,9 +179,6 @@ it("ranks lost marks by dot point with a practise link", async () => {
     screen.getAllByRole("link", { name: "Practise Inflation" })[0],
   ).toHaveAttribute("href", "/student/sprint?topics=t1&sub=inf");
   expect(screen.getAllByText("Focus").length).toBeGreaterThan(0);
-  expect(
-    screen.getByText("25%", { selector: ".progress-trend-avg" }),
-  ).toBeVisible();
 });
 it("passes load failures to the route error boundary", async () => {
   mocks.load.mockRejectedValue(new Error("unavailable"));
@@ -198,47 +202,53 @@ it("provides a route retry and card-shaped loading skeletons", () => {
   ).toBeGreaterThan(10);
 });
 
-it("derives the summary from parent topic marks without counting subtopics twice", async () => {
-  mocks.load.mockResolvedValue({
-    ...empty,
-    topics: [
-      { ...empty.topics[0], answered: 4, earned: 7, possible: 10, pct: 70 },
-      {
-        ...empty.topics[0],
-        id: "child",
-        parent_id: "t1",
-        answered: 4,
-        earned: 7,
-        possible: 10,
-        pct: 70,
-      },
-    ],
-  });
-  render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
+it("counts every marked answer from the RPC stats, with parent sums as a fallback", async () => {
+  const topics = [
+    { ...empty.topics[0], answered: 4, earned: 7, possible: 10, pct: 70 },
+    {
+      ...empty.topics[0],
+      id: "child",
+      parent_id: "t1",
+      answered: 4,
+      earned: 7,
+      possible: 10,
+      pct: 70,
+    },
+  ];
+  mocks.load.mockResolvedValue({ ...empty, topics });
+  const view = render(
+    await resolve(await Progress({ searchParams: Promise.resolve({}) })),
+  );
   expect(screen.getByTestId("progress-meta")).toHaveTextContent(
     "From your marked answers: 4 questions",
   );
-  expect(
-    screen.getByText("70%", { selector: ".progress-trend-avg" }),
-  ).toBeVisible();
   expect(screen.getByText("1 of 1")).toBeVisible();
+  view.unmount();
+  // stats include answers to questions with no topic; the headline is that weighted share.
+  mocks.load.mockResolvedValue({
+    ...empty,
+    topics,
+    stats: { answered: 9, earned: 8, possible: 16, pct: 50, active: 2 },
+  });
+  render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
+  expect(screen.getByTestId("progress-meta")).toHaveTextContent(
+    "From your marked answers: 9 questions",
+  );
+  expect(
+    screen.getByText("50%", { selector: ".progress-trend-avg" }),
+  ).toBeVisible();
+  expect(
+    screen.getByText("9 marked answers in the last 90 days"),
+  ).toBeVisible();
 });
 it("charts scored sessions with a screen-reader table", async () => {
   mocks.load.mockResolvedValue({
     ...empty,
     stats: { answered: 5, earned: 3, possible: 5, pct: 60, active: 1 },
-    history: [
-      {
-        id: "s1",
-        kind: "sprint",
-        config: {},
-        finished_at: "2026-10-08T01:00:00Z",
-        elapsed_s: 60,
-        pct: 62,
-        by_type: {},
-      },
-    ],
   });
+  mocks.scores.mockResolvedValue([
+    { finished_at: "2026-10-08T01:00:00Z", score: 31, max_score: 50 },
+  ]);
   render(
     await resolve(
       await Progress({ searchParams: Promise.resolve({ range: "7" }) }),
@@ -247,32 +257,12 @@ it("charts scored sessions with a screen-reader table", async () => {
   expect(
     screen.getByText("60%", { selector: ".progress-trend-avg" }),
   ).toBeVisible();
-  expect(screen.getByText("1 marked session in the last 7 days")).toBeVisible();
+  expect(screen.getByText("5 marked answers in the last 7 days")).toBeVisible();
   expect(
     screen.getByRole("table", { name: /Practice average by day/ }),
   ).toBeInTheDocument();
   expect(screen.getAllByText("62%").length).toBeGreaterThan(0);
 });
-it("excludes unfinished sessions from study time", async () => {
-  const session = {
-    id: "valid",
-    kind: "sprint",
-    config: {},
-    finished_at: "2026-10-08T00:00:00Z",
-    elapsed_s: 60,
-    pct: 75,
-    by_type: {},
-  };
-  mocks.load.mockResolvedValue({
-    ...empty,
-    history: [session, { ...session, id: "unfinished", finished_at: null }],
-  });
-  render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
-  expect(screen.getByTestId("progress-meta")).toHaveTextContent(
-    "0h 1m of practice",
-  );
-});
-
 it("counts only active days and handles an unavailable activity summary", async () => {
   mocks.rpc.mockResolvedValue({
     data: [
@@ -305,24 +295,11 @@ it("counts only active days and handles an unavailable activity summary", async 
   );
 });
 
-it("includes flashcard sessions in study time without a practice chart", async () => {
-  mocks.load.mockResolvedValue({
-    ...empty,
-    history: [
-      {
-        id: "cards",
-        kind: "flashcards",
-        config: {},
-        finished_at: "2026-10-09T01:00:00Z",
-        elapsed_s: 120,
-        pct: 90,
-        by_type: {},
-      },
-    ],
-  });
+it("shows no study-time figure and an unavailable chart state", async () => {
+  mocks.scores.mockResolvedValue(null);
   render(await resolve(await Progress({ searchParams: Promise.resolve({}) })));
-  expect(screen.getByText(/No marked practice/)).toBeVisible();
-  expect(screen.getByTestId("progress-meta")).toHaveTextContent(
-    "0h 2m of practice",
-  );
+  expect(
+    screen.getByText("Your session history is unavailable right now."),
+  ).toBeVisible();
+  expect(screen.getByTestId("progress-meta")).not.toHaveTextContent(/\dh \d+m/);
 });

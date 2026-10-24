@@ -1,85 +1,115 @@
 import { addDays } from "./activity";
 import { TAGS, type Tag } from "./feedback";
-import type { TopicProgress, HistoryScore } from "./progress";
+import type { TopicProgress } from "./progress";
 import { isWeakTopic } from "./weak-topics";
 import { sydneyDay } from "./sydney-day";
 
-/** One bucket of the practice average chart: the mean session score that started on `day`. */
+/** One bucket of the practice average chart: marks earned over marks available. */
 export type TrendPoint = { day: string; pct: number | null; sessions: number };
+/** One finished, marked practice session from score_history. */
+export type SessionScore = {
+  finished_at: string | null;
+  score: number | string | null;
+  max_score: number | string | null;
+};
 
 const DAY = 86_400_000;
 const daysBetween = (a: string, b: string) =>
   Math.round((Date.parse(b) - Date.parse(a)) / DAY);
 
 /**
- * Scored practice sessions (not flashcards) bucketed by Sydney day: daily up to
- * 14 days, weekly up to 26 weeks, else 30-day blocks. Buckets end on `today`;
- * a bucket with no sessions has pct null so the chart shows a gap.
+ * Finished sessions bucketed by Sydney finish day: daily up to 14 days, weekly
+ * up to 26 weeks, else 30-day blocks, ending on `today`. Each bucket is the
+ * share of marks earned (sum of scores over sum of marks available), so long
+ * sessions count for more than short ones; empty buckets are gaps (pct null).
  */
 export function practiceTrend(
-  history: HistoryScore[],
+  rows: SessionScore[],
   from: string | null,
   today: string,
 ) {
-  const scored = history.flatMap((h) =>
-    h.kind !== "flashcards" &&
-    h.finished_at &&
-    Number.isFinite(Date.parse(h.finished_at)) &&
-    typeof h.pct === "number" &&
-    Number.isFinite(h.pct)
-      ? [
-          {
-            day: sydneyDay(h.finished_at),
-            pct: Math.min(100, Math.max(0, h.pct)),
-          },
-        ]
-      : [],
-  );
+  const scored = rows.flatMap((r) => {
+    const score = Number(r.score),
+      max = Number(r.max_score);
+    return r.finished_at &&
+      Number.isFinite(Date.parse(r.finished_at)) &&
+      Number.isFinite(score) &&
+      Number.isFinite(max) &&
+      max > 0
+      ? [{ day: sydneyDay(r.finished_at), score: Math.max(0, score), max }]
+      : [];
+  });
   const start =
     from ?? scored.reduce((min, s) => (s.day < min ? s.day : min), today);
   const span = Math.max(1, daysBetween(start, today) + 1);
   const size = span <= 14 ? 1 : span <= 182 ? 7 : 30;
   const count = Math.ceil(span / size);
-  const points: (TrendPoint & { sum: number })[] = Array.from(
-    { length: count },
-    (_, i) => ({
-      day: addDays(today, -(count - 1 - i) * size - (size - 1)),
-      pct: null,
-      sessions: 0,
-      sum: 0,
-    }),
-  );
+  const points = Array.from({ length: count }, (_, i) => ({
+    day: addDays(today, -(count - 1 - i) * size - (size - 1)),
+    sessions: 0,
+    score: 0,
+    max: 0,
+  }));
+  let sessions = 0;
   for (const s of scored) {
     const back = daysBetween(s.day, today);
     if (back < 0 || s.day < start) continue;
     const i = count - 1 - Math.floor(back / size);
     if (i < 0) continue;
+    sessions++;
     points[i].sessions++;
-    points[i].sum += s.pct;
+    points[i].score += s.score;
+    points[i].max += s.max;
   }
   return {
     size,
-    sessions: scored.filter((s) => s.day >= start && s.day <= today).length,
-    points: points.map(({ sum, ...p }) => ({
-      ...p,
-      pct: p.sessions ? Math.round(sum / p.sessions) : null,
+    sessions,
+    points: points.map(({ day, sessions, score, max }): TrendPoint => ({
+      day,
+      sessions,
+      pct: max ? Math.min(100, Math.round((100 * score) / max)) : null,
     })),
   };
 }
 
-/** Dot points ranked by marks lost in the range; weak ones (shared rule) are flagged. */
+/**
+ * Dot points ranked by marks lost in the range. Marks on questions tagged only
+ * to a whole topic (not a dot point) are kept as a row for that topic, so the
+ * list accounts for every lost mark the topic table shows. Weak ones use the
+ * shared weak-topic rule.
+ */
 export function marksLost(topics: TopicProgress[], limit = 5) {
-  const parents = new Map(
-    topics.filter((t) => !t.parent_id).map((t) => [t.id, t.name]),
-  );
-  return topics
-    .filter((t) => t.parent_id && t.possible > t.earned)
-    .map((t) => ({
-      topic: t,
-      parent: parents.get(t.parent_id!) ?? null,
-      lost: Math.round((t.possible - t.earned) * 10) / 10,
-      weak: isWeakTopic(t),
+  const round = (n: number) => Math.round(n * 10) / 10;
+  const rows = topics.flatMap((t) => {
+    if (t.parent_id) {
+      const parent = topics.find((p) => p.id === t.parent_id);
+      return [
+        {
+          topic: t,
+          parent: parent?.name ?? null,
+          earned: t.earned,
+          possible: t.possible,
+          whole: false,
+        },
+      ];
+    }
+    const kids = topics.filter((k) => k.parent_id === t.id);
+    const earned = t.earned - kids.reduce((n, k) => n + k.earned, 0),
+      possible = t.possible - kids.reduce((n, k) => n + k.possible, 0);
+    return possible > 0
+      ? [{ topic: t, parent: null, earned, possible, whole: true }]
+      : [];
+  });
+  return rows
+    .map(({ topic, parent, earned, possible, whole }) => ({
+      topic,
+      parent,
+      whole,
+      possible: round(possible),
+      lost: round(possible - earned),
+      weak: !whole && isWeakTopic(topic),
     }))
+    .filter((r) => r.lost > 0)
     .sort(
       (a, b) =>
         b.lost - a.lost ||
