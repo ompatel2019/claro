@@ -103,6 +103,13 @@ export function SprintRunner({
   const [, setMarkTick] = useState(0);
   // Set once the student leaves the marking screen: Finish must not pull them back.
   const left = useRef(false);
+  useEffect(() => {
+    // Any route change away (links, Back) unmounts the runner: count it as leaving.
+    left.current = false;
+    return () => {
+      left.current = true;
+    };
+  }, []);
   const [background] = useState(() =>
     createSprintMarkQueue(
       async (id) => {
